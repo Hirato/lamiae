@@ -1,0 +1,15 @@
+# ignore compiled objects
+*.o
+*.gch
+*.a
+
+# and backups
+*.orig
+*.rej
+*.bak
+*~
+
+# and binaries
+*.dbg
+*.bin
+*.exe

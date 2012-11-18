@@ -1,0 +1,11 @@
+The most important thing to note with the scriptable huds, is that they use a virtual 1600x1200 screen space.
+This virtual screen is scaled proportionally onto the available screen space. The RPG module defines 2 variables, hud_bottom and hud_right which contain the scaled coordinates
+
+Examples
+1280x960	hud_right = 1600, hud_bottom = 1200
+1920x1080	hud_right = 2133, hud_bottom = 1200
+1280x1024	hud_right = 1600, hud_bottom = 1280
+
+This virtual screenspace makes it easier to define the locations and sizes of the objects.
+
+The hud can be changed at any point in the game, just use r_hud [script] to do so, until proper documentation is available, see the hud_standard.cfg example

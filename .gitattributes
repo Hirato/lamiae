@@ -1,0 +1,5 @@
+# Windows only files
+*.bat		eol=crlf
+*.rc		eol=crlf
+*.manifest	eol=crlf
+*.dsp		eol=crlf

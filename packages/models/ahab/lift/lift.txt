@@ -1,0 +1,20 @@
+Here is a simple lift for the Sandbox project
+
+lift.md3		
+lift.jpg
+
+the metal texture is a procedural texture baked onto the mesh and is my own creation
+the wood texture is form OpenfootageNETwood5.jpg from the kidrpg OF texture package
+(so I am assuming its okay for use in the game)
+
+I can change the wood texture if needed
+I hope to add a normal map with woodgrain, gear and bolt detail in the future.
+
+Richard Honeycutt
+
+Creative Commons
+non-commercial
+share-alike
+attribution
+
+21Feb09

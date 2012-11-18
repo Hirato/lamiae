@@ -1,0 +1,5 @@
+0 - null script
+1 - Default/Generic NPC script
+2 - Default/Generic item/pickup script
+3 - default/generic trigger script
+4 - Player's Script

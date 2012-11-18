@@ -1,0 +1,2 @@
+#include "mingw.rc"
+IDI_ICON1 ICON "lamiae.ico"

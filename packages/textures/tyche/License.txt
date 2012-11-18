@@ -1,0 +1,5 @@
+I, Craig A. Eddy, am the creator of the textures included in tyche-texture.
+
+These textures are licensed under the Creative Commons license Attribution-ShareAlike 3.0
+
+See http://creativecommons.org/licenses/by-sa/3.0/ for an explanation of the license.

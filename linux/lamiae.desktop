@@ -1,0 +1,10 @@
+[Desktop Entry]
+Comment=Lamiae RolePlaying Game Engine
+GenericName=Lamiae
+Name=Lamiae
+Icon=lamiae
+Exec=lamiae
+Type=Application
+Categories=Applications;Game;
+# this is actually a workaround for bugs in the window managers
+StartupNotify=false

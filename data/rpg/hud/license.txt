@@ -1,0 +1,43 @@
+http://opengameart.org/content/icon-background - CC0; Public Domain
+* spells/storm_smash
+* spells/tornado_storm
+
+LeoV117 - CC-BY-SA
+* compass
+* empty
+* exp
+* hbar
+* hback
+* health
+* invalid
+* mana
+* player
+
+Tony - CC-BY-SA
+* items/axe
+* items/bar-copper
+* items/bar-gold
+* items/bar-iron
+* items/bar-silver
+* items/bar-steel
+* items/bar-tin
+* items/cloth
+* items/hammer
+* items/ink
+* items/ore-copper
+* items/ore-gold
+* items/ore-iron
+* items/ore-silver
+* items/ore-steel
+* items/ore-tin
+* items/pick
+* items/quil
+* items/rake
+* items/rope
+* items/royal-sceptor
+* items/sack
+* items/saw
+* items/scroll
+* items/shovel
+
+Everything else is made by Hirato and licensed under CC-BY-SA

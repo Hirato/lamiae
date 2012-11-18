@@ -1,0 +1,65 @@
+Sandbox RPG module -- TODO/IDEAS
+==========================
+
+RENDERER
+* animations for weapons
+** generic animations, unarmed strike, melee strike, bow shoot, gun shoot, etc
+
+SOUND
+* sounds while charging spells
+* sounds for projectile firing, travel and death
+* sounds for active statusgroups
+
+LEVELS
+* slowly gain additional points from regular use?
+* level cap?
+
+CUTSCENES
+* create a cutscene variant which can't be skippped
+* some sort of skipping bar (1000 ms?) to prevent accidental skips
+
+ATTACKS
+* cast delay
+
+ITEMS
+* ability to 'bless' and add temporary status effects to items. ie, light on your equipment will cause it to illuminate the nearby area while equipped
+* cursed items (can't be unequipped, generally has undesirable effects)
+* charges
+
+GAME LOGIC
+* r_get_* functions to get effiency/power of melee/magic or comparitive strength
+* add support for additional hardcoded script slots
+** approach
+** saw someone interact with an owned item.
+* movables
+** speed should be based on a combo of strength and weight
+
+AI
+* implement directives
+** move
+** follow
+** guard
+** wander
+*** wanders around a a restricted area
+** patrol
+*** walks about waypoints in a certain order
+** interact
+** watch
+** flee
+* automatically call additional directives from existing directives without scripter intervention
+
+GUIs
+* dialogue
+** voice samples
+
+Quests
+* Journal
+** list quests by finished or unfinished status
+
+CONFIGURATION
+* implement custom blips
+
+HUD
+* increase hover range (looking only) to weapon's range
+
+
