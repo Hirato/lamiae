@@ -2,6 +2,15 @@
 
 namespace entities
 {
+	hashtable<uint, const char *> modelcache;
+
+	rpgchar      *dummychar      = new rpgchar     ();
+	rpgitem      *dummyitem      = new rpgitem     ();
+	rpgobstacle  *dummyobstacle  = new rpgobstacle ();
+	rpgcontainer *dummycontainer = new rpgcontainer();
+	rpgplatform  *dummyplatform  = new rpgplatform ();
+	rpgtrigger   *dummytrigger   = new rpgtrigger  ();
+
 	vector<extentity *> ents;
 	vector<extentity *> &getents() { return ents; }
 
@@ -51,14 +60,29 @@ namespace entities
 
 	void clearents()
 	{
-		ents.deletecontents();
-		intents.setsize(0);
 		//loopvrev(ents) { delete (rpgentity *) ents[i];}
 		//ents.shrink(0);
+		ents.deletecontents();
+		intents.setsize(0);
+
+		if (DEBUG_WORLD) conoutf(CON_DEBUG, "DEBUG: Clearing editmode model cache.");
+		enumerate(modelcache, const char *, str,
+			delete[] str;
+		);
+		modelcache.clear();
 	}
 
 	const char *entmodel(const entity &e)
 	{
+		if(e.type < CRITTER || e.type > TRIGGER) return NULL;
+		// 500 million should be enough for anyone
+		// we've moved way beyond 640kB here!
+		uint hash = (e.type - CRITTER) << 29;
+		hash |= e.attr[1] & ((1 << 29) - 1);
+
+		const char **mdl = modelcache.access(hash);
+		if(mdl) return *mdl;
+
 // 		switch(e.type)
 // 		{
 // 			case CRITTER:
