@@ -117,21 +117,21 @@ namespace entities
 
 	void renderentities()
 	{
-// 		loopv(ents)
-// 		{
-// 			extentity &e = *ents[i];
-// 			const char *mdl = entmodel(e);
-// 			//extern void rendermodel(entitylight *light, const char *mdl, int anim, const vec &o, float yaw = 0, float pitch = 0, float roll = 0, int cull = MDL_CULL_VFC | MDL_CULL_DIST | MDL_CULL_OCCLUDED | MDL_LIGHT, dynent *d = NULL, modelattach *a = NULL, int basetime = 0, int basetime2 = 0, float trans = 1, int colour = 0xFFFFFF);
-// 			if(mdl && entpreviewalpha)
-// 			{
-// 				rendermodel(
-// 					&e.light, mdl, (e.type == CRITTER ? ANIM_IDLE : ANIM_MAPMODEL)|ANIM_LOOP,
-// 					e.o, e.attr[0] + (e.type == CRITTER ? 90 : 0), 0, 0,
-// 					MDL_CULL_VFC | MDL_CULL_DIST | MDL_CULL_OCCLUDED | MDL_LIGHT,
-// 					NULL, NULL, 0, 0, entpreviewalpha
-// 				);
-// 			}
-// 		}
+		loopv(ents)
+		{
+			extentity &e = *ents[i];
+			const char *mdl = entmodel(e);
+
+			if(mdl)
+				rendermodel(
+					mdl,
+					(e.type == CRITTER ? ANIM_IDLE : ANIM_MAPMODEL)|ANIM_LOOP,
+					e.o,
+					e.attr[0] + 90, 0, 0,
+					MDL_CULL_VFC | MDL_CULL_DIST | MDL_CULL_OCCLUDED,
+					NULL, NULL, 0, 0, 1
+				);
+		}
 	}
 
 	void startmap()
