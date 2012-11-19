@@ -497,29 +497,34 @@ namespace game
 		forceverbose--;
 	}
 
-	void openworld(const char *name, bool fall)
+	void openworld(const char *name)
 	{
 		if(!connected) {conoutf("No game in progress"); return;}
 
 		if(name && *name && load_world(name))
 			return;
-		else if(fall && load_world(DEFAULTMAP))
-			return;
-		else
-			emptymap(10, true, "untitled");
-	}
 
-	ICOMMAND(map, "s", (char *s), openworld(s, false))
+		emptymap(10, true, "untitled");
+	}
 
 	void changemap(const char *name)
 	{
-		if(!connected) newgame(NULL);
-		openworld(name, true);
+		if(!connected)
+		{
+			conoutf(CON_WARN, "WARNING: No game is in progress, starting default game, this may mean things don't work as intended!");
+			newgame(NULL);
+		}
+		openworld(name);
 	}
+	COMMANDN(map, changemap, "s");
 
 	void forceedit(const char *name)
 	{
-		if(!connected) newgame(NULL);
+		if(!connected)
+		{
+			conoutf(CON_WARN, "WARNING: No game is in progress, starting default game, this may mean things don't work as intended!");
+			newgame(NULL);
+		}
 		//openworld(name, false);
 	}
 
@@ -747,13 +752,8 @@ namespace game
 		return false;
 	}
 
-	void newmap(int size)
-	{
-		if(!connected) {conoutf("No game in progress"); return;}
-		if(size < 0) return;
-		emptymap(size, true);
-	}
-	ICOMMAND(newmap, "i", (int *size), newmap(max(*size, 0));) ///overrides built in variant - we want to reset the game state before creating entities
+	//we can't actually do anything to prevent newmap invocations.
+	void newmap(int size) {}
 
 	void gameconnect(bool _remote) { connected = true; if(!mapdata) newgame(NULL); }
 

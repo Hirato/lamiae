@@ -3,7 +3,6 @@
 
 #include "cube.h"
 
-#define DEFAULTMAP "mansion"
 #define DEFAULTMODEL "rc"
 
 enum                            // static entity types
@@ -1703,7 +1702,7 @@ namespace game
 	extern hashset<mapinfo> *mapdata;
 	extern mapinfo *curmap;
 
-	extern void openworld(const char *name, bool fall = false);
+	extern void openworld(const char *name);
 	extern void newgame(const char *game, bool restore = false);
 	extern mapinfo *accessmap(const char *name);
 	extern bool cansave();
