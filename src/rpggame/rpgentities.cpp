@@ -131,7 +131,7 @@ namespace entities
 			extentity &e = *ents[i];
 			const char *mdl = entmodel(e);
 
-			if(mdl)
+			if(mdl && entpreviewalpha)
 				rendermodel(
 					mdl,
 					(e.type == CRITTER ? ANIM_IDLE : ANIM_MAPMODEL)|ANIM_LOOP,
