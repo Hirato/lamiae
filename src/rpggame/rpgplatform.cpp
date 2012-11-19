@@ -5,11 +5,11 @@ void rpgplatform::update()
 	if(!entities::ents.inrange(target) || entities::ents[target]->type != PLATFORMROUTE)
 	{
 		target = -1;
-		float closest;
+		float closest = 1e16f;
 		loopv(entities::ents)
 		{
 			extentity &e = *entities::ents[i];
-			if(e.type == PLATFORMROUTE && routes.access(e.attr[0]) && (target < 0 || e.o.dist(o) < closest))
+			if(e.type == PLATFORMROUTE && routes.access(e.attr[0]) && e.o.dist(o) < closest)
 			{
 				target = i;
 				closest = e.o.dist(o);
