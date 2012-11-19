@@ -1,0 +1,8 @@
+#compiled objects
+/.objs/
+
+# codeblocks files
+*.depend
+*.layout
+
+
