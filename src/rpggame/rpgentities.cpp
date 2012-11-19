@@ -76,41 +76,50 @@ namespace entities
 	{
 		if(e.type < CRITTER || e.type > TRIGGER) return NULL;
 		// 500 million should be enough for anyone
-		// we've moved way beyond 640kB here!
+		// we've moved way beyond 640k here!
 		uint hash = (e.type - CRITTER) << 29;
 		hash |= e.attr[1] & ((1 << 29) - 1);
 
 		const char **mdl = modelcache.access(hash);
 		if(mdl) return *mdl;
 
-// 		switch(e.type)
-// 		{
-// 			case CRITTER:
-// 				if(game::chars.inrange(e.attr[1]))
-// 					return game::chars[e.attr[1]]->mdl;
-// 				break;
-// 			case ITEM:
-// 				if(game::items.inrange(e.attr[1]))
-// 					return game::items[e.attr[1]]->mdl;
-// 				break;
-// 			case OBSTACLE:
-// 				if(game::obstacles.inrange(e.attr[1]))
-// 					return game::obstacles[e.attr[1]]->mdl;
-// 				break;
-// 			case CONTAINER:
-// 				if(game::containers.inrange(e.attr[1]))
-// 					return game::containers[e.attr[1]]->mdl;
-// 				break;
-// 			case PLATFORM:
-// 				if(game::platforms.inrange(e.attr[1]))
-// 					return game::platforms[e.attr[1]]->mdl;
-// 				break;
-// 			case TRIGGER:
-// 				if(game::triggers.inrange(e.attr[1]))
-// 					return game::triggers[e.attr[1]]->mdl;
-// 				break;
-// 		}
-		return NULL;
+
+		const char *m = NULL;
+		rpgent *dummy = NULL;
+		switch(e.type)
+		{
+			case CRITTER:   dummy = dummychar;      break;
+			case ITEM:      dummy = dummyitem;      break;
+			case OBSTACLE:  dummy = dummyobstacle;  break;
+			case CONTAINER: dummy = dummycontainer; break;
+			case PLATFORM:  dummy = dummyplatform;  break;
+			case TRIGGER:   dummy = dummytrigger;   break;
+		}
+
+		dummy->init(e.attr[1]);
+		dummy->resetmdl();
+
+		if(DEBUG_WORLD) conoutf(CON_DEBUG, "DEBUG: Registering model \"%s\" in preview cache as %i", dummy->temp.mdl, hash);
+		m = newstring(dummy->temp.mdl);
+
+#define x(enum, type) \
+	case enum: \
+		dummy ## type -> ~rpg ## type(); \
+		new (dummy ## type) rpg ## type(); \
+		break;
+
+		switch(e.type)
+		{
+			x(CRITTER,   char     );
+			x(ITEM,      item     );
+			x(OBSTACLE,  obstacle );
+			x(CONTAINER, container);
+			x(PLATFORM,  platform );
+			x(TRIGGER,   trigger  );
+		}
+#undef x
+
+		return modelcache.access(hash, m);
 	}
 
 	FVARP(entpreviewalpha, 0, .4, 1);
@@ -174,7 +183,6 @@ namespace entities
 					conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Creating creature and instancing to type %i", ind);
 
 				ent = new rpgchar();
-				ent->init(ind);
 
 				break;
 			}
@@ -187,7 +195,6 @@ namespace entities
 				ent = d;
 
 				d->quantity = max(1, qty);
-				d->init(ind);
 
 				break;
 			}
@@ -197,7 +204,6 @@ namespace entities
 					conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Creating obstacle and instancing to type %i", ind);
 
 				ent = new rpgobstacle();
-				ent->init(ind);
 
 				break;
 			}
@@ -207,7 +213,6 @@ namespace entities
 					conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Creating container and instancing to type %i", ind);
 
 				ent = new rpgcontainer();
-				ent->init(ind);
 
 				break;
 			}
@@ -217,7 +222,6 @@ namespace entities
 					conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Creating platform and instancing to type %i", ind);
 
 				ent = new rpgplatform();
-				ent->init(ind);
 
 				break;
 			}
@@ -227,12 +231,12 @@ namespace entities
 					conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Creating trigger and instancing to type %i", ind);
 
 				ent = new rpgtrigger();
-				ent->init(ind);
 
 				break;
 			}
 		}
 
+		ent->init(ind);
 		ent->resetmdl();
 		setbbfrommodel(ent, ent->temp.mdl);
 		ent->o = e.o;
