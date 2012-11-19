@@ -99,7 +99,7 @@ namespace entities
 		dummy->init(e.attr[1]);
 		dummy->resetmdl();
 
-		if(DEBUG_WORLD) conoutf(CON_DEBUG, "DEBUG: Registering model \"%s\" in preview cache as %i", dummy->temp.mdl, hash);
+		if(DEBUG_WORLD) conoutf(CON_DEBUG, "DEBUG: Registering model \"%s\" in preview cache as %.8X", dummy->temp.mdl, hash);
 		m = newstring(dummy->temp.mdl);
 
 #define x(enum, type) \
