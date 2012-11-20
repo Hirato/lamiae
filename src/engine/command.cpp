@@ -2577,6 +2577,68 @@ ICOMMAND(listdel, "ss", (char *list, char *del), commandret->setstr(listdel(list
 ICOMMAND(indexof, "ss", (char *list, char *elem), intret(listincludes(list, elem, strlen(elem))));
 ICOMMAND(listfind, "rse", (ident *id, char *list, uint *body), looplist(id, list, body, true));
 ICOMMAND(looplist, "rse", (ident *id, char *list, uint *body), looplist(id, list, body, false));
+
+uint *sortcmp = NULL;
+ident *sortleft = NULL;
+ident *sortright = NULL;
+
+bool scrsortcmp(const char *left, const char *right)
+{
+    if(sortleft->valtype == VAL_STR) delete[] sortleft->val.s;
+    else sortleft->valtype = VAL_STR;
+    sortleft->val.s = newstring(left);
+
+    if(sortright->valtype == VAL_STR) delete[] sortright->val.s;
+    else sortright->valtype = VAL_STR;
+    sortright->val.s = newstring(right);
+
+    return executebool(sortcmp);
+}
+
+void cs_quicksort(const char *list, ident *left, ident *right, uint *body)
+{
+    if(left->type != ID_ALIAS || right->type != ID_ALIAS) return;
+
+    vector<char *> strings;
+    explodelist(list, strings);
+
+    if(!strings.length()) return;
+
+    identstack ls, rs;
+    tagval lt, rt;
+
+    lt.setint(0); rt.setint(0);
+    pusharg(*left, lt, ls);
+    pusharg(*right, rt, rs);
+
+    uint *backcmp = sortcmp;
+    ident *bleft = sortleft, *bright = sortright;
+    sortcmp = body;
+    sortleft = left;
+    sortright = right;
+
+    strings.sort(scrsortcmp);
+
+    sortcmp = backcmp;
+    sortleft = bleft;
+    sortright = bright;
+    poparg(*left);
+    poparg(*right);
+
+    vector<char> ret;
+
+    loopv(strings)
+    {
+        const char *str = escapestring(strings[i]);
+        while(*str) ret.add(*(str++));
+    }
+
+    ret.add('\0');
+    result(ret.getbuf());
+}
+
+COMMANDN(quicksort, cs_quicksort, "srre");
+
 ICOMMAND(loopfiles, "rsse", (ident *id, char *dir, char *ext, uint *body),
 {
     if(id->type!=ID_ALIAS) return;
