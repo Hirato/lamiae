@@ -2638,6 +2638,7 @@ void cs_quicksort(const char *list, ident *left, ident *right, uint *body)
 
     ret.add('\0');
     result(ret.getbuf());
+    strings.deletearrays();
 }
 
 COMMANDN(quicksort, cs_quicksort, "srre");
