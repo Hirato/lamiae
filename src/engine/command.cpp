@@ -2610,8 +2610,8 @@ void cs_quicksort(const char *list, ident *left, ident *right, uint *body)
     lt.setint(0); rt.setint(0);
     pusharg(*left, lt, ls);
     pusharg(*right, rt, rs);
-    left->flags &= IDF_UNKNOWN;
-    right->flags &= IDF_UNKNOWN;
+    left->flags &= ~IDF_UNKNOWN;
+    right->flags &= ~IDF_UNKNOWN;
 
     uint *backcmp = sortcmp;
     ident *bleft = sortleft, *bright = sortright;
