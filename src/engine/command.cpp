@@ -2629,6 +2629,7 @@ void cs_quicksort(const char *list, ident *left, ident *right, uint *body)
 
     loopv(strings)
     {
+        if(i) ret.add ('\n');
         const char *str = escapestring(strings[i]);
         while(*str) ret.add(*(str++));
     }
