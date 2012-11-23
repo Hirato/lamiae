@@ -658,7 +658,7 @@ int batcheddynamicmodelbounds(int mask, vec &bbmin, vec &bbmax)
         if(b.flags&MDL_MAPMODEL) break;
         if(b.visible&mask)
         {
-            bbmin.min(vec(b.center).sub(b.radius)); 
+            bbmin.min(vec(b.center).sub(b.radius));
             bbmax.max(vec(b.center).add(b.radius));
             ++vis;
         }
@@ -673,7 +673,7 @@ int batcheddynamicmodelbounds(int mask, vec &bbmin, vec &bbmax)
             j = bm.next;
             if(bm.visible&mask)
             {
-                bbmin.min(vec(bm.center).sub(bm.radius)); 
+                bbmin.min(vec(bm.center).sub(bm.radius));
                 bbmax.max(vec(bm.center).add(bm.radius));
                 ++vis;
             }
@@ -1055,7 +1055,7 @@ void renderclient(dynent *d, const char *mdlname, modelattach *attachments, int 
     rendermodel(mdlname, anim, o, yaw, pitch, d->roll, flags, d, attachments, basetime, 0, fade);
 }
 
-void setbbfrommodel(dynent *d, const char *mdl)
+void setbbfrommodel(physent *d, const char *mdl)
 {
     model *m = loadmodel(mdl);
     if(!m) return;
