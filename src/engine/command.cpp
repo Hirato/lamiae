@@ -2578,71 +2578,6 @@ ICOMMAND(indexof, "ss", (char *list, char *elem), intret(listincludes(list, elem
 ICOMMAND(listfind, "rse", (ident *id, char *list, uint *body), looplist(id, list, body, true));
 ICOMMAND(looplist, "rse", (ident *id, char *list, uint *body), looplist(id, list, body, false));
 
-uint *sortcmp = NULL;
-ident *sortleft = NULL;
-ident *sortright = NULL;
-
-bool scrsortcmp(const char *left, const char *right)
-{
-    if(sortleft->valtype == VAL_STR) delete[] sortleft->val.s;
-    else sortleft->valtype = VAL_STR;
-    sortleft->val.s = newstring(left);
-
-    if(sortright->valtype == VAL_STR) delete[] sortright->val.s;
-    else sortright->valtype = VAL_STR;
-    sortright->val.s = newstring(right);
-
-    return executebool(sortcmp);
-}
-
-void cs_quicksort(const char *list, ident *left, ident *right, uint *body)
-{
-    if(left->type != ID_ALIAS || right->type != ID_ALIAS) return;
-
-    vector<char *> strings;
-    explodelist(list, strings);
-
-    if(!strings.length()) return;
-
-    identstack ls, rs;
-    tagval lt, rt;
-
-    lt.setint(0); rt.setint(0);
-    pusharg(*left, lt, ls);
-    pusharg(*right, rt, rs);
-    left->flags &= ~IDF_UNKNOWN;
-    right->flags &= ~IDF_UNKNOWN;
-
-    uint *backcmp = sortcmp;
-    ident *bleft = sortleft, *bright = sortright;
-    sortcmp = body;
-    sortleft = left;
-    sortright = right;
-
-    strings.sort(scrsortcmp);
-
-    sortcmp = backcmp;
-    sortleft = bleft;
-    sortright = bright;
-    poparg(*left);
-    poparg(*right);
-
-    vector<char> ret;
-
-    loopv(strings)
-    {
-        if(i) ret.add ('\t');
-        const char *str = escapestring(strings[i]);
-        while(*str) ret.add(*(str++));
-    }
-
-    ret.add('\0');
-    result(ret.getbuf());
-    strings.deletearrays();
-}
-
-COMMANDN(quicksort, cs_quicksort, "srre");
-
 ICOMMAND(loopfiles, "rsse", (ident *id, char *dir, char *ext, uint *body),
 {
     if(id->type!=ID_ALIAS) return;
@@ -2718,6 +2653,77 @@ ICOMMAND(loopdir, "rse", (ident *id, char *dir, uint *body),
     }
     if(files.length()) poparg(*id);
 });
+
+struct sortitem
+{
+    const char *str, *quotestart, *quoteend;
+};
+
+struct sortfun
+{
+    ident *x, *y;
+    uint *body;
+
+    bool operator()(const sortitem &xval, const sortitem &yval)
+    {
+        if(x->valtype != VAL_MACRO) x->valtype = VAL_MACRO;
+        cleancode(*x);
+        x->val.code = (const uint *)xval.str;
+        if(y->valtype != VAL_MACRO) y->valtype = VAL_MACRO;
+        cleancode(*y);
+        y->val.code = (const uint *)yval.str;
+        return executebool(body);
+    }
+};
+
+void sortlist(char *list, ident *x, ident *y, uint *body)
+{
+    if(x == y || x->type != ID_ALIAS || y->type != ID_ALIAS) return;
+
+    vector<sortitem> items;
+    int macrolen = strlen(list), total = 0;
+    char *macros = newstring(list, macrolen);
+    const char *curlist = list, *start, *end, *quotestart, *quoteend;
+    while(parselist(curlist, start, end, quotestart, quoteend))
+    {
+        macros[end - list] = '\0';
+        sortitem item = { &macros[start - list], quotestart, quoteend };
+        items.add(item);
+        total += int(quoteend - quotestart);
+    }
+
+    identstack xstack, ystack;
+    pusharg(*x, nullval, xstack); x->flags &= ~IDF_UNKNOWN;
+    pusharg(*y, nullval, ystack); y->flags &= ~IDF_UNKNOWN;
+
+    sortfun f = { x, y, body };
+    items.sort(f);
+
+    poparg(*x);
+    poparg(*y);
+
+    char *sorted = macros;
+    int sortedlen = total + max(items.length() - 1, 0);
+    if(macrolen < sortedlen)
+    {
+        delete[] macros;
+        sorted = newstring(sortedlen);
+    }
+
+    int offset = 0;
+    loopv(items)
+    {
+        sortitem &item = items[i];
+        int len = int(item.quoteend - item.quotestart);
+        if(i) sorted[offset++] = ' ';
+        memcpy(&sorted[offset], item.quotestart, len);
+        offset += len;
+    }
+    sorted[offset] = '\0';
+
+    commandret->setstr(sorted);
+}
+COMMAND(sortlist, "srre");
 
 ICOMMAND(+, "V", (tagval *v, int n), int ret = 0; loopi(n) ret += v[i].getint(); intret(ret));
 ICOMMAND(-, "V", (tagval *v, int n), int ret = n >= 1 ? v->getint() : 0; loopi(n - 1) ret -= v[i + 1].getint(); intret(ret));
