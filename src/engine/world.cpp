@@ -9,7 +9,6 @@ SVARR(maptitle, "Untitled Map by Unknown");
 
 VAR(octaentsize, 0, 128, 1024);
 VAR(entselradius, 0, 2, 10);
-ICOMMAND(getcurmap, "", (), result(game::getclientmap()))
 
 bool getentboundingbox(extentity &e, ivec &o, ivec &r)
 {

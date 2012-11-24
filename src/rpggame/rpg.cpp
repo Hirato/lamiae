@@ -525,7 +525,7 @@ namespace game
 			conoutf(CON_WARN, "WARNING: No game is in progress, starting default game, this may mean things don't work as intended!");
 			newgame(NULL);
 		}
-		//openworld(name, false);
+		openworld(name);
 	}
 
 	void updateworld()
@@ -753,7 +753,10 @@ namespace game
 	}
 
 	//we can't actually do anything to prevent newmap invocations.
-	void newmap(int size) {}
+	void newmap(int size)
+	{
+		startmap("untitled");
+	}
 
 	void gameconnect(bool _remote) { connected = true; if(!mapdata) newgame(NULL); }
 
