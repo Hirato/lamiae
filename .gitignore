@@ -9,7 +9,14 @@
 *.bak
 *~
 
+# some misc text formats
+*.diff
+*.path
+
 # and binaries
 *.dbg
 *.bin
 *.exe
+
+# extra
+/wiki/
