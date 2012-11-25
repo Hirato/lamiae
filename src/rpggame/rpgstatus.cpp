@@ -47,7 +47,10 @@ bool areaeffect::update()
 	{
 		//checking the head and the feet should be sufficiently accurate for gaming purposes
 		rpgent *victim = game::curmap->objs[j];
-		if(victim->o.dist(o) <= radius || victim->feetpos().dist(o) <= radius)
+		const vec min = vec(victim->o.x - victim->radius, victim->o.y - victim->radius, victim->o.z - victim->eyeheight);
+		const vec max = vec(victim->o.x + victim->radius, victim->o.y + victim->radius, victim->o.z + victim->aboveeye);
+
+		if(o.dist_to_bb(min, max) <= radius)
 		{
 			int resist = 0;
 			int thresh = 0;

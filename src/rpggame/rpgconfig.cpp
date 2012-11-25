@@ -200,11 +200,11 @@ namespace game
 				conoutf(CON_ERROR, "\fs\f3ERROR:\fr " #name " requires you to have a valid object selected first"); \
 				return; \
 			} \
-			e->var = clamp((int) max, (int) min, *i); \
+			e->var = clamp(*i, int(min), int(max)); \
 			if(e->var != *i) \
 				conoutf("\fs\f6WARNING:\fr value provided for " DEBUG "->" #var " exceeded limits", DEBUG_IND); \
 			if(DEBUG_CONF || e->var != *i) \
-				conoutf(DEBUG "->" #var " = %i (%.8X)", DEBUG_IND, e->var, e->var); \
+				conoutf(DEBUG "->" #var " = %i (0x%.8X)", DEBUG_IND, e->var, e->var); \
 		)
 
 	#define INTGET(name, var) \
@@ -216,7 +216,7 @@ namespace game
 				return; \
 			} \
 			if(DEBUG_VCONF) \
-				conoutf("\fs\f2DEBUG:\fr request for " #name " on %p, returning %i", e, e->var); \
+				conoutf("\fs\f2DEBUG:\fr request for " #name " on %p, returning %i (0x%.8X)", e, e->var, e->var); \
 			intret(e->var); \
 		)
 
@@ -234,7 +234,7 @@ namespace game
 				conoutf(CON_ERROR, "\fs\f3ERROR:\fr " #name " requires you to have a valid object selected first"); \
 				return; \
 			} \
-			e->var = clamp((float) max, (float) min, *f); \
+			e->var = clamp(*f, float(min), float(max)); \
 			if(e->var != *f) \
 				conoutf("\fs\f6WARNING:\fr value provided for " DEBUG "->" #var " exceeded limits", DEBUG_IND); \
 			if(DEBUG_CONF || e->var != *f) \
@@ -288,12 +288,13 @@ namespace game
 		START(name, "fff", (float *x, float *y, float *z), \
 			INIT \
 			if(!e) return; \
-			e->var.x = clamp((float)h1, (float)l1, *x); \
-			e->var.y = clamp((float)h2, (float)l2, *y); \
-			e->var.z = clamp((float)h3, (float)l3, *z); \
-			if(e->var.x != *x || e->var.y != *y || e->var.z != *z) \
+			const vec res(*x, *y, *z); \
+			const vec vmin(h1, h2, h3); \
+			const vec vmax(l1, l2, l3); \
+			e->var = vec(res).min(vmin).max(vmax); \
+			if(e->var != res) \
 				conoutf("\fs\f6WARNING:\fr value provided for " DEBUG "->" #var " exceeded limits", DEBUG_IND); \
-			if(DEBUG_CONF || e->var.x != *x || e->var.y != *y || e->var.z != *z) \
+			if(DEBUG_CONF || e->var != res) \
 				conoutf(DEBUG "->" #var " = (%g, %g, %g)", DEBUG_IND, e->var.x, e->var.y, e->var.z); \
 		) \
 		START(name ## _get, "", (), \
@@ -586,10 +587,8 @@ namespace game
 		e->effects.add(l);
 		l->type = STATUS_LIGHT;
 
-		l->colour.x = clamp((float) 1, (float) -1, *r);
-		l->colour.y = clamp((float) 1, (float) -1, *g);
-		l->colour.z = clamp((float) 1, (float) -1, *b);
-		l->strength = clamp((int) 512, (int) 8, *str);
+		l->colour = vec(*r, *g, *b).clamp(-1, 1);
+		l->strength = clamp(*str, 8, 512);
 		l->duration = *d;
 		l->variance = clamp(*v, 0.f, 1.0f);
 

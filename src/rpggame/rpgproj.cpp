@@ -197,7 +197,10 @@ bool projectile::update()
 		loopv(game::curmap->objs)
 		{
 			rpgent *d = game::curmap->objs[i];
-			if(d != owner && radius >= o.dist_to_bb(d->feetpos(), d->o) - d->radius)
+			const vec min = vec(d->o.x - d->radius, d->o.y - d->radius, d->o.z - d->eyeheight);
+			const vec max = vec(d->o.x + d->radius, d->o.y + d->radius, d->o.z + d->aboveeye);
+
+			if(d != owner && o.dist_to_bb(min, max) <= radius)
 				victims.add(d);
 		}
 	}
@@ -272,7 +275,15 @@ bool projectile::update()
 				loopv(game::curmap->objs)
 				{
 					rpgent *d = game::curmap->objs[i];
-					if((d != owner || friendlyfire) && hits.find(d) == -1 && radius >= o.dist_to_bb<vec>(d->feetpos(), d->o)  - d->radius)
+
+					//TODO improve friendly fire check
+					if((d == owner && !friendlyfire) || hits.find(d) >= 0)
+						continue;
+
+					const vec min = vec(d->o.x - d->radius, d->o.y - d->radius, d->o.z - d->eyeheight);
+					const vec max = vec(d->o.x + d->radius, d->o.y + d->radius, d->o.z + d->aboveeye);
+
+					if(o.dist_to_bb(min, max) <= radius)
 					{
 						vec kick = vec(d->o).sub(o).normalize();
 						d->hit(owner, wep, amm, charge, chargeflags, kick);

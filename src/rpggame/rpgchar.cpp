@@ -261,7 +261,10 @@ void rpgchar::doattack(equipment *eleft, equipment *eright, equipment *quiver)
 					if(d == this) continue;
 
 					vec other = vec(d->o).sub(o).normalize();
-					if(view.dot(other) > sin(attack->angle * RAD) && o.dist(d->o) <= reach)
+					const vec min = vec(d->o.x - d->radius, d->o.y - d->radius, d->o.z - d->eyeheight);
+					const vec max = vec(d->o.x + d->radius, d->o.y + d->radius, d->o.z + d->aboveeye);
+
+					if(view.dot(other) > sin(attack->angle * RAD) && o.dist_to_bb(min, max) <= reach)
 					{
 						d->hit(this, attack, ammo, mult, flags, other);
 
