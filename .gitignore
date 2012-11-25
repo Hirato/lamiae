@@ -11,7 +11,7 @@
 
 # some misc text formats
 *.diff
-*.path
+*.patch
 
 # and binaries
 *.dbg
