@@ -4,8 +4,8 @@ extern bool reloadtexture(const char *name); //texture.cpp
 
 namespace rpgio
 {
-	#define GAME_VERSION 37
-	#define COMPAT_VERSION 37
+	#define GAME_VERSION 38
+	#define COMPAT_VERSION 38
 	#define GAME_MAGIC "RPGS"
 
 	/**
@@ -650,8 +650,6 @@ namespace rpgio
 		ent->state = f->getchar();
 		ent->editstate = f->getchar();
 
-		ent->lastjump = f->getlil<int>() + lastmillis;
-
 		return ent;
 	}
 
@@ -873,8 +871,6 @@ namespace rpgio
 
 		f->putchar(d->state);
 		f->putchar(d->editstate);
-
-		f->putlil(d->lastjump - lastmillis);
 	}
 
 	mapinfo *readmap(stream *f)

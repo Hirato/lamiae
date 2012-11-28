@@ -1662,24 +1662,16 @@ void modifyvelocity(physent *pl, bool local, bool water, bool floating, int curt
         {
             pl->jumping = false;
             pl->vel.z = max(pl->vel.z, pl->jumpvel * (jumpvel / 200.0f));
-            pl->lastjump = lastmillis;
         }
     }
-    else if(pl->physstate >= PHYS_SLOPE || water || game::allowdoublejump())
+    else if(pl->physstate >= PHYS_SLOPE || water)
     {
         if(water && !pl->inwater) pl->vel.div(8);
         if(pl->jumping)
         {
             pl->jumping = false;
 
-            if(pl->physstate < PHYS_SLOPE && !water)
-            {
-                particle_splash(PART_STEAM, 80, 200, vec(pl->o.x, pl->o.y, pl->o.z-pl->eyeheight), 0xBFBFBF, 2, 150, -10); //double jump
-                pl->falling.div(8);
-            }
-
             pl->vel.z = max(pl->vel.z, pl->jumpvel * (jumpvel / 200.0f)); // physics impulse upwards
-            pl->lastjump = lastmillis;
             if(water) { pl->vel.x /= 8.0f; pl->vel.y /= 8.0f; } // dampen velocity change even harder, gives correct water feel
 
             game::physicstrigger(pl, local, 1, 0);
