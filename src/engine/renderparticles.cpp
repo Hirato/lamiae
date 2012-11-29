@@ -1389,6 +1389,8 @@ void renderentinfo(int i)
     extentity &e = *entities::getents()[i];
     vec pos = e.o;
     string ds, tmp;
+    // this works on the principle of concatenating strings, so null them first.
+    tmp[0] = ds[0] = '\0';
 
     extern void printent(extentity &e, char *buf);
     int colour = 0xFFB600;
@@ -1396,11 +1398,9 @@ void renderentinfo(int i)
     if(!showenttext)
     {
         printent(e, ds);
-        particle_text(pos, ds, PART_TEXT, 1, colour, 2.0f);
+        particle_textcopy(pos, ds, PART_TEXT, 1, colour, 2.0f);
         return;
     }
-    else
-        tmp[0] = ds[0] = '\0'; //prevents weird visual artefacts
 
 /*
     the format of the show ent stuff is like this
