@@ -84,93 +84,122 @@ areaeffect *reference::getaeffect(int i) const
 	return NULL;
 }
 
-void reference::pushref(rpgchar *d)
+void reference::pushref(rpgchar *d, bool force)
 {
+	if(!canset(force)) return;
+
 	list.add(ref(d, T_CHAR));
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed rpgchar type %p onto reference %s", d, name);
 }
-void reference::pushref(rpgitem *d)
+void reference::pushref(rpgitem *d, bool force)
 {
+	if(canset(force)) return;
+
 	list.add(ref(d, T_ITEM));
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed rpgitem type %p onto reference %s", d, name);
 }
-void reference::pushref(rpgobstacle *d)
+void reference::pushref(rpgobstacle *d, bool force)
 {
+	if(!canset(force)) return;
+
 	list.add(ref(d, T_OBSTACLE));
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed obstacle type %p onto reference %s", d, name);
 }
-void reference::pushref(rpgcontainer *d)
+void reference::pushref(rpgcontainer *d, bool force)
 {
+	if(!canset(force)) return;
+
 	list.add(ref(d, T_CONTAINER));
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed container type %p onto reference %s", d, name);
 }
-void reference::pushref(rpgplatform *d)
+void reference::pushref(rpgplatform *d, bool force)
 {
+	if(!canset(force)) return;
+
 	list.add(ref(d, T_PLATFORM));
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed platform type %p onto reference %s", d, name);
 }
-void reference::pushref(rpgtrigger *d)
+void reference::pushref(rpgtrigger *d, bool force)
 {
+	if(!canset(force)) return;
+
 	list.add(ref(d, T_TRIGGER));
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed trigger type %p onto reference %s", d, name);
 }
-void reference::pushref(rpgent *d)
+void reference::pushref(rpgent *d, bool force)
 {
+	if(!d || !canset(force)) return;
+
 	if(d) switch(d->type())
 	{
-		case ENT_CHAR: pushref((rpgchar *) d); return;
-		case ENT_ITEM: pushref((rpgitem *) d); return;
-		case ENT_OBSTACLE: pushref((rpgobstacle *) d); return;
-		case ENT_CONTAINER: pushref((rpgcontainer *) d); return;
-		case ENT_PLATFORM: pushref((rpgplatform *) d); return;
-		case ENT_TRIGGER: pushref((rpgtrigger *) d); return;
+		case ENT_CHAR: pushref((rpgchar *) d, force); return;
+		case ENT_ITEM: pushref((rpgitem *) d, force); return;
+		case ENT_OBSTACLE: pushref((rpgobstacle *) d, force); return;
+		case ENT_CONTAINER: pushref((rpgcontainer *) d, force); return;
+		case ENT_PLATFORM: pushref((rpgplatform *) d, force); return;
+		case ENT_TRIGGER: pushref((rpgtrigger *) d, force); return;
 	}
-	setnull();
+	conoutf(CON_ERROR, "ERROR: reference::pushref(rpgent *d), if you see this, an unknown entity was encountered (%i), report this as a bug!", d->type());
 }
-void reference::pushref(item *d)
+void reference::pushref(item *d, bool force)
 {
+	if(!canset(force)) return;
+
 	list.add(ref(d, T_INV));
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed inventory item type %p onto reference %s", d, name);
 }
-void reference::pushref(vector<item *> *d)
+void reference::pushref(vector<item *> *d, bool force)
 {
+	if(!canset(force)) return;
+
 	loopv(*d)
 		pushref((*d)[i]);
 }
-void reference::pushref(equipment *d)
+void reference::pushref(equipment *d, bool force)
 {
+	if(!canset(force)) return;
+
 	list.add(ref(d, T_EQUIP));
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed equip type %p onto reference %s", d, name);
 }
-void reference::pushref(mapinfo *d)
+void reference::pushref(mapinfo *d, bool force)
 {
+	if(!canset(force)) return;
+
 	list.add(ref(d, T_MAP));
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed mapinfo type %p onto reference %s", d, name);
 }
-void reference::pushref(victimeffect *d)
+void reference::pushref(victimeffect *d, bool force)
 {
+	if(!canset(force)) return;
+
 	list.add(ref(d, T_VEFFECT));
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed victim effect type %p onto reference %s", d, name);
 }
-void reference::pushref(areaeffect *d)
+void reference::pushref(areaeffect *d, bool force)
 {
+	if(!canset(force)) return;
+
 	list.add(ref(d, T_AEFFECT));
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed area effect type %p onto reference %s", d, name);
 }
-void reference::pushref(reference *d)
+void reference::pushref(reference *d, bool force)
 {
+	if(!canset(force)) return;
+
 	loopv(d->list)
 		list.add(d->list[i]);
 }
-void reference::setnull() { list.setsize(0); if(DEBUG_VSCRIPT) conoutf("\fs\f2DEBUG:\fr reference %s set to null", name);}
+void reference::setnull(bool force) { if(!canset(force)) return; list.setsize(0); if(DEBUG_VSCRIPT) conoutf("\fs\f2DEBUG:\fr reference %s set to null", name);}
 
 template<typename T>
-reference::reference(const char *n, T d) : name (newstring(n))
+reference::reference(const char *n, T d) : name (newstring(n)), immutable(false)
 {
 	setref(d);
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr adding reference %s", name);
 }
-reference::reference(const char *n) : name (newstring(n)) {
+reference::reference(const char *n) : name (newstring(n)), immutable(false)
+{
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr adding null reference %s", name);
 }
 

@@ -1539,7 +1539,19 @@ struct reference
 	};
 
 	const char *name;
+	bool immutable;
 	vector<ref> list;
+
+	inline bool canset(bool force)
+	{
+		if(immutable && !force)
+		{
+			conoutf(CON_ERROR, "ERROR: reference \"%s\" is immutable, and cannot be set manually.", name);
+			return false;
+		}
+
+		return true;
+	}
 
 	rpgchar *getchar(int i) const;
 	rpgitem *getitem(int i) const;
@@ -1554,31 +1566,35 @@ struct reference
 	victimeffect *getveffect(int i) const;
 	areaeffect *getaeffect(int i) const;
 
-	void pushref(rpgchar *d);
-	void pushref(rpgitem *d);
-	void pushref(rpgobstacle *d);
-	void pushref(rpgcontainer *d);
-	void pushref(rpgplatform *d);
-	void pushref(rpgtrigger *d);
-	void pushref(rpgent *d);
-	void pushref(item *d);
-	void pushref(vector<item *> *d);
-	void pushref(equipment *d);
-	void pushref(mapinfo *d);
-	void pushref(victimeffect *d);
-	void pushref(areaeffect *d);
-	void pushref(reference *d);
-	inline void pushref(int) {setnull();} //for NULL
+	void pushref(rpgchar *d, bool force = false);
+	void pushref(rpgitem *d, bool force = false);
+	void pushref(rpgobstacle *d, bool force = false);
+	void pushref(rpgcontainer *d, bool force = false);
+	void pushref(rpgplatform *d, bool force = false);
+	void pushref(rpgtrigger *d, bool force = false);
+	void pushref(rpgent *d, bool force = false);
+	void pushref(item *d, bool force = false);
+	void pushref(vector<item *> *d, bool force = false);
+	void pushref(equipment *d, bool force = false);
+	void pushref(mapinfo *d, bool force = false);
+	void pushref(victimeffect *d, bool force = false);
+	void pushref(areaeffect *d, bool force = false);
+	void pushref(reference *d, bool force = false);
+	inline void pushref(int, bool force = false) {setnull(force);} //for NULL
 
 	template<typename T>
-	inline void setref(T d) {list.setsize(0); pushref(d);}
+	inline void setref(T d, bool force = false)
+	{
+		if(!canset(force)) return;
+		list.setsize(0); pushref(d, force);
+	}
 
 	//specialised inside rpgscript.cpp
-	void setnull();
+	void setnull(bool force = false);
 	template<typename T>
 	reference(const char *n, T d);
 	reference(const char *n);
-	reference() : name(NULL) {}
+	reference() : name(NULL), immutable(false) {}
 
 	~reference();
 };
