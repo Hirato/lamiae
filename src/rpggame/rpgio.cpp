@@ -1572,7 +1572,8 @@ namespace rpgio
 		READ(variable,
 			 const char *n = readstring(f);
 			 const char *v = readstring(f);
-			 rpgscript::setglobal(n, v);
+			 if(!rpgscript::setglobal(n, v))
+				 conoutf(CON_WARN, "WARNING: reloading the game added variable \"%s\"", n);
 		)
 		vector<mapinfo *> maps;
 		READ(mapinfo, maps.add(readmap(f)));
