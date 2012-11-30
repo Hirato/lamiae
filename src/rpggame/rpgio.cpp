@@ -4,8 +4,8 @@ extern bool reloadtexture(const char *name); //texture.cpp
 
 namespace rpgio
 {
-	#define GAME_VERSION 38
-	#define COMPAT_VERSION 38
+	#define GAME_VERSION 39
+	#define COMPAT_VERSION 39
 	#define GAME_MAGIC "RPGS"
 
 	/**
@@ -1569,10 +1569,11 @@ namespace rpgio
 			if(!game::merchants.inrange(i)) game::merchants.add(new merchant());
 			readmerchant(f, game::merchants[i]);
 		);
-// 		READ(variable,
-// 			if(!game::variables.inrange(i)) game::variables.add(0);
-// 			game::variables[i] = readstring(f);
-// 		);
+		READ(variable,
+			 const char *n = readstring(f);
+			 const char *v = readstring(f);
+			 rpgscript::setglobal(n, v);
+		)
 		vector<mapinfo *> maps;
 		READ(mapinfo, maps.add(readmap(f)));
 
@@ -1680,10 +1681,14 @@ namespace rpgio
 		WRITE(merchant, game::merchants,
 			writemerchant(f, game::merchants[i]);
 		)
-// 		WRITE(variable, game::variables,
-// 			writestring(f, game::variables[i]);
-// 		)
 
+		vector<rpgvar *> vars;
+		enumerate(game::variables, rpgvar, var, vars.add(&var));
+
+		WRITE(variable, vars,
+			writestring(f, vars[i]->name);
+			writestring(f, vars[i]->value);
+		)
 		vector<mapinfo *> maps;
 		enumerate(*game::mapdata, mapinfo, map, maps.add(&map););
 		WRITE(map, maps, writemap(f, maps[i]));

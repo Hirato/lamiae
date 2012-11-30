@@ -1745,6 +1745,7 @@ namespace rpgscript
 	extern void doitemscript(item *invokee, rpgent *invoker, uint *code);
 	extern void doentscript(rpgent *invokee, rpgent *invoker, uint *code);
 	extern void domapscript(mapinfo *invokee, rpgent *invoker, uint *code);
+	extern bool setglobal(const char *n, const char *v, bool dup = true);
 
 	extern void pushstack();
 	extern void popstack();

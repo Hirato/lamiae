@@ -899,7 +899,7 @@ namespace rpgscript
 		result(var->value);
 	)
 
-	bool setglobal(const char *n, const char *v)
+	bool setglobal(const char *n, const char *v, bool dup)
 	{
 		rpgvar *var = variables.access(n);
 
@@ -909,16 +909,18 @@ namespace rpgscript
 				conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr global variable \"%s\" does not exist, creating and setting to \"%s\"", n, v);
 
 			var = &variables.access(n, rpgvar());
-			var->name = newstring(n);
-			var->value = newstring(v);
+			var->name = !dup ? n : newstring(n);
+			var->value = !dup ? v : newstring(v);
 			return false;
 		}
 
 		if(DEBUG_VSCRIPT)
 			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr global variable \"%s\" exists, setting to \"%s\" from \"%s\"", n, v, var->value);
 
+		if(!dup) delete[] n;
+
 		delete[] var->value;
-		var->value = newstring(v);
+		var->value = !dup ? v : newstring(v);
 
 		return true;
 	}
