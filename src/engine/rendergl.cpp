@@ -2617,7 +2617,7 @@ void renderbackground(const char *caption, Texture *mapshot, const char *mapname
     loopi(restore ? 1 : 3)
     {
         notextureshader->set();
-        glColor3f(.65, .65, .65);
+        glColor3f(.8, .775, .65);
         glBegin(GL_TRIANGLE_STRIP);
 
         glVertex2f(0, 0);
@@ -2629,18 +2629,34 @@ void renderbackground(const char *caption, Texture *mapshot, const char *mapname
         defaultshader->set();
         glEnable(GL_BLEND);
 
-        float ldim = min(w, h) * .45;
-
         glColor3f(1, 1, 1);
         settexture("<premul>data/lamiae", 3);
-        glBegin(GL_TRIANGLE_STRIP);
 
-        glTexCoord2f(0, 0); glVertex2f(w / 2 - ldim, h / 2 - ldim);
-        glTexCoord2f(1, 0); glVertex2f(w / 2 + ldim, h / 2 - ldim);
-        glTexCoord2f(0, 1); glVertex2f(w / 2 - ldim, h / 2 + ldim);
-        glTexCoord2f(1, 1); glVertex2f(w / 2 + ldim, h / 2 + ldim);
+        if(mapshot || mapname || mapinfo)
+        {
+            float ldim = min(w, h) * .15;
 
-        glEnd();
+            glBegin(GL_TRIANGLE_STRIP);
+            glTexCoord2d(0, 0); glVertex2f( w / 2 - ldim, h * 0.175 - ldim);
+            glTexCoord2d(1, 0); glVertex2f( w / 2 + ldim, h * 0.175 - ldim);
+            glTexCoord2d(0, 1); glVertex2f( w / 2 - ldim, h * 0.175 + ldim);
+            glTexCoord2d(1, 1); glVertex2f( w / 2 + ldim, h * 0.175 + ldim);
+
+            glEnd();
+        }
+        else
+        {
+            float ldim = min(w, h) * .45;
+
+            glBegin(GL_TRIANGLE_STRIP);
+
+            glTexCoord2f(0, 0); glVertex2f(w / 2 - ldim, h / 2 - ldim);
+            glTexCoord2f(1, 0); glVertex2f(w / 2 + ldim, h / 2 - ldim);
+            glTexCoord2f(0, 1); glVertex2f(w / 2 - ldim, h / 2 + ldim);
+            glTexCoord2f(1, 1); glVertex2f(w / 2 + ldim, h / 2 + ldim);
+
+            glEnd();
+        }
 
 
         float bh = 0.1f * min(w, h),
@@ -2699,7 +2715,7 @@ void renderbackground(const char *caption, Texture *mapshot, const char *mapname
             float sz = 0.35 * min(w, h);
             float isz = (0.85 * min(w, h) - sz) / infowidth;
             float x = .5 * w - sz / 2;
-            float y = .5 * h - sz / 2;
+            float y = .55 * h - sz / 2;
 
             if(mapinfo)
             {
