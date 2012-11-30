@@ -480,8 +480,8 @@ void Shader::cleanup(bool invalid)
     detailshader = NULL;
     used = false;
     native = true;
-    if(vsobj) { if(reusevs) glDeleteShader_(vsobj); vsobj = 0; }
-    if(psobj) { if(reuseps) glDeleteShader_(psobj); psobj = 0; }
+    if(vsobj) { if(!reusevs) glDeleteShader_(vsobj); vsobj = 0; }
+    if(psobj) { if(!reuseps) glDeleteShader_(psobj); psobj = 0; }
     if(program) { glDeleteProgram_(program); program = 0; }
     localparams.setsize(0);
     localparamremap.setsize(0);
@@ -1027,6 +1027,19 @@ COMMAND(altshader, "ss");
 COMMAND(fastshader, "ssi");
 COMMAND(defershader, "iss");
 ICOMMAND(forceshader, "s", (const char *name), useshaderbyname(name));
+ICOMMAND(dumpshader, "sbb", (const char *name, int *col, int *row),
+{
+    Shader *s = lookupshaderbyname(name);
+    FILE *l = getlogfile();
+    if(!s || !l) return;
+    if(*col >= 0)
+    {
+        if(*row >= MAXVARIANTROWS || !s->variants[max(*row, 0)].inrange(*col)) return;
+        s = s->variants[max(*row, 0)][*col];
+    }
+    if(s->vsstr) fprintf(l, "%s:%s\n%s\n", s->name, "VS", s->vsstr);        
+    if(s->psstr) fprintf(l, "%s:%s\n%s\n", s->name, "FS", s->psstr);
+});
 
 void isshaderdefined(char *name)
 {
@@ -1304,12 +1317,15 @@ void reloadshaders()
 
 void resetshaders()
 {
+    clearchanges(CHANGE_SHADERS);
+
     cleanupgbuffer();
     cleanupshaders();
     setupshaders();
     initgbuffer();
     reloadshaders();
     allchanged(true);
+    GLERROR;
 }
 COMMAND(resetshaders, "");
 

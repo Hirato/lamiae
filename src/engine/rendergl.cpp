@@ -2505,7 +2505,7 @@ bool resettextures()
 
 void resetgl()
 {
-    clearchanges(CHANGE_GFX);
+    clearchanges(CHANGE_GFX|CHANGE_SHADERS);
     renderbackground("resetting OpenGL");
 
     extern void cleanupva();
