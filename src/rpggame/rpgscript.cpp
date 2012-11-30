@@ -496,9 +496,10 @@ namespace rpgscript
 	void update()
 	{
 		obits.removeobj(game::player1);
+
 		while(obits.length())
 		{
-			rpgent *ent = obits[0];
+			rpgent *ent = obits.pop();
 			removereferences(ent);
 			delete ent;
 		}

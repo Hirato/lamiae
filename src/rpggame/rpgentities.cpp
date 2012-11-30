@@ -97,6 +97,7 @@ namespace entities
 		}
 
 		dummy->init(e.attr[1]);
+		rpgscript::removereferences(dummy);
 		dummy->resetmdl();
 
 		if(DEBUG_WORLD) conoutf(CON_DEBUG, "DEBUG: Registering model \"%s\" in preview cache as %.8X", dummy->temp.mdl, hash);
