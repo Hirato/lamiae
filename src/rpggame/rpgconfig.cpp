@@ -1084,13 +1084,6 @@ namespace game
 	#undef DEBUG
 	#undef DEBUG_IND
 
-	ICOMMAND(r_global_new, "s", (const char *s),
-		if(DEBUG_CONF)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr created new global variable - variables[%i] = \"%s\"", variables.length(), s);
-		variables.add(newstring(s));
-		intret(variables.length() - 1);
-	)
-
 	ICOMMAND(r_tip_new, "s", (const char *s),
 		if(DEBUG_CONF)
 			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr added tip...\n%s", s);

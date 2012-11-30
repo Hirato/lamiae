@@ -1569,10 +1569,10 @@ namespace rpgio
 			if(!game::merchants.inrange(i)) game::merchants.add(new merchant());
 			readmerchant(f, game::merchants[i]);
 		);
-		READ(variable,
-			if(!game::variables.inrange(i)) game::variables.add(0);
-			game::variables[i] = readstring(f);
-		);
+// 		READ(variable,
+// 			if(!game::variables.inrange(i)) game::variables.add(0);
+// 			game::variables[i] = readstring(f);
+// 		);
 		vector<mapinfo *> maps;
 		READ(mapinfo, maps.add(readmap(f)));
 
@@ -1680,9 +1680,9 @@ namespace rpgio
 		WRITE(merchant, game::merchants,
 			writemerchant(f, game::merchants[i]);
 		)
-		WRITE(variable, game::variables,
-			writestring(f, game::variables[i]);
-		)
+// 		WRITE(variable, game::variables,
+// 			writestring(f, game::variables[i]);
+// 		)
 
 		vector<mapinfo *> maps;
 		enumerate(*game::mapdata, mapinfo, map, maps.add(&map););

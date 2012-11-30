@@ -884,31 +884,53 @@ namespace rpgscript
 		r->list.remove(in, num);
 	)
 
-	ICOMMAND(r_global_get, "i", (int *i),
-		if(!variables.inrange(*i))
+	ICOMMAND(r_global_get, "s", (const char *n),
+		rpgvar *var = variables.access(n);
+		if(!var)
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr no global variable of index %i, returning \"\"", *i);
+			conoutf(CON_ERROR, "\fs\f3ERROR:\fr no global named \"%s\", returning \"\"", n);
 			result("");
 			return;
 		}
 
 		if(DEBUG_VSCRIPT)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr global variable %i requested, returning \"%s\"", *i, variables[*i]);
+			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr global %s found, returning...\n\t%s", n, var->value);
 
-		result(variables[*i]);
+		result(var->value);
 	)
 
-	ICOMMAND(r_global_set, "is", (int *i, const char *v),
-		if(!variables.inrange(*i))
-		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr no global variable of index %i, unable to replace", *i);
-			return;
-		}
-		if(DEBUG_VSCRIPT)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr global variable %i set to \"%s\" from \"%s\"", *i, v, variables[*i]);
+	bool setglobal(const char *n, const char *v)
+	{
+		rpgvar *var = variables.access(n);
 
-		delete[] variables[*i];
-		variables[*i] = newstring(v);
+		if(!var)
+		{
+			if(DEBUG_VSCRIPT)
+				conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr global variable \"%s\" does not exist, creating and setting to \"%s\"", n, v);
+
+			var = &variables.access(n, rpgvar());
+			var->name = newstring(n);
+			var->value = newstring(v);
+			return false;
+		}
+
+		if(DEBUG_VSCRIPT)
+			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr global variable \"%s\" exists, setting to \"%s\" from \"%s\"", n, v, var->value);
+
+		delete[] var->value;
+		var->value = newstring(v);
+
+		return true;
+	}
+
+	ICOMMAND(r_global_new, "ss", (const char *n, const char *v),
+		if(setglobal(n, v))
+			conoutf(CON_WARN, "\fs\f6WARNING:\fr r_global_new, variable \"%s\" already exists!");
+	)
+
+	ICOMMAND(r_global_new, "ss", (const char *n, const char *v),
+		if(!setglobal(n, v))
+			conoutf(CON_WARN, "\fs\f6WARNING:\fr r_global_new, variable \"%s\" doesn't exist, creating anyway.");
 	)
 
 	ICOMMAND(r_cat_get, "i", (int *i),

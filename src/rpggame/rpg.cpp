@@ -16,7 +16,8 @@ namespace game
 	vector<recipe *> recipes;
 	vector<merchant *> merchants;
 
-	vector<const char *> variables, categories, tips;
+	vector<const char *> categories, tips;
+	hashset<rpgvar> variables;
 	hashset<journal> journals;
 
 	string data; //data folder
@@ -165,10 +166,10 @@ namespace game
 		}
 
 		if(DEBUG_WORLD)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr clearing %i scripts, %i effects, %i status effects, %i ammotypes, %i mapscripts, %i recipes, %i merchants, %i variables, %i item categories and %i tips",
+			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr clearing %i scripts, %i effects, %i status effects, %i ammotypes, %i mapscripts, %i recipes, %i merchants, %i item categories and %i tips",
 				scripts.length(), effects.length(), statuses.length(),
 				ammotypes.length(), factions.length(), mapscripts.length(),
-				recipes.length(), merchants.length(), variables.length(), categories.length(), tips.length());
+				recipes.length(), merchants.length(), categories.length(), tips.length());
 
 		scripts.deletecontents();
 		effects.deletecontents();
@@ -178,9 +179,9 @@ namespace game
 		mapscripts.deletecontents();
 		recipes.deletecontents();
 		merchants.deletecontents();
-		variables.deletearrays();
 		categories.deletearrays();
 		tips.deletearrays();
+		variables.clear();
 		journals.clear();
 
 		//We reset the player here so he has a clean slate on a new game.

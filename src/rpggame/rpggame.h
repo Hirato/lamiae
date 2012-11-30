@@ -139,6 +139,17 @@ struct journal
 
 static inline bool htcmp(const char *key, const journal &ref) { return !strcmp(key, ref.name); }
 
+struct rpgvar
+{
+	const char *name;
+	const char *value;
+
+	rpgvar() : name(NULL), value(NULL) {}
+	~rpgvar() { delete[] name; delete[] value; }
+};
+
+static inline bool htcmp(const char *key, const rpgvar &ref) { return !strcmp(key, ref.name); }
+
 struct response
 {
 	const char *talk; //text the player can respond with
@@ -1674,10 +1685,11 @@ namespace game
 	extern vector<recipe *> recipes;
 	extern vector<merchant *> merchants;
 
+	extern vector<const char *> categories, tips;
+	extern hashset<rpgvar> variables;
 	extern hashset<journal> journals;
-	extern vector<const char *> variables, categories, tips;
 
-	extern vector<equipment> hotkeys;
+// 	extern vector<equipment> hotkeys;
 
 	//config
 	extern script *loadingscript;
