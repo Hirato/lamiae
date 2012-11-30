@@ -1542,7 +1542,7 @@ struct reference
 	bool immutable;
 	vector<ref> list;
 
-	inline bool canset(bool force)
+	inline bool canset(bool force = false)
 	{
 		if(immutable && !force)
 		{
