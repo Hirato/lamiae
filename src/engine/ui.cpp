@@ -2752,11 +2752,12 @@ void applychanges()
 {
     static uint *resetgl = compilecode("resetgl");
     static uint *resetsound = compilecode("resetsound");
+	static uint *resetshaders = compilecode("resetshaders");
 
     int changetypes = 0;
     loopv(needsapply) changetypes |= needsapply[i].type;
     if(changetypes&CHANGE_GFX) UI::updatelater.add().schedule(resetgl);
-    else if(changetypes&CHANGE_SHADERS) updatelater.add().schedule("resetshaders");
+    else if(changetypes&CHANGE_SHADERS) UI::updatelater.add().schedule(resetshaders);
     if(changetypes&CHANGE_SOUND) UI::updatelater.add().schedule(resetsound);
 }
 
