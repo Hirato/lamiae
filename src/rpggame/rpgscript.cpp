@@ -679,12 +679,17 @@ namespace rpgscript
 		else intret(reference::T_INVALID);
 	)
 
-	//TODO uncomment after giving references an unmutable flag
-// 	ICOMMAND(r_clearref, "s", (const char *ref),
-// 		loopvrev(stack)
-// 			if(stack[i]->remove(ref))
-// 				return;
-// 	)
+	ICOMMAND(r_clearref, "s", (const char *ref),
+		loopvrev(stack)
+		{
+			reference *r = searchstack(ref, false);
+			if(r)
+			{
+				r->setnull();
+				return;
+			}
+		}
+	)
 
 	ICOMMAND(r_ref, "V", (tagval *v, int n),
 		if(!n) {conoutf(CON_ERROR, "ERROR; r_registerref; requires the reference to be named"); return;}
