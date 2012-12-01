@@ -308,6 +308,7 @@ namespace rpgscript
 
 	vector<rpgent *> obits; //r_destroy
 	vector<hashset<reference> *> stack;
+	vector<localinst *> locals;
 	vector<delayscript *> delaystack;
 	reference *player = NULL;
 	reference *hover = NULL;
@@ -444,6 +445,7 @@ namespace rpgscript
 	void clean()
 	{
 		stack.deletecontents();
+		locals.deletecontents();
 		obits.setsize(0);
 		player = map = talker = looter = trader = hover = NULL;
 	}
@@ -973,6 +975,124 @@ namespace rpgscript
 	ICOMMAND(r_global_set, "ss", (const char *n, const char *v),
 		if(!setglobal(n, v))
 			conoutf(CON_WARN, "\fs\f6WARNING:\fr r_global_set, variable \"%s\" doesn't exist, creating anyway.", n);
+	)
+
+	int alloclocal(bool track)
+	{
+		localinst *l = NULL;
+		int idx = -1;
+
+		loopv(locals) if(locals[i] == NULL)
+		{
+			idx = i;
+			l = locals[i] = new localinst();
+		}
+		if(!l)
+		{
+			idx = locals.length();
+			l = locals.add(new localinst());
+		}
+
+		if(track) l->refs++;
+
+		return idx;
+	}
+
+	void dumplocals()
+	{
+		loopvj(locals)
+		{
+			localinst *l = locals[j];
+			conoutf("locals[%i] = %p", j, l);
+
+			if(!l) continue;
+
+			conoutf("references by %i objects", l->refs);
+			enumerate(l->variables, rpgvar, var,
+				conoutf("\t%s = %s", escapestring(var.name), escapestring(var.value));
+			)
+		}
+	}
+	COMMAND(dumplocals, "");
+
+	bool keeplocal(int i)
+	{
+		if(i < 0) return true;
+
+		if(!locals.inrange(i) || !locals[i])
+		{
+			dumplocals();
+			conoutf(CON_ERROR, "ERROR: Can't increse reference counter for local variable stack %i! \f3REPORT A BUG!", i);
+			return false;
+		}
+
+		locals[i]->refs++;
+		return true;
+	}
+
+	bool freelocal(int i)
+	{
+		if(i < 0) return true;
+
+		if(!locals.inrange(i) || !locals[i])
+		{
+			dumplocals();
+			conoutf(CON_ERROR, "ERROR: Can't decrease reference counter for local variable stack %i! \f3REPORT A BUG!", i);
+			return false;
+		}
+
+		if((--locals[i]->refs) <= 0)
+		{
+			if(locals[i]->refs < 0)
+				conoutf(CON_ERROR, "ERROR: locals stack[%i] decremented to %i! \f3REPORT A BUG!", i, locals[i]->refs);
+
+			delete locals[i];
+			locals[i] = NULL;
+		}
+		return true;
+	}
+
+	void cleanlocals()
+	{
+		loopv(locals)
+		{
+			if(locals[i] && locals[i]->refs <= 0)
+			{
+				if(locals[i]->refs < 0)
+				conoutf(CON_ERROR, "ERROR: locals stack[%i] erased with negative refcount! \f3REPORT A BUG!", i);
+
+				delete locals[i];
+				locals[i] = NULL;
+			}
+		}
+	}
+
+	ICOMMAND(r_local_get, "ss", (const char *ref, const char *name),
+		getreference(ref, gen, false, result(""), r_local_get)
+
+		int li = -1;
+
+		if(li >= 0)
+		{
+			rpgvar *var = locals[li]->variables.access(name);
+			if(var) result(var->value);
+		}
+	)
+
+	ICOMMAND(r_local_set, "sss", (const char *ref, const char *name, const char *val),
+		getreference(ref, gen, false, , r_local_get)
+
+		int *li = NULL;
+
+		//critical error really
+		if(!li) return;
+
+		if(*li == -1) *li = alloclocal();
+
+		rpgvar &var = locals[*li]->variables.access(name, rpgvar());
+		if(!var.name) var.name = newstring(name);
+		delete[] var.value;
+		var.value = newstring(val);
 	)
 
 	ICOMMAND(r_cat_get, "i", (int *i),

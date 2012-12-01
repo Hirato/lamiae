@@ -150,6 +150,14 @@ struct rpgvar
 
 static inline bool htcmp(const char *key, const rpgvar &ref) { return !strcmp(key, ref.name); }
 
+struct localinst
+{
+	int refs;
+	hashset<rpgvar> variables;
+
+	localinst() : refs(0) {}
+};
+
 struct response
 {
 	const char *talk; //text the player can respond with
@@ -1762,6 +1770,10 @@ namespace rpgscript
 	extern void doentscript(rpgent *invokee, rpgent *invoker, uint *code);
 	extern void domapscript(mapinfo *invokee, rpgent *invoker, uint *code);
 	extern bool setglobal(const char *n, const char *v, bool dup = true);
+
+	extern int alloclocal(bool track = true);
+	extern bool keeplocal(int i);
+	extern bool freelocal(int i);
 
 	extern void pushstack();
 	extern void popstack();
