@@ -84,93 +84,122 @@ areaeffect *reference::getaeffect(int i) const
 	return NULL;
 }
 
-void reference::pushref(rpgchar *d)
+void reference::pushref(rpgchar *d, bool force)
 {
+	if(!canset(force)) return;
+
 	list.add(ref(d, T_CHAR));
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed rpgchar type %p onto reference %s", d, name);
 }
-void reference::pushref(rpgitem *d)
+void reference::pushref(rpgitem *d, bool force)
 {
+	if(canset(force)) return;
+
 	list.add(ref(d, T_ITEM));
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed rpgitem type %p onto reference %s", d, name);
 }
-void reference::pushref(rpgobstacle *d)
+void reference::pushref(rpgobstacle *d, bool force)
 {
+	if(!canset(force)) return;
+
 	list.add(ref(d, T_OBSTACLE));
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed obstacle type %p onto reference %s", d, name);
 }
-void reference::pushref(rpgcontainer *d)
+void reference::pushref(rpgcontainer *d, bool force)
 {
+	if(!canset(force)) return;
+
 	list.add(ref(d, T_CONTAINER));
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed container type %p onto reference %s", d, name);
 }
-void reference::pushref(rpgplatform *d)
+void reference::pushref(rpgplatform *d, bool force)
 {
+	if(!canset(force)) return;
+
 	list.add(ref(d, T_PLATFORM));
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed platform type %p onto reference %s", d, name);
 }
-void reference::pushref(rpgtrigger *d)
+void reference::pushref(rpgtrigger *d, bool force)
 {
+	if(!canset(force)) return;
+
 	list.add(ref(d, T_TRIGGER));
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed trigger type %p onto reference %s", d, name);
 }
-void reference::pushref(rpgent *d)
+void reference::pushref(rpgent *d, bool force)
 {
+	if(!d || !canset(force)) return;
+
 	if(d) switch(d->type())
 	{
-		case ENT_CHAR: pushref((rpgchar *) d); return;
-		case ENT_ITEM: pushref((rpgitem *) d); return;
-		case ENT_OBSTACLE: pushref((rpgobstacle *) d); return;
-		case ENT_CONTAINER: pushref((rpgcontainer *) d); return;
-		case ENT_PLATFORM: pushref((rpgplatform *) d); return;
-		case ENT_TRIGGER: pushref((rpgtrigger *) d); return;
+		case ENT_CHAR: pushref((rpgchar *) d, force); return;
+		case ENT_ITEM: pushref((rpgitem *) d, force); return;
+		case ENT_OBSTACLE: pushref((rpgobstacle *) d, force); return;
+		case ENT_CONTAINER: pushref((rpgcontainer *) d, force); return;
+		case ENT_PLATFORM: pushref((rpgplatform *) d, force); return;
+		case ENT_TRIGGER: pushref((rpgtrigger *) d, force); return;
 	}
-	setnull();
+	conoutf(CON_ERROR, "ERROR: reference::pushref(rpgent *d), if you see this, an unknown entity was encountered (%i), report this as a bug!", d->type());
 }
-void reference::pushref(item *d)
+void reference::pushref(item *d, bool force)
 {
+	if(!canset(force)) return;
+
 	list.add(ref(d, T_INV));
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed inventory item type %p onto reference %s", d, name);
 }
-void reference::pushref(vector<item *> *d)
+void reference::pushref(vector<item *> *d, bool force)
 {
+	if(!canset(force)) return;
+
 	loopv(*d)
 		pushref((*d)[i]);
 }
-void reference::pushref(equipment *d)
+void reference::pushref(equipment *d, bool force)
 {
+	if(!canset(force)) return;
+
 	list.add(ref(d, T_EQUIP));
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed equip type %p onto reference %s", d, name);
 }
-void reference::pushref(mapinfo *d)
+void reference::pushref(mapinfo *d, bool force)
 {
+	if(!canset(force)) return;
+
 	list.add(ref(d, T_MAP));
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed mapinfo type %p onto reference %s", d, name);
 }
-void reference::pushref(victimeffect *d)
+void reference::pushref(victimeffect *d, bool force)
 {
+	if(!canset(force)) return;
+
 	list.add(ref(d, T_VEFFECT));
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed victim effect type %p onto reference %s", d, name);
 }
-void reference::pushref(areaeffect *d)
+void reference::pushref(areaeffect *d, bool force)
 {
+	if(!canset(force)) return;
+
 	list.add(ref(d, T_AEFFECT));
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed area effect type %p onto reference %s", d, name);
 }
-void reference::pushref(reference *d)
+void reference::pushref(reference *d, bool force)
 {
+	if(!canset(force)) return;
+
 	loopv(d->list)
 		list.add(d->list[i]);
 }
-void reference::setnull() { list.setsize(0); if(DEBUG_VSCRIPT) conoutf("\fs\f2DEBUG:\fr reference %s set to null", name);}
+void reference::setnull(bool force) { if(!canset(force)) return; list.setsize(0); if(DEBUG_VSCRIPT) conoutf("\fs\f2DEBUG:\fr reference %s set to null", name);}
 
 template<typename T>
-reference::reference(const char *n, T d) : name (newstring(n))
+reference::reference(const char *n, T d) : name (newstring(n)), immutable(false)
 {
 	setref(d);
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr adding reference %s", name);
 }
-reference::reference(const char *n) : name (newstring(n)) {
+reference::reference(const char *n) : name (newstring(n)), immutable(false)
+{
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr adding null reference %s", name);
 }
 
@@ -428,6 +457,8 @@ namespace rpgscript
 		trader = searchstack("trader", true);
 		talker = searchstack("talker", true);
 		map = registerref("curmap", curmap);
+
+		player->immutable = hover->immutable = looter->immutable = trader->immutable = talker-> immutable = map->immutable = true;
 	}
 
 	void removeminorrefs(void *ptr)
@@ -485,12 +516,12 @@ namespace rpgscript
 
 	void changemap()
 	{
-		map->setref(curmap);
-		player->setref(player1); //just in case someone's decided to be stupid...
-		talker->setnull();
-		looter->setnull();
-		trader->setnull();
-		hover->setnull();
+		map->setref(curmap, true);
+		player->setref(player1, true); //just in case someone's decided to be stupid...
+		talker->setnull(true);
+		looter->setnull(true);
+		trader->setnull(true);
+		hover->setnull(true);
 	}
 
 	void update()
@@ -529,7 +560,7 @@ namespace rpgscript
 		float dist;
 		rpgent *h = intersectclosest(player1->o, dir, player1, dist, 1);
 
-		hover->setref(h);
+		hover->setref(h, true);
 	}
 
 	void doitemscript(item *invokee, rpgent *invoker, uint *code)
@@ -540,8 +571,8 @@ namespace rpgscript
 
 		pushstack();
 
-		registertemp("self", invokee);
-		registertemp("actor", invoker);
+		registertemp("self", invokee)->immutable = true;
+		registertemp("actor", invoker)->immutable = true;
 
 		execute(code);
 		popstack();
@@ -555,8 +586,8 @@ namespace rpgscript
 
 		pushstack();
 
-		registertemp("self", invokee);
-		registertemp("actor", invoker);
+		registertemp("self", invokee)->immutable = true;
+		registertemp("actor", invoker)->immutable = true;
 
 		execute(code);
 		popstack();
@@ -570,8 +601,8 @@ namespace rpgscript
 
 		pushstack();
 
-		registertemp("self", invokee);
-		registertemp("actor", invoker);
+		registertemp("self", invokee)->immutable = true;
+		registertemp("actor", invoker)->immutable = true;
 
 		execute(code);
 		popstack();
@@ -648,12 +679,17 @@ namespace rpgscript
 		else intret(reference::T_INVALID);
 	)
 
-	//TODO uncomment after giving references an unmutable flag
-// 	ICOMMAND(r_clearref, "s", (const char *ref),
-// 		loopvrev(stack)
-// 			if(stack[i]->remove(ref))
-// 				return;
-// 	)
+	ICOMMAND(r_clearref, "s", (const char *ref),
+		loopvrev(stack)
+		{
+			reference *r = searchstack(ref, false);
+			if(r)
+			{
+				r->setnull();
+				return;
+			}
+		}
+	)
 
 	ICOMMAND(r_ref, "V", (tagval *v, int n),
 		if(!n) {conoutf(CON_ERROR, "ERROR; r_registerref; requires the reference to be named"); return;}
@@ -671,7 +707,7 @@ namespace rpgscript
 		if(!*ref) {conoutf(CON_ERROR, "ERROR; r_setref; requires reference to be named"); return;}
 
 		reference *r = searchstack(ref, true);
-		if(!r) return; //if this fails, then no stack
+		if(!r || !r->canset()) return; //if this fails, then no stack
 
 		reference *a = *alias ? searchstack(alias) : NULL;
 
@@ -743,6 +779,7 @@ namespace rpgscript
 		reference *a = searchstack(f);
 		reference *b = searchstack(s);
 		if(!a || !b) {conoutf(CON_ERROR, "\fs\f3ERROR:\fr r_swapref; either %s or %s is an invalid reference", f, s); return;}
+		if(!a->canset() || b->canset()) return;
 		swap(a->list, b->list);
 	)
 
@@ -825,7 +862,9 @@ namespace rpgscript
 		reference *r = searchstack(ref, true);
 		reference *a = searchstack(add, false);
 
-		if(a)
+
+
+		if(a && r->canset())
 		{
 			const char *addsep = strchr(add, ':');
 			if(addsep)
@@ -843,7 +882,7 @@ namespace rpgscript
 
 	ICOMMAND(r_ref_sub, "ss", (const char *r, const char *c),
 		reference *ref = searchstack(r, false);
-		if(!ref) return;
+		if(!ref || !ref->canset()) return;
 
 		reference *children = searchstack(c, false);
 		if(!children) return;
@@ -876,7 +915,7 @@ namespace rpgscript
 
 	ICOMMAND(r_ref_remove, "sii", (const char *ref, int *i, int *n),
 		reference *r = searchstack(ref);
-		if(!r) return;
+		if(!r || !r->canset()) return;
 
 		*n = max(1, *n);
 		int in = clamp(0, r->list.length(), *i);
@@ -1004,9 +1043,10 @@ namespace rpgscript
 
 		pushstack();
 		reference *cur = registertemp(ref, NULL);
+		cur->immutable = true;
 
 		enumerate(*mapdata, mapinfo, map,
-			cur->setref(&map);
+			cur->setref(&map, true);
 			execute(body);
 		)
 
@@ -1019,10 +1059,11 @@ namespace rpgscript
 
 		pushstack();
 		reference *cur = registertemp(ref, NULL);
+		cur->immutable = true;
 
 		loopv(map->getmap(mapidx)->objs)
 		{
-			cur->setref(map->getmap(mapidx)->objs[i]);
+			cur->setref(map->getmap(mapidx)->objs[i], true);
 			execute(body);
 		}
 
@@ -1034,6 +1075,8 @@ namespace rpgscript
 		getreference(mapref, map, map->getmap(mapidx), , r_setref_ents)
 
 		reference *entstack = registerref(ref, NULL);
+		if(!entstack->canset()) return;
+
 		entstack->setnull();
 		loopv(map->getmap(mapidx)->objs)
 			entstack->pushref(map->getmap(mapidx)->objs[i]);
@@ -1055,13 +1098,14 @@ namespace rpgscript
 
 		pushstack();
 		reference *cur = registertemp(ref, NULL);
+		cur->immutable = true;
 
 		loopv(map->getmap(mapidx)->aeffects)
 		{
 			areaeffect *ae = map->getmap(mapidx)->aeffects[i];
 			if(victim && victim->o.dist(ae->o) > ae->radius && victim->feetpos().dist(ae->o) > ae->radius) continue;
 
-			cur->setref(ae);
+			cur->setref(ae, true);
 			execute(body);
 		}
 
@@ -1074,13 +1118,14 @@ namespace rpgscript
 
 		pushstack();
 		reference *it = registertemp(ref, NULL);
+		it->immutable = true;
 
 		if(ent->getchar(entidx)) enumerate(ent->getchar(entidx)->inventory, vector<item *>, stack,
-			it->setref(&stack);
+			it->setref(&stack, true);
 			execute(body);
 		)
 		else enumerate(ent->getcontainer(entidx)->inventory, vector<item *>, stack,
-			it->setref(&stack);
+			it->setref(&stack, true);
 			execute(body);
 		)
 
@@ -1092,6 +1137,7 @@ namespace rpgscript
 		getreference(srcref, src, src->getchar(srcidx) || src->getcontainer(srcidx), , r_setref_invstack)
 
 		reference *invstack = registerref(ref, NULL);
+		if(!invstack->canset()) return;
 
 		if(src->getchar(srcidx))
 			invstack->setref(&src->getchar(srcidx)->inventory.access(*base, vector<item *>()));
@@ -1104,6 +1150,7 @@ namespace rpgscript
 		getreference(srcref, src, src->getchar(srcidx) || src->getcontainer(srcidx), , r_setref_inv)
 
 		reference *inv = registerref(ref, NULL);
+		if(!inv->canset()) return;
 
 		if(src->getchar(srcidx))
 		{
@@ -1124,8 +1171,9 @@ namespace rpgscript
 
 		rpgchar *d = ent->getchar(entidx);
 		reference *equip = searchstack(ref, true);
-		equip->setnull();
+		if(!equip->canset()) return;
 
+		equip->setnull();
 		loopv(d->equipped)
 		{
 			use_armour *ua = (use_armour *) d->equipped[i]->it->uses[d->equipped[i]->use];
@@ -1140,11 +1188,12 @@ namespace rpgscript
 
 		pushstack();
 		reference *effect = registertemp(ref, NULL);
+		effect->immutable = true;
 
 		vector<victimeffect *> &seffects = ent->getent(entidx)->seffects;
 		loopv(seffects)
 		{
-			effect->setref(seffects[i]);
+			effect->setref(seffects[i], true);
 			execute(body);
 		}
 
@@ -1577,11 +1626,11 @@ namespace rpgscript
 	//see also r_script_say in rpgconfig.cpp
 	ICOMMAND(r_chat, "ss", (const char *s, const char *node),
 		getreference(s, speaker, speaker->getent(speakeridx), , r_chat)
-		if(speaker != talker && talker->list.length()) talker->setnull();
+		if(speaker != talker && talker->list.length()) talker->setnull(true);
 
 		if(scripts.inrange(speaker->getent(speakeridx)->getscript()))
 		{
-			talker->setref(speaker->getent(speakeridx));
+			talker->setref(speaker->getent(speakeridx), true);
 			script *scr = scripts[talker->getent(0)->getscript()];
 
 			if(scr->curnode) scr->curnode->close();
@@ -1608,7 +1657,7 @@ namespace rpgscript
 				}
 			}
 
-			if(!scr->curnode) talker->setnull();
+			if(!scr->curnode) talker->setnull(true);
 		}
 		else
 			conoutf(CON_ERROR, "\fs\f3ERROR:\fr invalid script %i, can't initialise dialogue", talker->getent(0)->getscript());
@@ -1629,12 +1678,12 @@ namespace rpgscript
 
 	ICOMMAND(r_trade, "s", (const char *str),
 		getreference(str, cont, cont->getchar(contidx) || cont->getcontainer(contidx), , r_trade)
-		trader->setref(cont->getent(contidx));
+		trader->setref(cont->getent(contidx), true);
 	)
 
 	ICOMMAND(r_loot, "s", (const char *str),
 		getreference(str, cont, cont->getchar(contidx) || cont->getcontainer(contidx), , r_loot)
-		looter->setref(cont->getent(contidx));
+		looter->setref(cont->getent(contidx), true);
 		execute("showloot");
 	)
 

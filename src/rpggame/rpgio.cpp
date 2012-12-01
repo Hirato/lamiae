@@ -4,8 +4,8 @@ extern bool reloadtexture(const char *name); //texture.cpp
 
 namespace rpgio
 {
-	#define GAME_VERSION 39
-	#define COMPAT_VERSION 39
+	#define GAME_VERSION 40
+	#define COMPAT_VERSION 40
 	#define GAME_MAGIC "RPGS"
 
 	/**
@@ -1231,6 +1231,7 @@ namespace rpgio
 
 		enumerate(stack, ::reference, saving,
 			writestring(f, saving.name);
+			f->putchar(saving.immutable);
 
 			f->putlil(saving.list.length());
 			loopvj(saving.list)
@@ -1353,6 +1354,7 @@ namespace rpgio
 			CHECKEOF(*f, )
 			const char *name = readstring(f);
 			::reference *loading = &stack.access(name, dummy);
+			loading->immutable = f->getchar();
 			if(dummy.name != loading->name)
 				delete[] name;
 			else
@@ -1377,12 +1379,12 @@ namespace rpgio
 						if(map == -1 && ent == -1)
 						{
 							if(DEBUG_IO) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr reading player char reference %s", loading->name);
-							loading->pushref(game::player1);
+							loading->pushref(game::player1, true);
 						}
 						else if(maps.inrange(map) && maps[map]->objs.inrange(ent))
 						{
 							if(DEBUG_IO) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr reading valid rpgent reference %s: %i %i", loading->name, map, ent);
-							loading->pushref(maps[map]->objs[ent]);
+							loading->pushref(maps[map]->objs[ent], true);
 						}
 						else conoutf(CON_WARN, "\fs\f6WARNING:\fr rpgent reference %s: %i %i - indices out of range", loading->name, map, ent);
 
@@ -1392,7 +1394,7 @@ namespace rpgio
 					{
 						int map = f->getlil<int>();
 						if(DEBUG_IO) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr reading map reference %s: %i", loading->name, map);
-						if(maps.inrange(map)) loading->pushref(maps[map]);
+						if(maps.inrange(map)) loading->pushref(maps[map], true);
 						break;
 					}
 					case ::reference::T_INV:
@@ -1418,7 +1420,7 @@ namespace rpgio
 						if(stack && stack->inrange(offset))
 						{
 							if(DEBUG_IO) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Loading T_INV reference to %p successfully", (*stack)[offset]);
-							loading->pushref((*stack)[offset]);
+							loading->pushref((*stack)[offset], true);
 						}
 						else
 							conoutf(CON_WARN, "\fs\f6WARNING:\fr T_INV has out of range values: %i %i %i %i, loading failed", map, ent, base, offset);
