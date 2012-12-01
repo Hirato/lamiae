@@ -723,6 +723,7 @@ struct rpgent : dynent
 
 	///everything can suffer some status effects, whether this is just invisibility or something more sinister is up for debate
 	vector<victimeffect *> seffects;
+	int locals;
 
 	///global
 	virtual void update()=0;
@@ -754,7 +755,7 @@ struct rpgent : dynent
 	virtual float getweight() {return 0;}
 
 	///{de,con}structors
-	rpgent() : lasttouch(0)
+	rpgent() : lasttouch(0), locals(-1)
 	{
 		temp.mdl = NULL;
 		temp.light = vec4(0, 0, 0, 0);
@@ -763,6 +764,7 @@ struct rpgent : dynent
 	virtual ~rpgent()
 	{
 		seffects.deletecontents();
+		rpgscript::freelocal(locals);
 	}
 };
 
@@ -1100,6 +1102,7 @@ struct item
 	float recovery;
 
 	vector<use *> uses;
+	int locals;
 
 	void getsignal(const char *sig, bool prop = true, rpgent *sender = NULL, int use = -1);
 
@@ -1121,11 +1124,13 @@ struct item
 
 		loopv(uses)
 			o.uses[i] = uses[i]->dup();
+
+		rpgscript::keeplocal(locals);
 	}
 
 	bool compare(item *o)
 	{
-		if(base != o->base || durability != o->durability || recovery != o->recovery || script != o->script || category != o->category ||
+		if(locals != o->locals || base != o->base || durability != o->durability || recovery != o->recovery || script != o->script || category != o->category ||
 			flags != o->flags || value != o->value || maxdurability != o->maxdurability || weight != o->weight || uses.length() != o->uses.length())
 			return false;
 
@@ -1140,7 +1145,7 @@ struct item
 		return true;
 	}
 
-	item() : name(NULL), icon(NULL), description(NULL), mdl(newstring(DEFAULTMODEL)), quantity(1), base(-1), script(2), category(0), flags(0), value(0), maxdurability(0), weight(0), durability(0), recovery(1) {}
+	item() : name(NULL), icon(NULL), description(NULL), mdl(newstring(DEFAULTMODEL)), quantity(1), base(-1), script(2), category(0), flags(0), value(0), maxdurability(0), weight(0), durability(0), recovery(1), locals(-1) {}
 	~item()
 	{
 		delete[] name;
@@ -1148,6 +1153,7 @@ struct item
 		delete[] description;
 		delete[] mdl;
 		uses.deletecontents();
+		rpgscript::freelocal(locals);
 	}
 };
 
@@ -1681,9 +1687,10 @@ struct mapinfo
 	vector<projectile *> projs;
 	vector<areaeffect *> aeffects;
 	vector<blip> blips;
+	int locals;
 
 	void getsignal(const char *sig, bool prop = true, rpgent *sender = NULL);
-	mapinfo() : name(NULL), script(0), flags(0), loaded(false) {}
+	mapinfo() : name(NULL), script(0), flags(0), loaded(false), locals(-1) {}
 	~mapinfo()
 	{
 		delete[] name;
@@ -1691,6 +1698,7 @@ struct mapinfo
 		loadactions.deletecontents();
 		projs.deletecontents();
 		aeffects.deletecontents();
+		rpgscript::freelocal(locals);
 	}
 };
 

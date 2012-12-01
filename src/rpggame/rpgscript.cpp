@@ -1068,9 +1068,15 @@ namespace rpgscript
 	}
 
 	ICOMMAND(r_local_get, "ss", (const char *ref, const char *name),
-		getreference(ref, gen, false, result(""), r_local_get)
+		getreference(ref, gen, gen->getinv(genidx) || gen->getent(genidx) || gen->getmap(genidx), result(""), r_local_get)
 
 		int li = -1;
+		if(gen->getinv(genidx))
+			li = gen->getinv(genidx)->locals;
+		else if(gen->getent(genidx))
+			li = gen->getent(genidx)->locals;
+		else if(gen->getmap(genidx))
+			li = gen->getmap(genidx)->locals;
 
 		if(li >= 0)
 		{
@@ -1080,9 +1086,16 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_local_set, "sss", (const char *ref, const char *name, const char *val),
-		getreference(ref, gen, false, , r_local_get)
+		getreference(ref, gen, gen->getinv(genidx) || gen->getent(genidx) || gen->getmap(genidx), , r_local_get)
 
 		int *li = NULL;
+
+		if(gen->getinv(genidx))
+			li = &gen->getinv(genidx)->locals;
+		else if(gen->getent(genidx))
+			li = &gen->getent(genidx)->locals;
+		else if(gen->getmap(genidx))
+			li = &gen->getmap(genidx)->locals;
 
 		//critical error really
 		if(!li) return;
