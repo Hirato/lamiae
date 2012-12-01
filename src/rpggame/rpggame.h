@@ -5,6 +5,200 @@
 
 #define DEFAULTMODEL "rc"
 
+#ifdef NO_DEBUG
+
+#define DEBUG_WORLD   (false)
+#define DEBUG_ENT     (false)
+#define DEBUG_CONF    (false)
+#define DEBUG_PROJ    (false)
+#define DEBUG_SCRIPT  (false)
+#define DEBUG_AI      (false)
+#define DEBUG_IO      (false)
+#define DEBUG_CAMERA  (false)
+#define DEBUG_STATUS  (false)
+#define DEBUG_VERBOSE (false)
+
+#else
+
+#define DEBUG_WORLD   (game::debug & (1 << 0))
+#define DEBUG_ENT     (game::debug & (1 << 1))
+#define DEBUG_CONF    (game::debug & (1 << 2))
+#define DEBUG_PROJ    (game::debug & (1 << 3))
+#define DEBUG_SCRIPT  (game::debug & (1 << 4))
+#define DEBUG_AI      (game::debug & (1 << 5))
+#define DEBUG_IO      (game::debug & (1 << 6))
+#define DEBUG_CAMERA  (game::debug & (1 << 7))
+#define DEBUG_STATUS  (game::debug & (1 << 8))
+#define DEBUG_VERBOSE (game::debug & (1 << 9) || game::forceverbose)
+
+#endif
+
+
+#define DEBUG_VWORLD   (DEBUG_VERBOSE && DEBUG_WORLD)
+#define DEBUG_VENT     (DEBUG_VERBOSE && DEBUG_ENT)
+#define DEBUG_VCONF    (DEBUG_VERBOSE && DEBUG_CONF)
+#define DEBUG_VPROJ    (DEBUG_VERBOSE && DEBUG_PROJ)
+#define DEBUG_VSCRIPT  (DEBUG_VERBOSE && DEBUG_SCRIPT)
+#define DEBUG_VAI      (DEBUG_VERBOSE && DEBUG_AI)
+#define DEBUG_VIO      (DEBUG_VERBOSE && DEBUG_IO)
+#define DEBUG_VCAMERA  (DEBUG_VERBOSE && DEBUG_CAMERA)
+#define DEBUG_VSTATUS  (DEBUG_VERBOSE && DEBUG_STATUS)
+
+#define DEBUG_MAX ((1 << 10) - 1)
+
+struct ammotype;
+struct delayscript;
+struct effect;
+struct faction;
+struct item;
+struct journal;
+struct mapinfo;
+struct mapscript;
+struct merchant;
+struct recipe;
+struct reference;
+struct rpgent;
+struct rpgchar;
+struct rpgcontainer;
+struct rpgitem;
+struct rpgobstacle;
+struct rpgplatform;
+struct rpgtrigger;
+struct rpgvar;
+struct script;
+struct statusgroup;
+struct waypoint;
+
+namespace ai
+{
+	extern int dropwaypoints;
+
+	extern vector<waypoint> waypoints;
+	extern void loadwaypoints(const char *name, bool msg = false);
+	extern void savewaypoints(const char *name);
+	extern void findroute(int from, int to, vector<ushort> &route);
+	extern waypoint *closestwaypoint(const vec &o);
+	extern void renderwaypoints();
+	extern void trydrop();
+	extern void clearwaypoints();
+}
+
+namespace game
+{
+	extern string data;
+
+	extern vector<script *> scripts; ///scripts, includes dialogue
+	extern vector<effect *> effects; ///pretty particle effects for spells and stuff
+	extern vector<statusgroup *> statuses; ///status effect definitions to transfer onto victims
+	extern vector<ammotype *> ammotypes;
+	extern vector<faction *> factions;
+	extern vector<mapscript *> mapscripts;
+	extern vector<recipe *> recipes;
+	extern vector<merchant *> merchants;
+
+	extern vector<const char *> categories, tips;
+	extern hashset<rpgvar> variables;
+	extern hashset<journal> journals;
+
+// 	extern vector<equipment> hotkeys;
+
+	//config
+	extern script *loadingscript;
+	extern effect *loadingeffect;
+	extern statusgroup *loadingstatusgroup;
+	extern item *loadingitem;
+	extern ammotype *loadingammotype;
+	extern rpgchar *loadingrpgchar;
+	extern faction *loadingfaction;
+	extern rpgobstacle *loadingrpgobstacle;
+	extern rpgcontainer *loadingrpgcontainer;
+	extern rpgplatform *loadingrpgplatform;
+	extern rpgtrigger *loadingrpgtrigger;
+	extern mapscript *loadingmapscript;
+	extern recipe *loadingrecipe;
+	extern merchant *loadingmerchant;
+
+	extern int debug, forceverbose;
+	extern bool connected;
+	extern bool transfer;
+	extern rpgchar *player1;
+	extern hashset<mapinfo> *mapdata;
+	extern mapinfo *curmap;
+
+	extern void openworld(const char *name);
+	extern void newgame(const char *game, bool restore = false);
+	extern mapinfo *accessmap(const char *name);
+	extern bool cansave();
+	extern bool intersect(rpgent *d, const vec &from, const vec &to, float &dist);
+	extern rpgent *intersectclosest(const vec &from, const vec &to, rpgent *at, float &bestdist, float maxdist = 1e16);
+	extern void loadcutscenes(const char *dir);
+	extern void hudline(const char *fmt, ...);
+
+	//game variables
+	extern char *firstmap;
+	extern int gameversion;
+	extern int compatversion;
+}
+
+namespace rpgscript
+{
+	extern reference *hover, *talker, *looter, *trader;
+	extern vector<rpgent *> obits;
+	extern void parseref(const char *name, int &idx);
+	extern reference *searchstack(const char *name, bool create = false);
+
+	extern void update();
+	extern void clean();
+	extern void init();
+	extern void removereferences(rpgent *ptr, bool references = true);
+	extern void removeminorrefs(void *ptr);
+	extern void changemap();
+	extern void doitemscript(item *invokee, rpgent *invoker, uint *code);
+	extern void doentscript(rpgent *invokee, rpgent *invoker, uint *code);
+	extern void domapscript(mapinfo *invokee, rpgent *invoker, uint *code);
+	extern bool setglobal(const char *n, const char *v, bool dup = true);
+
+	extern int alloclocal(bool track = true);
+	extern bool keeplocal(int i);
+	extern bool freelocal(int i);
+
+	extern void pushstack();
+	extern void popstack();
+	extern vector<hashset<reference> *> stack;
+	extern vector<delayscript *> delaystack;
+}
+
+namespace entities
+{
+	extern vector<extentity *> ents;
+	extern vector<int> intents;
+	extern void startmap();
+	extern void spawn(extentity &e, int ind, int type, int qty);
+	extern void teleport(rpgent *d, int dest);
+	extern void genentlist();
+	extern void touchents(rpgent *d);
+	extern void renderentities();
+}
+
+namespace camera
+{
+	extern bool cutscene;
+	extern void cleanup(bool clear);
+	extern void update();
+	extern void render(int w, int h);
+	extern void getsignal(const char *signal);
+
+	extern physent *attached;
+	extern physent camera;
+}
+
+namespace rpggui
+{
+	bool open();
+	void forcegui();
+	bool hotkey(int n);
+}
+
 enum                            // static entity types
 {
 	NOTUSED = ET_EMPTY,         // entity slot not in use in map
@@ -248,9 +442,6 @@ struct mapscript
 	~mapscript() {}
 };
 
-struct rpgent;
-struct rpgchar;
-struct rpgitem;
 struct use_weapon;
 
 enum
@@ -322,8 +513,6 @@ enum
 	T_CONE,		//hits everything inside a cone
 	T_MAX
 };
-
-struct item;
 
 struct equipment
 {
@@ -1640,177 +1829,6 @@ static const char * const animnames[] =
 	"cast hold", "cast strike", "cast charge", "cast cooldown",
 	"hud idle", "hud strike", "hud charge", "hud cooldown"
 };
-
-#ifdef NO_DEBUG
-
-#define DEBUG_WORLD   (false)
-#define DEBUG_ENT     (false)
-#define DEBUG_CONF    (false)
-#define DEBUG_PROJ    (false)
-#define DEBUG_SCRIPT  (false)
-#define DEBUG_AI      (false)
-#define DEBUG_IO      (false)
-#define DEBUG_CAMERA  (false)
-#define DEBUG_STATUS  (false)
-#define DEBUG_VERBOSE (false)
-
-#else
-
-#define DEBUG_WORLD   (game::debug & (1 << 0))
-#define DEBUG_ENT     (game::debug & (1 << 1))
-#define DEBUG_CONF    (game::debug & (1 << 2))
-#define DEBUG_PROJ    (game::debug & (1 << 3))
-#define DEBUG_SCRIPT  (game::debug & (1 << 4))
-#define DEBUG_AI      (game::debug & (1 << 5))
-#define DEBUG_IO      (game::debug & (1 << 6))
-#define DEBUG_CAMERA  (game::debug & (1 << 7))
-#define DEBUG_STATUS  (game::debug & (1 << 8))
-#define DEBUG_VERBOSE (game::debug & (1 << 9) || game::forceverbose)
-
-#endif
-
-
-#define DEBUG_VWORLD   (DEBUG_VERBOSE && DEBUG_WORLD)
-#define DEBUG_VENT     (DEBUG_VERBOSE && DEBUG_ENT)
-#define DEBUG_VCONF    (DEBUG_VERBOSE && DEBUG_CONF)
-#define DEBUG_VPROJ    (DEBUG_VERBOSE && DEBUG_PROJ)
-#define DEBUG_VSCRIPT  (DEBUG_VERBOSE && DEBUG_SCRIPT)
-#define DEBUG_VAI      (DEBUG_VERBOSE && DEBUG_AI)
-#define DEBUG_VIO      (DEBUG_VERBOSE && DEBUG_IO)
-#define DEBUG_VCAMERA  (DEBUG_VERBOSE && DEBUG_CAMERA)
-#define DEBUG_VSTATUS  (DEBUG_VERBOSE && DEBUG_STATUS)
-
-#define DEBUG_MAX ((1 << 10) - 1)
-
-namespace ai
-{
-	extern int dropwaypoints;
-
-	extern vector<waypoint> waypoints;
-	extern void loadwaypoints(const char *name, bool msg = false);
-	extern void savewaypoints(const char *name);
-	extern void findroute(int from, int to, vector<ushort> &route);
-	extern waypoint *closestwaypoint(const vec &o);
-	extern void renderwaypoints();
-	extern void trydrop();
-	extern void clearwaypoints();
-}
-
-namespace game
-{
-	extern string data;
-
-	extern vector<script *> scripts; ///scripts, includes dialogue
-	extern vector<effect *> effects; ///pretty particle effects for spells and stuff
-	extern vector<statusgroup *> statuses; ///status effect definitions to transfer onto victims
-	extern vector<ammotype *> ammotypes;
-	extern vector<faction *> factions;
-	extern vector<mapscript *> mapscripts;
-	extern vector<recipe *> recipes;
-	extern vector<merchant *> merchants;
-
-	extern vector<const char *> categories, tips;
-	extern hashset<rpgvar> variables;
-	extern hashset<journal> journals;
-
-// 	extern vector<equipment> hotkeys;
-
-	//config
-	extern script *loadingscript;
-	extern effect *loadingeffect;
-	extern statusgroup *loadingstatusgroup;
-	extern item *loadingitem;
-	extern ammotype *loadingammotype;
-	extern rpgchar *loadingrpgchar;
-	extern faction *loadingfaction;
-	extern rpgobstacle *loadingrpgobstacle;
-	extern rpgcontainer *loadingrpgcontainer;
-	extern rpgplatform *loadingrpgplatform;
-	extern rpgtrigger *loadingrpgtrigger;
-	extern mapscript *loadingmapscript;
-	extern recipe *loadingrecipe;
-	extern merchant *loadingmerchant;
-
-	extern int debug, forceverbose;
-	extern bool connected;
-	extern bool transfer;
-	extern rpgchar *player1;
-	extern hashset<mapinfo> *mapdata;
-	extern mapinfo *curmap;
-
-	extern void openworld(const char *name);
-	extern void newgame(const char *game, bool restore = false);
-	extern mapinfo *accessmap(const char *name);
-	extern bool cansave();
-	extern bool intersect(rpgent *d, const vec &from, const vec &to, float &dist);
-	extern rpgent *intersectclosest(const vec &from, const vec &to, rpgent *at, float &bestdist, float maxdist = 1e16);
-	extern void loadcutscenes(const char *dir);
-	extern void hudline(const char *fmt, ...);
-
-	//game variables
-	extern char *firstmap;
-	extern int gameversion;
-	extern int compatversion;
-}
-
-namespace rpgscript
-{
-	extern reference *hover, *talker, *looter, *trader;
-	extern vector<rpgent *> obits;
-	extern void parseref(const char *name, int &idx);
-	extern reference *searchstack(const char *name, bool create = false);
-
-	extern void update();
-	extern void clean();
-	extern void init();
-	extern void removereferences(rpgent *ptr, bool references = true);
-	extern void removeminorrefs(void *ptr);
-	extern void changemap();
-	extern void doitemscript(item *invokee, rpgent *invoker, uint *code);
-	extern void doentscript(rpgent *invokee, rpgent *invoker, uint *code);
-	extern void domapscript(mapinfo *invokee, rpgent *invoker, uint *code);
-	extern bool setglobal(const char *n, const char *v, bool dup = true);
-
-	extern int alloclocal(bool track = true);
-	extern bool keeplocal(int i);
-	extern bool freelocal(int i);
-
-	extern void pushstack();
-	extern void popstack();
-	extern vector<hashset<reference> *> stack;
-	extern vector<delayscript *> delaystack;
-}
-
-namespace entities
-{
-	extern vector<extentity *> ents;
-	extern vector<int> intents;
-	extern void startmap();
-	extern void spawn(extentity &e, int ind, int type, int qty);
-	extern void teleport(rpgent *d, int dest);
-	extern void genentlist();
-	extern void touchents(rpgent *d);
-	extern void renderentities();
-}
-
-namespace camera
-{
-	extern bool cutscene;
-	extern void cleanup(bool clear);
-	extern void update();
-	extern void render(int w, int h);
-	extern void getsignal(const char *signal);
-
-	extern physent *attached;
-	extern physent camera;
-}
-
-namespace rpggui
-{
-	bool open();
-	void forcegui();
-	bool hotkey(int n);
-}
 
 enum
 {
