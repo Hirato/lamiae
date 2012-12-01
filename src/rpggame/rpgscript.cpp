@@ -928,12 +928,12 @@ namespace rpgscript
 
 	ICOMMAND(r_global_new, "ss", (const char *n, const char *v),
 		if(setglobal(n, v))
-			conoutf(CON_WARN, "\fs\f6WARNING:\fr r_global_new, variable \"%s\" already exists!");
+			conoutf(CON_WARN, "\fs\f6WARNING:\fr r_global_new, variable \"%s\" already exists!", n);
 	)
 
 	ICOMMAND(r_global_set, "ss", (const char *n, const char *v),
 		if(!setglobal(n, v))
-			conoutf(CON_WARN, "\fs\f6WARNING:\fr r_global_set, variable \"%s\" doesn't exist, creating anyway.");
+			conoutf(CON_WARN, "\fs\f6WARNING:\fr r_global_set, variable \"%s\" doesn't exist, creating anyway.", n);
 	)
 
 	ICOMMAND(r_cat_get, "i", (int *i),
