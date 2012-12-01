@@ -271,7 +271,7 @@ namespace rpggui
 		if(talker->getent(0) && !UI::activeui("chat"))
 			execute("showchat");
 		if(trader->getent(0) && !UI::activeui("trade"))
-			trader->setnull();
+			trader->setnull(true);
 	}
 
 	void refreshgui()
@@ -351,7 +351,7 @@ namespace rpggui
 			}
 			if(!scr->curnode)
 			{
-				talker->setnull();
+				talker->setnull(true);
 				UI::hideui("chat");
 			}
 			else
