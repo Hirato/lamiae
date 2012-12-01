@@ -333,7 +333,7 @@ namespace rpgscript
 			if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr new depth is %i", stack.length());
 		}
 		else
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr sandbox just tried to pop the reference stack, but it is too shallow (stack.length <= 1)");
+			conoutf(CON_ERROR, "\fs\f3ERROR:\fr Lamiae just tried to pop the reference stack, but it is too shallow (stack.length <= 1)");
 	}
 
 	ICOMMAND(r_stack, "e", (uint *body),
