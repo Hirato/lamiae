@@ -52,6 +52,7 @@ struct effect;
 struct faction;
 struct item;
 struct journal;
+struct localinst;
 struct mapinfo;
 struct mapscript;
 struct merchant;
@@ -165,6 +166,7 @@ namespace rpgscript
 	extern void pushstack();
 	extern void popstack();
 	extern vector<hashset<reference> *> stack;
+	extern vector<localinst *> locals;
 	extern vector<delayscript *> delaystack;
 }
 

@@ -4,8 +4,8 @@ extern bool reloadtexture(const char *name); //texture.cpp
 
 namespace rpgio
 {
-	#define GAME_VERSION 40
-	#define COMPAT_VERSION 40
+	#define GAME_VERSION 41
+	#define COMPAT_VERSION 41
 	#define GAME_MAGIC "RPGS"
 
 	/**
@@ -208,6 +208,8 @@ namespace rpgio
 		it->durability = f->getlil<float>();
 		it->recovery = f->getlil<float>();
 
+		rpgscript::keeplocal((it->locals = f->getlil<int>()));
+
 		int uses = f->getlil<int>();
 		loopi(uses)
 		{
@@ -314,6 +316,8 @@ namespace rpgio
 		f->putlil(it->durability);
 		f->putlil(it->recovery);
 
+		f->putlil(it->locals);
+
 		f->putlil(it->uses.length());
 		loopv(it->uses)
 		{
@@ -392,6 +396,8 @@ namespace rpgio
 		int type = f->getlil<int>();
 		if(ent)
 			type = ent->type();
+
+		rpgscript::keeplocal((ent->locals = f->getlil<int>()));
 
 		switch(type)
 		{
@@ -656,6 +662,7 @@ namespace rpgio
 	void writeent(stream *f, rpgent *d)
 	{
 		f->putlil(d->type());
+		f->putlil(d->locals);
 
 		switch(d->type())
 		{
@@ -889,6 +896,7 @@ namespace rpgio
 		numprojs = f->getlil<int>(),
 		numaeffects = f->getlil<int>(),
 		numblips = f->getlil<int>();
+		rpgscript::keeplocal((loading->locals = f->getlil<int>()));
 
 		loopi(numobjs)
 		{
@@ -1081,6 +1089,7 @@ namespace rpgio
 		f->putlil(saving->projs.length());
 		f->putlil(saving->aeffects.length());
 		f->putlil(saving->blips.length());
+		f->putlil(saving->locals);
 
 		loopv(saving->objs)
 		{
@@ -1487,6 +1496,45 @@ namespace rpgio
 			writestring(f, saving->entries[i]);
 	}
 
+	void readlocal(stream *f, int i)
+	{
+		if(!rpgscript::locals.inrange(i))
+			rpgscript::alloclocal(false);
+
+		localinst *loading = rpgscript::locals[i];
+		loading->refs = 0;
+
+		int n = f->getlil<int>();
+		loopj(n)
+		{
+			CHECKEOF(*f, )
+			const char *name = readstring(f);
+			const char *value = readstring(f);
+
+			rpgvar &var = loading->variables.access(name, rpgvar());
+			if(var.name) delete[] var.name;
+			if(var.value) delete[] var.value;
+
+			var.name = name;
+			var.value = value;
+		}
+	}
+
+	void writelocal(stream *f, localinst *saving)
+	{
+		int n = 0;
+		if(saving) n = saving->refs;
+		f->putlil(n);
+
+		loopi(n)
+		{
+			enumerate(saving->variables, rpgvar, var,
+				writestring(f, var.name);
+				writestring(f, var.value);
+			)
+		}
+	}
+
 	void loadgame(const char *name)
 	{
 		defformatstring(file)("data/rpg/saves/%s.sgz", name);
@@ -1534,7 +1582,6 @@ namespace rpgio
 		}
 
 		lastmap = game::accessmap(curmap);
-		readent(f, game::player1);
 
 		int num;
 		#define READ(m, b) \
@@ -1577,6 +1624,11 @@ namespace rpgio
 			 if(!rpgscript::setglobal(n, v))
 				 conoutf(CON_WARN, "WARNING: reloading the game added variable \"%s\"", n);
 		)
+		READ(locals stack,
+			 readlocal(f, i);
+		)
+		readent(f, game::player1);
+
 		vector<mapinfo *> maps;
 		READ(mapinfo, maps.add(readmap(f)));
 
@@ -1657,8 +1709,6 @@ namespace rpgio
 
 		writestring(f, game::data);
 		writestring(f, game::curmap->name);
-		writeent(f, game::player1);
-		game::curmap->objs.removeobj(game::player1);
 
 		#define WRITE(m, v, b) \
 			f->putlil(v.length()); \
@@ -1692,6 +1742,12 @@ namespace rpgio
 			writestring(f, vars[i]->name);
 			writestring(f, vars[i]->value);
 		)
+		WRITE(locals stack, rpgscript::locals,
+			  writelocal(f, rpgscript::locals[i]);
+		)
+		writeent(f, game::player1);
+		game::curmap->objs.removeobj(game::player1);
+
 		vector<mapinfo *> maps;
 		enumerate(*game::mapdata, mapinfo, map, maps.add(&map););
 		WRITE(map, maps, writemap(f, maps[i]));
