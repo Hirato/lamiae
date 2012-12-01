@@ -445,7 +445,15 @@ namespace rpgscript
 	void clean()
 	{
 		stack.deletecontents();
-		locals.deletecontents();
+
+		while(locals.length() && !locals.last()) locals.pop();
+		if(locals.length())
+		{
+			dumplocals();
+			conoutf(CON_ERROR, "ERROR: The locals stack wasn't fully freed! REPORT A BUG!");
+			locals.deletecontents();
+		}
+
 		obits.setsize(0);
 		player = map = talker = looter = trader = hover = NULL;
 	}

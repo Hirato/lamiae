@@ -148,7 +148,6 @@ namespace game
 	{
 		gameversion = compatversion = 0;
 
-		rpgscript::clean();
 		colcache.setsize(0);
 		mergecache.setsize(0);
 		camera::cleanup(true);
@@ -187,6 +186,8 @@ namespace game
 		//We reset the player here so he has a clean slate on a new game.
 		player1->~rpgchar();
 		new (player1) rpgchar();
+
+		rpgscript::clean();
 	}
 
 	template<class T>

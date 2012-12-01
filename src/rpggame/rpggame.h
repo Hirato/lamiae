@@ -160,6 +160,7 @@ namespace rpgscript
 	extern bool setglobal(const char *n, const char *v, bool dup = true);
 
 	extern int alloclocal(bool track = true);
+	extern void dumplocals();
 	extern bool keeplocal(int i);
 	extern bool freelocal(int i);
 
