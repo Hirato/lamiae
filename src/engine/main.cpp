@@ -917,7 +917,6 @@ int main(int argc, char **argv)
     UI::setup();
 
     logoutf("init: console");
-    identflags &= ~IDF_PERSIST;
     if(!execfile("data/stdlib.cfg", false)) fatal("cannot find data files (you are running from the wrong folder, try .bat file in the main folder)");   // this is the first file we load.
     if(!execfile("data/font.cfg", false)) fatal("cannot find font definitions");
     if(!setfont("default")) fatal("no default font specified");
@@ -969,13 +968,13 @@ int main(int argc, char **argv)
 
     initing = NOT_INITING;
 
-    identflags |= IDF_PERSIST;
-
     logoutf("init: shaders");
     initgbuffer();
     loadshaders();
     particleinit();
     initdecals();
+
+    identflags |= IDF_PERSIST;
 
     logoutf("init: mainloop");
 
