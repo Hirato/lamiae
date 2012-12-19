@@ -1526,7 +1526,7 @@ namespace rpgio
 		if(saving) n = saving->variables.length();
 		f->putlil(n);
 
-		enumerate(saving->variables, rpgvar, var,
+		if(saving) enumerate(saving->variables, rpgvar, var,
 			writestring(f, var.name);
 			writestring(f, var.value);
 		)
