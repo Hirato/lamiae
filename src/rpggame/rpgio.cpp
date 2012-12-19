@@ -1523,16 +1523,13 @@ namespace rpgio
 	void writelocal(stream *f, localinst *saving)
 	{
 		int n = 0;
-		if(saving) n = saving->refs;
+		if(saving) n = saving->variables.length();
 		f->putlil(n);
 
-		loopi(n)
-		{
-			enumerate(saving->variables, rpgvar, var,
-				writestring(f, var.name);
-				writestring(f, var.value);
-			)
-		}
+		enumerate(saving->variables, rpgvar, var,
+			writestring(f, var.name);
+			writestring(f, var.value);
+		)
 	}
 
 	void loadgame(const char *name)
