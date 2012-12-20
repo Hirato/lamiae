@@ -3,7 +3,7 @@
 
 #include "cube.h"
 
-#define DEFAULTMODEL "rc"
+#define DEFAULTMODEL "xonotic/gak"
 
 #ifdef NO_DEBUG
 
