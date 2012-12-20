@@ -1,0 +1,5 @@
+The Xonotic art assets are licensed under the terms of the GPL version 2.0 or later.
+The license isn't bundled.
+
+You can peruse their online versions at the GNU website.
+http://www.gnu.org/licenses/gpl.html
