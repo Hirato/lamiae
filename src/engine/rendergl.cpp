@@ -2,7 +2,7 @@
 
 #include "engine.h"
 
-bool hasVBO = false, hasDRE = false, hasOQ = false, hasTR = false, hasT3D = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasBE = false, hasBC = false, hasCM = false, hasNP2 = false, hasTC = false, hasS3TC = false, hasFXT1 = false, hasMT = false, hasAF = false, hasMDA = false, hasGLSL = false, hasGM = false, hasNVFB = false, hasSGIDT = false, hasSGISH = false, hasDT = false, hasSH = false, hasNVPCF = false, hasPBO = false, hasFBB = false, hasUBO = false, hasBUE = false, hasMBR = false, hasDB = false, hasTG = false, hasT4 = false, hasTQ = false, hasPF = false, hasTRG = false, hasDBT = false, hasDC = false, hasDBGO = false;
+bool hasVBO = false, hasDRE = false, hasOQ = false, hasTR = false, hasT3D = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasBE = false, hasBC = false, hasCM = false, hasNP2 = false, hasTC = false, hasS3TC = false, hasFXT1 = false, hasMT = false, hasAF = false, hasMDA = false, hasGLSL = false, hasGM = false, hasNVFB = false, hasSGIDT = false, hasSGISH = false, hasDT = false, hasSH = false, hasNVPCF = false, hasPBO = false, hasFBB = false, hasUBO = false, hasBUE = false, hasMBR = false, hasDB = false, hasTG = false, hasT4 = false, hasTQ = false, hasPF = false, hasTRG = false, hasDBT = false, hasDC = false, hasDBGO = false, hasGPU4 = false, hasGPU5 = false;
 bool mesa = false, intel = false, ati = false, nvidia = false;
 
 int hasstencil = 0;
@@ -187,6 +187,7 @@ VAR(ati_minmax_bug, 0, 0, 1);
 VAR(ati_cubemap_bug, 0, 0, 1);
 VAR(ati_ubo_bug, 0, 0, 1);
 VAR(intel_immediate_bug, 0, 0, 1);
+VAR(intel_vertexarray_bug, 0, 0, 1);
 VAR(sdl_backingstore_bug, -1, 0, 1);
 VAR(usetexrect, 1, 0, 0);
 VAR(useubo, 1, 0, 0);
@@ -228,7 +229,7 @@ void gl_checkextensions()
 
 #ifdef __APPLE__
     extern int mac_osversion();
-    int osversion = mac_osversion();  /* 0x1050 = 10.5 (Leopard) */
+    int osversion = mac_osversion();  /* 0x0A0500 = 10.5 (Leopard) */
     sdl_backingstore_bug = -1;
 #endif
 
@@ -276,7 +277,7 @@ void gl_checkextensions()
 #ifdef __APPLE__
     /* VBOs over 256KB seem to destroy performance on 10.5, but not in 10.6 */
     extern int maxvbosize;
-    if(osversion < 0x1060) maxvbosize = min(maxvbosize, 8192);
+    if(osversion < 0x0A0600) maxvbosize = min(maxvbosize, 8192);
 #endif
 
     if(hasext(exts, "GL_ARB_pixel_buffer_object"))
@@ -314,7 +315,7 @@ void gl_checkextensions()
 
 #ifdef __APPLE__
     // floating point FBOs not fully supported until 10.5
-    if(osversion>=0x1050)
+    if(osversion>=0x0A0500)
 #endif
     if(hasext(exts, "GL_ARB_texture_float") || hasext(exts, "GL_ATI_texture_float"))
     {
@@ -387,7 +388,7 @@ void gl_checkextensions()
 
 #ifdef __APPLE__
     // Intel HD3000 broke occlusion queries - either causing software fallback, or returning wrong results
-    if(!intel)
+    if(osversion >= 0x0A0800 || !intel)
 #endif
     if(hasext(exts, "GL_ARB_occlusion_query"))
     {
@@ -405,7 +406,7 @@ void gl_checkextensions()
             hasOQ = true;
             if(dbgexts) conoutf(CON_INIT, "Using GL_ARB_occlusion_query extension.");
 #if defined(__APPLE__) && SDL_BYTEORDER == SDL_BIG_ENDIAN
-            if(ati && (osversion<0x1050)) ati_oq_bug = 1;
+            if(ati && (osversion<0x0A0500)) ati_oq_bug = 1;
 #endif
             //if(ati_oq_bug) conoutf(CON_WARN, "WARNING: Using ATI occlusion query bug workaround. (use \"/ati_oq_bug 0\" to disable if unnecessary)");
         }
@@ -441,7 +442,7 @@ void gl_checkextensions()
         hasTQ = true;
     }
 
-    extern int gdepthstencil, glineardepth, lighttilebatch, batchsunlight, lighttilestrip;
+    extern int gdepthstencil, glineardepth, lighttilebatch, batchsunlight, lighttilestrip, smgather;
     if(ati)
     {
         //conoutf(CON_WARN, "WARNING: ATI cards may show garbage in skybox. (use \"/ati_skybox_bug 1\" to fix)");
@@ -455,11 +456,13 @@ void gl_checkextensions()
     {
 #ifdef WIN32
         intel_immediate_bug = 1;
+        intel_vertexarray_bug = 1;
         gdepthstencil = 0; // workaround for buggy stencil on windows ivy bridge driver
 #endif
         glineardepth = 1; // causes massive slowdown in windows driver (and sometimes in linux driver) if not using linear depth
         lighttilebatch = 4;
         if(mesa) batchsunlight = 0; // causes massive slowdown in linux driver
+        smgather = 1; // native shadow filter is slow
     }
 
     if(glversion >= 200)
@@ -709,6 +712,18 @@ void gl_checkextensions()
         if(dbgexts) conoutf(CON_INIT, "Using GL_AMD_texture_texture4 extension.");
     }
     if(hasTG || hasT4) usetexgather = 1;
+
+    if(hasext(exts, "GL_EXT_gpu_shader4"))
+    {
+        hasGPU4 = true;
+        if(dbgexts) conoutf(CON_INIT, "Using GL_EXT_gpu_shader4 extension.");
+    }
+    if(hasext(exts, "GL_ARB_gpu_shader5"))
+    {
+        if(!intel) usetexgather = 2;
+        hasGPU5 = true;
+        if(dbgexts) conoutf(CON_INIT, "Using GL_ARB_gpu_shader5 extension.");
+    }
 
     if(hasext(exts, "GL_EXT_depth_bounds_test"))
     {
@@ -1332,6 +1347,20 @@ bool calcspherescissor(const vec &center, float size, float &sx1, float &sy1, fl
           mvmatrix.transformy(center),
           mvmatrix.transformz(center));
     if(e.z > 2*size) { sx1 = sy1 = sz1 = 1; sx2 = sy2 = sz2 = -1; return false; }
+    if(minimapping)
+    {
+        vec dir(size, size, size);
+        if(projmatrix.v[0] < 0) dir.x = -dir.x;
+        if(projmatrix.v[5] < 0) dir.y = -dir.y;
+        if(projmatrix.v[10] < 0) dir.z = -dir.z;
+        sx1 = max(projmatrix.v[0]*(e.x - dir.x) + projmatrix.v[12], -1.0f);
+        sx2 = min(projmatrix.v[0]*(e.x + dir.x) + projmatrix.v[12], 1.0f);
+        sy1 = max(projmatrix.v[5]*(e.y - dir.y) + projmatrix.v[13], -1.0f);
+        sy2 = min(projmatrix.v[5]*(e.y + dir.y) + projmatrix.v[13], 1.0f);
+        sz1 = max(projmatrix.v[10]*(e.z - dir.z) + projmatrix.v[14], -1.0f);
+        sz2 = min(projmatrix.v[10]*(e.z + dir.z) + projmatrix.v[14], 1.0f);
+        return sx1 < sx2 && sy1 < sy2 && sz1 < sz2;
+    }
     float zzrr = e.z*e.z - size*size,
           dx = e.x*e.x + zzrr, dy = e.y*e.y + zzrr,
           focaldist = 1.0f/tan(fovy*0.5f*RAD);
@@ -1526,6 +1555,7 @@ VAR(fogoverlay, 0, 1, 1);
 
 static float findsurface(int fogmat, const vec &v, int &abovemat)
 {
+    fogmat &= MATF_VOLUME;
     ivec o(v), co;
     int csize;
     do
@@ -1534,7 +1564,7 @@ static float findsurface(int fogmat, const vec &v, int &abovemat)
         int mat = c.material&MATF_VOLUME;
         if(mat != fogmat)
         {
-            abovemat = isliquid(mat) ? mat : MAT_AIR;
+            abovemat = isliquid(mat) ? c.material : MAT_AIR;
             return o.z;
         }
         o.z = co.z + csize;
@@ -1546,22 +1576,28 @@ static float findsurface(int fogmat, const vec &v, int &abovemat)
 
 static void blendfog(int fogmat, float below, float blend, float logblend, float &start, float &end, vec &fogc)
 {
-    switch(fogmat)
+    switch(fogmat&MATF_VOLUME)
     {
         case MAT_WATER:
         {
-            float deepfade = clamp(below/max(waterdeep, waterfog), 0.0f, 1.0f);
+            const bvec &wcol = getwatercolor(fogmat), &wdeepcol = getwaterdeepcolor(fogmat);
+            int wfog = getwaterfog(fogmat), wdeep = getwaterdeep(fogmat);
+            float deepfade = clamp(below/max(wdeep, wfog), 0.0f, 1.0f);
             vec color;
-            color.lerp(watercolor.tocolor(), waterdeepcolor.tocolor(), deepfade);
+            color.lerp(wcol.tocolor(), wdeepcol.tocolor(), deepfade);
             fogc.add(vec(color).mul(blend));
-            end += logblend*min(fog, max(waterfog*2, 16));
+            end += logblend*min(fog, max(wfog*2, 16));
             break;
         }
 
         case MAT_LAVA:
-            fogc.add(lavacolor.tocolor().mul(blend));
-            end += logblend*min(fog, max(lavafog*2, 16));
+        {
+            const bvec &lcol = getlavacolor(fogmat);
+            int lfog = getlavafog(fogmat);
+            fogc.add(lcol.tocolor().mul(blend));
+            end += logblend*min(fog, max(lfog*2, 16));
             break;
+        }
 
         default:
             fogc.add(fogcolor.tocolor().mul(blend));
@@ -1607,22 +1643,27 @@ static void setfog(int fogmat, float below = 0, float blend = 1, int abovemat = 
 static void blendfogoverlay(int fogmat, float below, float blend, float *overlay)
 {
     float maxc;
-    switch(fogmat)
+    switch(fogmat&MATF_VOLUME)
     {
         case MAT_WATER:
         {
-            float deepfade = clamp(below/max(waterdeep, waterfog), 0.0f, 1.0f);
+            const bvec &wcol = getwatercolor(fogmat), &wdeepcol = getwaterdeepcolor(fogmat);
+            int wfog = getwaterfog(fogmat), wdeep = getwaterdeep(fogmat);
+            float deepfade = clamp(below/max(wdeep, wfog), 0.0f, 1.0f);
             vec color;
-            loopk(3) color[k] = watercolor[k]*(1-deepfade) + waterdeepcolor[k]*deepfade;
+            loopk(3) color[k] = wcol[k]*(1-deepfade) + wdeepcol[k]*deepfade;
             maxc = max(color[0], max(color[1], color[2]));
             loopk(3) overlay[k] += blend*max(0.4f, color[k]/min(32.0f + maxc*7.0f/8.0f, 255.0f));
             break;
         }
 
         case MAT_LAVA:
-            maxc = max(lavacolor[0], max(lavacolor[1], lavacolor[2]));
-            loopk(3) overlay[k] += blend*max(0.4f, lavacolor[k]/min(32.0f + maxc*7.0f/8.0f, 255.0f));
+        {
+            const bvec &lcol = getlavacolor(fogmat);
+            maxc = max(lcol[0], max(lcol[1], lcol[2]));
+            loopk(3) overlay[k] += blend*max(0.4f, lcol[k]/min(32.0f + maxc*7.0f/8.0f, 255.0f));
             break;
+        }
 
         default:
             loopk(3) overlay[k] += blend;
@@ -1851,9 +1892,9 @@ void drawcubemap(int size, const vec &o, float yaw, float pitch, const cubemapsi
     setviewcell(camera1->o);
 
     float fogmargin = 1 + WATER_AMPLITUDE + nearplane;
-    int fogmat = lookupmaterial(vec(camera1->o.x, camera1->o.y, camera1->o.z - fogmargin))&MATF_VOLUME, abovemat = MAT_AIR;
+    int fogmat = lookupmaterial(vec(camera1->o.x, camera1->o.y, camera1->o.z - fogmargin))&(MATF_VOLUME|MATF_INDEX), abovemat = MAT_AIR;
     float fogbelow = 0;
-    if(fogmat==MAT_WATER || fogmat==MAT_LAVA)
+    if(isliquid(fogmat&MATF_VOLUME))
     {
         float z = findsurface(fogmat, vec(camera1->o.x, camera1->o.y, camera1->o.z - fogmargin), abovemat) - WATER_OFFSET;
         if(camera1->o.z < z + fogmargin)
@@ -1942,15 +1983,16 @@ void gl_drawframe(int w, int h)
 
     defaultshader->set();
 
-    vieww = w;
-    viewh = h;
-    aspect = forceaspect ? forceaspect : w/float(h);
+    GLuint scalefbo = shouldscale();
+    if(scalefbo) { vieww = gw; viewh = gh; }
+    else { vieww = w; viewh = h; }
+    aspect = forceaspect ? forceaspect : vieww/float(viewh);
     fovy = 2*atan2(tan(curfov/2*RAD), aspect)/RAD;
 
     float fogmargin = 1 + WATER_AMPLITUDE + nearplane;
-    int fogmat = lookupmaterial(vec(camera1->o.x, camera1->o.y, camera1->o.z - fogmargin))&MATF_VOLUME, abovemat = MAT_AIR;
+    int fogmat = lookupmaterial(vec(camera1->o.x, camera1->o.y, camera1->o.z - fogmargin))&(MATF_VOLUME|MATF_INDEX), abovemat = MAT_AIR;
     float fogbelow = 0;
-    if(fogmat==MAT_WATER || fogmat==MAT_LAVA)
+    if(isliquid(fogmat&MATF_VOLUME))
     {
        float z = findsurface(fogmat, vec(camera1->o.x, camera1->o.y, camera1->o.z - fogmargin), abovemat) - WATER_OFFSET;
         if(camera1->o.z < z + fogmargin)
@@ -2062,15 +2104,16 @@ void gl_drawframe(int w, int h)
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
 
-    doaa(setuppostfx(w, h), processhdr);
+    doaa(setuppostfx(vieww, viewh, scalefbo), processhdr);
     if(fogoverlay && fogmat != MAT_AIR) drawfogoverlay(fogmat, fogbelow, clamp(fogbelow, 0.0f, 1.0f), abovemat);
-    renderpostfx();
+    renderpostfx(scalefbo);
+    if(scalefbo) { vieww = w; viewh = h; doscale(vieww, viewh); }
 
     defaultshader->set();
     UI::render();
     notextureshader->set();
 
-    gl_drawhud(w, h);
+    gl_drawhud(vieww, viewh);
 }
 
 void gl_drawmainmenu(int w, int h)
@@ -2424,7 +2467,7 @@ void gl_drawhud(int w, int h)
             if(editmode)
             {
                 abovehud -= FONTH;
-                draw_textf("cube %s%d", FONTH/2, abovehud, selchildcount<0 ? "1/" : "", abs(selchildcount));
+                draw_textf("cube %s%d%s", FONTH/2, abovehud, selchildcount<0 ? "1/" : "", abs(selchildcount), showmat && selchildmat > 0 ? getmaterialdesc(selchildmat, ": ") : "");
 
                 char *editinfo = executestr("edithud");
                 if(editinfo)

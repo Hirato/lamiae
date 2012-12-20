@@ -1323,7 +1323,7 @@ const char *textypename(int i)
 
 vector<VSlot *> vslots;
 vector<Slot *> slots;
-MSlot materialslots[MATF_VOLUME+1];
+MSlot materialslots[(MATF_VOLUME|MATF_INDEX)+1];
 Slot dummyslot;
 VSlot dummyvslot(&dummyslot);
 
@@ -1539,7 +1539,7 @@ COMMAND(texturereset, "i");
 void materialreset()
 {
     if(!(identflags&IDF_OVERRIDDEN) && !game::allowedittoggle()) return;
-    loopi(MATF_VOLUME+1) materialslots[i].reset();
+    loopi((MATF_VOLUME|MATF_INDEX)+1) materialslots[i].reset();
 }
 
 COMMAND(materialreset, "");
@@ -1553,7 +1553,7 @@ void clearslots()
     cleartexanims(true);
     slots.deletecontents();
     vslots.deletecontents();
-    loopi(MATF_VOLUME+1) materialslots[i].reset();
+    loopi((MATF_VOLUME|MATF_INDEX)+1) materialslots[i].reset();
     clonedvslots = 0;
 }
 
@@ -1897,23 +1897,36 @@ ICOMMAND(fixinsidefaces, "i", (int *tex),
     allchanged();
 });
 
+const struct slottex
+{
+    const char *name;
+    int id;
+} slottexs[] =
+{
+    {"c", TEX_DIFFUSE},
+    {"u", TEX_UNKNOWN},
+    {"d", TEX_DECAL},
+    {"n", TEX_NORMAL},
+    {"g", TEX_GLOW},
+    {"s", TEX_SPEC},
+    {"z", TEX_DEPTH},
+    {"e", TEX_ENVMAP}
+};
+
+int findslottex(const char *name)
+{
+    loopi(sizeof(slottexs)/sizeof(slottex))
+    {
+        if(!strcmp(slottexs[i].name, name)) return slottexs[i].id;
+    }
+    return -1;
+}
+
 void texture(char *type, char *name, int *rot, int *xoffset, int *yoffset, float *scale)
 {
     if(slots.length()>=0x10000) return;
-    static const struct { const char *name; int type; } types[] =
-    {
-        {"c", TEX_DIFFUSE},
-        {"u", TEX_UNKNOWN},
-        {"d", TEX_DECAL},
-        {"n", TEX_NORMAL},
-        {"g", TEX_GLOW},
-        {"s", TEX_SPEC},
-        {"z", TEX_DEPTH},
-        {"e", TEX_ENVMAP}
-    };
     static int lastmatslot = -1;
-    int tnum = -1, matslot = findmaterial(type);
-    loopi(sizeof(types)/sizeof(types[0])) if(!strcmp(types[i].name, type)) { tnum = i; break; }
+    int tnum = findslottex(type), matslot = findmaterial(type);
     if(tnum<0) tnum = atoi(type);
     if(tnum==TEX_DIFFUSE) lastmatslot = matslot;
     else if(lastmatslot>=0) matslot = lastmatslot;
@@ -2230,7 +2243,7 @@ void linkslotshaders()
 {
     loopv(slots) if(slots[i]->loaded) linkslotshader(*slots[i]);
     loopv(vslots) if(vslots[i]->linked) linkvslotshader(*vslots[i]);
-    loopi(MATF_VOLUME+1) if(materialslots[i].loaded)
+    loopi((MATF_VOLUME|MATF_INDEX)+1) if(materialslots[i].loaded)
     {
         linkslotshader(materialslots[i]);
         linkvslotshader(materialslots[i]);
@@ -2661,7 +2674,7 @@ void cleanuptextures()
     clearenvmaps();
     loopv(slots) slots[i]->cleanup();
     loopv(vslots) vslots[i]->cleanup();
-    loopi(MATF_VOLUME+1) materialslots[i].cleanup();
+    loopi((MATF_VOLUME|MATF_INDEX)+1) materialslots[i].cleanup();
     enumerate(textures, Texture, tex, cleanuptexture(&tex));
 }
 

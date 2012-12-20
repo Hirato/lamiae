@@ -11,8 +11,8 @@ enum
     MAP_LAMIA
 };
 
-#define MAPVERSION 32           // bump if map format changes, see worldio.cpp
-#define LAMIAMAPVERSION 1
+#define MAPVERSION 33           // bump if map format changes, see worldio.cpp
+#define LAMIAMAPVERSION 2
 
 struct octaheader
 {

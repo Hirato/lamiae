@@ -1037,7 +1037,7 @@ ICOMMAND(dumpshader, "sbb", (const char *name, int *col, int *row),
         if(*row >= MAXVARIANTROWS || !s->variants[max(*row, 0)].inrange(*col)) return;
         s = s->variants[max(*row, 0)][*col];
     }
-    if(s->vsstr) fprintf(l, "%s:%s\n%s\n", s->name, "VS", s->vsstr);        
+    if(s->vsstr) fprintf(l, "%s:%s\n%s\n", s->name, "VS", s->vsstr);
     if(s->psstr) fprintf(l, "%s:%s\n%s\n", s->name, "FS", s->psstr);
 });
 
@@ -1144,9 +1144,9 @@ void cleanuppostfx(bool fullclean)
     postfxh = 0;
 }
 
-GLuint setuppostfx(int w, int h)
+GLuint setuppostfx(int w, int h, GLuint outfbo)
 {
-    if(postfxpasses.empty()) return 0;
+    if(postfxpasses.empty()) return outfbo;
 
     if(postfxw != w || postfxh != h)
     {
@@ -1169,7 +1169,7 @@ GLuint setuppostfx(int w, int h)
     return postfxfb;
 }
 
-void renderpostfx()
+void renderpostfx(GLuint outfbo)
 {
     loopv(postfxpasses)
     {
@@ -1178,7 +1178,7 @@ void renderpostfx()
         int tex = -1;
         if(!postfxpasses.inrange(i+1))
         {
-            glBindFramebuffer_(GL_FRAMEBUFFER_EXT, 0);
+            glBindFramebuffer_(GL_FRAMEBUFFER_EXT, outfbo);
         }
         else
         {
@@ -1319,7 +1319,7 @@ void resetshaders()
 {
     clearchanges(CHANGE_SHADERS);
 
-    cleanupgbuffer();
+    cleanuplights();
     cleanupshaders();
     setupshaders();
     initgbuffer();
@@ -1364,20 +1364,9 @@ void setblurshader(int pass, int size, int radius, float *weights, float *offset
         s = lookupshaderbyname(name);
     }
     s->set();
-    LOCALPARAM(weights, (weights[0], weights[1], weights[2], weights[3]));
-    LOCALPARAM(weights2, (weights[4], weights[5], weights[6], weights[7]));
-    LOCALPARAM(offsets, (
-        pass==0 ? offsets[1]/size : offsets[0]/size,
-        pass==1 ? offsets[1]/size : offsets[0]/size,
-        (offsets[2] - offsets[1])/size,
-        (offsets[3] - offsets[2])/size));
-    loopk(4)
-    {
-        static LocalShaderParam offsets2[4] = { "offset4", "offset5", "offset6", "offset7" };
-        offsets2[k].set(
-            pass==0 ? offsets[4+k]/size : offsets[0]/size,
-            pass==1 ? offsets[4+k]/size : offsets[0]/size,
-            0, 0);
-    }
+    LOCALPARAM(weights, (weights, 8));
+    float scaledoffsets[8];
+    loopk(8) scaledoffsets[k] = offsets[k]/size;
+    LOCALPARAM(offsets, (scaledoffsets, 8));
 }
 
