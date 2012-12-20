@@ -112,7 +112,7 @@ int finddynlights()
         dynlight &d = dynlights[j];
         if(d.curradius <= 0) continue;
         d.dist = camera1->o.dist(d.o) - d.curradius;
-        if(d.dist > dynlightdist || isfoggedsphere(d.curradius, d.o) || pvsoccluded(d.o, 2*int(d.curradius+1))) 
+        if(d.dist > dynlightdist || isfoggedsphere(d.curradius, d.o) || pvsoccluded(d.o, 2*int(d.curradius+1)))
             continue;
         e.o = d.o;
         e.radius = e.xradius = e.yradius = e.eyeheight = e.aboveeye = d.curradius;
@@ -162,7 +162,7 @@ void dynlightreaching(const vec &target, vec &color, vec &dir, bool hud)
         if(x+y>0)
         {
             dir.mul(x);
-            dyndir.mul(y); 
+            dyndir.mul(y);
             dir.add(dyndir).div(x+y);
             if(dir.iszero()) dir = vec(0, 0, 1);
             else dir.normalize();

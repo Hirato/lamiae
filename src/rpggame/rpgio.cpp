@@ -397,8 +397,6 @@ namespace rpgio
 		if(ent)
 			type = ent->type();
 
-		rpgscript::keeplocal((ent->locals = f->getlil<int>()));
-
 		switch(type)
 		{
 			case ENT_CHAR:
@@ -577,6 +575,8 @@ namespace rpgio
 				return NULL;
 		}
 
+		rpgscript::keeplocal((ent->locals = f->getlil<int>()));
+
 		int numeffs = f->getlil<int>();
 		loopi(numeffs)
 		{
@@ -662,7 +662,6 @@ namespace rpgio
 	void writeent(stream *f, rpgent *d)
 	{
 		f->putlil(d->type());
-		f->putlil(d->locals);
 
 		switch(d->type())
 		{
@@ -814,6 +813,7 @@ namespace rpgio
 				conoutf(CON_ERROR, "\fs\f3ERROR:\fr unsupported ent type %i, aborting", d->type());
 				return;
 		}
+		f->putlil(d->locals);
 
 		f->putlil(d->seffects.length());
 		loopv(d->seffects)
