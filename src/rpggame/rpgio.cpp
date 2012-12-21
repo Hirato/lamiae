@@ -120,8 +120,17 @@ namespace rpgio
 	{
 		int len = f->getlil<int>();
 		char *s = NULL;
+
 		if(len)
 		{
+			int fsize = f->size() - f->tell();
+			if(len < 0 || len > fsize)
+			{
+				conoutf(CON_ERROR, "\fs\f3ERROR:\fr Cannot read %i characters from file, there are %i bytes remaining, aborting", len, fsize);
+				abort = true;
+				return NULL;
+			}
+
 			s = new char[len];
 			f->read(s, len);
 			if(DEBUG_IO)
