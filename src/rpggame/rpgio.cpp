@@ -1484,7 +1484,8 @@ namespace rpgio
 					case ::reference::T_VEFFECT:
 					case ::reference::T_AEFFECT:
 					case ::reference::T_INVALID:
-						if(DEBUG_IO) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr reading now null reference %s - ignoring", loading->name);
+						if(DEBUG_IO) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr reading now null reference %s", loading->name);
+						loading->pushref(NULL, true);
 						break;
 					default:
 						conoutf(CON_ERROR, "\fs\f3ERROR:\fr unsupported reference type %i for reference %s, this will cause issues; aborting", type, loading->name);

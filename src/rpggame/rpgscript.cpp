@@ -693,10 +693,9 @@ namespace rpgscript
 		loopvrev(stack)
 		{
 			reference *r = searchstack(ref, false);
-			if(r)
+			if(r->canset()) loopvrev(stack)
 			{
-				r->setnull();
-				return;
+				if(stack[i]->remove(r->name)) return;
 			}
 		}
 	)
