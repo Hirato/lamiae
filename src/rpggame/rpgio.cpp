@@ -55,6 +55,14 @@ namespace rpgio
 		return val; \
 	}
 
+	#define NOTNULL(f, val) \
+	if(!f) \
+	{ \
+		abort = true; \
+		conoutf(CON_ERROR, "\fs\f3ERROR:\fr Encountered unexpected NULL value for " #f " at " __FILE__ ":%i; aborting.", __LINE__); \
+		return val; \
+	}
+
 	struct saveheader
 	{
 		char magic[4];
@@ -196,6 +204,9 @@ namespace rpgio
 		it->description = readstring(f);
 		it->mdl = readstring(f);
 
+		NOTNULL(it->mdl, it);
+		preloadmodel(it->mdl);
+
 		it->quantity = f->getlil<int>();
 		it->base = f->getlil<int>();
 
@@ -255,6 +266,11 @@ namespace rpgio
 
 					ar->vwepmdl = readstring(f);
 					ar->hudmdl = readstring(f);
+
+					NOTNULL(ar->vwepmdl, it);
+					NOTNULL(ar->hudmdl, it);
+					preloadmodel(ar->vwepmdl);
+					preloadmodel(ar->hudmdl);
 
 					ar->idlefx = f->getlil<int>();
 					ar->slots = f->getlil<int>();
@@ -412,6 +428,9 @@ namespace rpgio
 				loading->mdl = readstring(f);
 				loading->portrait = readstring(f);
 
+				NOTNULL(loading->mdl, ent);
+				preloadmodel(loading->mdl);
+
 				#define x(var, type) loading->base.var = f->getlil<type>();
 
 				x(experience, int)
@@ -492,7 +511,11 @@ namespace rpgio
 				rpgobstacle *loading = (rpgobstacle *) ent;
 
 				delete loading->mdl;
+
 				loading->mdl = readstring(f);
+				NOTNULL(loading->mdl, ent);
+				preloadmodel(loading->mdl);
+
 				loading->weight = f->getlil<int>();
 				loading->script = f->getlil<int>();
 				loading->flags = f->getlil<int>();
@@ -509,6 +532,9 @@ namespace rpgio
 
 				loading->mdl = readstring(f);
 				loading->name = readstring(f);
+
+				NOTNULL(loading->mdl, ent);
+				preloadmodel(loading->mdl);
 
 				loading->capacity = f->getlil<int>();
 				loading->faction = f->getlil<int>();
@@ -533,8 +559,10 @@ namespace rpgio
 				rpgplatform *loading = (rpgplatform *) ent;
 
 				delete[] loading->mdl;
-
 				loading->mdl = readstring(f);
+				NOTNULL(loading->mdl, ent);
+				preloadmodel(loading->mdl);
+
 				loading->speed = f->getlil<int>();
 				loading->script = f->getlil<int>();
 				loading->flags = f->getlil<int>();
@@ -562,6 +590,9 @@ namespace rpgio
 				delete[] loading->name;
 
 				loading->mdl = readstring(f);
+				NOTNULL(loading->mdl, ent);
+				preloadmodel(loading->mdl);
+
 				loading->name = readstring(f);
 				loading->script = f->getlil<int>();
 				loading->flags = f->getlil<int>();
@@ -1026,6 +1057,8 @@ namespace rpgio
 						st = poly;
 
 						poly->mdl = readstring(f);
+						NOTNULL(poly->mdl, loading);
+						preloadmodel(poly->mdl);
 						break;
 					}
 					case STATUS_LIGHT:
