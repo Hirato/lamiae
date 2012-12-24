@@ -995,6 +995,7 @@ namespace rpgscript
 		{
 			idx = i;
 			l = locals[i] = new localinst();
+			break;
 		}
 		if(!l)
 		{
@@ -1509,8 +1510,8 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_remove, "ssi", (const char *ref, const char *itref, int *q),
-		getreference(ref, ent, ent->getchar(entidx) || ent->getcontainer(entidx), intret(0), r_drop)
-		getreference(itref, it, it->getinv(itidx), intret(0), r_drop)
+		getreference(ref, ent, ent->getchar(entidx) || ent->getcontainer(entidx), intret(0), r_remove)
+		getreference(itref, it, it->getinv(itidx), intret(0), r_remove)
 
 		int dropped = ent->getent(entidx)->drop(it->getinv(itidx), max(0, *q), false);
 		if(DEBUG_SCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr removing %i of reference \"%s\" from reference \"%s\" - %i removing", *q, itref, ref, dropped);
