@@ -986,6 +986,28 @@ namespace rpgscript
 			conoutf(CON_WARN, "\fs\f6WARNING:\fr r_global_set, variable \"%s\" doesn't exist, creating anyway.", n);
 	)
 
+	bool comparelocals(int a, int b)
+	{
+		if (a == b) return true;
+		if (!locals.inrange(a) || !locals.inrange(b)) return false;
+
+		static vector<rpgvar *> varsa, varsb;
+		varsa.setsize(0); varsb.setsize(0);
+
+		enumerate(locals[a]->variables, rpgvar, var, varsa.add(&var);)
+		enumerate(locals[b]->variables, rpgvar, var, varsb.add(&var);)
+
+		if(varsa.length() != varsb.length()) return false;
+
+		loopv(varsa)
+		{
+			if(strcmp(varsa[i]->name, varsb[i]->name)) return false;
+			if(strcmp(varsa[i]->value, varsb[i]->value)) return false;
+		}
+
+		return true;
+	}
+
 	int alloclocal(bool track)
 	{
 		localinst *l = NULL;

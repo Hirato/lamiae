@@ -165,6 +165,7 @@ namespace rpgscript
 	extern void dumplocals();
 	extern bool keeplocal(int i);
 	extern bool freelocal(int i);
+	extern bool comparelocals(int a, int b);
 
 	extern void pushstack();
 	extern void popstack();
@@ -1136,9 +1137,11 @@ struct item
 
 	bool compare(item *o)
 	{
-		if(locals != o->locals || base != o->base || durability != o->durability || recovery != o->recovery || script != o->script || category != o->category ||
+		if(base != o->base || durability != o->durability || recovery != o->recovery || script != o->script || category != o->category ||
 			flags != o->flags || value != o->value || maxdurability != o->maxdurability || charges != o->charges || weight != o->weight || uses.length() != o->uses.length())
 			return false;
+
+		if(!rpgscript::comparelocals(locals, o->locals)) return false;
 
 		loopv(uses) if(!uses[i]->compare(o->uses[i]))
 			return false;
