@@ -1550,6 +1550,27 @@ namespace rpgscript
 		}
 	)
 
+	ICOMMAND(r_use, "ssiN", (const char *ref, const char *itref, int *use, int *numargs),
+		getreference(ref, ent, ent->getchar(entidx), , r_use)
+		getreference(itref, it, it->getinv(itidx) || it->getequip(itidx), , r_use);
+
+		item *item;
+		int u;
+
+		if(it->getequip(itidx))
+		{
+			item = it->getequip(itidx)->it;
+			u = it->getequip(itidx)->use;
+		}
+		else if(it->getinv(itidx))
+			item = it->getinv(itidx);
+
+		if(*numargs >= 3)
+			u = *use;
+
+		ent->getchar(entidx)->useitem(item, NULL, u);
+	)
+
 	ICOMMAND(r_transfer, "sssi", (const char *fromref, const char *toref, const char *itref, int *q),
 		getreference(fromref, from, from->getchar(fromidx) || from->getcontainer(fromidx), , r_transfer)
 		getreference(toref, to, to->getchar(toidx) || to->getcontainer(toidx), , r_transfer)
