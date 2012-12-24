@@ -47,6 +47,7 @@ void item::init(int base)
 	execfile(file);
 
 	game::loadingitem = NULL;
+	game::loadinguse = NULL;
 }
 
 void rpgitem::init(int base)

@@ -68,6 +68,7 @@ struct rpgtrigger;
 struct rpgvar;
 struct script;
 struct statusgroup;
+struct use;
 struct waypoint;
 
 namespace ai
@@ -108,6 +109,7 @@ namespace game
 	extern effect *loadingeffect;
 	extern statusgroup *loadingstatusgroup;
 	extern item *loadingitem;
+	extern use *loadinguse;
 	extern ammotype *loadingammotype;
 	extern rpgchar *loadingrpgchar;
 	extern faction *loadingfaction;
