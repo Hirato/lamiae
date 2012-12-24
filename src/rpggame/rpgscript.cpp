@@ -153,7 +153,7 @@ void reference::pushref(vector<item *> *d, bool force)
 	if(!canset(force)) return;
 
 	loopv(*d)
-		pushref((*d)[i]);
+		pushref((*d)[i], force);
 }
 void reference::pushref(equipment *d, bool force)
 {
