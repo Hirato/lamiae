@@ -505,6 +505,8 @@ namespace rpgio
 					loading->equip(items[idx], use);
 				}
 
+				loading->compactinventory();
+
 				break;
 			}
 			case ENT_ITEM:
