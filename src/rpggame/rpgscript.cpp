@@ -316,6 +316,7 @@ namespace rpgscript
 	reference *talker = NULL;
 	reference *looter = NULL;
 	reference *trader = NULL;
+	reference *config = NULL; //dummy for creation and initialisation.
 
 	void pushstack()
 	{
@@ -467,8 +468,9 @@ namespace rpgscript
 		trader = searchstack("trader", true);
 		talker = searchstack("talker", true);
 		map = registerref("curmap", curmap);
+		config = registerref("config", NULL);
 
-		player->immutable = hover->immutable = looter->immutable = trader->immutable = talker-> immutable = map->immutable = true;
+		player->immutable = hover->immutable = looter->immutable = trader->immutable = talker-> immutable = map->immutable = config->immutable = true;
 	}
 
 	void removeminorrefs(void *ptr)
@@ -1506,11 +1508,12 @@ namespace rpgscript
 		intret(dropped);
 	)
 
-	ICOMMAND(r_remove, "sii", (const char *ref, int *i, int *q),
-		getreference(ref, ent, ent->getchar(entidx) || ent->getcontainer(entidx), intret(0), r_remove)
+	ICOMMAND(r_remove, "ssi", (const char *ref, const char *itref, int *q),
+		getreference(ref, ent, ent->getchar(entidx) || ent->getcontainer(entidx), intret(0), r_drop)
+		getreference(itref, it, it->getinv(itidx), intret(0), r_drop)
 
-		int dropped = ent->getent(entidx)->drop(*i, max(0, *q), false);
-		if(DEBUG_SCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr removing %i instances of %i from reference \"%s\"; %i removed", *q, *i, ref, dropped);
+		int dropped = ent->getent(entidx)->drop(it->getinv(itidx), max(0, *q), false);
+		if(DEBUG_SCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr removing %i of reference \"%s\" from reference \"%s\" - %i removing", *q, itref, ref, dropped);
 		intret(dropped);
 	)
 

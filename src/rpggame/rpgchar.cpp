@@ -767,11 +767,13 @@ void rpgchar::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float 
 void rpgchar::init(int base)
 {
 	game::loadingrpgchar = this;
+	rpgscript::config->setref(this, true);
 
 	defformatstring(file)("data/rpg/games/%s/critters/%i.cfg", game::data, base);
 	execfile(file);
 
-	game::loadingitem = NULL;
+	game::loadingrpgchar = NULL;
+	rpgscript::config->setnull(true);
 
 	health = this->base.getmaxhp();
 	mana = this->base.getmaxmp();

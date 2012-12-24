@@ -82,9 +82,11 @@ void rpgplatform::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, fl
 void rpgplatform::init(int base)
 {
 	game::loadingrpgplatform = this;
+	rpgscript::config->setref(this, true);
 
 	defformatstring(file)("data/rpg/games/%s/platforms/%i.cfg", game::data, base);
 	execfile(file);
 
 	game::loadingrpgplatform = NULL;
+	rpgscript::config->setnull(true);
 }

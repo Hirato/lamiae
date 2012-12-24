@@ -63,7 +63,11 @@ namespace game
 				} \
 			} \
 			if(loading ## x) \
+			{\
+				rpgscript::config->setref(loading ## x, true); \
 				execute(contents); \
+				rpgscript::config->setnull(true); \
+			} \
 			else \
 				conoutf(CON_ERROR, "\fs\f3ERROR:\fr unable to select reference %s as type " #c, ref); \
 			loading ## x = old; \

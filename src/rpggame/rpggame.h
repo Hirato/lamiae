@@ -143,7 +143,7 @@ namespace game
 
 namespace rpgscript
 {
-	extern reference *hover, *talker, *looter, *trader;
+	extern reference *hover, *talker, *looter, *trader, *config;
 	extern vector<rpgent *> obits;
 	extern void parseref(const char *name, int &idx);
 	extern reference *searchstack(const char *name, bool create = false);
@@ -1791,7 +1791,8 @@ struct reference
 	void pushref(victimeffect *d, bool force = false);
 	void pushref(areaeffect *d, bool force = false);
 	void pushref(reference *d, bool force = false);
-	inline void pushref(int, bool force = false) {setnull(force);} //for NULL
+	template<typename T>
+	inline void pushref(T, bool force = false) { setnull(force); }
 
 	template<typename T>
 	inline void setref(T d, bool force = false)
