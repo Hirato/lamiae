@@ -277,10 +277,8 @@ namespace rpgio
 					ar->vwepmdl = readstring(f);
 					ar->hudmdl = readstring(f);
 
-					NOTNULL(ar->vwepmdl, it);
-					NOTNULL(ar->hudmdl, it);
-					preloadmodel(ar->vwepmdl);
-					preloadmodel(ar->hudmdl);
+					if(ar->vwepmdl) preloadmodel(ar->vwepmdl);
+					if(ar->hudmdl) preloadmodel(ar->hudmdl);
 
 					ar->idlefx = f->getlil<int>();
 					ar->slots = f->getlil<int>();
