@@ -4,8 +4,8 @@ extern bool reloadtexture(const char *name); //texture.cpp
 
 namespace rpgio
 {
-	#define GAME_VERSION 41
-	#define COMPAT_VERSION 41
+	#define GAME_VERSION 42
+	#define COMPAT_VERSION 42
 	#define GAME_MAGIC "RPGS"
 
 	/**
@@ -224,6 +224,7 @@ namespace rpgio
 		it->flags = f->getlil<int>();
 		it->value = f->getlil<int>();
 		it->maxdurability = f->getlil<int>();
+		it->charges = f->getlil<int>();
 		it->weight = f->getlil<float>();
 		it->durability = f->getlil<float>();
 		it->recovery = f->getlil<float>();
@@ -276,10 +277,8 @@ namespace rpgio
 					ar->vwepmdl = readstring(f);
 					ar->hudmdl = readstring(f);
 
-					NOTNULL(ar->vwepmdl, it);
-					NOTNULL(ar->hudmdl, it);
-					preloadmodel(ar->vwepmdl);
-					preloadmodel(ar->hudmdl);
+					if(ar->vwepmdl) preloadmodel(ar->vwepmdl);
+					if(ar->hudmdl) preloadmodel(ar->hudmdl);
 
 					ar->idlefx = f->getlil<int>();
 					ar->slots = f->getlil<int>();
@@ -337,6 +336,7 @@ namespace rpgio
 		f->putlil(it->flags);
 		f->putlil(it->value);
 		f->putlil(it->maxdurability);
+		f->putlil(it->charges);
 		f->putlil(it->weight);
 		f->putlil(it->durability);
 		f->putlil(it->recovery);
@@ -502,6 +502,8 @@ namespace rpgio
 					items[idx]->quantity++;
 					loading->equip(items[idx], use);
 				}
+
+				loading->compactinventory();
 
 				break;
 			}

@@ -40,9 +40,11 @@ void rpgobstacle::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, fl
 void rpgobstacle::init(int base)
 {
 	game::loadingrpgobstacle = this;
+	rpgscript::config->setref(this, true);
 
 	defformatstring(file)("data/rpg/games/%s/obstacles/%i.cfg", game::data, base);
 	execfile(file);
 
 	game::loadingrpgobstacle = NULL;
+	rpgscript::config->setnull(true);
 }

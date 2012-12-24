@@ -47,11 +47,14 @@ void item::init(int base)
 	execfile(file);
 
 	game::loadingitem = NULL;
+	game::loadinguse = NULL;
 }
 
 void rpgitem::init(int base)
 {
+	rpgscript::config->setref(this, true);
 	item::init(base);
+	rpgscript::config->setnull(true);
 }
 
 item *rpgitem::additem(int base, int q)

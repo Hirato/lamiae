@@ -36,9 +36,11 @@ void rpgtrigger::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, flo
 void rpgtrigger::init(int base)
 {
 	game::loadingrpgtrigger = this;
+	rpgscript::config->setref(this, true);
 
 	defformatstring(file)("data/rpg/games/%s/triggers/%i.cfg", game::data, base);
 	execfile(file);
 
+	rpgscript::config->setnull(true);
 	game::loadingrpgtrigger = NULL;
 }

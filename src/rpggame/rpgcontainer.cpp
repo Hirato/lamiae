@@ -131,9 +131,11 @@ void rpgcontainer::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, f
 void rpgcontainer::init(int base)
 {
 	game::loadingrpgcontainer = this;
+	rpgscript::config->setref(this, true);
 
 	defformatstring(file)("data/rpg/games/%s/containers/%i.cfg", game::data, base);
 	execfile(file);
 
 	game::loadingrpgcontainer = NULL;
+	rpgscript::config->setnull(true);
 }
