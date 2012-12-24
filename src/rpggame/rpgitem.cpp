@@ -38,8 +38,11 @@ int rpgitem::getscript()
 	return script;
 }
 
-void item::init(int base)
+void item::init(int base, bool world)
 {
+	if(world) rpgscript::config->setref( (rpgitem *) this, true);
+	else rpgscript::config->setref(this, true);
+
 	this->base = base;
 	game::loadingitem = this;
 
@@ -48,13 +51,13 @@ void item::init(int base)
 
 	game::loadingitem = NULL;
 	game::loadinguse = NULL;
+
+	rpgscript::config->setnull(true);
 }
 
 void rpgitem::init(int base)
 {
-	rpgscript::config->setref(this, true);
-	item::init(base);
-	rpgscript::config->setnull(true);
+	item::init(base, true);
 }
 
 item *rpgitem::additem(int base, int q)
@@ -64,6 +67,7 @@ item *rpgitem::additem(int base, int q)
 	quantity += q;
 	return this;
 }
+
 item *rpgitem::additem(item *it) {
 	if(it->compare(this))
 	{

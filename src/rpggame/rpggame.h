@@ -1112,7 +1112,7 @@ struct item
 
 	void getsignal(const char *sig, bool prop = true, rpgent *sender = NULL, int use = -1);
 
-	void init(int base);
+	void init(int base, bool world = false);
 
 	void transfer(item &o)
 	{
