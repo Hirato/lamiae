@@ -1100,6 +1100,7 @@ struct item
 	int flags;
 	int value;
 	int maxdurability;
+	int charges;
 	float weight;
 	float durability;
 	float recovery;
@@ -1134,7 +1135,7 @@ struct item
 	bool compare(item *o)
 	{
 		if(locals != o->locals || base != o->base || durability != o->durability || recovery != o->recovery || script != o->script || category != o->category ||
-			flags != o->flags || value != o->value || maxdurability != o->maxdurability || weight != o->weight || uses.length() != o->uses.length())
+			flags != o->flags || value != o->value || maxdurability != o->maxdurability || charges != o->charges || weight != o->weight || uses.length() != o->uses.length())
 			return false;
 
 		loopv(uses) if(!uses[i]->compare(o->uses[i]))
@@ -1148,7 +1149,7 @@ struct item
 		return true;
 	}
 
-	item() : name(NULL), icon(NULL), description(NULL), mdl(newstring(DEFAULTMODEL)), quantity(1), base(-1), script(2), category(0), flags(0), value(0), maxdurability(0), weight(0), durability(0), recovery(1), locals(-1) {}
+	item() : name(NULL), icon(NULL), description(NULL), mdl(newstring(DEFAULTMODEL)), quantity(1), base(-1), script(2), category(0), flags(0), value(0), maxdurability(0), charges(-2), weight(0), durability(0), recovery(1), locals(-1) {}
 	~item()
 	{
 		delete[] name;
@@ -1474,6 +1475,8 @@ struct rpgchar : rpgent
 	//character specific stuff
 	bool checkammo(equipment &eq, equipment *quiver, bool remove = false);
 	void doattack(equipment *eleft, equipment *eright, equipment *quiver);
+	bool useitem(item *it, equipment *slot = NULL, int u = -1);
+	void compactinventory(int base = -1);
 
 	void cleanup();
 

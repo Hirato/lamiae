@@ -37,6 +37,72 @@ void use_armour::apply(rpgchar *user)
 void use_weapon::apply(rpgchar *user) {} // does nothing, do it in the character update loop
 
 ///base functions
+bool rpgchar::useitem(item *it, equipment *slot, int u)
+{
+	int count = getcount(it);
+	if(!count) return false;
+
+	if(it->charges == 0)
+	{
+		if(this == game::player1) game::hudline("\f3This item has no more charges left!");
+		else if (DEBUG_AI) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr AI cannot use %p, charges", this);
+		return false;
+	}
+
+	bool shouldcompact = false;
+
+	if(it->charges > 0)
+	{
+		if(it->quantity)
+		{
+			item *newit = new item(); it->transfer(*newit);
+			it->quantity--;
+			newit->quantity = 1;
+			newit->charges--;
+
+			item *add = additem(newit);
+			delete newit;
+			it = add;
+
+			if(slot)
+			{
+				it->quantity++;
+				newit->quantity--;
+				slot->it = add;
+			}
+		}
+		else if(!it->quantity && count == 1)
+		{
+			it->charges--;
+			shouldcompact = true;
+		}
+		else
+		{
+			//ASSERT(slot)
+			//ASSERT(!it->quantity)
+
+			item *newit = new item(); it->transfer(*newit);
+			newit->charges--;
+			it = slot->it = additem(newit);
+			delete newit;
+
+		}
+
+		if(this == game::player1 && it->charges >= 1 && it->charges <= 5)
+			game::hudline("\fs\f3%s\fr has limited (\fs\f3%i\fr) charges remaining!", it->name, it->charges);
+	}
+
+	if(u >= 0 && it->uses[u]->type == USE_CONSUME)
+	{
+		it->uses[u]->apply(this);
+		it->getsignal("use", false, this, u);
+	}
+
+	if(shouldcompact) compactinventory(it->base);
+
+	return true;
+}
+
 bool rpgchar::checkammo(equipment &eq, equipment *quiver, bool remove)
 {
 	//it is assumed it's valid
@@ -836,6 +902,48 @@ float rpgchar::getweight()
 		ret += equipped[i]->it->weight;
 
 	return ret;
+}
+
+void rpgchar::compactinventory(int base)
+{
+	if(base < 0)
+	{
+		enumerate(inventory, vector<item *>, itemstack,
+			if(itemstack.length()) compactinventory(itemstack[0]->base);
+		)
+
+		return;
+	}
+
+	vector<item *> &stack = *inventory.access(base);
+	loopvrev(stack)
+	{
+		if(!getcount(stack[i]))
+		{
+			delete stack.remove(i);
+			continue;
+		}
+
+		loopj(i)
+		{
+			if(stack[i]->compare(stack[j]))
+			{
+				if(DEBUG_ENT)
+					conoutf(CON_DEBUG, "DEBUG: Found duplicate item definition, merging %p and %p", stack[j], stack[i]);
+
+				item *it = stack.remove(i);
+				stack[j]->quantity += it->quantity;
+
+				loopv(equipped) if(equipped[i]->it == it)
+					equipped[i]->it = stack[j];
+
+
+				delete it;
+
+				break;
+			}
+		}
+	}
 }
 
 extern int fog;

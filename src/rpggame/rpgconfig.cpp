@@ -127,6 +127,7 @@ namespace game
 			loading ## x = old; \
 		)
 
+	//FIXME can generate multiple copies of otherwise identical items.
 	CHECK(item, item,
 		obj->getinv(objidx) ? obj->getinv(objidx) :
 		obj->getequip(objidx) ? obj->getequip(objidx)->it :
@@ -679,6 +680,8 @@ namespace game
 		item *e = checkitem();
 		if(!e) return;
 
+		if(!e->charges) e->charges = 1;
+
 		loadinguse = (e->uses.add(new use(e->script)));
 		if(DEBUG_CONF)
 			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr created new consumable use (%i) for " DEBUG, e->uses.length() - 1, DEBUG_IND);
@@ -688,6 +691,8 @@ namespace game
 		item *e = checkitem();
 		if(!e) return;
 
+		if(!e->charges) e->charges = -1;
+
 		loadinguse = (e->uses.add(new use_armour(e->script)));
 		if(DEBUG_CONF)
 			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr created new armour use (%i) for " DEBUG, e->uses.length() - 1, DEBUG_IND);
@@ -696,6 +701,8 @@ namespace game
 	ICOMMAND(r_item_use_new_weapon, "", (),
 		item *e = checkitem();
 		if(!e) return;
+
+		if(!e->charges) e->charges = -1;
 
 		loadinguse = (e->uses.add(new use_weapon(e->script)));
 		if(DEBUG_CONF)
@@ -714,6 +721,7 @@ namespace game
 	INT(flags, 0, item::F_MAX)
 	INT(value, 0, 0xFFFFFF)
 	INT(maxdurability, 0, 0xFFFFFF)
+	INT(charges, -1, 0xFFFF)
 	FLOAT(weight, 0, 0xFFFF)
 	FLOAT(durability, 0, 0xFFFFFF)
 	FLOAT(recovery, 0, 1)

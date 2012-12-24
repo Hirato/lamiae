@@ -4,8 +4,8 @@ extern bool reloadtexture(const char *name); //texture.cpp
 
 namespace rpgio
 {
-	#define GAME_VERSION 41
-	#define COMPAT_VERSION 41
+	#define GAME_VERSION 42
+	#define COMPAT_VERSION 42
 	#define GAME_MAGIC "RPGS"
 
 	/**
@@ -224,6 +224,7 @@ namespace rpgio
 		it->flags = f->getlil<int>();
 		it->value = f->getlil<int>();
 		it->maxdurability = f->getlil<int>();
+		it->charges = f->getlil<int>();
 		it->weight = f->getlil<float>();
 		it->durability = f->getlil<float>();
 		it->recovery = f->getlil<float>();
@@ -337,6 +338,7 @@ namespace rpgio
 		f->putlil(it->flags);
 		f->putlil(it->value);
 		f->putlil(it->maxdurability);
+		f->putlil(it->charges);
 		f->putlil(it->weight);
 		f->putlil(it->durability);
 		f->putlil(it->recovery);
