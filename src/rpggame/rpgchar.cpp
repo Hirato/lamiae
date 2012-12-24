@@ -40,14 +40,7 @@ void use_weapon::apply(rpgchar *user) {} // does nothing, do it in the character
 bool rpgchar::useitem(item *it, equipment *slot, int u)
 {
 	int count = getcount(it);
-	if(!count) return false;
-
-	if(it->charges == 0)
-	{
-		if(this == game::player1) game::hudline("\f3This item has no more charges left!");
-		else if (DEBUG_AI) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr AI cannot use %p, charges", this);
-		return false;
-	}
+	if(!it->charges || !count) return false;
 
 	bool shouldcompact = false;
 
@@ -515,7 +508,7 @@ void rpgchar::update()
 	loopv(equipped)
 	{
 		use *usable = equipped[i]->it->uses[equipped[i]->use];
-		usable->apply(this);
+		if(equipped[i]->it->charges) usable->apply(this);
 		if(usable->type == USE_WEAPON)
 		{
 			use_weapon *wep = (use_weapon *) usable;
@@ -737,7 +730,35 @@ void rpgchar::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float 
 		loopvj(v.effects) hit_total += v.effects[j]->value();
 	}
 
-	vel.add(dir.mul(weapon->kickback + (ammo ? ammo->kickback : 0)));
+	vec kickback = dir.mul(weapon->kickback + (ammo ? ammo->kickback : 0));
+	if(state == CS_DEAD && ragdoll)
+	{
+		kickback.mul(2);
+		ragdolladdvel(this, kickback);
+	}
+	else vel.add(kickback);
+
+	if(!hit_friendly)
+	{
+		if(this == game::player1 && hit_total)
+			damagecompass(hit_total, attacker->o);
+
+		static vector<equipment *> armour;
+		armour.setsize(0);
+
+		loopv(equipped)
+		{
+			use_weapon *wep = (use_weapon *) equipped[i]->it->uses[equipped[i]->use];
+			if(wep->slots &  ~(SLOT_LHAND|SLOT_RHAND))
+				armour.add(equipped[i]);
+		}
+		if(armour.length())
+		{
+			int i = rnd(armour.length());
+			useitem(armour[i]->it, armour[i]);
+		}
+	}
+
 	if(this == game::player1 && !hit_friendly && hit_total) damagecompass(hit_total, attacker->o);
 	getsignal("hit", false, attacker);
 }
