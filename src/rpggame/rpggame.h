@@ -134,7 +134,6 @@ namespace game
 	extern bool cansave();
 	extern bool intersect(rpgent *d, const vec &from, const vec &to, float &dist);
 	extern rpgent *intersectclosest(const vec &from, const vec &to, rpgent *at, float &bestdist, float maxdist = 1e16);
-	extern void loadcutscenes(const char *dir);
 	extern void hudline(const char *fmt, ...);
 
 	//game variables
