@@ -1619,6 +1619,7 @@ namespace rpgio
 		{
 			delete f;
 			conoutf(CON_ERROR, "\fs\f3ERROR:\fr no game/map in progress? aborting");
+			rpgscript::cleanlocals();
 			localdisconnect();
 			return;
 		}
@@ -1696,6 +1697,7 @@ namespace rpgio
 		if(abort)
 		{
 			conoutf(CON_ERROR, "\fs\f3ERROR:\fr aborted - something went seriously wrong");
+			rpgscript::cleanlocals();
 			localdisconnect();
 			delete[] curmap;
 			return;

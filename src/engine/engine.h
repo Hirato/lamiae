@@ -304,7 +304,7 @@ extern int farplane;
 extern int hdr;
 extern bool hdrfloat;
 extern float ldrscale, ldrscaleb;
-extern bool envmapping;
+extern bool envmapping, modelpreviewing;
 extern int minimapping;
 extern const glmatrixf viewmatrix;
 extern glmatrixf mvmatrix, projmatrix, mvpmatrix, invmvmatrix, invmvpmatrix, invprojmatrix;
@@ -336,6 +336,12 @@ extern void zerofogcolor();
 extern void resetfogcolor();
 extern void renderavatar();
 extern void writecrosshairs(stream *f);
+
+namespace modelpreview
+{
+    extern void start(int x, int y, int w, int h, bool background = true);
+    extern void end();
+}
 
 struct timer;
 extern timer *begintimer(const char *name, bool gpu = true);
@@ -496,15 +502,18 @@ extern GLuint gdepthtex, gcolortex, gnormaltex, gglowtex, gdepthrb, gstencilrb;
 extern void cleanupgbuffer();
 extern void initgbuffer();
 extern void maskgbuffer(const char *mask);
+extern void preparegbuffer();
 extern void rendergbuffer();
 extern void shadegbuffer();
 extern void shademinimap(const vec &color = vec(0, 0, 0));
+extern void shademodelpreview(int x, int y, int w, int h, bool background = true);
 extern void rendertransparent();
 extern void renderao();
 extern void loadhdrshaders(bool luma = false);
 extern void processhdr(GLuint outfbo = 0, bool luma = false);
 extern void readhdr(int w, int h, GLenum format, GLenum type, void *dst, GLenum target = 0, GLuint tex = 0);
 extern void setupframe(int w, int h);
+extern void setupgbuffer(int w, int h);
 extern GLuint shouldscale();
 extern void doscale(int w, int h);
 extern bool debuglights();
@@ -836,6 +845,7 @@ extern void writemapsounds(stream *f);
 extern void clearmapsounds();
 extern void checkmapsounds();
 extern void updatesounds();
+extern void preloadmapsounds();
 
 extern void initmumble();
 extern void closemumble();

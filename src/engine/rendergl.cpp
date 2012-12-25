@@ -386,10 +386,6 @@ void gl_checkextensions()
         if(dbgexts) conoutf(CON_INIT, "Using GL_ARB_color_buffer_float extension.");
     }
 
-#ifdef __APPLE__
-    // Intel HD3000 broke occlusion queries - either causing software fallback, or returning wrong results
-    if(osversion >= 0x0A0800 || !intel)
-#endif
     if(hasext(exts, "GL_ARB_occlusion_query"))
     {
         GLint bits;
@@ -454,6 +450,9 @@ void gl_checkextensions()
     }
     else if(intel)
     {
+#ifdef __APPLE__
+        intel_immediate_bug = 1;
+#endif
 #ifdef WIN32
         intel_immediate_bug = 1;
         intel_vertexarray_bug = 1;
@@ -1933,7 +1932,6 @@ void drawcubemap(int size, const vec &o, float yaw, float pitch, const cubemapsi
     GLOBALPARAM(millis, (lastmillis/1000.0f, lastmillis/1000.0f, lastmillis/1000.0f));
 
     visiblecubes();
-
     GLERROR;
 
     rendergbuffer();
@@ -1971,6 +1969,113 @@ void drawcubemap(int size, const vec &o, float yaw, float pitch, const cubemapsi
 
     camera1 = oldcamera;
     envmapping = false;
+}
+
+bool modelpreviewing = false;
+
+namespace modelpreview
+{
+    physent *oldcamera;
+    physent camera;
+
+    float oldaspect, oldfovy, oldfov, oldldrscale, oldldrscaleb;
+    int oldfarplane, oldvieww, oldviewh;
+
+    int x, y, w, h;
+    bool background;
+
+    void start(int x, int y, int w, int h, bool background)
+    {
+        modelpreview::x = x;
+        modelpreview::y = y;
+        modelpreview::w = w;
+        modelpreview::h = h;
+        modelpreview::background = background;
+
+        setupgbuffer(screen->w, screen->h);
+
+        useshaderbyname("modelpreview");
+
+        envmapping = modelpreviewing = true;
+
+        oldcamera = camera1;
+        camera = *camera1;
+        camera.reset();
+        camera.type = ENT_CAMERA;
+        camera.o = vec(0, 0, 0);
+        camera.yaw = 0;
+        camera.pitch = 0;
+        camera.roll = 0;
+        camera1 = &camera;
+
+        oldaspect = aspect;
+        oldfovy = fovy;
+        oldfov = curfov;
+        oldldrscale = ldrscale;
+        oldldrscaleb = ldrscaleb;
+        oldfarplane = farplane;
+        oldvieww = vieww;
+        oldviewh = viewh;
+
+        aspect = w/float(h);
+        fovy = 90;
+        curfov = 2*atan2(tan(fovy/2*RAD), 1/aspect)/RAD;
+        farplane = 1024;
+        vieww = min(gw, w);
+        viewh = min(gh, h);
+        aspect =
+        ldrscale = 1;
+        ldrscaleb = ldrscale/255;
+
+        GLOBALPARAM(ldrscale, (ldrscale));
+        GLOBALPARAM(camera, (camera1->o.x, camera1->o.y, camera1->o.z, 1));
+        GLOBALPARAM(millis, (lastmillis/1000.0f, lastmillis/1000.0f, lastmillis/1000.0f));
+
+        glMatrixMode(GL_PROJECTION);
+        glPushMatrix();
+        glMatrixMode(GL_MODELVIEW);
+        glPushMatrix();
+
+        project(fovy, aspect, farplane);
+        transplayer();
+        readmatrices();
+
+        glEnable(GL_CULL_FACE);
+        glEnable(GL_DEPTH_TEST);
+
+        preparegbuffer();
+
+        resetmodelbatches();
+    }
+
+    void end()
+    {
+        rendermodelbatches();
+
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_CULL_FACE);
+
+        shademodelpreview(x, y, w, h, background);
+
+        defaultshader->set();
+
+        glMatrixMode(GL_PROJECTION);
+        glPopMatrix();
+        glMatrixMode(GL_MODELVIEW);
+        glPopMatrix();
+
+        aspect = oldaspect;
+        fovy = oldfovy;
+        curfov = oldfov;
+        farplane = oldfarplane;
+        vieww = oldvieww;
+        viewh = oldviewh;
+        ldrscale = oldldrscale;
+        ldrscaleb = oldldrscaleb;
+
+        camera1 = oldcamera;
+        envmapping = modelpreviewing = false;
+    }
 }
 
 extern void gl_drawhud(int w, int h);

@@ -165,6 +165,7 @@ namespace rpgscript
 	extern void dumplocals();
 	extern bool keeplocal(int i);
 	extern bool freelocal(int i);
+    extern void cleanlocals();
 	extern bool comparelocals(int a, int b);
 
 	extern void pushstack();
