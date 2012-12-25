@@ -2665,7 +2665,6 @@ void resetgl()
     extern void cleanuplights();
     extern void cleanupshaders();
     extern void cleanupgl();
-    cleartexanims(false);
     recorder::cleanup();
     cleanupva();
     cleanupparticles();
@@ -2701,8 +2700,6 @@ void resetgl()
     reloadtextures();
     initlights();
     allchanged(true);
-
-    reconftexanims();
 }
 
 static void getbackgroundres(int &w, int &h)

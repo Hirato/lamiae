@@ -17,7 +17,6 @@ namespace game
 	void dynlighttrack(physent *owner, vec &o, vec &hud) {}
 	void vartrigger(ident *id) {}
 	void bounced(physent *d, const vec &surface) {}
-	void registeranimation(char *dir, char* anim, int num) {}
 }
 
 namespace server

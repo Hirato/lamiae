@@ -57,8 +57,6 @@ extern bool isthirdperson();
 
 extern bool settexture(const char *name, int clamp = 0);
 extern void scaledscreenshot(char *filename, int format, int x = 0, int y = 0);
-//offtools: reload on receiving textures (replace dummy texture: notexture)
-extern void reloadslot(int n);
 
 // octaedit
 

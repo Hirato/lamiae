@@ -634,20 +634,6 @@ struct frame
     frame(int _s, GLuint _n) : num(_n), slot(_s) {}
 };
 
-struct TexAnim
-{
-    vector<frame>  frames;
-    int               pos;
-    int               delay;
-    int               lastupdate, pausemillis;
-    bool              on;
-
-    TexAnim(int _s, GLuint _if): pos(0), delay(500), lastupdate(0), pausemillis(0), on(false)
-    {
-        frames.add(frame(_s, _if));
-    }
-};
-
 enum
 {
     TEX_DIFFUSE = 0,
@@ -832,8 +818,6 @@ extern const char *getshaderparamname(const char *name);
 
 extern void setupblurkernel(int radius, float sigma, float *weights, float *offsets);
 extern void setblurshader(int pass, int size, int radius, float *weights, float *offsets, GLenum target = GL_TEXTURE_2D);
-
-extern void updatetexanims();
 
 extern void savepng(const char *filename, ImageData &image, bool flip = false);
 extern void savetga(const char *filename, ImageData &image, bool flip = false);

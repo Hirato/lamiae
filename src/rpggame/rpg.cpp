@@ -846,9 +846,6 @@ namespace game
 
 	void writemapdata(stream *f) {} //do we save rpg declarations per map or not?
 	void loadconfigs() {}
-	void texturefailed(char* name, int slot) {}
-	void mmodelfailed(const char *name, int idx) {}
-	void mapfailed(const char *name) {}
 	bool detachcamera() { return player1->state == CS_DEAD; }
 	void toserver(char *text) { execute(text); } //since we don't talk, just execute if the / is forgotten
 }

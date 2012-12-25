@@ -88,14 +88,6 @@ namespace game
     extern bool needminimap();
     extern bool showenthelpers();
 
-    //__offtools__ - disfunc fix this
-    extern void texturefailed(char *file, int slot);
-    extern void mmodelfailed(const char *name, int idx);
-    extern void mapfailed(const char *name);
-
-    //__offtools__
-    extern void registeranimation(char *dir, char* anim, int num);
-
     //return false if you do not wish to override the associated code in game - return true otherwise
     extern bool mousemove(int &dx, int &dy, float &cursens);
     extern bool recomputecamera(physent *&camera1, physent &tempcamera, bool &detachedcamera, float &thirdpersondistance);

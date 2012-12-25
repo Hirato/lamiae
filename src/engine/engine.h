@@ -273,8 +273,6 @@ extern void compactvslots(cube *c, int n = 8);
 extern void compactvslot(int &index);
 extern int compactvslots();
 extern const char *textypename(int i);
-extern void cleartexanims(bool clear = true);
-extern void reconftexanims();
 
 // pvs
 extern void clearpvs();

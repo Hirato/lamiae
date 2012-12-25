@@ -1327,203 +1327,10 @@ MSlot materialslots[(MATF_VOLUME|MATF_INDEX)+1];
 Slot dummyslot;
 VSlot dummyvslot(&dummyslot);
 
-vector<TexAnim *> texanim;
-
-void updatetexanims()
-{
-    loopv(texanim)
-    {
-        TexAnim &anim = *texanim[i];
-        if(anim.frames.length() && anim.on && anim.delay >= 0 && lastmillis-anim.lastupdate >= anim.delay)
-        {
-            int updates = (lastmillis - anim.lastupdate) / anim.delay;
-            anim.lastupdate += updates * anim.delay;
-
-            anim.pos+= updates;
-            anim.pos %= anim.frames.length();
-            slots[anim.frames[0].slot]->sts[0].t->id = anim.frames[anim.pos].num;
-        } //if off, just pause, keep at current frame
-    }
-}
-
-void texaniminit(int *n)
-{
-    loopv(texanim)
-    {
-        if(texanim[i]->frames[0].slot == *n) {conoutf("slot %i already initiated for animation", *n); return;}
-    }
-
-    if(!slots.inrange(*n)) { conoutf("undefiend slot %i", *n); return; }
-    Slot &tmp = lookupslot(*n, true); //load the texture, prevents crashes due to NULL textures in the slot[i].sts vector
-
-    texanim.add(new TexAnim(*n, tmp.sts[0].t->id));
-}
-
-void texanimadd(int *d, int *s)
-{
-    int anim = -1, tex = -1;
-    loopv(texanim) {
-        if(texanim[i]->frames[0].slot == *d) anim = i;
-        if(texanim[i]->frames[0].slot == *s) tex = i; //ie, the replacement slot is animated
-    }
-    if(anim >= 0 && slots.inrange(*d) && slots.inrange(*s))
-    {
-        if(tex >= 0) texanim[anim]->frames.add(texanim[tex]->frames[0]); //add the original frame, not the current one, if animated
-        else
-        {
-            Slot &tmp = lookupslot(*s, true); //load the texture, prevents crashes due to NULL textures in the slot[i].sts vector
-            texanim[anim]->frames.add(frame(*s, tmp.sts[0].t->id));
-        }
-    }
-    else
-    {
-        if(anim < 0) conoutf("slot %i not initiated for animation", *d);
-        if(!slots.inrange(*d)) conoutf("slot %i not defined", *d);
-        if(!slots.inrange(*s)) conoutf("replacement slot %i not defined, ignoring frame", *s);
-    }
-}
-
-void texanimstart(int *n)
-{
-    loopv(texanim)
-    {
-        if(texanim[i]->frames[0].slot == *n)
-        {
-            if(texanim[i]->pausemillis)
-            {
-                texanim[i]->lastupdate = lastmillis - (texanim[i]->pausemillis - texanim[i]->lastupdate); //ie, resume
-                texanim[i]->pausemillis = 0;
-            }
-            else
-                texanim[i]->lastupdate = lastmillis;
-            texanim[i]->on = true;
-            return;
-        }
-    }
-    conoutf("slot %i not initiated for animation", *n);
-}
-
-void texanimdelay(int *n, int *d)
-{
-    loopv(texanim)
-    {
-        if(texanim[i]->frames[0].slot == *n)
-        {
-            if(*d <= 0)
-            {
-                conoutf("invalid delay time (%i) for slot %i", *d, *n);
-                return;
-            }
-            texanim[i]->delay = *d;
-            return;
-        }
-    }
-    conoutf("slot %i not initiated for animation", *n);
-}
-
-void texanimstop(int *n)
-{
-    loopv(texanim)
-    {
-        if(texanim[i]->frames[0].slot == *n)
-        {
-            if(texanim[i]->on) texanim[i]->pausemillis = lastmillis;
-            texanim[i]->on = false;
-            return;
-        }
-    }
-    conoutf("slot %i not initiated for animation", *n);
-}
-
-void texanimsetframe(int *n, int *fr)
-{
-    loopv(texanim) if(texanim[i]->frames[0].slot == *n)
-    {
-        TexAnim &anim = *texanim[i];
-        if (anim.frames.inrange(*fr))
-        {
-            texanimstop(n);
-            slots[anim.frames[0].slot]->sts[0].t->id = anim.frames[*fr].num;
-        }
-        else
-        {
-            conoutf("frame %i not found in animation", *fr);
-        }
-        return;
-    }
-    conoutf("slot %i not initiated for animation", *n);
-}
-
-void texanimreset(int *n)
-{
-    loopv(texanim)
-    {
-        if(texanim[i]->frames[0].slot == *n)
-        {
-            texanim[i]->on = false;
-            texanim[i]->pos = 0;
-            slots[*n]->sts[0].t->id = texanim[i]->frames[0].num;
-            texanim[i]->pausemillis = 0;
-            return;
-        }
-    }
-    conoutf("slot %i not initiated for animation", *n);
-}
-
-void writetexanims(stream *f)
-{
-    loopv(texanim)
-    {
-        TexAnim &anim = *texanim[i];
-        if(anim.frames.length())
-        {
-            loopvj(anim.frames) f->printf(j ? "texanimadd %i %i\n" : "texaniminit %i\n", anim.frames[0].slot, anim.frames[j].slot);
-            f->printf("texanimdelay %i %i\n\n", anim.frames[0].slot, anim.delay);
-        }
-    }
-}
-
-void cleartexanims(bool clear)
-{
-    //return textures to their original states when resetting
-    //the engine uses methods to reuse the old texture in memory, and this manipulation of memory idents most likely causes the wrong texture to be represented if animated
-
-    // solution: restore the original idents, it's stored afterall
-    loopv(texanim)
-    {
-        slots[texanim[i]->frames[0].slot]->sts[0].t->id = texanim[i]->frames[0].num;
-    }
-    if(clear) texanim.deletecontents();
-}
-
-void reconftexanims()
-{
-    loopv(texanim)
-    {
-        loopvj(texanim[i]->frames)
-        {
-            //we're assuming it's still inrange
-            Slot &tmp = lookupslot(texanim[i]->frames[j].slot, true); //load the texture, prevents crashes due to NULL textures in the slot[i].sts vector
-
-            texanim[i]->frames[j].num = tmp.sts[0].t->id;
-            //TODO handle animated cases
-        }
-    }
-}
-
-COMMAND(texaniminit, "i");
-COMMAND(texanimadd, "ii");
-COMMAND(texanimstart, "i");
-COMMAND(texanimstop, "i");
-COMMAND(texanimsetframe, "ii");
-COMMAND(texanimreset, "i");
-COMMAND(texanimdelay, "ii");
-
 void texturereset(int *n)
 {
     if(!(identflags&IDF_OVERRIDDEN) && !game::allowedittoggle()) return;
     resetslotshader();
-    cleartexanims(true);
     int limit = clamp(*n, 0, slots.length());
     for(int i = limit; i < slots.length(); i++)
     {
@@ -1550,7 +1357,6 @@ static bool markingvslots = false;
 void clearslots()
 {
     resetslotshader();
-    cleartexanims(true);
     slots.deletecontents();
     vslots.deletecontents();
     loopi((MATF_VOLUME|MATF_INDEX)+1) materialslots[i].reset();
@@ -1952,19 +1758,6 @@ void texture(char *type, char *name, int *rot, int *xoffset, int *yoffset, float
         vs.scale = *scale <= 0 ? 1 : *scale;
         propagatevslot(&vs, (1<<VSLOT_NUM)-1);
     }
-
-    //__offtools__: texture sharing, test file exists
-    const char* file;
-    if(name[0]=='<')
-    {
-        file = strrchr(name, '>');
-        file++;
-    }
-    else { file = name; }
-    defformatstring(pfile)("packages/%s", file);
-    path(pfile);
-    //fallback, if texture file doesnt exist, handled by game mods
-    if(!fileexists(findfile(pfile, "r"), "r")) game::texturefailed(pfile, slots.length() - 1);
 }
 COMMAND(texture, "ssiiif");
 
@@ -2195,18 +1988,6 @@ static Slot &loadslot(Slot &s, bool forceload)
     }
     s.loaded = true;
     return s;
-}
-
-//__offtools__: just a debugging routine
-void debugtexture(int slot)
-{
-    conoutf("debug slot %d", slot);
-}
-
-//__offtools__: dirty workaround on receiving textures
-void reloadslot(int n)
-{
-    loadslot(*slots[n], true);
 }
 
 MSlot &lookupmaterialslot(int index, bool load)

@@ -863,11 +863,6 @@ void writemapcfg(const char *a)
         saveslotconfig(f, *slots[i], i);
     }
 
-    f->printf("\n//Texture Animations; cleared on texture reset\n\n");
-
-    extern void writetexanims(stream *f);
-    writetexanims(f);
-
     f->printf("\n\n");
     delete f;
 
@@ -1231,7 +1226,7 @@ bool load_world(const char *mname, const char *cname)        // still supports a
     setmapfilenames(mname);
 
     stream *f = opengzfile(ogzname, "rb");
-    if(!f) { conoutf(CON_ERROR, "could not read map %s", ogzname); game::mapfailed(mname); return false; }
+    if(!f) { conoutf(CON_ERROR, "could not read map %s", ogzname); return false; }
     octaheader hdr;
     if(f->read(&hdr, 7*sizeof(int))!=int(7*sizeof(int))) { conoutf(CON_ERROR, "map %s has malformatted header", ogzname); delete f; return false; }
     lilswap(&hdr.version, 6);
