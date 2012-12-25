@@ -691,13 +691,17 @@ namespace rpgscript
 		else intret(reference::T_INVALID);
 	)
 
-	ICOMMAND(r_clearref, "s", (const char *ref),
-		loopvrev(stack)
+	ICOMMAND(r_clearref, "V", (tagval *v, int n),
+		loopi(n)
 		{
-			reference *r = searchstack(ref, false);
-			if(r->canset()) loopvrev(stack)
+			const char *ref = v[i].getstr();
+			loopvrev(stack)
 			{
-				if(stack[i]->remove(r->name)) return;
+				reference *r = searchstack(ref, false);
+				if(r->canset()) loopvrev(stack)
+				{
+					if(stack[i]->remove(r->name)) return;
+				}
 			}
 		}
 	)
