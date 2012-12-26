@@ -1897,6 +1897,84 @@ namespace UI
         }
     };
 
+    struct ModelPreview : Filler
+    {
+        const char *mdl;
+        int anim;
+        vector <const char *> attachments[2];
+        dynent ent;
+
+        ModelPreview(float minw, float minh, const char *m, int a, const char *attach) : Filler(minw, minh), mdl(newstring(m))
+        {
+            int aprim = (a & ANIM_INDEX) | ANIM_LOOP;
+            int asec = ((a >> 8) & ANIM_INDEX);
+            if(asec) asec |= ANIM_LOOP;
+
+            anim = aprim | (asec << ANIM_SECONDARY);
+
+            vector<char *> elems;
+            explodelist(attach, elems);
+
+            loopv(elems)
+                attachments[i % 2].add(elems[i]);
+        }
+        ~ModelPreview()
+        {
+            delete[] mdl;
+            loopi(2) attachments[i].deletearrays();
+        }
+
+        void draw(float sx, float sy)
+        {
+            glDisable(GL_BLEND);
+            // GL_SCISSOR_TEST causes problems with rendering
+            // disable it and reapply it afterwards.
+            if(clipstack.length()) glDisable(GL_SCISSOR_TEST);
+
+            int screensize = screen->h;
+            int margin = ceil((screen->w - screen->h) / 2.f);
+
+            int x = floor(margin + screensize * sx), dx = ceil(w * screensize),
+                y = ceil(screen->h - (h + sy) * screensize), dy = ceil(h * screensize);
+
+            modelpreview::start(x, y, dx, dy);
+
+            model *m = loadmodel(mdl);
+            if(m)
+            {
+                vec center, radius;
+                m->boundbox(center, radius);
+                float dist = 2.0f * max(max(radius.x, radius.y), 1.1f * radius.z),
+                    yaw = fmod(totalmillis / 10000.f * 360.f, 360.f);
+                vec o(-center.x, dist - center.y, -0.1f * dist - center.z);
+
+                vector<modelattach> attach;
+
+                if(attachments[1].length())
+                {
+                    attach.reserve(attachments[1].length());
+                    loopv(attachments[1])
+                    {
+                        attach.add(modelattach(attachments[0][i], attachments[1][i]));
+                    }
+
+                    attach.add(modelattach());
+                }
+
+                rendermodel(mdl, ANIM_IDLE|ANIM_LOOP, o, yaw, 0, 0, 0, &ent, attach.getbuf(), 0, 0, 1);
+
+            }
+
+            modelpreview::end();
+            glEnable(GL_BLEND);
+            if(clipstack.length()) glEnable(GL_SCISSOR_TEST);
+
+            Object::draw(sx, sy);
+
+        }
+
+    };
+
     // default size of text in terms of rows per screenful
     VARP(uitextrows, 1, 40, 200);
 
@@ -2485,6 +2563,10 @@ namespace UI
     ICOMMAND(uitiledimage, "sffffe", (char *texname, float *tilew, float *tileh, float *minw, float *minh, uint *children),
         Texture *tex = textureload(texname, 3, true, false);
         addui(new TiledImage(tex, *tilew <= 0 ? 1 : *tilew, *tileh <= 0 ? 1 : *tileh, *minw, *minh), children));
+
+    ICOMMAND(uimodelpreview, "sisffe", (const char *model, int *anim, const char *attach, float *minw, float *minh, uint *children),
+        addui(new ModelPreview(*minw, *minh, model, *anim, attach), children);
+    )
 
     ICOMMAND(uicolortext, "sfffffe", (char *text, float *scale, float *wrap, float *r, float *g, float *b, uint *children),
         addui(new Text(text, *scale <= 0 ? 1 : *scale, *wrap, *r, *g, *b), children));
