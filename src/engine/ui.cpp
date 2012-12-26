@@ -512,14 +512,18 @@ namespace UI
 
     struct World : Object
     {
+        float margin;
+        int size;
+
         void layout()
         {
             Object::layout();
 
-            int sw = screen->w, sh = screen->h;
-            if(forceaspect) sw = int(ceil(sh*forceaspect));
+            int sw = screen->w;
+            size = screen->h;
+            if(forceaspect) sw = int(ceil(size*forceaspect));
 
-            float margin = max((float(sw)/sh - 1)/2, 0.0f);
+            margin = max((float(sw)/size - 1)/2, 0.0f);
             x = -margin;
             y = 0;
             w = 1 + 2*margin;
@@ -1931,11 +1935,11 @@ namespace UI
             // disable it and reapply it afterwards.
             if(clipstack.length()) glDisable(GL_SCISSOR_TEST);
 
-            int screensize = screen->h;
-            int margin = ceil((screen->w - screen->h) / 2.f);
 
-            int x = floor(margin + screensize * sx), dx = ceil(w * screensize),
-                y = ceil(screen->h - (h + sy) * screensize), dy = ceil(h * screensize);
+            int x = floor( (sx + world->margin) * screen->w / world->w),
+                dx = ceil(w * screen->w / world->w),
+                y = ceil(( 1 - (h + sy) ) * world->size),
+                dy = ceil(h * world->size);
 
             modelpreview::start(x, y, dx, dy);
 
@@ -1970,7 +1974,6 @@ namespace UI
             if(clipstack.length()) glEnable(GL_SCISSOR_TEST);
 
             Object::draw(sx, sy);
-
         }
 
     };
@@ -2764,17 +2767,14 @@ namespace UI
 
         if(tooltip)
         {
-            int sw = screen->w, sh = screen->h;
-            if(forceaspect) sw = int(ceil(sh*forceaspect));
+            float x = world->x + (1 + world->margin * 2) * cursorx;
+            float y = world->y + ( 1 ) * cursory;
+            x += 0.01; y += 0.01;
 
-            float margin = max((float(sw)/sh - 1)/2, 0.0f);
-            float left = -margin, right = 1 + margin * 2;
-            float x = left + cursorx * right + 0.01, y = cursory + 0.01;
-
-            if(x + tooltip->w * .95 > right - margin)
+            if(x + tooltip->w * .95 > 1 + world->margin)
             {
                 x -= tooltip->w + 0.02;
-                if(x <= -margin) x = -margin + 0.02;
+                if(x <= -world->margin) x = -world->margin + 0.02;
             }
             if(y + tooltip->h * .95 > 1)
             {
