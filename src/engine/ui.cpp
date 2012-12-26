@@ -1932,7 +1932,7 @@ namespace UI
         {
             glDisable(GL_BLEND);
             // GL_SCISSOR_TEST causes problems with rendering
-            // disable it and reapply it afterwards.
+            // disable it and restore it afterwards.
             if(clipstack.length()) glDisable(GL_SCISSOR_TEST);
 
 
@@ -1941,7 +1941,7 @@ namespace UI
                 y = ceil(( 1 - (h + sy) ) * world->size),
                 dy = ceil(h * world->size);
 
-            modelpreview::start(x, y, dx, dy);
+            modelpreview::start(x, y, dx, dy, true, true);
 
             model *m = loadmodel(mdl);
             if(m)
