@@ -1965,7 +1965,7 @@ namespace UI
                     attach.add(modelattach());
                 }
 
-                rendermodel(mdl, ANIM_IDLE|ANIM_LOOP, o, yaw, 0, 0, 0, &ent, attach.getbuf(), 0, 0, 1);
+                rendermodel(mdl, anim, o, yaw, 0, 0, 0, &ent, attach.getbuf(), 0, 0, 1);
 
             }
 
