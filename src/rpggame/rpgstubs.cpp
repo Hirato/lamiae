@@ -45,4 +45,5 @@ namespace server
 	int masterport() {return 0;}
 	void processmasterinput(const char *cmd, int cmdlen, const char *args) {}
 	bool ispaused() {return game::ispaused();}
+	int scaletime(int t) { return t; }
 }

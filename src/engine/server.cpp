@@ -422,6 +422,7 @@ const char *disconnectreason(int reason)
         case DISC_LOCAL: return "server is in local mode";
         case DISC_KICK: return "kicked/banned";
         case DISC_TAGT: return "tag type";
+        case DISC_IPBAN: return "ip is banned";
         case DISC_PRIVATE: return "server is in private mode";
         case DISC_MAXCLIENTS: return "server FULL";
         case DISC_TIMEOUT: return "connection timed out";
@@ -713,10 +714,14 @@ void serverslice(bool dedicated, uint timeout)   // main server update, called f
 
     if(dedicated)
     {
-        int millis = (int)enet_time_get();
-        curtime = server::ispaused() ? 0 : millis - totalmillis;
-        totalmillis = millis;
+        int millis = (int)enet_time_get(), elapsed = millis - totalmillis;
+        static int timeerr = 0;
+        int scaledtime = server::scaletime(elapsed) + timeerr;
+        curtime = scaledtime/100;
+        timeerr = scaledtime%100;
+        if(server::ispaused()) curtime = 0;
         lastmillis += curtime;
+        totalmillis = millis;
         updatetime();
     }
     server::serverupdate();

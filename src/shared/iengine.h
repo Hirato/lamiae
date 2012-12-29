@@ -4,7 +4,6 @@ extern int curtime;                     // current frame time
 extern int lastmillis;                  // last time
 extern int totalmillis;                 // total elapsed time
 extern uint totalsecs;
-extern int gamespeed, paused;
 extern bvec watercolor;
 extern char *version;
 
@@ -133,6 +132,7 @@ extern ident *newident(const char *name, int flags = 0);
 extern ident *readident(const char *name);
 extern ident *writeident(const char *name, int flags = 0);
 extern bool addcommand(const char *name, identfun fun, const char *narg);
+extern bool addkeyword(int type, const char *name);
 extern uint *compilecode(const char *p);
 extern void keepcode(uint *p);
 extern void freecode(uint *p);
@@ -155,6 +155,12 @@ extern bool validateblock(const char *s);
 extern void explodelist(const char *s, vector<char *> &elems, int limit = -1);
 extern char *indexlist(const char *s, int pos);
 extern int listlen(const char *s);
+extern void printvar(ident *id);
+extern void printvar(ident *id, int i);
+extern void printfvar(ident *id, float f);
+extern void printsvar(ident *id, const char *s);
+extern int clampvar(ident *id, int i, int minval, int maxval);
+extern float clampfvar(ident *id, float f, float minval, float maxval);
 
 // console
 
@@ -338,8 +344,8 @@ extern bool loadents(const char *fname, vector<entity> &ents, uint *crc = NULL);
 extern void moveplayer(physent *pl, int moveres, bool local);
 extern bool moveplayer(physent *pl, int moveres, bool local, int curtime);
 extern bool collide(physent *d, const vec &dir = vec(0, 0, 0), float cutoff = 0.0f, bool playercol = true);
-extern bool bounce(physent *d, float secs, float elasticity, float waterfric);
-extern bool bounce(physent *d, float elasticity, float waterfric);
+extern bool bounce(physent *d, float secs, float elasticity, float waterfric, float grav);
+extern bool bounce(physent *d, float elasticity, float waterfric, float grav);
 extern void avoidcollision(physent *d, const vec &dir, physent *obstacle, float space);
 extern bool overlapsdynent(const vec &o, float radius);
 extern bool movecamera(physent *pl, const vec &dir, float dist, float stepdist);
@@ -357,9 +363,15 @@ extern bool entinmap(dynent *d, bool avoidplayers = false);
 extern void findplayerspawn(dynent *d, int forceent = -1, int tag = 0);
 
 // sound
-extern int playsound(int n, const vec *loc = NULL, extentity *ent = NULL, int loops = 0, int fade = 0, int chanid = -1, int radius = 0, int expire = -1);
-extern int playsoundname(const char *s, const vec *loc = NULL, int vol = 0, int loops = 0, int fade = 0, int chanid = -1, int radius = 0, int expire = -1);
+enum
+{
+    SND_MAP = 1<<0
+};
+
+extern int playsound(int n, const vec *loc = NULL, extentity *ent = NULL, int flags = 0, int loops = 0, int fade = 0, int chanid = -1, int radius = 0, int expire = -1);
+extern int playsoundname(const char *s, const vec *loc = NULL, int vol = 0, int flags = 0, int loops = 0, int fade = 0, int chanid = -1, int radius = 0, int expire = -1);
 extern void preloadsound(int n);
+extern void preloadmapsound(int n);
 extern bool stopsound(int n, int chanid, int fade = 0);
 extern void stopsounds();
 extern void initsound();

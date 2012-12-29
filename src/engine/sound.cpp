@@ -47,7 +47,7 @@ struct soundchannel
     vec loc;
     soundslot *slot;
     extentity *ent;
-    int radius, volume, pan;
+    int radius, volume, pan, flags;
     bool dirty;
 
     soundchannel(int id) : id(id) { reset(); }
@@ -64,13 +64,14 @@ struct soundchannel
         radius = 0;
         volume = -1;
         pan = -1;
+        flags = 0;
         dirty = false;
     }
 };
 vector<soundchannel> channels;
 int maxchannels = 0;
 
-soundchannel &newchannel(int n, soundslot *slot, const vec *loc = NULL, extentity *ent = NULL, int radius = 0)
+soundchannel &newchannel(int n, soundslot *slot, const vec *loc = NULL, extentity *ent = NULL, int flags = 0, int radius = 0)
 {
     if(ent)
     {
@@ -84,6 +85,7 @@ soundchannel &newchannel(int n, soundslot *slot, const vec *loc = NULL, extentit
     if(loc) chan.loc = *loc;
     chan.slot = slot;
     chan.ent = ent;
+    chan.flags = 0;
     chan.radius = radius;
     return chan;
 }
@@ -373,7 +375,7 @@ void checkmapsounds()
         if(e.type!=ET_SOUND) continue;
         if(camera1->o.dist(e.o) < e.attr[1])
         {
-            if(!e.visible) playsound(e.attr[0], NULL, &e, -1);
+            if(!e.visible) playsound(e.attr[0], NULL, &e, SND_MAP, -1);
         }
         else if(e.visible) stopmapsound(&e);
     }
@@ -446,7 +448,7 @@ void updatesounds()
     }
 }
 
-VARP(maxsoundsatonce, 0, 5, 100);
+VARP(maxsoundsatonce, 0, 7, 100);
 
 VAR(dbgsound, 0, 0, 1);
 
@@ -488,11 +490,21 @@ static bool loadsoundslot(soundslot &slot, bool msg = false)
     return false;
 }
 
+static inline void preloadsound(vector<soundconfig> &sounds, vector<soundslot> &slots, int n)
+{
+    if(!sounds.inrange(n)) return;
+    soundconfig &config = sounds[n];
+    loopk(config.numslots) loadsoundslot(slots[config.slots+k], true);
+}
+
 void preloadsound(int n)
 {
-    if(!gamesounds.inrange(n)) return;
-    soundconfig &config = gamesounds[n];
-    loopk(config.numslots) loadsoundslot(gameslots[config.slots+k], true);
+    preloadsound(gamesounds, gameslots, n);
+}
+
+void preloadmapsound(int n)
+{
+    preloadsound(mapsounds, mapslots, n);
 }
 
 void preloadmapsounds()
@@ -501,18 +513,16 @@ void preloadmapsounds()
     loopv(ents)
     {
         extentity &e = *ents[i];
-        if(e.type!=ET_SOUND || !mapsounds.inrange(e.attr[0])) continue;
-        soundconfig &config = mapsounds[e.attr[0]];
-        loopk(config.numslots) loadsoundslot(mapslots[config.slots+k], true);
+        if(e.type==ET_SOUND) preloadsound(mapsounds, mapslots, e.attr[0]);
     }
 }
 
-int playsound(int n, const vec *loc, extentity *ent, int loops, int fade, int chanid, int radius, int expire)
+int playsound(int n, const vec *loc, extentity *ent, int flags, int loops, int fade, int chanid, int radius, int expire)
 {
     if(nosound || !soundvol) return -1;
 
-    vector<soundslot> &slots = ent ? mapslots : gameslots;
-    vector<soundconfig> &sounds = ent ? mapsounds : gamesounds;
+    vector<soundslot> &slots = ent || flags&SND_MAP ? mapslots : gameslots;
+    vector<soundconfig> &sounds = ent || flags&SND_MAP ? mapsounds : gamesounds;
     if(!sounds.inrange(n)) { conoutf(CON_WARN, "unregistered sound: %d", n); return -1; }
     soundconfig &config = sounds[n];
 
@@ -574,7 +584,7 @@ int playsound(int n, const vec *loc, extentity *ent, int loops, int fade, int ch
         Mix_HaltChannel(chanid);
         freechannel(chanid);
     }
-    soundchannel &chan = newchannel(chanid, &slot, loc, ent, radius);
+    soundchannel &chan = newchannel(chanid, &slot, loc, ent, flags, radius);
     updatechannel(chan);
     int playing = -1;
     if(fade)
@@ -610,12 +620,12 @@ bool stopsound(int n, int chanid, int fade)
     return true;
 }
 
-int playsoundname(const char *s, const vec *loc, int vol, int loops, int fade, int chanid, int radius, int expire)
+int playsoundname(const char *s, const vec *loc, int vol, int flags, int loops, int fade, int chanid, int radius, int expire)
 {
     if(!vol) vol = 100;
     int id = findsound(s, vol, gamesounds, gameslots);
     if(id < 0) id = addsound(s, vol, 0, gamesounds, gameslots);
-    return playsound(id, loc, NULL, loops, fade, chanid, radius, expire);
+    return playsound(id, loc, NULL, flags, loops, fade, chanid, radius, expire);
 }
 
 ICOMMAND(playsound, "i", (int *n), playsound(*n));

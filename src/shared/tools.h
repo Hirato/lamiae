@@ -1199,8 +1199,6 @@ extern int listfiles(const char *dir, const char *ext, vector<char *> &files);
 extern int listzipfiles(const char *dir, const char *ext, vector<char *> &files);
 extern void seedMT(uint seed);
 extern uint randomMT(void);
-#ifndef STANDALONE
-extern SDL_Surface *loadsurface(const char *name);
-#endif
+extern int guessnumcpus();
 
 #endif

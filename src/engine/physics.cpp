@@ -1467,7 +1467,7 @@ bool move(physent *d, vec &dir)
     return !collided;
 }
 
-bool bounce(physent *d, float secs, float elasticity, float waterfric)
+bool bounce(physent *d, float secs, float elasticity, float waterfric, float grav)
 {
     // make sure bouncers don't start inside geometry
     if(d->physstate!=PHYS_BOUNCE && !collide(d, vec(0, 0, 0), 0, false)) return true;
@@ -1475,10 +1475,10 @@ bool bounce(physent *d, float secs, float elasticity, float waterfric)
     bool water = isliquid(mat);
     if(water)
     {
-        d->vel.z -= gravity/16*secs;
+        d->vel.z -= grav*gravity/16*secs;
         d->vel.mul(max(1.0f - secs/waterfric, 0.0f));
     }
-    else d->vel.z -= gravity*secs;
+    else d->vel.z -= grav*gravity*secs;
     vec old(d->o);
     loopi(2)
     {
@@ -1825,8 +1825,7 @@ void physicsframe()          // optimally schedule physics frames inside the gra
     if(diff <= 0) physsteps = 0;
     else
     {
-        extern int gamespeed;
-        physframetime = clamp((PHYSFRAMETIME*gamespeed)/100, 1, PHYSFRAMETIME);
+        physframetime = clamp(game::scaletime(PHYSFRAMETIME)/100, 1, PHYSFRAMETIME);
         physsteps = (diff + physframetime - 1)/physframetime;
         lastphysframe += physsteps * physframetime;
     }
@@ -1867,7 +1866,7 @@ void moveplayer(physent *pl, int moveres, bool local)
     }
 }
 
-bool bounce(physent *d, float elasticity, float waterfric)
+bool bounce(physent *d, float elasticity, float waterfric, float grav)
 {
     if(physsteps <= 0)
     {
@@ -1879,10 +1878,10 @@ bool bounce(physent *d, float elasticity, float waterfric)
     bool hitplayer = false;
     loopi(physsteps-1)
     {
-        if(bounce(d, physframetime/1000.0f, elasticity, waterfric)) hitplayer = true;
+        if(bounce(d, physframetime/1000.0f, elasticity, waterfric, grav)) hitplayer = true;
     }
     d->deltapos = d->o;
-    if(bounce(d, physframetime/1000.0f, elasticity, waterfric)) hitplayer = true;
+    if(bounce(d, physframetime/1000.0f, elasticity, waterfric, grav)) hitplayer = true;
     d->newpos = d->o;
     d->deltapos.sub(d->newpos);
     interppos(d);

@@ -734,11 +734,18 @@ namespace game
 		return editmode;
 	}
 
+	#ifndef NO_DEBUG
+	VAR(gamespeed, 1, 100, -1);
+	#else
+	VAR(gamespeed, 10, 100, 1000);
+	#endif
+
 	bool ispaused()
 	{
 		if(rpggui::open()) return true;
 		return false;
 	}
+	int scaletime(int t) { return t * gamespeed; }
 
 	bool canjump()
 	{
