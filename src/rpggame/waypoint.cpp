@@ -41,79 +41,22 @@ namespace ai
 	}
 
 	VAR(waypointstairheight, 0, 8, 32);
-	VARP(experimentalwaypoint, 0, 0, 1); //temp - testing var
 
 	void dropwaypoint(const vec &o)
 	{
-		waypoint *closest = closestwaypoint(o);
-
-		if(!prev)
-		{
-			prev = &waypoints.add(waypoint(o));
-			return;
-		}
-
-		float distp = prev->o.dist(o);
-		float distc = closest->o.dist(o);
-		float distn = closest->o.dist(prev->o);
-
-		if(distp > 15 && distc > 15)
-		{
-			ushort ind = prev - waypoints.getbuf(); //just in case buffer position changes
-			waypoint *next = &waypoints.add(waypoint(o));
-
-			prev->links.add(next - waypoints.getbuf());
-			//only link back if the node would be close to the floor; ie stairs
-			if(waypointdoublelink && waypointstairheight >= raycube(o, vec(0, 0, -1))) next->links.add(ind);
-
-			prev = next;
-		}
-		else if(distn > 31) //the spot is overshot, but the target was somewhere between the nodes, so we add one at an intermediary
-		{
-			vec pos = vec(prev->o).add(closest->o).div(2.0f);
-
-			//just in case buffer position changes
-			ushort close = closest - waypoints.getbuf(),
-			       prior = prev    - waypoints.getbuf(),
-			       n;
-
-			waypoint *next = &waypoints.add(waypoint(pos));
-			n = next - waypoints.getbuf();
-
-			if(waypointdoublelink) next->links.add(close);
-			next->links.add(prior);
-			prev->links.add(n);
-			if(waypointdoublelink) closest->links.add(n);
-
-			prev = next;
-		}
-		else if(prev != closest)
-		{
-			int ind = closest - waypoints.getbuf();
-			if(prev->links.find(ind) == -1)
-				prev->links.add(ind);
-
-			ind = prev - waypoints.getbuf();
-			if(waypointdoublelink && game::player1->timeinair < 25 && closest->links.find(ind) == -1)
-				closest->links.add(ind);
-
-			prev = closest;
-		}
-	}
-
-	void dropwaypoint_exp(const vec &o)
-	{
-		int p = prev - waypoints.getbuf();
+		int p = prev ? prev - waypoints.getbuf() : -1;
 		waypoint &wp = waypoints.add(waypoint(o));
 		prev = &wp;
 
-		bool wpair = raycube(wp.o, vec(0, 0, -waypointstairheight), 0, RAY_POLY|RAY_CLIPMAT) >= 1;
+		int wmat = lookupmaterial(wp.o);
+		bool wpair = !isliquid(wmat) && raycube(wp.o, vec(0, 0, -waypointstairheight), 0, RAY_POLY|RAY_CLIPMAT) >= 1;
 		// - 1; do not test last one
 		for(int i = 0; i < waypoints.length() - 1; i++)
 		{
 			waypoint &ow = waypoints[i];
 			if(ow.o.dist(wp.o) > 30) continue;
-			bool owair = raycube(ow.o, vec(0, 0, -waypointstairheight), 0, RAY_POLY|RAY_CLIPMAT) >= 1;
+			int omat = lookupmaterial(ow.o);
+			bool owair = !isliquid(omat) && raycube(ow.o, vec(0, 0, -waypointstairheight), 0, RAY_POLY|RAY_CLIPMAT) >= 1;
 
 			if(wpair && owair)
 			{
@@ -152,58 +95,38 @@ namespace ai
 		}
 	}
 
+	//note, single direction link.
+	void linkwaypoint(waypoint &from, waypoint &to)
+	{
+		int id = &to - waypoints.getbuf();
+		if(from.links.find(id) == -1)
+			from.links.add(id);
+	}
+
 	void trydrop()
 	{
 		if(!dropwaypoints || editmode || game::player1->state == CS_DEAD)
-		{
 			return;
+
+		waypoint *closest = closestwaypoint(game::player1->feetpos());
+
+		float dist = 1e16;
+		loopv(waypoints)
+		{
+			float dst = waypoints[i].o.dist(game::player1->feetpos());
+			if(dst < dist) dist = dst;
 		}
 
-		if(!waypoints.length())
+		if(dist >= 16)
 		{
-			prev = &waypoints.add(waypoint(game::player1->feetpos()));
-			return;
+			dropwaypoint(game::player1->feetpos());
 		}
-		else if (!prev)
-			prev = closestwaypoint(game::player1->feetpos());
-
-		if(!experimentalwaypoint)
+		else if (prev != closest)
 		{
-			vec feet = game::player1->feetpos();
-			float dist = prev->o.dist(feet);
-
-			if(dist > 75)
-			{
-				prev = NULL;
-				dropwaypoint(feet);
-			}
-			else if(dist >= 20)
-			{
-				vec delta = feet.sub(prev->o).normalize().mul(24);
-
-				feet = prev->o;
-				while(dist > 20)
-				{
-					dist -= 24;
-					feet.add(delta);
-
-					dropwaypoint(feet);
-				}
-			}
-			else
-				dropwaypoint(feet); //link :D
-		}
-		else
-		{
-			float closest = 1024;
-			loopv(waypoints)
-			{
-				float dst = waypoints[i].o.dist(game::player1->feetpos());
-				if(dst < closest) closest = dst;
-			}
-
-			if(closest >= 16)
-				dropwaypoint_exp(game::player1->feetpos());
+			//ASSERT(prev && closest)
+			//single direction link as fallback
+			linkwaypoint(*prev, *closest);
+			prev = closest;
 		}
 	}
 
@@ -588,6 +511,10 @@ namespace ai
 				particle_flare(w.o, l.o, 0, PART_STREAK, 0x0000FF, .5);
 			}
 		}
+
+		if(dropwaypoints && prev)
+			regular_particle_splash(PART_EDIT, 2, 100, prev->o, 0xFF0000, .5);
+
 		#ifdef NO_DEBUG
 		if(!DEBUG_AI) return;
 
