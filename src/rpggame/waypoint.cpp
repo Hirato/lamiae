@@ -14,7 +14,6 @@ namespace ai
 
 	waypoint *prev = NULL;
 	VARF(dropwaypoints, 0, 0, 1, prev = NULL);
-	VAR(waypointdoublelink, 0, 1, 1);
 
 	void clearwaypoints()
 	{
