@@ -31,7 +31,7 @@ inline void setvars(effect *e, int type, int &fade, int &gravity, int &num)
 
 FVARP(partmul, .1, 2, 10);
 
-void effect::drawsphere(vec &o, float radius, float size, int type, int elapse)
+void effect::drawsphere(const vec &o, float radius, float size, int type, int elapse)
 {
 	if(size <= 0) return;
 
@@ -68,7 +68,7 @@ void effect::drawsphere(vec &o, float radius, float size, int type, int elapse)
 	}
 }
 
-void effect::drawsplash(vec &o, vec dir, float radius, float size, int type, int elapse)
+void effect::drawsplash(const vec &o, vec dir, float radius, float size, int type, int elapse)
 {
 	if(size <= 0) return;
 
@@ -114,7 +114,7 @@ void effect::drawsplash(vec &o, vec dir, float radius, float size, int type, int
 VARP(linemaxsteps, 8, 32, 1024);
 VARP(linemininterval, 1, 8, 32);
 
-bool effect::drawline(vec &from, vec &to, float size, int type, int elapse)
+bool effect::drawline(vec &from, const vec &to, float size, int type, int elapse)
 {
 	if(size <= 0) return false;
 
@@ -157,7 +157,7 @@ bool effect::drawline(vec &from, vec &to, float size, int type, int elapse)
 	return true;
 }
 
-void effect::drawwield(vec &from, vec &to, float size, int type, int elapse)
+void effect::drawwield(vec &from, const vec &to, float size, int type, int elapse)
 {
 	if(size <= 0) return;
 
@@ -229,7 +229,7 @@ void effect::drawaura(rpgent *d, float size, int type, int elapse)
 	}
 }
 
-void effect::drawcircle(vec &o, vec dir, vec &axis, int angle, float radius, float size, int type, int elapse)
+void effect::drawcircle(const vec &o, vec dir, const vec &axis, int angle, float radius, float size, int type, int elapse)
 {
 	if(size <= 0) return;
 
@@ -278,7 +278,7 @@ void effect::drawcircle(rpgent *d, use_weapon *wep, float size, int type, int el
 	drawcircle(o, dir, axis, wep->angle, d->radius + wep->range, size, type, elapse);
 }
 
-void effect::drawcone(vec &o, vec dir, vec &axis, int angle, float radius, float size, int type, int elapse)
+void effect::drawcone(const vec &o, vec dir, const vec &axis, int angle, float radius, float size, int type, int elapse)
 {
 	if(size <= 0) return;
 

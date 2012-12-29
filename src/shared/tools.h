@@ -598,7 +598,7 @@ template <class T> struct vector
     }
 
     template<class U>
-    int find(const U &o)
+    int find(const U &o) const
     {
         loopi(ulen) if(buf[i]==o) return i;
         return -1;
@@ -694,7 +694,7 @@ template <class T> struct vector
         return e;
     }
 
-    template<class K> 
+    template<class K>
     int htfind(const K &key)
     {
         loopi(ulen) if(htcmp(key, buf[i])) return i;
@@ -735,7 +735,7 @@ template<class T> struct hashset
         deletechunks();
     }
 
-    int length()
+    int length() const
     {
         int ret = 0;
         loopi(size)
@@ -1116,7 +1116,7 @@ struct stream
     virtual int printf(const char *fmt, ...);
     virtual uint getcrc() { return 0; }
 
-    template<class T> int put(const T *v, int n) { return write(v, n*sizeof(T))/sizeof(T); } 
+    template<class T> int put(const T *v, int n) { return write(v, n*sizeof(T))/sizeof(T); }
     template<class T> bool put(T n) { return write(&n, sizeof(n)) == sizeof(n); }
     template<class T> bool putlil(T n) { return put<T>(lilswap(n)); }
     template<class T> bool putbig(T n) { return put<T>(bigswap(n)); }
@@ -1137,11 +1137,11 @@ struct streambuf
     stream *s;
 
     streambuf(stream *s) : s(s) {}
-    
+
     T get() { return s->get<T>(); }
     int get(T *vals, int numvals) { return s->get(vals, numvals); }
     void put(const T &val) { s->put(&val, 1); }
-    void put(const T *vals, int numvals) { s->put(vals, numvals); } 
+    void put(const T *vals, int numvals) { s->put(vals, numvals); }
     int length() { return s->size(); }
 };
 

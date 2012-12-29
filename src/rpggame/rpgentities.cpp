@@ -173,7 +173,7 @@ namespace entities
 		}
 	}
 
-	void spawn(extentity &e, int ind, int type, int qty)
+	void spawn(const extentity &e, int ind, int type, int qty)
 	{
 		rpgent *ent = NULL;
 		switch(type)

@@ -179,7 +179,7 @@ namespace entities
 	extern vector<extentity *> ents;
 	extern vector<int> intents;
 	extern void startmap();
-	extern void spawn(extentity &e, int ind, int type, int qty);
+	extern void spawn(const extentity &e, int ind, int type, int qty);
 	extern void teleport(rpgent *d, int dest);
 	extern void genentlist();
 	extern void touchents(rpgent *d);
@@ -483,14 +483,14 @@ struct effect
 		DEATH_PROLONG // death variant which is intended for a delay that takes a while
 	};
 
-	void drawsphere(vec &o, float radius, float size = 1, int type = PROJ, int elapse = 17);
-	void drawsplash(vec &o, vec dir, float radius, float size = 1, int type = PROJ, int elapse = 17);
-	bool drawline(vec &from, vec &to, float size = 1, int type = PROJ, int elapse = 17);
-	void drawwield(vec &from, vec &to, float size = 1, int type = PROJ, int elapse = 17);
+	void drawsphere(const vec &o, float radius, float size = 1, int type = PROJ, int elapse = 17);
+	void drawsplash(const vec &o, vec dir, float radius, float size = 1, int type = PROJ, int elapse = 17);
+	bool drawline(vec &from, const vec &to, float size = 1, int type = PROJ, int elapse = 17);
+	void drawwield(vec &from, const vec &to, float size = 1, int type = PROJ, int elapse = 17);
 	void drawaura(rpgent *d, float size = 1, int type = PROJ, int elapse = 17);
-	void drawcircle(vec &o, vec dir, vec &axis, int angle, float radius, float size = 1, int type = PROJ, int elapse = 17);
+	void drawcircle(const vec &o, vec dir, const vec &axis, int angle, float radius, float size = 1, int type = PROJ, int elapse = 17);
 	void drawcircle(rpgent *d, use_weapon *wep, float size = 1, int type = PROJ, int elapse = 17);
-	void drawcone(vec &o, vec dir, vec &axis, int angle, float radius, float size, int type = PROJ, int elapse = 17);
+	void drawcone(const vec &o, vec dir, const vec &axis, int angle, float radius, float size, int type = PROJ, int elapse = 17);
 	void drawcone(rpgent *d, use_weapon *wep, float size, int type = PROJ, int elapse = 17);
 };
 
@@ -832,15 +832,15 @@ struct stats
 
 	static int neededexp(int level) { return level * (level + 1) * 500; } //standard EXP formula, 0... 1000.... 3000.... 6000.... 10000....
 	void givexp(int xp);
-	int getmaxhp();
-	float gethpregen();
-	int getmaxmp();
-	float getmpregen();
-	int getmaxcarry();
-	int getthreshold(int n);
-	int getresistance(int n);
+	int getmaxhp() const;
+	float gethpregen() const;
+	int getmaxmp() const;
+	float getmpregen() const;
+	int getmaxcarry() const;
+	int getthreshold(int n) const;
+	int getresistance(int n) const;
 	void skillpotency(int n, float &amnt, float &extra);
-	void setspeeds(float &maxspeed, float &jumpvel);
+	void setspeeds(float &maxspeed, float &jumpvel) const;
 	void resetdeltas();
 
 	stats(rpgchar *p) : parent(p), experience(0), level(1), statpoints(0), skillpoints(0)
@@ -1514,7 +1514,7 @@ struct merchant
 	int currency;
 	int credit; //store credit, a measure of how much money the merchant owes you.
 
-	rate getrate(rpgchar &buyer, int cat)
+	rate getrate(const rpgchar &buyer, int cat) const
 	{
 		if(!rates.inrange(cat))
 			return rate(0, 0);
@@ -1810,7 +1810,7 @@ struct reference
 	void setnull(bool force = false);
 	template<typename T>
 	reference(const char *n, T d);
-	reference(const char *n);
+	explicit reference(const char *n);
 	reference() : name(NULL), immutable(false) {}
 
 	~reference();

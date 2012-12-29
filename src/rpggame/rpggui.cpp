@@ -61,7 +61,7 @@ namespace rpggui
 			it->quantity = amnt - q;
 		}
 
-		float value(merchant &mer, bool buy)
+		float value(const merchant &mer, bool buy) const
 		{
 			float val = 0;
 			loopv(items)

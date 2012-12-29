@@ -1278,7 +1278,7 @@ namespace rpgio
 	}
 
 	//don't mind the ::blah, just a namespace collision with rpgio:: when we want it from the global scope
-	void writereferences(stream *f, vector<mapinfo *> &maps, hashset< ::reference> &stack)
+	void writereferences(stream *f, const vector<mapinfo *> &maps, hashset< ::reference> &stack)
 	{
 		f->putlil(stack.length());
 
@@ -1398,7 +1398,7 @@ namespace rpgio
 		)
 	}
 
-	void readreferences(stream *f, vector<mapinfo *> &maps, hashset< ::reference> &stack)
+	void readreferences(stream *f, const vector<mapinfo *> &maps, hashset< ::reference> &stack)
 	{
 		static ::reference dummy("");
 		int num = f->getlil<int>();
@@ -1498,14 +1498,14 @@ namespace rpgio
 		}
 	}
 
-	void readdelayscript(stream *f, vector<mapinfo *> &maps, delayscript *loading)
+	void readdelayscript(stream *f, const vector<mapinfo *> &maps, delayscript *loading)
 	{
 		readreferences(f, maps, loading->refs);
 		loading->script = readstring(f);
 		loading->remaining = f->getlil<int>();
 	}
 
-	void writedelayscript(stream *f, vector<mapinfo *> &maps, delayscript *saving)
+	void writedelayscript(stream *f, const vector<mapinfo *> &maps, delayscript *saving)
 	{
 		writereferences(f, maps, saving->refs);
 		writestring(f, saving->script);

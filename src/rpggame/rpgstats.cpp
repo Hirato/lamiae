@@ -11,41 +11,41 @@ void stats::givexp(int xp)
 	}
 }
 
-int stats::getmaxhp()
+int stats::getmaxhp() const
 {
 	int amnt = bonushealth + deltahealth + (getattr(STAT_ENDURANCE) * 4 + getattr(STAT_STRENGTH) * 2) * (25 + level) / 40.0f;
 	return amnt;
 }
 
-float stats::gethpregen()
+float stats::gethpregen() const
 {
 	return max<float>(0, bonushregen + deltahregen + getattr(STAT_ENDURANCE) * 0.0025 + getattr(STAT_STRENGTH) * 0.00125);
 }
 
-int stats::getmaxmp()
+int stats::getmaxmp() const
 {
 	int amnt = bonusmana + deltamana + (getattr(STAT_INTELLIGENCE) * 2 + getattr(STAT_WISDOM) * 4) * (25 + level) / 40.0f;
 	return max(0, amnt);
 }
 
-float stats::getmpregen()
+float stats::getmpregen() const
 {
 	return max<float>(0, bonusmregen + deltamregen + getattr(STAT_WISDOM)  * 0.05 + getattr(STAT_INTELLIGENCE) * 0.025);
 }
 
-int stats::getmaxcarry()
+int stats::getmaxcarry() const
 {
 	int amnt = bonuscarry + deltacarry + getattr(STAT_STRENGTH) * 5;
 	return max(0, amnt);
 }
 
-int stats::getthreshold(int n)
+int stats::getthreshold(int n) const
 {
 	if(n == ATTACK_NONE) return 0;
 	return bonusthresh[n] + deltathresh[n];
 }
 
-int stats::getresistance(int n)
+int stats::getresistance(int n) const
 {
 	float amnt = 0;
 	switch(n)
@@ -108,7 +108,7 @@ void stats::skillpotency(int n, float &amnt, float &extra)
 	extra -= amnt;
 }
 
-void stats::setspeeds(float &maxspeed, float &jumpvel)
+void stats::setspeeds(float &maxspeed, float &jumpvel) const
 {
 	float mul = clamp(2 - parent->getweight() / getmaxcarry(), 0.01f, 1.f);
 	maxspeed = (40 + bonusmovespeed + deltamovespeed + getattr(STAT_AGILITY) / 4.f) * mul;
