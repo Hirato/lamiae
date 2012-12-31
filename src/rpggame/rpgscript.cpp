@@ -93,7 +93,7 @@ void reference::pushref(rpgchar *d, bool force)
 }
 void reference::pushref(rpgitem *d, bool force)
 {
-	if(canset(force)) return;
+	if(!canset(force)) return;
 
 	list.add(ref(d, T_ITEM));
 	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed rpgitem type %p onto reference %s", d, name);
