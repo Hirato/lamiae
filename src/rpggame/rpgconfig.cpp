@@ -197,14 +197,24 @@ namespace game
 	/// #define DEBUG "scripts[%i]"
 	/// #define DEBUG_IND scripts.length() - 1
 
-	#define INTSET(name, var, min, max) \
-		START(name, "i", (int *i), \
-			INIT \
-			if(!e) \
-			{ \
-				conoutf(CON_ERROR, "\fs\f3ERROR:\fr " #name " requires you to have a valid object selected first"); \
-				return; \
-			} \
+	#define PREAMBLE(name, prep, lookup, print) \
+		INIT \
+		if(!e) \
+		{ \
+			conoutf(CON_ERROR, "\fs\f3ERROR:\fr " #name " requires you to have a valid object selected first"); \
+			return; \
+		} \
+		if(*numargs <= 0) \
+		{ \
+			prep \
+			if(*numargs == -1) { lookup; } \
+			else { print; } \
+			return; \
+		} \
+
+	#define INTN(name, var, min, max) \
+		START(name, "iN$", (int *i, int *numargs, ident *self), \
+			PREAMBLE(name, , intret(e->var), printvar(self, e->var)) \
 			e->var = clamp(*i, int(min), int(max)); \
 			if(e->var != *i) \
 				conoutf("\fs\f6WARNING:\fr value provided for " DEBUG "->" #var " exceeded limits", DEBUG_IND); \
@@ -212,33 +222,19 @@ namespace game
 				conoutf(DEBUG "->" #var " = %i (0x%.8X)", DEBUG_IND, e->var, e->var); \
 		)
 
-	#define INTGET(name, var) \
-		START(name ## _get, "", (), \
-			INIT \
-			if(!e) \
-			{ \
-				conoutf(CON_ERROR, "\fs\f3ERROR:\fr " #name " requires you to have a valid object selected first"); \
-				return; \
-			} \
-			if(DEBUG_VCONF) \
-				conoutf("\fs\f2DEBUG:\fr request for " #name " on %p, returning %i (0x%.8X)", e, e->var, e->var); \
-			intret(e->var); \
-		)
-
-	#define INTN(name, var, min, max) \
-		INTSET(name, var, min, max) \
-		INTGET(name, var)
-
 	#define INT(var, min, max) INTN(var, var, min, max)
 
-	#define FLOATSET(name, var, min, max) \
-		START(name, "f", (float *f), \
-			INIT \
-			if(!e) \
-			{ \
-				conoutf(CON_ERROR, "\fs\f3ERROR:\fr " #name " requires you to have a valid object selected first"); \
-				return; \
-			} \
+	#define INTNRO(name, var) \
+		START(name, "N$", (int *numargs, ident *self), \
+			PREAMBLE(name, , intret(e->var), printvar(self, e->var)) \
+			conoutf(CON_WARN, #name " is read-only"); \
+		)
+
+	#define INTRO(var) INTNRO(var, var)
+
+	#define FLOATN(name, var, min, max) \
+		START(name, "fN$", (float *f, int *numargs, ident *self), \
+			PREAMBLE(name, , floatret(e->var), printfvar(self, e->var)) \
 			e->var = clamp(*f, float(min), float(max)); \
 			if(e->var != *f) \
 				conoutf("\fs\f6WARNING:\fr value provided for " DEBUG "->" #var " exceeded limits", DEBUG_IND); \
@@ -246,53 +242,40 @@ namespace game
 				conoutf(DEBUG "->" #var " = %g", DEBUG_IND, e->var); \
 		)
 
-	#define FLOATGET(name, var) \
-		START(name ## _get, "", (), \
-			INIT \
-			if(!e) \
-			{ \
-				conoutf(CON_ERROR, "\fs\f3ERROR:\fr " #name " requires you to have a valid object selected first"); \
-				return; \
-			} \
-			if(DEBUG_VCONF) \
-				conoutf("\fs\f2DEBUG:\fr request for " #name " on %p, returning %f", e, e->var); \
-			floatret(e->var); \
-		)
-
-	#define FLOATN(name, var, min, max) \
-		FLOATSET(name, var, min, max) \
-		FLOATGET(name, var)
-
 	#define FLOAT(var, min, max) FLOATN(var, var, min, max)
 
+	#define FLOATNRO(name, var) \
+		START(name, "N$", (int *numargs, ident *self), \
+			PREAMBLE(name, , floatret(e->var), printfvar(self, e->var)) \
+			conoutf(CON_WARN, #name " is read-only"); \
+		)
+
+	#define FLOATRO(var) INTNRO(var, var)
+
 	#define STRINGN(name, var, body) \
-		START(name, "C", (const char *s), \
-			INIT \
-			if(!e) \
-			{ \
-				conoutf(CON_ERROR, "\fs\f3ERROR:\fr " #name " requires you to have a valid object selected first"); \
-				return; \
-			} \
+		START(name, "sN$", (const char *s, int *numargs, ident *self), \
+			PREAMBLE(name, , result(e->var ? e->var : ""), printsvar(self, e->var ? e->var : "")) \
 			if(e->var) delete[] e->var; \
 			e->var = newstring(s); \
 			body; \
 			if(DEBUG_CONF) \
 				conoutf(CON_DEBUG, DEBUG "->" #var " = %s", DEBUG_IND, e->var); \
-		) \
-		START(name ## _get, "", (), \
-			INIT \
-			if(!e) return; \
-			if(DEBUG_VCONF) \
-				conoutf("\fs\f2DEBUG:\fr request for " #name " on %p, returning %s", e, e->var); \
-			result(e->var ? e->var : ""); \
 		)
+
 	#define STRING(var) STRINGN(var, var, )
 	#define MODEL(var) STRINGN(var, var, preloadmodel(e->var))
 
+	#define STRINGNRO(name, var) \
+		START(name, "N$", (int *numargs, ident *self), \
+			PREAMBLE(name, , result(e->var), printsvar(self, e->var)) \
+			conoutf(CON_WARN, #name " is read-only"); \
+		)
+
+	#define STRINGRO(var) STRINGNRO(var, var);
+
 	#define VECN(name, var, l1, l2, l3, h1, h2, h3) \
-		START(name, "fff", (float *x, float *y, float *z), \
-			INIT \
-			if(!e) return; \
+		START(name, "fffN$", (float *x, float *y, float *z, int *numargs, ident *self), \
+			PREAMBLE(name, defformatstring(res)("%g %g %g", e->var.x, e->var.y, e->var.z);, result(res), printsvar(self, res)) \
 			const vec res(*x, *y, *z); \
 			const vec vmin(h1, h2, h3); \
 			const vec vmax(l1, l2, l3); \
@@ -301,33 +284,29 @@ namespace game
 				conoutf("\fs\f6WARNING:\fr value provided for " DEBUG "->" #var " exceeded limits", DEBUG_IND); \
 			if(DEBUG_CONF || e->var != res) \
 				conoutf(DEBUG "->" #var " = (%g, %g, %g)", DEBUG_IND, e->var.x, e->var.y, e->var.z); \
-		) \
-		START(name ## _get, "", (), \
-			INIT \
-			if(!e) return; \
-			defformatstring(res)("%g %g %g", e->var.x, e->var.y, e->var.z); \
-			if(DEBUG_VCONF) \
-				conoutf("\fs\f2DEBUG:\fr request for " #name " on %p, returning %s", e, res); \
-			result(res); \
 		)
+
 	#define VEC(var, l1, l2, l3, h1, h2, h3) VECN(var, var, l1, l2, l3, h1, h2, h3)
 
+	#define VECNRO(name, var) \
+		START(name, "N$", (int *numargs, ident *self), \
+			PREAMBLE(name, defformatstring(res)("%g %g %g", e->var.x, e->var.y, e->var.z);, result(res), printsvar(self, res)) \
+			conoutf(CON_WARN, #name " is read-only"); \
+		)
+
+	#define VECRO(var) VECNRO(var, var)
+
 	#define BOOLN(name, var) \
-		START(name, "i", (int *i), \
-			INIT \
-			if(!e) return; \
+		START(name, "iN$", (int *i, int *numargs, ident *self), \
+			PREAMBLE(name, , intret(e->var), printvar(self, e->var)) \
 			e->var = *i != 0; \
 			if(DEBUG_CONF) \
 				conoutf(CON_DEBUG, DEBUG "->" #var " = %i", DEBUG_IND, e->var); \
-		)\
-		START(name ## _get, "", (), \
-			INIT \
-			if(!e) return; \
-			if(DEBUG_VCONF) \
-				conoutf("\fs\f2DEBUG:\fr request for " #name " on %p, returning %i", e, e->var); \
-			intret(e->var); \
 		)
+
 	#define BOOL(var) BOOLN(var, var)
+	#define BOOLNRO(var, name) INTNRO(var, name);
+	#define BOOLRO(var) INTNRO(var, var)
 
 	#define STATREQ(var) \
 		INTN(var ## _strength, var.attrs[STAT_STRENGTH], 0, 100) \
@@ -359,13 +338,13 @@ namespace game
 		INTN(var ## _intelligence, var.baseattrs[STAT_INTELLIGENCE], 1, 100) \
 		INTN(var ## _luck, var.baseattrs[STAT_LUCK], 1, 100) \
 		\
-		INTGET(var ## _delta_strength, var.deltaattrs[STAT_STRENGTH]) \
-		INTGET(var ## _delta_endurance, var.deltaattrs[STAT_ENDURANCE]) \
-		INTGET(var ## _delta_agility, var.deltaattrs[STAT_AGILITY]) \
-		INTGET(var ## _delta_charisma, var.deltaattrs[STAT_CHARISMA]) \
-		INTGET(var ## _delta_wisdom, var.deltaattrs[STAT_WISDOM]) \
-		INTGET(var ## _delta_intelligence, var.deltaattrs[STAT_INTELLIGENCE]) \
-		INTGET(var ## _delta_luck, var.deltaattrs[STAT_LUCK]) \
+		INTNRO(var ## _delta_strength, var.deltaattrs[STAT_STRENGTH]) \
+		INTNRO(var ## _delta_endurance, var.deltaattrs[STAT_ENDURANCE]) \
+		INTNRO(var ## _delta_agility, var.deltaattrs[STAT_AGILITY]) \
+		INTNRO(var ## _delta_charisma, var.deltaattrs[STAT_CHARISMA]) \
+		INTNRO(var ## _delta_wisdom, var.deltaattrs[STAT_WISDOM]) \
+		INTNRO(var ## _delta_intelligence, var.deltaattrs[STAT_INTELLIGENCE]) \
+		INTNRO(var ## _delta_luck, var.deltaattrs[STAT_LUCK]) \
 		\
 		INTN(var ## _armour, var.baseskills[SKILL_ARMOUR], 0, 100) \
 		INTN(var ## _diplomacy, var.baseskills[SKILL_DIPLOMACY], 0, 100) \
@@ -375,13 +354,13 @@ namespace game
 		INTN(var ## _stealth, var.baseskills[SKILL_STEALTH], 0, 100) \
 		INTN(var ## _craft, var.baseskills[SKILL_CRAFT], 0, 100) \
 		\
-		INTGET(var ## _delta_armour, var.deltaskills[SKILL_ARMOUR]) \
-		INTGET(var ## _delta_diplomacy, var.deltaskills[SKILL_DIPLOMACY]) \
-		INTGET(var ## _delta_magic, var.deltaskills[SKILL_MAGIC]) \
-		INTGET(var ## _delta_marksman, var.deltaskills[SKILL_MARKSMAN]) \
-		INTGET(var ## _delta_melee, var.deltaskills[SKILL_MELEE]) \
-		INTGET(var ## _delta_stealth, var.deltaskills[SKILL_STEALTH]) \
-		INTGET(var ## _delta_craft, var.deltaskills[SKILL_CRAFT]) \
+		INTNRO(var ## _delta_armour, var.deltaskills[SKILL_ARMOUR]) \
+		INTNRO(var ## _delta_diplomacy, var.deltaskills[SKILL_DIPLOMACY]) \
+		INTNRO(var ## _delta_magic, var.deltaskills[SKILL_MAGIC]) \
+		INTNRO(var ## _delta_marksman, var.deltaskills[SKILL_MARKSMAN]) \
+		INTNRO(var ## _delta_melee, var.deltaskills[SKILL_MELEE]) \
+		INTNRO(var ## _delta_stealth, var.deltaskills[SKILL_STEALTH]) \
+		INTNRO(var ## _delta_craft, var.deltaskills[SKILL_CRAFT]) \
 		\
 		INTN(var ## _fire_thresh, var.bonusthresh[ATTACK_FIRE], -500, 500) \
 		INTN(var ## _water_thresh, var.bonusthresh[ATTACK_WATER], -500, 500) \
@@ -395,17 +374,17 @@ namespace game
 		INTN(var ## _blunt_thresh, var.bonusthresh[ATTACK_BLUNT], -500, 500) \
 		INTN(var ## _pierce_thresh, var.bonusthresh[ATTACK_PIERCE], -500, 500) \
 		\
-		INTGET(var ## _delta_fire_thresh, var.deltathresh[ATTACK_FIRE]) \
-		INTGET(var ## _delta_water_thresh, var.deltathresh[ATTACK_WATER]) \
-		INTGET(var ## _delta_air_thresh, var.deltathresh[ATTACK_AIR]) \
-		INTGET(var ## _delta_earth_thresh, var.deltathresh[ATTACK_EARTH]) \
-		INTGET(var ## _delta_arcane_thresh, var.deltathresh[ATTACK_ARCANE]) \
-		INTGET(var ## _delta_mind_thresh, var.deltathresh[ATTACK_MIND]) \
-		INTGET(var ## _delta_holy_thresh, var.deltathresh[ATTACK_HOLY]) \
-		INTGET(var ## _delta_darkness_thresh, var.deltathresh[ATTACK_DARKNESS]) \
-		INTGET(var ## _delta_slash_thresh, var.deltathresh[ATTACK_SLASH]) \
-		INTGET(var ## _delta_blunt_thresh, var.deltathresh[ATTACK_BLUNT]) \
-		INTGET(var ## _delta_pierce_thresh, var.deltathresh[ATTACK_PIERCE]) \
+		INTNRO(var ## _delta_fire_thresh, var.deltathresh[ATTACK_FIRE]) \
+		INTNRO(var ## _delta_water_thresh, var.deltathresh[ATTACK_WATER]) \
+		INTNRO(var ## _delta_air_thresh, var.deltathresh[ATTACK_AIR]) \
+		INTNRO(var ## _delta_earth_thresh, var.deltathresh[ATTACK_EARTH]) \
+		INTNRO(var ## _delta_arcane_thresh, var.deltathresh[ATTACK_ARCANE]) \
+		INTNRO(var ## _delta_mind_thresh, var.deltathresh[ATTACK_MIND]) \
+		INTNRO(var ## _delta_holy_thresh, var.deltathresh[ATTACK_HOLY]) \
+		INTNRO(var ## _delta_darkness_thresh, var.deltathresh[ATTACK_DARKNESS]) \
+		INTNRO(var ## _delta_slash_thresh, var.deltathresh[ATTACK_SLASH]) \
+		INTNRO(var ## _delta_blunt_thresh, var.deltathresh[ATTACK_BLUNT]) \
+		INTNRO(var ## _delta_pierce_thresh, var.deltathresh[ATTACK_PIERCE]) \
 		\
 		INTN(var ## _fire_resist, var.bonusresist[ATTACK_FIRE], -200, 100) \
 		INTN(var ## _water_resist, var.bonusresist[ATTACK_WATER], -200, 100) \
@@ -419,17 +398,17 @@ namespace game
 		INTN(var ## _blunt_resist, var.bonusresist[ATTACK_BLUNT], -200, 100) \
 		INTN(var ## _pierce_resist, var.bonusresist[ATTACK_PIERCE], -200, 100) \
 		\
-		INTGET(var ## _delta_fire_resist, var.deltaresist[ATTACK_FIRE]) \
-		INTGET(var ## _delta_water_resist, var.deltaresist[ATTACK_WATER]) \
-		INTGET(var ## _delta_air_resist, var.deltaresist[ATTACK_AIR]) \
-		INTGET(var ## _delta_earth_resist, var.deltaresist[ATTACK_EARTH]) \
-		INTGET(var ## _delta_arcane_resist, var.deltaresist[ATTACK_ARCANE]) \
-		INTGET(var ## _delta_mind_resist, var.deltaresist[ATTACK_MIND]) \
-		INTGET(var ## _delta_holy_resist, var.deltaresist[ATTACK_HOLY]) \
-		INTGET(var ## _delta_darkness_resist, var.deltaresist[ATTACK_DARKNESS]) \
-		INTGET(var ## _delta_slash_resist, var.deltaresist[ATTACK_SLASH]) \
-		INTGET(var ## _delta_blunt_resist, var.deltaresist[ATTACK_BLUNT]) \
-		INTGET(var ## _delta_pierce_resist, var.deltaresist[ATTACK_PIERCE]) \
+		INTNRO(var ## _delta_fire_resist, var.deltaresist[ATTACK_FIRE]) \
+		INTNRO(var ## _delta_water_resist, var.deltaresist[ATTACK_WATER]) \
+		INTNRO(var ## _delta_air_resist, var.deltaresist[ATTACK_AIR]) \
+		INTNRO(var ## _delta_earth_resist, var.deltaresist[ATTACK_EARTH]) \
+		INTNRO(var ## _delta_arcane_resist, var.deltaresist[ATTACK_ARCANE]) \
+		INTNRO(var ## _delta_mind_resist, var.deltaresist[ATTACK_MIND]) \
+		INTNRO(var ## _delta_holy_resist, var.deltaresist[ATTACK_HOLY]) \
+		INTNRO(var ## _delta_darkness_resist, var.deltaresist[ATTACK_DARKNESS]) \
+		INTNRO(var ## _delta_slash_resist, var.deltaresist[ATTACK_SLASH]) \
+		INTNRO(var ## _delta_blunt_resist, var.deltaresist[ATTACK_BLUNT]) \
+		INTNRO(var ## _delta_pierce_resist, var.deltaresist[ATTACK_PIERCE]) \
 		\
 		INTN(var ## _maxspeed, var.bonusmovespeed, 0, 100) \
 		INTN(var ## _jumpvel, var.bonusjumpvel, 0, 100) \
@@ -439,13 +418,13 @@ namespace game
 		FLOATN(var ## _healthregen, var.bonushregen, 0, 1000) \
 		FLOATN(var ## _manaregen, var.bonusmregen, 0, 1000) \
 		\
-		INTGET(var ## _delta_maxspeed, var.deltamovespeed) \
-		INTGET(var ## _delta_jumpvel, var.deltajumpvel) \
-		INTGET(var ## _delta_maxhealth, var.deltahealth) \
-		INTGET(var ## _delta_maxmana, var.deltamana) \
-		INTGET(var ## _delta_crit, var.deltacrit) \
-		FLOATGET(var ## _delta_healthregen, var.deltahregen) \
-		FLOATGET(var ## _delta_manaregen, var.deltamregen) \
+		INTNRO(var ## _delta_maxspeed, var.deltamovespeed) \
+		INTNRO(var ## _delta_jumpvel, var.deltajumpvel) \
+		INTNRO(var ## _delta_maxhealth, var.deltahealth) \
+		INTNRO(var ## _delta_maxmana, var.deltamana) \
+		INTNRO(var ## _delta_crit, var.deltacrit) \
+		FLOATNRO(var ## _delta_healthregen, var.deltahregen) \
+		FLOATNRO(var ## _delta_manaregen, var.deltamregen) \
 
 	ICOMMAND(r_script_node, "see", (const char *n, uint *txt, uint *scr),
 		script *s = checkscript();
@@ -743,10 +722,7 @@ namespace game
 	#define CAST use
 	#define TYPE USE_CONSUME
 
-	START(type_get, "", (),
-		INIT
-		intret(e ? e->type : -1);
-	)
+	INTRO(type)
 
 	STRING(name)
 	STRING(description)

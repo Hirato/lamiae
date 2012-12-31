@@ -898,7 +898,8 @@ struct statreq
 
 enum
 {
-	USE_CONSUME = 0,
+	USE_INVALID = 0,
+	USE_CONSUME,
 	USE_ARMOUR,
 	USE_WEAPON,
 	USE_MAX
