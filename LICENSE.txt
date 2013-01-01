@@ -1,6 +1,6 @@
 Lamiae source code, any release.
 
-Copyright (C) 2012 Kevin "Hirato Kirata" Meyer
+Copyright (C) 2012-2013 Kevin "Hirato Kirata" Meyer
 
 This software is provided 'as-is', without any express or implied
 warranty.  In no event will the authors be held liable for any damages
@@ -22,7 +22,7 @@ freely, subject to the following restrictions:
 
 Platinum Arts Sandbox source code, any release.
 
-Copyright (C) 2007-2012 Mike Tomaino, Kevin Meyer, Dale Weiler, and Thomas Achtner
+Copyright (C) 2007-2013 Mike Tomaino, Kevin Meyer, Dale Weiler, and Thomas Achtner
 
 This software is provided 'as-is', without any express or implied
 warranty.  In no event will the authors be held liable for any damages
@@ -45,7 +45,7 @@ freely, subject to the following restrictions:
 
 Sauerbraten game engine source code, any release.
 
-Copyright (C) 2001-2012 Wouter van Oortmerssen, Lee Salzman, Mike Dysart, Robert Pointon, and Quinton Reeves
+Copyright (C) 2001-2013 Wouter van Oortmerssen, Lee Salzman, Mike Dysart, Robert Pointon, and Quinton Reeves
 
 This software is provided 'as-is', without any express or implied
 warranty.  In no event will the authors be held liable for any damages
@@ -66,6 +66,6 @@ freely, subject to the following restrictions:
 =====================================================================
 
 The bundled art is under a variety of licenses, the licenses are typically with the respective files.
-In the absense of a license, IT IS SAFE TO ASSUME THE CONTENT IS UNDER A NON-EXCLUSIVE CREATIVE COMMONS LICENSE WITH "ATTRIBUTION" AND "SHARE-ALIKE" CLAUSES.
+In the absense of a license, as defined in a txt file alongside the content,  IT IS SAFE TO ASSUME THE CONTENT IS UNDER A NON-EXCLUSIVE CREATIVE COMMONS LICENSE WITH "ATTRIBUTION" AND "SHARE-ALIKE" CLAUSES IN EFFECT.
 
 In a nutshell, all bundled content are all under licenses that allow redistribution, modification, and commercial use, although some have the caveat that to be able to use the related artwork commercially, requires you to use it as part of another work.
