@@ -1584,8 +1584,8 @@ namespace rpgscript
 		getreference(ref, ent, ent->getchar(entidx), , r_use)
 		getreference(itref, it, it->getinv(itidx) || it->getequip(itidx), , r_use);
 
-		item *item;
-		int u;
+		item *item = NULL;
+		int u = -1;
 
 		if(it->getequip(itidx))
 		{
