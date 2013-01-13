@@ -952,7 +952,7 @@ void rpgchar::compactinventory(int base)
 			if(stack[i]->compare(stack[j]))
 			{
 				if(DEBUG_ENT)
-					conoutf(CON_DEBUG, "DEBUG: Found duplicate item definition, merging %p and %p", stack[j], stack[i]);
+					conoutf(CON_DEBUG, "DEBUG: Found duplicate item definition, merging %p into %p", stack[i], stack[j]);
 
 				item *it = stack.remove(i);
 				stack[j]->quantity += it->quantity;
