@@ -347,30 +347,30 @@ static struct lightcacheentry
 
 VARF(lightcachesize, 4, 6, 12, clearlightcache());
 
-void clearlightcache(int e)
+void clearlightcache(int id)
 {
-    if(e < 0 || !entities::getents()[e]->attr[0])
+    if(id >= 0)
     {
-        for(lightcacheentry *lce = lightcache; lce < &lightcache[LIGHTCACHESIZE]; lce++)
+        const extentity &light = *entities::getents()[id];
+        int radius = light.attr[0];
+        if(radius)
         {
-            lce->x = -1;
-            lce->lights.setsize(0);
+            for(int x = int(max(light.o.x-radius, 0.0f))>>lightcachesize, ex = int(min(light.o.x+radius, worldsize-1.0f))>>lightcachesize; x <= ex; x++)
+            for(int y = int(max(light.o.y-radius, 0.0f))>>lightcachesize, ey = int(min(light.o.y+radius, worldsize-1.0f))>>lightcachesize; y <= ey; y++)
+            {
+                lightcacheentry &lce = lightcache[LIGHTCACHEHASH(x, y)];
+                if(lce.x != x || lce.y != y) continue;
+                lce.x = -1;
+                lce.lights.setsize(0);
+            }
+            return;
         }
     }
-    else
-    {
-        const extentity &light = *entities::getents()[e];
-        int radius, r, g, b;
-        getlightprops(light, radius, r, g, b);
 
-        for(int x = int(max(light.o.x-radius, 0.0f))>>lightcachesize, ex = int(min(light.o.x+radius, worldsize-1.0f))>>lightcachesize; x <= ex; x++)
-        for(int y = int(max(light.o.y-radius, 0.0f))>>lightcachesize, ey = int(min(light.o.y+radius, worldsize-1.0f))>>lightcachesize; y <= ey; y++)
-        {
-            lightcacheentry &lce = lightcache[LIGHTCACHEHASH(x, y)];
-            if(lce.x != x || lce.y != y) continue;
-            lce.x = -1;
-            lce.lights.setsize(0);
-        }
+    for(lightcacheentry *lce = lightcache; lce < &lightcache[LIGHTCACHESIZE]; lce++)
+    {
+        lce->x = -1;
+        lce->lights.setsize(0);
     }
 }
 

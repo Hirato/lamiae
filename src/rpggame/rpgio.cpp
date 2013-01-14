@@ -1316,7 +1316,7 @@ namespace rpgio
 						}
 						if(map < 0 && ent < 0 && sav.ptr != game::player1)
 						{
-							conoutf(CON_WARN, "\fs\f6WARNING:\fr char/item/object reference \"%s\" points to non-player entity that does not exist");
+							conoutf(CON_WARN, "\fs\f6WARNING:\fr char/item/object reference \"%s\" points to non-player entity that does not exist", saving.name);
 							f->putchar(::reference::T_INVALID);
 							continue;
 						}

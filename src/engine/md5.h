@@ -389,7 +389,7 @@ struct md5 : skelmodel, skelloader<md5>
         }
     };
 
-    meshgroup *loadmeshes(char *name, va_list args)
+    meshgroup *loadmeshes(const char *name, va_list args)
     {
         md5meshgroup *group = new md5meshgroup;
         group->shareskeleton(va_arg(args, char *));
@@ -450,7 +450,6 @@ struct md5 : skelmodel, skelloader<md5>
             p->endanimparts();
             p->meshes->shared++;
         }
-        preloadshaders();
         return loaded = true;
     }
 };

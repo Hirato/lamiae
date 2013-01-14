@@ -126,7 +126,7 @@ bool rpgchar::checkammo(equipment &eq, equipment *quiver, bool remove)
 		{
 			if(!game::ammotypes.inrange(wep->ammo))
 			{
-				conoutf(CON_ERROR, "\fs\f3ERROR:\fr entity %p trying to attack with weapon using invalid ammotype %i; out of range", wep->ammo);
+				conoutf(CON_ERROR, "\fs\f3ERROR:\fr entity %p trying to attack with weapon using invalid ammotype %i; out of range", this, wep->ammo);
 				return false;
 			}
 			ammotype *at = game::ammotypes[wep->ammo];

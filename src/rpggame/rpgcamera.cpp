@@ -385,7 +385,7 @@ namespace camera
 				draw_text("Type: Action/Viewport", 100, 0 + hoffset);
 				hoffset += 64;
 			}
-			draw_textf("Target: %p", 100, 0 + hoffset);
+			draw_textf("Target: %p", 100, 0 + hoffset, ent);
 			hoffset += 64;
 
 			action::debug(hoffset, false);

@@ -262,6 +262,8 @@ VAR(dbgalias, 0, 4, 1000);
 
 static int nodebug = 0;
 
+static void debugcode(const char *fmt, ...) PRINTFARGS(1, 2);
+
 static void debugcode(const char *fmt, ...)
 {
     if(nodebug) return;
@@ -1190,6 +1192,7 @@ done:
 static bool compileword(vector<uint> &code, const char *&p, int wordtype, char *&word, int &wordlen)
 {
     skipcomments(p);
+retry:
     switch(*p)
     {
         case '\"': word = cutstring(p, wordlen); break;
@@ -1211,8 +1214,8 @@ static bool compileword(vector<uint> &code, const char *&p, int wordtype, char *
             return true;
         case '@':
             debugcode(debugline(p, "unexpected \"@\""));
-            p++;
-            return true;
+            do ++p; while(*p == '@');
+            goto retry;
         default: word = cutword(p, wordlen); break;
     }
     return word!=NULL;
@@ -2164,7 +2167,7 @@ const char *escapestring(const char *s)
 
 const char *escapeid(const char *s)
 {
-    const char *end = s + strcspn(s, "\"/;()[] \f\t\r\n\0");
+    const char *end = s + strcspn(s, "\"/;()[]@ \f\t\r\n\0");
     return *end ? escapestring(s) : s;
 }
 
@@ -2180,7 +2183,7 @@ bool validateblock(const char *s)
         case ')': if(brakdepth <= 0 || brakstack[--brakdepth] != '(') return false; break;
         case '"': s = parsestring(s + 1); if(*s != '"') return false; break;
         case '/': if(s[1] == '/') return false; break;
-        case '\f': return false;
+        case '@': case '\f': return false;
     }
     return brakdepth == 0;
 }

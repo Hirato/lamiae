@@ -165,7 +165,7 @@ namespace game
 		}
 
 		if(DEBUG_WORLD)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr clearing %i scripts, %i effects, %i status effects, %i ammotypes, %i mapscripts, %i recipes, %i merchants, %i item categories and %i tips",
+			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr clearing %i scripts, %i effects, %i status effects, %i ammotypes, %i factions, %i mapscripts, %i recipes, %i merchants, %i item categories, and %i tips",
 				scripts.length(), effects.length(), statuses.length(),
 				ammotypes.length(), factions.length(), mapscripts.length(),
 				recipes.length(), merchants.length(), categories.length(), tips.length());

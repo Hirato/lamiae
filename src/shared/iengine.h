@@ -174,15 +174,15 @@ enum
     CON_ECHO  = 1<<5
 };
 
-extern void conoutf(const char *s, ...);
-extern void conoutf(int type, const char *s, ...);
+extern void conoutf(const char *s, ...) PRINTFARGS(1, 2);
+extern void conoutf(int type, const char *s, ...) PRINTFARGS(2, 3);
 extern void conoutfv(int type, const char *fmt, va_list args);
 
 extern FILE *getlogfile();
 extern void setlogfile(const char *fname);
 extern void closelogfile();
 extern void logoutfv(const char *fmt, va_list args);
-extern void logoutf(const char *fmt, ...);
+extern void logoutf(const char *fmt, ...) PRINTFARGS(1, 2);
 
 // octa
 extern int lookupmaterial(const vec &o);
@@ -215,7 +215,7 @@ extern void renderentsphere(const extentity &e, float radius);
 extern void renderentring(const extentity &e, float radius, int axis = 0);
 
 // main
-extern void fatal(const char *s, ...);
+extern void fatal(const char *s, ...) PRINTFARGS(1, 2);
 extern void keyrepeat(bool on);
 
 // rendertext
@@ -224,7 +224,7 @@ extern void pushfont();
 extern bool popfont();
 extern void gettextres(int &w, int &h);
 extern void draw_text(const char *str, int left, int top, int r = 255, int g = 255, int b = 255, int a = 255, int cursor = -1, int maxwidth = -1);
-extern void draw_textf(const char *fstr, int left, int top, ...);
+extern void draw_textf(const char *fstr, int left, int top, ...) PRINTFARGS(1, 4);
 extern float text_widthf(const char *str);
 extern void text_boundsf(const char *str, float &width, float &height, int maxwidth = -1);
 extern int text_visible(const char *str, float hitx, float hity, int maxwidth);
@@ -401,7 +401,7 @@ extern void setbbfrommodel(physent *d, const char *mdl);
 extern const char *mapmodelname(int i);
 extern model *loadmodel(const char *name, int i = -1, bool msg = false);
 extern void preloadmodel(const char *name);
-extern void flushpreloadedmodels();
+extern void flushpreloadedmodels(bool msg = true);
 
 // ragdoll
 
@@ -426,23 +426,6 @@ extern void flushserver(bool force);
 extern int getservermtu();
 extern int getnumclients();
 extern uint getclientip(int n);
-extern void putint(ucharbuf &p, int n);
-extern void putint(packetbuf &p, int n);
-extern void putint(vector<uchar> &p, int n);
-extern int getint(ucharbuf &p);
-extern void putuint(ucharbuf &p, int n);
-extern void putuint(packetbuf &p, int n);
-extern void putuint(vector<uchar> &p, int n);
-extern int getuint(ucharbuf &p);
-extern void putfloat(ucharbuf &p, float f);
-extern void putfloat(packetbuf &p, float f);
-extern void putfloat(vector<uchar> &p, float f);
-extern float getfloat(ucharbuf &p);
-extern void sendstring(const char *t, ucharbuf &p);
-extern void sendstring(const char *t, packetbuf &p);
-extern void sendstring(const char *t, vector<uchar> &p);
-extern void getstring(char *t, ucharbuf &p, int len = MAXTRANS);
-extern void filtertext(char *dst, const char *src, bool whitespace = true, int len = sizeof(string)-1);
 extern void localconnect();
 extern const char *disconnectreason(int reason);
 extern void localdisconnect(bool cleanup = true);
@@ -452,7 +435,7 @@ extern bool hasnonlocalclients();
 extern bool haslocalclients();
 extern void sendserverinforeply(ucharbuf &p);
 extern bool requestmaster(const char *req);
-extern bool requestmasterf(const char *fmt, ...);
+extern bool requestmasterf(const char *fmt, ...) PRINTFARGS(1, 2);
 extern bool isdedicatedserver();
 
 // client

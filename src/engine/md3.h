@@ -53,7 +53,7 @@ struct md3 : vertmodel, vertloader<md3>
 
     struct md3meshgroup : vertmeshgroup
     {
-        bool load(char *path)
+        bool load(const char *path)
         {
             stream *f = openfile(path, "rb");
             if(!f) return false;
@@ -168,7 +168,7 @@ struct md3 : vertmodel, vertloader<md3>
         }
     };
 
-    meshgroup *loadmeshes(char *name, va_list args)
+    meshgroup *loadmeshes(const char *name, va_list args)
     {
         md3meshgroup *group = new md3meshgroup;
         if(!group->load(name)) { delete group; return NULL; }
@@ -221,7 +221,6 @@ struct md3 : vertmodel, vertloader<md3>
         translate.y = -translate.y;
         parts[0]->translate = translate;
         loopv(parts) parts[i]->meshes->shared++;
-        preloadshaders();
         return loaded = true;
     }
 };
