@@ -2,6 +2,4 @@ DEFINES =
 ENET_CFLAGS=
 CXXFLAGS= -g $(DEFINES)
 
-BIN_SUFFIX=dbg
-
 include includes.mk

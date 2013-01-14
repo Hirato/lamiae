@@ -1,10 +1,13 @@
 override CXXFLAGS+= -Wall -fsigned-char -fno-exceptions -fno-rtti
 override ENET_CFLAGS+= -g -O2
 
+BIN_SUFFIX=dbg
+
 STRIP=
 ifeq (,$(findstring -g,$(CXXFLAGS)))
 ifeq (,$(findstring -pg,$(CXXFLAGS)))
 	STRIP=strip
+	BIN_SUFFIX=bin
 endif
 endif
 
@@ -16,6 +19,8 @@ CLIENT_LIBS= -Lenet/.libs -lenet -L/usr/X11R6/lib `sdl-config --libs` -lSDL_imag
 
 
 PLATFORM= $(shell uname -s)
+PLATFORM_PATH="bin_unk"
+
 ifeq ($(PLATFORM),Linux)
 	CLIENT_LIBS+= -lrt
 	PLATFORM_PATH=bin_unix
@@ -31,11 +36,25 @@ ifeq ($(PLATFORM),FreeBSD)
 	PLATFORM_PATH=bin_bsd
 endif
 
+
 ifeq ($(shell uname -m),x86_64)
 	MACHINE?=64
-else
+endif
+
+ifeq ($(shell uname -m),i686)
 	MACHINE?=32
 endif
+
+ifeq ($(shell uname -m),i586)
+	MACHINE?=32
+endif
+
+ifeq ($(shell uname -m),i486)
+	MACHINE?=32
+endif
+
+# assume 64bit if in doubt
+MACHINE?=64
 
 
 CLIENT_OBJS= \
@@ -150,6 +169,7 @@ install: all
 ifneq (,$(STRIP))
 	strip lamiae$(MACHINE).$(BIN_SUFFIX)
 endif
+	mkdir -p ../$(PLATFORM_PATH)
 	cp lamiae$(MACHINE).$(BIN_SUFFIX) ../$(PLATFORM_PATH)/
 	chmod o+x ../$(PLATFORM_PATH)/lamiae$(MACHINE).$(BIN_SUFFIX)
 

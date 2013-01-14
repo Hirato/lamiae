@@ -3,7 +3,6 @@ ENET_CFLAGS= -m32
 CXXFLAGS= -O3 $(DEFINES)
 override CXXFLAGS+= -m32
 
-BIN_SUFFIX=bin
 MACHINE=32
 
 include includes.mk

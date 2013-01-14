@@ -9,6 +9,8 @@ LAMIAE_HOME="${HOME}/.lamiae"
 LAMIAE_SUFFIX=".bin"
 LAMIAE_EXEC=""
 LAMIAE_PLATFORM=""
+LAMIAE_MAKEFILE="Makefile"
+forced=1
 
 case $(uname -s) in
 Linux)
@@ -17,6 +19,9 @@ Linux)
 FreeBSD)
     LAMIAE_PLATFORM="bsd"
     ;;
+SunOS)
+	LAMIAE_PLATFORM="sun"
+	;;
 *)
     LAMIAE_PLATFORM="unk"
     ;;
@@ -24,12 +29,19 @@ esac
 
 
 case $(uname -m) in
-i386|i486|i586|i686)
-  MACHINE_BIT=32
-  ;;
-x86_64|*)
-  MACHINE_BIT=64 #assume 64bit otherwise
-  ;;
+i486|i586|i686)
+	MACHINE_BIT=32
+	;;
+x86_64)
+	MACHINE_BIT=64 #assume 64bit otherwise
+	;;
+*)
+	MACHINE_BIT=64
+	echo "Your platform ($(uname -m)) is unknown, assuming 64bit."
+	echo "please file a bug report at https://github.com/Hirato/lamiae/issues"
+	echo "\nPress Enter to continue"
+	read -r
+	;;
 esac
 
 while [ $# -ne 0 ]
@@ -47,6 +59,7 @@ do
 			echo "			NOTE: your architecture ($(uname -m)) can be queried via \"uname -m\""
 			echo "  --force-unix		forces use of Linux binaries when outside Linux"
 			echo "  --force-bsd		forces use of the BSD binaries when outside BSD"
+			echo "  --force-sun		forces use of SunOS binaries when outside SunOS"
 			echo "			NOTE: your platform ($(uname -s)) can be queried via \"uname -s\""
 			echo ""
 			echo "  --debug		starts the debug build(s) inside GDB"
@@ -89,19 +102,28 @@ do
 			case $argument in
 			"force-32")
 				MACHINE_BIT=32
+				forced=0
 			;;
 			"force-64")
 				MACHINE_BIT=64
+				forced=0
 			;;
 			"force-unix")
 				LAMIAE_PLATFORM="unix"
+				forced=0
 			;;
 			"force-bsd")
 				LAMIAE_PLATFORM="bsd"
+				forced=0
+			;;
+			"force-sunos")
+				LAMIAE_PLATFORM="sun"
+				forced=0
 			;;
 			"debug")
 				LAMIAE_SUFFIX=".dbg"
 				LAMIAE_EXEC="gdb --args"
+				LAMIAE_MAKEFILE="Makefile.debug"
 			;;
 			esac
 		;;
@@ -112,6 +134,25 @@ do
 
 	shift
 done
+
+function build {
+	echo "${LAMIAE_DIR}/bin_${LAMIAE_PLATFORM}/lamiae${MACHINE_BIT}${LAMIAE_SUFFIX} does not exist"
+	echo "Lamiae will attempt to compile one by executing the following command."
+	echo "	make -C src -f${LAMIAE_MAKEFILE} install"
+	echo ""
+	echo "Please make sure the SDL, SDL_image, and SDL_mixer, and zlib *Development* libraries are installed."
+	echo "Press Enter to proceed or Ctrl-C to abort."
+
+	read -r
+	make -C src -f${LAMIAE_MAKEFILE} install
+	if [ $? -ne 0 ]
+	then
+		echo "compilation failed"
+		failed
+	fi
+
+	run 0
+}
 
 function failed {
 	echo ""
@@ -125,10 +166,19 @@ function failed {
 	exit 1
 }
 
-cd ${LAMIAE_DIR}
-if [ -a bin_${LAMIAE_PLATFORM}/lamiae${MACHINE_BIT}${LAMIAE_SUFFIX} ]
-then
-	eval ${LAMIAE_EXEC} ./bin_${LAMIAE_PLATFORM}/lamiae${MACHINE_BIT}${LAMIAE_SUFFIX} -q${LAMIAE_HOME} ${LAMIAE_OPTIONS}
-else
-	failed
-fi
+function run {
+	cd ${LAMIAE_DIR}
+	if [ -a bin_${LAMIAE_PLATFORM}/lamiae${MACHINE_BIT}${LAMIAE_SUFFIX} ]
+	then
+		eval ${LAMIAE_EXEC} ./bin_${LAMIAE_PLATFORM}/lamiae${MACHINE_BIT}${LAMIAE_SUFFIX} -q${LAMIAE_HOME} ${LAMIAE_OPTIONS}
+	else
+		if [ $1 -ne 1 ]
+		then
+			failed
+		else
+			build
+		fi
+	fi
+}
+
+run $forced
