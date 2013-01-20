@@ -391,6 +391,11 @@ namespace rpgscript
 		if(r) r->setref(ref);
 		return r;
 	}
+	template<>
+	inline reference *registerref(const char *name, int)
+	{
+		return registerref(name, (void *) 0);
+	}
 
 	template<typename T>
 	reference *registertemp(const char *name, T ref)
@@ -411,6 +416,11 @@ namespace rpgscript
 			r->setref(ref);
 		}
 		return r;
+	}
+	template<>
+	inline reference *registertemp(const char *name, int)
+	{
+		return registertemp(name, (void *) 0);
 	}
 
 	void copystack(hashset<reference> &dst)
@@ -1151,7 +1161,7 @@ namespace rpgscript
 		}
 		else
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr category[%i] does not exist");
+			conoutf(CON_ERROR, "\fs\f3ERROR:\fr category[%i] does not exist", *i);
 			result("");
 		}
 	)
