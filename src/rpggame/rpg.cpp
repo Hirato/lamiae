@@ -368,17 +368,10 @@ namespace game
 		findplayerspawn(d, -1);
 	}
 
-	void respawnself(bool death = false)
-	{
-		player1->revive();
-	}
-
 	void respawn()
 	{
-		if(player1->state==CS_DEAD)
-		{
-			respawnself(true);
-		}
+		if(player1->state==CS_DEAD && !camera::cutscene)
+			player1->revive();
 	}
 
 	mapinfo *accessmap(const char *name)
