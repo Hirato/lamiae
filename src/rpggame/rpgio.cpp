@@ -1579,7 +1579,7 @@ namespace rpgio
 
 	void loadgame(const char *name)
 	{
-		defformatstring(file)("data/rpg/saves/%s.sgz", name);
+		defformatstring(file)("%s/%s.sgz", game::datapath("saves"), name);
 		stream *f = opengzfile(file, "rb");
 
 		if(!f)
@@ -1734,7 +1734,7 @@ namespace rpgio
 			return;
 		}
 
-		defformatstring(file)("data/rpg/saves/%s.sgz.tmp", name);
+		defformatstring(file)("%s/%s.sgz.tmp", game::datapath("saves"), name);
 		stream *f = opengzfile(path(file), "wb");
 
 		if(!f)

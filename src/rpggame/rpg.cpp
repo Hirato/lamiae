@@ -93,9 +93,22 @@ namespace game
 // 			hotkeys[*idx] = equipment(-1, -1);
 // 	)
 
+	const char *datapath(const char *subdir)
+	{
+		static string pth;
+		if(!mapdata || !subdir)
+			copystring(pth, "games");
+		else if(subdir[0])
+			formatstring(pth)("games/%s/%s", data, subdir);
+		else
+			formatstring(pth)("games/%s", data);
+
+		return pth;
+	}
+
 	ICOMMAND(include, "s", (const char *pth),
 		static string file;
-		formatstring(file)("data/rpg/games/%s/%s.cfg", data, pth);
+		formatstring(file)("%s/%s.cfg", datapath(), pth);
 		execfile(file);
 	)
 
@@ -298,8 +311,7 @@ namespace game
 	ICOMMAND(r_rehash, "", (),
 		if(!mapdata) return;
 		conoutf("Reloading configuration files in data/rpg/games/%s", data);
-		defformatstring(dir)("data/rpg/games/%s", data);
-		loadassets(dir, true);
+		loadassets(datapath(), true);
 		if(abort)
 		{
 			conoutf(CON_ERROR, "\fs\f3ERROR:\fr game breaking errors were encountered while parsing files; aborting current game");
@@ -332,7 +344,8 @@ namespace game
 		mapdata = new hashset<mapinfo>();
 		copystring(data, game);
 
-		defformatstring(dir)("data/rpg/games/%s", game);
+		string dir;
+		copystring(dir, datapath());
 		loadassets(dir, false);
 		if(abort)
 		{

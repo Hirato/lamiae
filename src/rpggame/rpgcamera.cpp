@@ -754,7 +754,7 @@ namespace camera
 		}
 
 		static string file;
-		formatstring(file)("data/rpg/games/%s/cutscenes/%s.cfg", game::data, s);
+		formatstring(file)("%s/%s.cfg", game::datapath("cutscenes"), s);
 		cutscene = true;
 		cancel = false;
 		execfile(file);

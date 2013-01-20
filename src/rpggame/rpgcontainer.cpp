@@ -133,7 +133,7 @@ void rpgcontainer::init(int base)
 	game::loadingrpgcontainer = this;
 	rpgscript::config->setref(this, true);
 
-	defformatstring(file)("data/rpg/games/%s/containers/%i.cfg", game::data, base);
+	defformatstring(file)("%s/%i.cfg", game::datapath("containers"), base);
 	execfile(file);
 
 	game::loadingrpgcontainer = NULL;

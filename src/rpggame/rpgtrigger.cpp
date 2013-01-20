@@ -38,7 +38,7 @@ void rpgtrigger::init(int base)
 	game::loadingrpgtrigger = this;
 	rpgscript::config->setref(this, true);
 
-	defformatstring(file)("data/rpg/games/%s/triggers/%i.cfg", game::data, base);
+	defformatstring(file)("%s/%i.cfg", game::datapath("triggers"), base);
 	execfile(file);
 
 	rpgscript::config->setnull(true);

@@ -46,7 +46,7 @@ void item::init(int base, bool world)
 	this->base = base;
 	game::loadingitem = this;
 
-	defformatstring(file)("data/rpg/games/%s/items/%i.cfg", game::data, base);
+	defformatstring(file)("%s/%i.cfg", game::datapath("items"), base);
 	execfile(file);
 
 	game::loadingitem = NULL;

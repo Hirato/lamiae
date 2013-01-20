@@ -88,6 +88,7 @@ namespace ai
 namespace game
 {
 	extern string data;
+	extern const char *datapath(const char *subdir = "");
 
 	extern vector<script *> scripts; ///scripts, includes dialogue
 	extern vector<effect *> effects; ///pretty particle effects for spells and stuff
