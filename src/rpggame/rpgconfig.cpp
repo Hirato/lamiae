@@ -33,7 +33,7 @@ namespace game
 		static x *check ## x () \
 		{ \
 			if(! loading ## x) \
-				ERRORF("" #c " not defined or being loaded"); \
+				ERRORF(#c " not defined or being loaded"); \
 			return loading ## x; \
 		} \
 		ICOMMAND(r_select_ ## c, "se", (const char *ref, uint *contents), \
@@ -49,7 +49,7 @@ namespace game
 				if((vec).inrange(idx)) \
 					loading ## x = (vec)[idx]; \
 				if(loading ## x && DEBUG_VCONF) \
-					conoutf("\fs\f2DEBUG:\fr successfully selected \"" #c "\" from reference %s", ref); \
+					DEBUGF("successfully selected \"" #c "\" from reference %s", ref); \
 			} \
 			\
 			if(!loading ##x) \
@@ -58,7 +58,7 @@ namespace game
 				if(vec.inrange(idx)) \
 				{ \
 					if(DEBUG_VCONF) \
-						conoutf("\fs\f2DEBUG:\fr successfully selected \"" #c "\" using index %i", idx); \
+						DEBUGF("successfully selected \"" #c "\" using index %i", idx); \
 					loading ## x = vec[idx]; \
 				} \
 			} \
@@ -74,7 +74,7 @@ namespace game
 		) \
 		ICOMMAND(r_num_ ## c, "", (), \
 			if(DEBUG_VCONF) \
-				conoutf("\fs\f2DEBUG:\fr r_num_" #c " requested, returning %i", vec.length()); \
+				DEBUGF("r_num_" #c " requested, returning %i", vec.length()); \
 			intret(vec.length()); \
 		)
 
@@ -108,7 +108,7 @@ namespace game
 		static x *check ##x () \
 		{ \
 			if(! loading ## x) \
-				ERRORF("" #c " not being loaded"); \
+				ERRORF(#c " not being loaded"); \
 			return loading ## x; \
 		} \
 		ICOMMAND(r_select_ ## c, "se", (const char *ref, uint *body),  \
@@ -122,7 +122,7 @@ namespace game
 			{ \
 				loading ## x = select; \
 				if(loading ## x && DEBUG_VCONF) \
-					conoutf("\fs\f2DEBUG:\fr successfully selected \"" #c "\" from reference %s", ref); \
+					DEBUGF("successfully selected \"" #c "\" from reference %s", ref); \
 			} \
 			if(loading ## x) \
 				execute(body); \
@@ -166,7 +166,7 @@ namespace game
 		if(obj && obj->getequip(objidx))
 		{
 			if(DEBUG_VCONF)
-				conoutf("\fs\f2DEBUG:\fr successfully selected \"use\" from reference %s", ref);
+				DEBUGF("successfully selected \"use\" from reference %s", ref);
 			loadinguse = obj->getequip(objidx)->it->uses[obj->getequip(objidx)->use];
 		}
 		else if(loadingitem)
@@ -175,7 +175,7 @@ namespace game
 			if(loadingitem->uses.inrange(idx))
 			{
 				if(DEBUG_VCONF)
-					conoutf("\fs\f2DEBUG:\fr successfully selected \"use\" using index %i", idx);
+					DEBUGF("successfully selected \"use\" using index %i", idx);
 				loadinguse = loadingitem->uses[idx];
 			}
 		}
@@ -201,7 +201,7 @@ namespace game
 		INIT \
 		if(!e) \
 		{ \
-			ERRORF("" #name " requires you to have a valid object selected first"); \
+			ERRORF(#name " requires you to have a valid object selected first"); \
 			return; \
 		} \
 		if(*numargs <= 0) \
