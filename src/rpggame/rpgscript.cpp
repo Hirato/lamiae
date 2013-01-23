@@ -89,42 +89,42 @@ void reference::pushref(rpgchar *d, bool force)
 	if(!canset(force)) return;
 
 	list.add(ref(d, T_CHAR));
-	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed rpgchar type %p onto reference %s", d, name);
+	if(DEBUG_VSCRIPT) DEBUGF("pushed rpgchar type %p onto reference %s", d, name);
 }
 void reference::pushref(rpgitem *d, bool force)
 {
 	if(!canset(force)) return;
 
 	list.add(ref(d, T_ITEM));
-	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed rpgitem type %p onto reference %s", d, name);
+	if(DEBUG_VSCRIPT) DEBUGF("pushed rpgitem type %p onto reference %s", d, name);
 }
 void reference::pushref(rpgobstacle *d, bool force)
 {
 	if(!canset(force)) return;
 
 	list.add(ref(d, T_OBSTACLE));
-	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed obstacle type %p onto reference %s", d, name);
+	if(DEBUG_VSCRIPT) DEBUGF("pushed obstacle type %p onto reference %s", d, name);
 }
 void reference::pushref(rpgcontainer *d, bool force)
 {
 	if(!canset(force)) return;
 
 	list.add(ref(d, T_CONTAINER));
-	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed container type %p onto reference %s", d, name);
+	if(DEBUG_VSCRIPT) DEBUGF("pushed container type %p onto reference %s", d, name);
 }
 void reference::pushref(rpgplatform *d, bool force)
 {
 	if(!canset(force)) return;
 
 	list.add(ref(d, T_PLATFORM));
-	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed platform type %p onto reference %s", d, name);
+	if(DEBUG_VSCRIPT) DEBUGF("pushed platform type %p onto reference %s", d, name);
 }
 void reference::pushref(rpgtrigger *d, bool force)
 {
 	if(!canset(force)) return;
 
 	list.add(ref(d, T_TRIGGER));
-	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed trigger type %p onto reference %s", d, name);
+	if(DEBUG_VSCRIPT) DEBUGF("pushed trigger type %p onto reference %s", d, name);
 }
 void reference::pushref(rpgent *d, bool force)
 {
@@ -139,14 +139,14 @@ void reference::pushref(rpgent *d, bool force)
 		case ENT_PLATFORM: pushref((rpgplatform *) d, force); return;
 		case ENT_TRIGGER: pushref((rpgtrigger *) d, force); return;
 	}
-	conoutf(CON_ERROR, "ERROR: reference::pushref(rpgent *d), if you see this, an unknown entity was encountered (%i), report this as a bug!", d->type());
+	ERRORF("reference::pushref(rpgent *d), if you see this, an unknown entity was encountered (%i), report this as a bug!", d->type());
 }
 void reference::pushref(item *d, bool force)
 {
 	if(!canset(force)) return;
 
 	list.add(ref(d, T_INV));
-	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed inventory item type %p onto reference %s", d, name);
+	if(DEBUG_VSCRIPT) DEBUGF("pushed inventory item type %p onto reference %s", d, name);
 }
 void reference::pushref(vector<item *> *d, bool force)
 {
@@ -160,28 +160,28 @@ void reference::pushref(equipment *d, bool force)
 	if(!canset(force)) return;
 
 	list.add(ref(d, T_EQUIP));
-	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed equip type %p onto reference %s", d, name);
+	if(DEBUG_VSCRIPT) DEBUGF("pushed equip type %p onto reference %s", d, name);
 }
 void reference::pushref(mapinfo *d, bool force)
 {
 	if(!canset(force)) return;
 
 	list.add(ref(d, T_MAP));
-	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed mapinfo type %p onto reference %s", d, name);
+	if(DEBUG_VSCRIPT) DEBUGF("pushed mapinfo type %p onto reference %s", d, name);
 }
 void reference::pushref(victimeffect *d, bool force)
 {
 	if(!canset(force)) return;
 
 	list.add(ref(d, T_VEFFECT));
-	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed victim effect type %p onto reference %s", d, name);
+	if(DEBUG_VSCRIPT) DEBUGF("pushed victim effect type %p onto reference %s", d, name);
 }
 void reference::pushref(areaeffect *d, bool force)
 {
 	if(!canset(force)) return;
 
 	list.add(ref(d, T_AEFFECT));
-	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushed area effect type %p onto reference %s", d, name);
+	if(DEBUG_VSCRIPT) DEBUGF("pushed area effect type %p onto reference %s", d, name);
 }
 void reference::pushref(reference *d, bool force)
 {
@@ -190,22 +190,22 @@ void reference::pushref(reference *d, bool force)
 	loopv(d->list)
 		list.add(d->list[i]);
 }
-void reference::setnull(bool force) { if(!canset(force)) return; list.setsize(0); if(DEBUG_VSCRIPT) conoutf("\fs\f2DEBUG:\fr reference %s set to null", name);}
+void reference::setnull(bool force) { if(!canset(force)) return; list.setsize(0); if(DEBUG_VSCRIPT) DEBUGF("reference %s set to null", name);}
 
 template<typename T>
 reference::reference(const char *n, T d) : name (newstring(n)), immutable(false)
 {
 	setref(d);
-	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr adding reference %s", name);
+	if(DEBUG_VSCRIPT) DEBUGF("adding reference %s", name);
 }
 reference::reference(const char *n) : name (newstring(n)), immutable(false)
 {
-	if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr adding null reference %s", name);
+	if(DEBUG_VSCRIPT) DEBUGF("adding null reference %s", name);
 }
 
 reference::~reference()
 {
-	if(name && DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr freeing reference %s", name);
+	if(name && DEBUG_VSCRIPT) DEBUGF("freeing reference %s", name);
 	delete[] name;
 }
 
@@ -216,7 +216,7 @@ reference::~reference()
 void item::getsignal(const char *sig, bool prop, rpgent *sender, int use)
 {
 	if(DEBUG_VSCRIPT)
-		conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr item %p received signal %s with sender %p and use %i; propagating: %s", this, sig, sender, use, prop ? "yes" : "no");
+		DEBUGF("item %p received signal %s with sender %p and use %i; propagating: %s", this, sig, sender, use, prop ? "yes" : "no");
 
 	signal *listen = NULL;
 	if(use >= 0 && uses.inrange(use) && game::scripts.inrange(uses[use]->script))
@@ -231,7 +231,7 @@ void item::getsignal(const char *sig, bool prop, rpgent *sender, int use)
 void rpgent::getsignal(const char *sig, bool prop, rpgent *sender)
 {
 	if(DEBUG_VSCRIPT)
-		conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr entity %p received signal %s with sender %p; propagating: %s", this, sig, sender, prop ? "yes" : "no");
+		DEBUGF("entity %p received signal %s with sender %p; propagating: %s", this, sig, sender, prop ? "yes" : "no");
 
 	if(game::scripts.inrange(getscript()))
 	{
@@ -266,7 +266,7 @@ void rpgent::getsignal(const char *sig, bool prop, rpgent *sender)
 void mapinfo::getsignal(const char *sig, bool prop, rpgent *sender)
 {
 	if(DEBUG_VSCRIPT)
-		conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr map %p received signal %s with sender %p; propagating: %s", this, sig, sender, prop ? "yes" : "no");
+		DEBUGF("map %p received signal %s with sender %p; propagating: %s", this, sig, sender, prop ? "yes" : "no");
 
 	if(game::mapscripts.inrange(script))
 	{
@@ -320,22 +320,22 @@ namespace rpgscript
 
 	void pushstack()
 	{
-		if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr pushing new stack...");
+		if(DEBUG_VSCRIPT) DEBUGF("pushing new stack...");
 		int size = stack.length() ? 64 : 1024;
 		stack.add(new hashset<reference>(size));
-		if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr new depth is %i", stack.length());
+		if(DEBUG_VSCRIPT) DEBUGF("new depth is %i", stack.length());
 	}
 
 	void popstack()
 	{
-		if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr popping stack...");
+		if(DEBUG_VSCRIPT) DEBUGF("popping stack...");
 		if(stack.length() > 1)
 		{
 			delete stack.pop();
-			if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr new depth is %i", stack.length());
+			if(DEBUG_VSCRIPT) DEBUGF("new depth is %i", stack.length());
 		}
 		else
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr Lamiae just tried to pop the reference stack, but it is too shallow (stack.length <= 1)");
+			ERRORF("Lamiae just tried to pop the reference stack, but it is too shallow (stack.length <= 1)");
 	}
 
 	ICOMMAND(r_stack, "e", (uint *body),
@@ -351,7 +351,7 @@ namespace rpgscript
 
 		if(!stack.length())
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr no stack");
+			ERRORF("no stack");
 			return NULL;
 		}
 
@@ -366,27 +366,27 @@ namespace rpgscript
 			if(ref)
 			{
 				if(DEBUG_VSCRIPT)
-					conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr reference \"%s\" found, returning %p", name, ref);
+					DEBUGF("reference \"%s\" found, returning %p", name, ref);
 				return ref;
 			}
 		}
 		if(create)
 		{
-			if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr reference \"%s\" not found, creating", name);
+			if(DEBUG_VSCRIPT) DEBUGF("reference \"%s\" not found, creating", name);
 			const char *refname = newstring(lookup);
 			reference *ref = &stack[0]->access(refname, dummy);
 			ref->name = refname;
 			return ref;
 
 		}
-		if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr reference \"%s\" not found", lookup);
+		if(DEBUG_VSCRIPT) DEBUGF("reference \"%s\" not found", lookup);
 		return NULL;
 	}
 
 	template<typename T>
 	reference *registerref(const char *name, T ref)
 	{
-		if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr registering reference %p to name %s", ref, name);
+		if(DEBUG_VSCRIPT) DEBUGF("registering reference %p to name %s", ref, name);
 		reference *r = searchstack(name, true);
 		if(r) r->setref(ref);
 		return r;
@@ -402,7 +402,7 @@ namespace rpgscript
 	{
 		static reference dummy("");
 
-		if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr registering end-of-stack reference %p to name %s", ref, name);
+		if(DEBUG_VSCRIPT) DEBUGF("registering end-of-stack reference %p to name %s", ref, name);
 		reference *r = NULL;
 		if(stack.length())
 		{
@@ -461,7 +461,7 @@ namespace rpgscript
 		if(locals.length())
 		{
 			dumplocals();
-			conoutf(CON_ERROR, "ERROR: The locals stack wasn't fully freed! REPORT A BUG!");
+			ERRORF("The locals stack wasn't fully freed! REPORT A BUG!");
 			locals.deletecontents();
 		}
 
@@ -589,7 +589,7 @@ namespace rpgscript
 	{
 		if(!invokee || !code) return;
 		if(DEBUG_VSCRIPT)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr conditions met, executing code with invokee %p and invoker %p", invokee, invoker);
+			DEBUGF("conditions met, executing code with invokee %p and invoker %p", invokee, invoker);
 
 		pushstack();
 
@@ -604,7 +604,7 @@ namespace rpgscript
 	{
 		if(!invokee || !code) return;
 		if(DEBUG_VSCRIPT)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr conditions met, executing code with invokee %p and invoker %p", invokee, invoker);
+			DEBUGF("conditions met, executing code with invokee %p and invoker %p", invokee, invoker);
 
 		pushstack();
 
@@ -619,7 +619,7 @@ namespace rpgscript
 	{
 		if(!invokee || !code) return;
 		if(DEBUG_VSCRIPT)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr conditions met, executing code with invokee %p and invoker %p", invokee, invoker);
+			DEBUGF("conditions met, executing code with invokee %p and invoker %p", invokee, invoker);
 
 		pushstack();
 
@@ -641,7 +641,7 @@ namespace rpgscript
 	#define getreference(var, name, cond, fail, fun) \
 		if(!*var) \
 		{ \
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr " #fun "; requires a reference to be specified"); \
+			ERRORF(#fun "; requires a reference to be specified"); \
 			fail; return; \
 		} \
 		int name ## idx; \
@@ -649,12 +649,12 @@ namespace rpgscript
 		if(DEBUG_VSCRIPT) \
 		{ \
 			const char *sep = strchr(var, ':'); \
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr searching for reference " #name ", via reference %s%s", var, sep ? "" : ":0"); \
+			DEBUGF("searching for reference " #name ", via reference %s%s", var, sep ? "" : ":0"); \
 		} \
 		reference *name = searchstack(var); \
 		if(!name || !(cond)) \
 		{ \
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr " #fun "; invalid reference \"%s\" or of incompatible type", var); \
+			ERRORF(#fun "; invalid reference \"%s\" or of incompatible type", var); \
 			fail; return; \
 		}
 
@@ -665,7 +665,7 @@ namespace rpgscript
 		if(hover && hover->getent(0) && hover->getent(0) != player1)
 		{
 			if(DEBUG_SCRIPT)
-				conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Player interacted with %p", hover);
+				DEBUGF("Player interacted with %p", hover);
 
 			hover->getent(0)->getsignal("interact", false, player1);
 		}
@@ -685,7 +685,7 @@ namespace rpgscript
 			if(!tmp) return;
 
 			if(DEBUG_SCRIPT)
-				conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Prepared mapinfo for %s with script %i and flags %i", m, *scr, *f);
+				DEBUGF("Prepared mapinfo for %s with script %i and flags %i", m, *scr, *f);
 
 			tmp->script = *scr;
 			tmp->flags = *f;
@@ -717,19 +717,19 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_ref, "V", (tagval *v, int n),
-		if(!n) {conoutf(CON_ERROR, "ERROR; r_registerref; requires the reference to be named"); return;}
+		if(!n) {ERRORF("r_registerref; requires the reference to be named"); return;}
 
 		loopi(n) searchstack(v[i].getstr(), true);
 	)
 
 	ICOMMAND(r_local, "V", (tagval *v, int n),
-		if(!n) {conoutf(CON_ERROR, "ERROR; r_registertemp; requires the reference to be named"); return;}
+		if(!n) {ERRORF("r_registertemp; requires the reference to be named"); return;}
 
 		loopi(n) registertemp(v[i].getstr(), NULL);
 	)
 
 	ICOMMAND(r_setref, "ss", (const char *ref, const char *alias),
-		if(!*ref) {conoutf(CON_ERROR, "ERROR; r_setref; requires reference to be named"); return;}
+		if(!*ref) {ERRORF("r_setref; requires reference to be named"); return;}
 
 		reference *r = searchstack(ref, true);
 		if(!r || !r->canset()) return; //if this fails, then no stack
@@ -746,7 +746,7 @@ namespace rpgscript
 			if(!a)
 			{
 				if(DEBUG_VSCRIPT)
-					conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr no valid alias, nulling %s:%i, if exists", ref, refidx);
+					DEBUGF("no valid alias, nulling %s:%i, if exists", ref, refidx);
 				if(r->list.inrange(refidx))
 					r->list[refidx] = reference::ref();
 				return;
@@ -755,7 +755,7 @@ namespace rpgscript
 				r->list.add(reference::ref());
 			if(!r->list.inrange(refidx))
 			{
-				conoutf(CON_ERROR, "\fs\f3ERROR:\fr Invalid reference index %i", refidx);
+				ERRORF("Invalid reference index %i", refidx);
 				return;
 			}
 
@@ -763,20 +763,20 @@ namespace rpgscript
 			{
 				if(!a->list.inrange(alidx))
 				{
-					conoutf(CON_ERROR, "\fs\f3ERROR:\fr %s has no ref at position %i", alias, alidx);
+					ERRORF("%s has no ref at position %i", alias, alidx);
 					r->list[refidx] = reference::ref();
 				}
 				else
 				{
 					if(DEBUG_VSCRIPT)
-						conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr setting %s;%i to %s:%i", ref, refidx, alias, alidx);
+						DEBUGF("setting %s;%i to %s:%i", ref, refidx, alias, alidx);
 					r->list[refidx] = a->list[alidx];
 				}
 			}
 			else
 			{
 				if(DEBUG_VSCRIPT)
-					conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr replacing %s:%i, with contents of %s", ref, refidx, alias);
+					DEBUGF("replacing %s:%i, with contents of %s", ref, refidx, alias);
 				r->list.remove(refidx);
 				r->list.insert(refidx, a->list.getbuf(), a->list.length());
 			}
@@ -792,7 +792,7 @@ namespace rpgscript
 				if(a->list.inrange(alidx))
 					r->list.add(a->list[alidx]);
 				else
-					conoutf(CON_ERROR, "\fs\f3ERROR:\fr %s has no reference at position %i", alias, alidx);
+					ERRORF("%s has no reference at position %i", alias, alidx);
 			}
 			else
 				r->pushref(a);
@@ -800,10 +800,10 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_swapref, "ss", (const char *f, const char *s),
-		if(!*f || !*s) {conoutf(CON_ERROR, "\fs\f3ERROR:\fr r_swapref; requires two valid references to swap"); return;}
+		if(!*f || !*s) {ERRORF("r_swapref; requires two valid references to swap"); return;}
 		reference *a = searchstack(f);
 		reference *b = searchstack(s);
-		if(!a || !b) {conoutf(CON_ERROR, "\fs\f3ERROR:\fr r_swapref; either %s or %s is an invalid reference", f, s); return;}
+		if(!a || !b) {ERRORF("r_swapref; either %s or %s is an invalid reference", f, s); return;}
 		if(!a->canset() || b->canset()) return;
 		swap(a->list, b->list);
 	)
@@ -819,10 +819,10 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_matchref, "ss", (const char *f, const char *s),
-		if(!*f || !*s) {conoutf(CON_ERROR, "\fs\f3ERROR:\fr r_matchref; requires two valid references to compare"); intret(0); return;}
+		if(!*f || !*s) {ERRORF("r_matchref; requires two valid references to compare"); intret(0); return;}
 		reference *a = searchstack(f);
 		reference *b = searchstack(s);
-		if(!a || !b) {conoutf(CON_ERROR, "\fs\f3ERROR:\fr r_matchref; either %s or %s is an invalid reference", f, s); intret(0); return;}
+		if(!a || !b) {ERRORF("r_matchref; either %s or %s is an invalid reference", f, s); intret(0); return;}
 
 		const char *asep = strchr(f, ':');
 		const char *bsep = strchr(s, ':');
@@ -898,7 +898,7 @@ namespace rpgscript
 				if(a->list.inrange(idx))
 					r->list.add(a->list[idx]);
 				else
-					conoutf(CON_ERROR, "\fs\f3ERROR:\fr nothing at %s; cannot append onto %s", add, ref);
+					ERRORF("nothing at %s; cannot append onto %s", add, ref);
 			}
 			else
 				r->pushref(a);
@@ -945,7 +945,7 @@ namespace rpgscript
 		*n = max(1, *n);
 		int in = clamp(0, r->list.length(), *i);
 		int num = max(1, *n + in - r->list.length());
-		if(in != *i || *n != num) conoutf(CON_WARN, "\fs\f6WARNING:\fr r_ref_remove, arguments clamped fo %s: %i %i --> %i %i", ref, *i, *n, in, num);
+		if(in != *i || *n != num) WARNINGF("r_ref_remove, arguments clamped fo %s: %i %i --> %i %i", ref, *i, *n, in, num);
 		r->list.remove(in, num);
 	)
 
@@ -953,13 +953,13 @@ namespace rpgscript
 		rpgvar *var = variables.access(n);
 		if(!var)
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr no global named \"%s\", returning \"\"", n);
+			ERRORF("no global named \"%s\", returning \"\"", n);
 			result("");
 			return;
 		}
 
 		if(DEBUG_VSCRIPT)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr global %s found, returning...\n\t%s", n, var->value);
+			DEBUGF("global %s found, returning...\n\t%s", n, var->value);
 
 		result(var->value);
 	)
@@ -971,7 +971,7 @@ namespace rpgscript
 		if(!var)
 		{
 			if(DEBUG_VSCRIPT)
-				conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr global variable \"%s\" does not exist, creating and setting to \"%s\"", n, v);
+				DEBUGF("global variable \"%s\" does not exist, creating and setting to \"%s\"", n, v);
 
 			var = &variables.access(n, rpgvar());
 			var->name = !dup ? n : newstring(n);
@@ -980,7 +980,7 @@ namespace rpgscript
 		}
 
 		if(DEBUG_VSCRIPT)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr global variable \"%s\" exists, setting to \"%s\" from \"%s\"", n, v, var->value);
+			DEBUGF("global variable \"%s\" exists, setting to \"%s\" from \"%s\"", n, v, var->value);
 
 		if(!dup) delete[] n;
 
@@ -992,12 +992,12 @@ namespace rpgscript
 
 	ICOMMAND(r_global_new, "ss", (const char *n, const char *v),
 		if(setglobal(n, v))
-			conoutf(CON_WARN, "\fs\f6WARNING:\fr r_global_new, variable \"%s\" already exists!", n);
+			WARNINGF("r_global_new, variable \"%s\" already exists!", n);
 	)
 
 	ICOMMAND(r_global_set, "ss", (const char *n, const char *v),
 		if(!setglobal(n, v))
-			conoutf(CON_WARN, "\fs\f6WARNING:\fr r_global_set, variable \"%s\" doesn't exist, creating anyway.", n);
+			WARNINGF("r_global_set, variable \"%s\" doesn't exist, creating anyway.", n);
 	)
 
 	bool comparelocals(int a, int b)
@@ -1053,7 +1053,7 @@ namespace rpgscript
 
 			if(!l) continue;
 
-			conoutf("references by %i objects", l->refs);
+			conoutf("referenced by %i objects", l->refs);
 			enumerate(l->variables, rpgvar, var,
 				conoutf("\t%s = %s", escapestring(var.name), escapestring(var.value));
 			)
@@ -1068,7 +1068,7 @@ namespace rpgscript
 		if(!locals.inrange(i) || !locals[i])
 		{
 			dumplocals();
-			conoutf(CON_ERROR, "ERROR: Can't increse reference counter for local variable stack %i! \f3REPORT A BUG!", i);
+			ERRORF("Can't increse reference counter for local variable stack %i! \f3REPORT A BUG!", i);
 			return false;
 		}
 
@@ -1083,14 +1083,14 @@ namespace rpgscript
 		if(!locals.inrange(i) || !locals[i])
 		{
 			dumplocals();
-			conoutf(CON_ERROR, "ERROR: Can't decrease reference counter for local variable stack %i! \f3REPORT A BUG!", i);
+			ERRORF("Can't decrease reference counter for local variable stack %i! \f3REPORT A BUG!", i);
 			return false;
 		}
 
 		if((--locals[i]->refs) <= 0)
 		{
 			if(locals[i]->refs < 0)
-				conoutf(CON_ERROR, "ERROR: locals stack[%i] decremented to %i! \f3REPORT A BUG!", i, locals[i]->refs);
+				ERRORF("locals stack[%i] decremented to %i! \f3REPORT A BUG!", i, locals[i]->refs);
 
 			delete locals[i];
 			locals[i] = NULL;
@@ -1105,7 +1105,7 @@ namespace rpgscript
 			if(locals[i] && locals[i]->refs <= 0)
 			{
 				if(locals[i]->refs < 0)
-				conoutf(CON_ERROR, "ERROR: locals stack[%i] erased with negative refcount! \f3REPORT A BUG!", i);
+				ERRORF("locals stack[%i] erased with negative refcount! \f3REPORT A BUG!", i);
 
 				delete locals[i];
 				locals[i] = NULL;
@@ -1161,7 +1161,7 @@ namespace rpgscript
 		}
 		else
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr category[%i] does not exist", *i);
+			ERRORF("category[%i] does not exist", *i);
 			result("");
 		}
 	)
@@ -1179,16 +1179,16 @@ namespace rpgscript
 		if(*send) sender = searchstack(send);
 		if(*rec) receiver = searchstack(rec);
 
-		if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "DEBUG, r_signal called with sig: %s - send: %s - rec: %s - prop: %i", sig, send, rec, prop);
+		if(DEBUG_VSCRIPT) DEBUGF("r_signal called with sig: %s - send: %s - rec: %s - prop: %i", sig, send, rec, prop);
 
 		if(*rec && !receiver)
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr receiver does not exist");
+			ERRORF("receiver does not exist");
 			return;
 		}
 		else if(!receiver)
 		{
-			if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr no receiver, sending signal to everything");
+			if(DEBUG_VSCRIPT) DEBUGF("no receiver, sending signal to everything");
 			enumerate(*game::mapdata, mapinfo, map,
 				map.getsignal(sig, true, sender ? sender->getent(sendidx) : NULL);
 			)
@@ -1196,19 +1196,19 @@ namespace rpgscript
 		}
 		else if(receiver->getmap(recidx))
 		{
-			if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr receiver is map, sending signal");
+			if(DEBUG_VSCRIPT) DEBUGF("receiver is map, sending signal");
 			receiver->getmap(recidx)->getsignal(sig, prop, sender ? sender->getent(sendidx) : NULL);
 			return;
 		}
 		else  if(receiver->getent(recidx))
 		{
-			if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr receiver is ent, sending signal");
+			if(DEBUG_VSCRIPT) DEBUGF("receiver is ent, sending signal");
 			receiver->getent(recidx)->getsignal(sig, prop, sender ? sender->getent(sendidx) : NULL);
 			return;
 		}
 		else if(receiver->getinv(0))
 		{
-			if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr receiver is item, sending signal");
+			if(DEBUG_VSCRIPT) DEBUGF("receiver is item, sending signal");
 			receiver->getinv(recidx)->getsignal(sig, prop, sender ? sender->getent(sendidx) : NULL);
 			return;
 		}
@@ -1218,7 +1218,7 @@ namespace rpgscript
 
 	ICOMMAND(r_loop_maps, "se", (const char *ref, uint *body),
 		if(!mapdata) return;
-		if(!*ref) {conoutf(CON_ERROR, "ERROR; r_loop_maps; requires reference to alias maps to"); return;}
+		if(!*ref) {ERRORF("r_loop_maps; requires reference to alias maps to"); return;}
 
 		pushstack();
 		reference *cur = registertemp(ref, NULL);
@@ -1233,7 +1233,7 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_loop_ents, "sse", (const char *mapref, const char *ref, uint *body),
-		if(!*ref) {conoutf(CON_ERROR, "\fs\f3ERROR:\fr r_loop_ents; requires map reference and a reference to alias ents to"); return;}
+		if(!*ref) {ERRORF("r_loop_ents; requires map reference and a reference to alias ents to"); return;}
 		getreference(mapref, map, map->getmap(mapidx), , r_loop_ents)
 
 		pushstack();
@@ -1262,13 +1262,13 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_loop_aeffects, "ssse", (const char *mapref, const char *vic, const char *ref, uint *body),
-		if(!*ref) {conoutf(CON_ERROR, "\fs\f3ERROR:\fr r_loop_aeffects; requires map reference and a reference to alias ents to"); return;}
+		if(!*ref) {ERRORF("r_loop_aeffects; requires map reference and a reference to alias ents to"); return;}
 		getreference(mapref, map, map->getmap(mapidx), , r_loop_aeffects)
 
 		rpgent *victim = NULL;
 		if(*vic)
 		{
-			if(DEBUG_VSCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr r_loop_aeffects, entity reference provided, may do bounds checking");
+			if(DEBUG_VSCRIPT) DEBUGF("r_loop_aeffects, entity reference provided, may do bounds checking");
 			int vidx;
 			parseref(vic, vidx);
 			reference *v = searchstack(vic, false);
@@ -1292,7 +1292,7 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_loop_inv, "sse", (const char *entref, const char *ref, uint *body),
-		if(!*ref) {conoutf(CON_ERROR, "\fs\f3ERROR:\fr r_loop_inv, requires ent reference and reference to alias items to"); return;}
+		if(!*ref) {ERRORF("r_loop_inv, requires ent reference and reference to alias items to"); return;}
 		getreference(entref, ent, ent->getchar(entidx) || ent->getcontainer(entidx), , r_loop_inv)
 
 		pushstack();
@@ -1312,7 +1312,7 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_setref_invstack, "ssi", (const char *ref, const char *srcref, int *base),
-		if(!*ref) {conoutf(CON_ERROR, "\fs\f3ERROR:\fr r_setref_invstack; requires ent reference and a reference name"); return;}
+		if(!*ref) {ERRORF("r_setref_invstack; requires ent reference and a reference name"); return;}
 		getreference(srcref, src, src->getchar(srcidx) || src->getcontainer(srcidx), , r_setref_invstack)
 
 		reference *invstack = registerref(ref, NULL);
@@ -1325,7 +1325,7 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_setref_inv, "ssi", (const char *ref, const char *srcref, int *idx),
-		if(!*ref) {conoutf(CON_ERROR, "\fs\f3ERROR:\fr r_setref_inv; requires ent reference and a reference name"); return;}
+		if(!*ref) {ERRORF("r_setref_inv; requires ent reference and a reference name"); return;}
 		getreference(srcref, src, src->getchar(srcidx) || src->getcontainer(srcidx), , r_setref_inv)
 
 		reference *inv = registerref(ref, NULL);
@@ -1362,7 +1362,7 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_loop_veffects, "sse", (const char *entref, const char *ref, uint *body),
-		if(!*ref) {conoutf(CON_ERROR, "\fs\f3ERROR:\fr r_loop_veffects; requires ent reference and a reference name"); return;}
+		if(!*ref) {ERRORF("r_loop_veffects; requires ent reference and a reference name"); return;}
 		getreference(entref, ent, ent->getent(entidx), , r_loop_veffects)
 
 		pushstack();
@@ -1382,7 +1382,7 @@ namespace rpgscript
 	// Highly generic stuff
 
 	ICOMMAND(r_get_attr, "sii", (const char *ref, int *attr, int *u),
-		if(*attr < 0 || *attr >= STAT_MAX) {conoutf(CON_ERROR, "\fs\f3ERROR:\fr r_get_attr; attribute %i out of range", *attr); intret(0); return;}
+		if(*attr < 0 || *attr >= STAT_MAX) {ERRORF("r_get_attr; attribute %i out of range", *attr); intret(0); return;}
 		getreference(ref, obj, obj->getchar(objidx) || obj->getinv(objidx), intret(0), r_get_attr)
 		if(obj->getchar(objidx))
 			intret(obj->getchar(objidx)->base.getattr(*attr));
@@ -1403,7 +1403,7 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_get_skill, "sii", (const char *ref, int *skill, int *u),
-		if(*skill < 0 || *skill >= SKILL_MAX) {conoutf(CON_ERROR, "\fs\f3ERROR:\fr r_get_skill; skill %i out of range", *skill); intret(0); return;}
+		if(*skill < 0 || *skill >= SKILL_MAX) {ERRORF("r_get_skill; skill %i out of range", *skill); intret(0); return;}
 		getreference(ref, obj, obj->getchar(objidx) || obj->getinv(objidx) || obj->getequip(objidx), intret(0), r_get_skill)
 		if(obj->getchar(objidx))
 			intret(obj->getchar(objidx)->base.getskill(*skill));
@@ -1495,14 +1495,14 @@ namespace rpgscript
 		parseref(killer, nastyidx);
 		reference *nasty = *killer ? searchstack(killer) : NULL;
 
-		if(DEBUG_SCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr r_kill; killing \"%s\" with \"%s\" as the killer", ref, killer);
+		if(DEBUG_SCRIPT) DEBUGF("r_kill; killing \"%s\" with \"%s\" as the killer", ref, killer);
 		victim->getent(victimidx)->die(nasty ? nasty->getent(nastyidx) : NULL);
 	)
 
 	ICOMMAND(r_resurrect, "s", (const char *ref),
 		getreference(ref, target, target->getchar(targetidx), , r_resurrect)
 
-		if(DEBUG_SCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr r_resurrect; trying to revive \"%s\"", ref);
+		if(DEBUG_SCRIPT) DEBUGF("r_resurrect; trying to revive \"%s\"", ref);
 		target->getchar(targetidx)->revive(false);
 	)
 
@@ -1510,11 +1510,11 @@ namespace rpgscript
 		getreference(finder, actor, actor->getchar(actoridx), , r_pickup)
 		getreference(keepsake, item, item->getitem(itemidx), , r_pickup)
 
-		if(DEBUG_SCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr r_pickup; reference \"%s\" trying to pickup \"%s\"", finder, keepsake);
+		if(DEBUG_SCRIPT) DEBUGF("r_pickup; reference \"%s\" trying to pickup \"%s\"", finder, keepsake);
 		actor->getchar(actoridx)->pickup(item->getitem(itemidx));
 		if(!item->getitem(itemidx)->quantity)
 		{
-			if(DEBUG_SCRIPT) conoutf("\fs\f2DEBUG:\fr r_pickup; keepsake has no more items left, queueing for obit");
+			if(DEBUG_SCRIPT) DEBUGF("r_pickup; keepsake has no more items left, queueing for obit");
 			 obits.add(item->getent(itemidx));
 		}
 	)
@@ -1522,7 +1522,7 @@ namespace rpgscript
 	ICOMMAND(r_additem, "siie", (const char *ref, int *i, int *q, uint *body),
 		getreference(ref, ent, ent->getchar(entidx) || ent->getcontainer(entidx), , r_additem)
 
-		if(DEBUG_SCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr added %i instances of item %i to reference \"%s\"", *q, *i, ref);
+		if(DEBUG_SCRIPT) DEBUGF("added %i instances of item %i to reference \"%s\"", *q, *i, ref);
 		item *it = ent->getent(entidx)->additem(*i, max(0, *q));
 		doitemscript(it, ent->getchar(entidx), body);
 	)
@@ -1541,7 +1541,7 @@ namespace rpgscript
 		getreference(itref, it, it->getinv(itidx), intret(0), r_drop)
 
 		int dropped = ent->getent(entidx)->drop(it->getinv(itidx), max(0, *q), true);
-		if(DEBUG_SCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr dropping %i of reference \"%s\" from reference \"%s\" - %i dropped", *q, itref, ref, dropped);
+		if(DEBUG_SCRIPT) DEBUGF("dropping %i of reference \"%s\" from reference \"%s\" - %i dropped", *q, itref, ref, dropped);
 		intret(dropped);
 	)
 
@@ -1550,7 +1550,7 @@ namespace rpgscript
 		getreference(itref, it, it->getinv(itidx), intret(0), r_remove)
 
 		int dropped = ent->getent(entidx)->drop(it->getinv(itidx), max(0, *q), false);
-		if(DEBUG_SCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr removing %i of reference \"%s\" from reference \"%s\" - %i removing", *q, itref, ref, dropped);
+		if(DEBUG_SCRIPT) DEBUGF("removing %i of reference \"%s\" from reference \"%s\" - %i removing", *q, itref, ref, dropped);
 		intret(dropped);
 	)
 
@@ -1583,7 +1583,7 @@ namespace rpgscript
 		}
 		else //2 arg version
 		{
-			if(DEBUG_SCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr attempting 2-arg dequip on reference %s for (equip?) reference %s", ref, which->getstr());
+			if(DEBUG_SCRIPT) DEBUGF("attempting 2-arg dequip on reference %s for (equip?) reference %s", ref, which->getstr());
 			getreference(which->getstr(), eq, eq->getequip(eqidx), intret(0), r_dequip)
 
 			intret(ent->getchar(entidx)->dequip(eq->getequip(eqidx)->it->base, eq->getequip(eqidx)->use));
@@ -1619,7 +1619,7 @@ namespace rpgscript
 		//Just save us the effort and further complications.
 		if(from == to)
 		{
-			conoutf(CON_WARN, "\fs\f6WARNING:\fr from and to reference is identical");
+			WARNINGF("from and to reference is identical");
 			return;
 		}
 
@@ -1628,7 +1628,7 @@ namespace rpgscript
 		reference *it = searchstack(itref, false);
 		if(!it)
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr r_transfer: reference %s does not exist", itref);
+			ERRORF("r_transfer: reference %s does not exist", itref);
 			return;
 		}
 
@@ -1636,12 +1636,12 @@ namespace rpgscript
 		{
 			if(!it->getinv(itidx))
 			{
-				conoutf(CON_WARN, "\fs\f6WARNING:\fr %s at index %i is not an item!", itref, itidx);
+				WARNINGF("%s at index %i is not an item!", itref, itidx);
 				if(itsep) break;
 				continue;
 			}
 			if(DEBUG_SCRIPT)
-				 conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr attempting to move %i units of item %s (index %i) (%p) to entity %s (%p) from %s (%p)", *q, itref, itidx, it->getinv(itidx), toref, to->getent(toidx), fromref, from->getent(fromidx));
+				 DEBUGF("attempting to move %i units of item %s (index %i) (%p) to entity %s (%p) from %s (%p)", *q, itref, itidx, it->getinv(itidx), toref, to->getent(toidx), fromref, from->getent(fromidx));
 
 			vector<item *> *stack = NULL;
 			if(from->getchar(fromidx)) stack = from->getchar(fromidx)->inventory.access(it->getinv(itidx)->base);
@@ -1649,7 +1649,7 @@ namespace rpgscript
 
 			if(stack->find(it->getinv(itidx)) == -1)
 			{
-				conoutf(CON_WARN, "\fs\f6WARNING:\fr item %p does not exist in the inventory of %p", it->getinv(itidx), from->getent(toidx));
+				WARNINGF("item %p does not exist in the inventory of %p", it->getinv(itidx), from->getent(toidx));
 				if(itsep) break;
 				continue;
 			}
@@ -1660,7 +1660,7 @@ namespace rpgscript
 			it->getinv(itidx)->quantity = max(orig - *q, 0);
 
 			if(DEBUG_SCRIPT)
-				 conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr transferred up to %i instances of %i from item %p to %p", *q, orig, it->getinv(itidx), to->getent(toidx));
+				 DEBUGF("transferred up to %i instances of %i from item %p to %p", *q, orig, it->getinv(itidx), to->getent(toidx));
 
 			if(itsep) break;
 		}
@@ -1672,14 +1672,14 @@ namespace rpgscript
 		obj->gettrigger(objidx)->lasttrigger = lastmillis;
 		obj->gettrigger(objidx)->flags ^= rpgtrigger::F_TRIGGERED;
 
-		if(DEBUG_SCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr triggered reference \"%s\", triggered flag is now %i", ref, obj->gettrigger(0)->flags & rpgtrigger::F_TRIGGERED);
+		if(DEBUG_SCRIPT) DEBUGF("triggered reference \"%s\", triggered flag is now %i", ref, obj->gettrigger(0)->flags & rpgtrigger::F_TRIGGERED);
 	)
 
 	ICOMMAND(r_destroy, "s", (const char *victim),
 		getreference(victim, obit, obit->getent(obitidx), , r_destroy)
 		if(obit->getent(obitidx) == trader->getent(0)) return;
 
-		if(DEBUG_SCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr queueing reference %s for destruction", victim);
+		if(DEBUG_SCRIPT) DEBUGF("queueing reference %s for destruction", victim);
 		obits.add(obit->getent(obitidx));
 	)
 
@@ -1716,13 +1716,13 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_get_resist, "si", (const char *ref, int *elem),
-		if(*elem < 0 || *elem >= ATTACK_MAX) {conoutf(CON_ERROR, "\fs\f3ERROR:\fr r_get_resist; element %i out of range", *elem); intret(0); return;}
+		if(*elem < 0 || *elem >= ATTACK_MAX) {ERRORF("r_get_resist; element %i out of range", *elem); intret(0); return;}
 		getreference(ref, ent, ent->getchar(entidx), intret(0), r_get_resist)
 		intret(ent->getchar(entidx)->base.getresistance(*elem));
 	)
 
 	ICOMMAND(r_get_thresh, "si", (const char *ref, int *elem),
-		if(*elem < 0 || *elem >= ATTACK_MAX) {conoutf(CON_ERROR, "\fs\f3ERROR:\fr r_get_thres; element %i out of range", *elem); intret(0); return;}
+		if(*elem < 0 || *elem >= ATTACK_MAX) {ERRORF("r_get_thres; element %i out of range", *elem); intret(0); return;}
 		getreference(ref, ent, ent->getchar(entidx), intret(0), r_get_thresh)
 		intret(ent->getchar(entidx)->base.getthreshold(*elem));
 	)
@@ -1799,7 +1799,7 @@ namespace rpgscript
 	ICOMMAND(r_check_recipe, "ii", (int *ind, int *num),
 		if(!game::recipes.inrange(*ind))
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr r_check_recipe; recipe %i out of range", *ind);
+			ERRORF("r_check_recipe; recipe %i out of range", *ind);
 			intret(0); return;
 		}
 		intret(game::recipes[*ind]->checkreqs(game::player1, max(1, *num)));
@@ -1808,7 +1808,7 @@ namespace rpgscript
 	ICOMMAND(r_use_recipe, "ii", (int *ind, int *num),
 		if(!game::recipes.inrange(*ind))
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr r_use_recipe; recipe %i out of range", *ind);
+			ERRORF("r_use_recipe; recipe %i out of range", *ind);
 			return;
 		}
 		game::recipes[*ind]->craft(game::player1, max(1, *num));
@@ -1817,7 +1817,7 @@ namespace rpgscript
 	ICOMMAND(r_learn_recipe, "i", (int *ind),
 		if(!game::recipes.inrange(*ind))
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr r_learn_recipe; recipe %i out of range", *ind);
+			ERRORF("r_learn_recipe; recipe %i out of range", *ind);
 			return;
 		}
 		game::recipes[*ind]->flags |= recipe::KNOWN;
@@ -1841,7 +1841,7 @@ namespace rpgscript
 			{
 				scr->curnode = scr->chat.access(node);
 				if(!scr->curnode)
-					conoutf(CON_ERROR, "\fs\f3ERROR:\fr no such dialogue node: %s", node);
+					ERRORF("no such dialogue node: %s", node);
 			}
 			if(scr->curnode)
 			{
@@ -1850,7 +1850,7 @@ namespace rpgscript
 
 				if(!scr->curnode->choices.length())
 				{
-					//if(DEBUG print something
+					//if(DEBUGF print something
 					//there are no destinations so just print the text and close...
 					game::hudline("%s: %s", talker->getent(0)->getname(), scr->curnode->str);
 					scr->curnode->close();
@@ -1861,20 +1861,20 @@ namespace rpgscript
 			if(!scr->curnode) talker->setnull(true);
 		}
 		else
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr invalid script %i, can't initialise dialogue", talker->getent(0)->getscript());
+			ERRORF("invalid script %i, can't initialise dialogue", talker->getent(0)->getscript());
 	)
 
 	ICOMMAND(r_response, "sss", (const char *t, const char *n, const char *s),
-		if(!talker->getent(0)) { conoutf(CON_ERROR, "\fs\f3ERROR:\fr r_response; no conversation in progress?"); return; }
+		if(!talker->getent(0)) { ERRORF("r_response; no conversation in progress?"); return; }
 
 		script *scr = scripts[talker->getent(0)->getscript()];
 		if(scr->curnode)
 		{
-			if(DEBUG_SCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr added response for scr->chat[%s]: \"%s\" \"%s\" \"%s\"", scr->curnode->node, t, n, s);
+			if(DEBUG_SCRIPT) DEBUGF("added response for scr->chat[%s]: \"%s\" \"%s\" \"%s\"", scr->curnode->node, t, n, s);
 			 scr->curnode->choices.add(new response(t, n, s));
 		}
 		else
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr currently in a non-existant dialogue");
+			ERRORF("currently in a non-existant dialogue");
 	)
 
 	ICOMMAND(r_trade, "s", (const char *str),
@@ -1906,13 +1906,13 @@ namespace rpgscript
 			action_spawn *spawn = new action_spawn con; \
 			if(map->getmap(mapidx) == curmap) \
 			{ \
-				if(DEBUG_SCRIPT) conoutf("\fs\f2DEBUG:\fr conditions met, spawning (" #type ") %i %i %i %i", *attra, *attrb, *attrc, *attrd); \
+				if(DEBUG_SCRIPT) DEBUGF("conditions met, spawning (" #type ") %i %i %i %i", *attra, *attrb, *attrc, *attrd); \
 				spawn->exec(); \
 				delete spawn; \
 			} \
 			else \
 			{ \
-				if(DEBUG_SCRIPT) conoutf("\fs\f2DEBUG:\fr conditions met but on another map queueing (" #type ") %i %i %i %i", *attra, *attrb, *attrc, *attrd); \
+				if(DEBUG_SCRIPT) DEBUGF("conditions met but on another map queueing (" #type ") %i %i %i %i", *attra, *attrb, *attrc, *attrd); \
 				map->getmap(mapidx)->loadactions.add(spawn); \
 			} \
 		)
@@ -1938,26 +1938,26 @@ namespace rpgscript
 
 		if(ent->getent(entidx) == player1 && curmap != destmap)
 		{
-			if(DEBUG_SCRIPT) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr teleporting player to map %s", m);
+			if(DEBUG_SCRIPT) DEBUGF("teleporting player to map %s", m);
 			destmap->loadactions.add(new action_teleport(ent->getent(0), *d));
 			load_world(m);
 			return;
 		}
 		if(ent->getent(entidx) != player1)
 		{
-			if(DEBUG_SCRIPT) conoutf("\fs\f2DEBUG:\fr moving creature to destination map");
+			if(DEBUG_SCRIPT) DEBUGF("moving creature to destination map");
 			removereferences(ent->getent(entidx), false);
 			destmap->objs.add(ent->getent(entidx));
 
 			if(destmap != curmap)
 			{
-				if(DEBUG_SCRIPT) conoutf("\fs\f2DEBUG:\fr different map, queueing teleport on map %s", m);
+				if(DEBUG_SCRIPT) DEBUGF("different map, queueing teleport on map %s", m);
 				destmap->loadactions.add(new action_teleport(ent->getent(entidx), *d));
 				return;
 			}
 		}
 
-		if(DEBUG_SCRIPT) conoutf("\fs\f2DEBUG:\fr teleporting creature to destination %d", *d);
+		if(DEBUG_SCRIPT) DEBUGF("teleporting creature to destination %d", *d);
 		entities::teleport(ent->getent(entidx), *d);
 	)
 
@@ -2003,7 +2003,7 @@ namespace rpgscript
 			if(!effects.inrange(*idx))
 			{
 				val = 0;
-				conoutf(CON_ERROR, "\fs\f3ERROR:\fr r_get_status_duration, invalid index");
+				ERRORF("r_get_status_duration, invalid index");
 			}
 			else
 				val = effects[*idx]->duration;
@@ -2013,7 +2013,7 @@ namespace rpgscript
 			val = max(val, effects[i]->duration);
 		}
 
-		if(DEBUG_VSCRIPT) conoutf("\fs\f2DEBUG:\fr r_get_status_duration; returning %i for \"%s\" %i", val, ref, *idx);
+		if(DEBUG_VSCRIPT) DEBUGF("r_get_status_duration; returning %i for \"%s\" %i", val, ref, *idx);
 		intret(val);
 	)
 
@@ -2027,7 +2027,7 @@ namespace rpgscript
 			if(!effects.inrange(*idx))
 			{
 				val = 0;
-				conoutf(CON_ERROR, "\fs\f3ERROR:\fr r_get_status_remain, invalid index");
+				ERRORF("r_get_status_remain, invalid index");
 			}
 			else
 				val = effects[*idx]->remain;
@@ -2037,7 +2037,7 @@ namespace rpgscript
 			val = max(val, effects[i]->remain);
 		}
 
-		if(DEBUG_VSCRIPT) conoutf("\fs\f2DEBUG:\fr r_get_status_remain; returning %i for \"%s\" %i", val, ref, *idx);
+		if(DEBUG_VSCRIPT) DEBUGF("r_get_status_remain; returning %i for \"%s\" %i", val, ref, *idx);
 		intret(val);
 	)
 

@@ -5,7 +5,7 @@
 void action_teleport::exec()
 {
 	if(DEBUG_SCRIPT)
-		conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr executing delayed teleport to dest %i", dest);
+		DEBUGF("executing delayed teleport to dest %i", dest);
 	entities::teleport(ent, dest);
 }
 
@@ -19,7 +19,7 @@ void action_spawn::exec()
 	}
 	if(!matches.length())
 	{
-		conoutf("\fs\f6WARNING:\fr spawn action spawned nothing: %i %i %i %i %i", tag, ent, id, amount, qty);
+		WARNINGF("spawn action spawned nothing: %i %i %i %i %i", tag, ent, id, amount, qty);
 		return;
 	}
 

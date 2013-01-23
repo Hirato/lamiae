@@ -38,20 +38,20 @@ namespace rpgio
 	v.y = f->getlil<float>(); \
 	v.z = f->getlil<float>(); \
 	if(DEBUG_IO) \
-		conoutf("\fs\f2DEBUG:\fr Read vec (%f, %f, %f) from file", v.x, v.y, v.z);
+		DEBUGF("Read vec (%f, %f, %f) from file", v.x, v.y, v.z);
 
 	#define writevec(v) \
 	f->putlil(v.x); \
 	f->putlil(v.y); \
 	f->putlil(v.z); \
 	if(DEBUG_IO) \
-		conoutf("\fs\f2DEBUG:\fr Wrote vec (%f, %f, %f) to file", v.x, v.y, v.z);
+		DEBUGF("Wrote vec (%f, %f, %f) to file", v.x, v.y, v.z);
 
 	#define CHECKEOF(f, val) \
 	if((f).end()) \
 	{ \
 		abort = true; \
-		conoutf(CON_ERROR, "\fs\f3ERROR:\fr Unexpected EoF at " __FILE__ ":%i; aborting - You should report this.", __LINE__); \
+		ERRORF("Unexpected EoF at " __FILE__ ":%i; aborting - You should report this.", __LINE__); \
 		return val; \
 	}
 
@@ -59,7 +59,7 @@ namespace rpgio
 	if(!f) \
 	{ \
 		abort = true; \
-		conoutf(CON_ERROR, "\fs\f3ERROR:\fr Encountered unexpected NULL value for " #f " at " __FILE__ ":%i; aborting.", __LINE__); \
+		ERRORF("Encountered unexpected NULL value for " #f " at " __FILE__ ":%i; aborting.", __LINE__); \
 		return val; \
 	}
 
@@ -81,7 +81,7 @@ namespace rpgio
 			return game::player1;
 		else if(num >= lastmap->objs.length())
 		{
-			conoutf("\fs\f6WARNING:\fr invalid entity num (%i), possible corruption", num);
+			WARNINGF("invalid entity num (%i), possible corruption", num);
 			return NULL;
 		}
 		return lastmap->objs[num];
@@ -126,7 +126,7 @@ namespace rpgio
 			int fsize = f->size() - f->tell();
 			if(len < 0 || len > fsize)
 			{
-				conoutf(CON_ERROR, "\fs\f3ERROR:\fr Cannot read %i characters from file, there are %i bytes remaining, aborting", len, fsize);
+				ERRORF("Cannot read %i characters from file, there are %i bytes remaining, aborting", len, fsize);
 				abort = true;
 				return NULL;
 			}
@@ -134,7 +134,7 @@ namespace rpgio
 			s = new char[len];
 			f->read(s, len);
 			if(DEBUG_IO)
-				conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Read \"%s\" from file (%i)", s, len);
+				DEBUGF("Read \"%s\" from file (%i)", s, len);
 		}
 
 		return s;
@@ -148,14 +148,14 @@ namespace rpgio
 		if(!len) return;
 		f->write(s, len);
 		if(DEBUG_IO)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Wrote \"%s\" to file (%i)", s, len);
+			DEBUGF("Wrote \"%s\" to file (%i)", s, len);
 	}
 
 	void readfaction(stream *f, faction *fact)
 	{
 		int num = f->getlil<int>();
 		if(DEBUG_IO)
-			conoutf(CON_DEBUG, "reading %i relations", num);
+			DEBUGF("reading %i relations", num);
 
 		loopi(num)
 		{
@@ -173,7 +173,7 @@ namespace rpgio
 	{
 		f->putlil(fact->relations.length());
 		if(DEBUG_IO)
-			conoutf(CON_DEBUG, "saving %i relations", fact->relations.length());
+			DEBUGF("saving %i relations", fact->relations.length());
 
 		loopv(fact->relations)
 			f->putlil(fact->relations[i]);
@@ -612,7 +612,7 @@ namespace rpgio
 				break;
 			}
 			default:
-				conoutf(CON_ERROR, "\fs\f3ERROR:\fr unknown entity type %i", type);
+				ERRORF("unknown entity type %i", type);
 				abort = true;
 				return NULL;
 		}
@@ -852,7 +852,7 @@ namespace rpgio
 				break;
 			}
 			default:
-				conoutf(CON_ERROR, "\fs\f3ERROR:\fr unsupported ent type %i, aborting", d->type());
+				ERRORF("unsupported ent type %i, aborting", d->type());
 				return;
 		}
 		f->putlil(d->locals);
@@ -966,7 +966,7 @@ namespace rpgio
 					int ent = f->getlil<int>();
 					if(!entfromnum(ent))
 					{//how'd that happen?
-					conoutf("\fs\f6WARNING:\fr loaded teleport loadaction for invalid ent? ignoring");
+					WARNINGF("loaded teleport loadaction for invalid ent? ignoring");
 					f->getlil<int>();
 					continue;
 					}
@@ -1294,7 +1294,7 @@ namespace rpgio
 				if(sav.ptr == NULL)
 				{
 					if(DEBUG_IO)
-						conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr reference %s:%i of type %i is null, saving as T_INVALID", saving.name, j, type);
+						DEBUGF("reference %s:%i of type %i is null, saving as T_INVALID", saving.name, j, type);
 					type = ::reference::T_INVALID;
 				}
 				switch(type)
@@ -1316,13 +1316,13 @@ namespace rpgio
 						}
 						if(map < 0 && ent < 0 && sav.ptr != game::player1)
 						{
-							conoutf(CON_WARN, "\fs\f6WARNING:\fr char/item/object reference \"%s\" points to non-player entity that does not exist", saving.name);
+							WARNINGF("char/item/object reference \"%s\" points to non-player entity that does not exist", saving.name);
 							f->putchar(::reference::T_INVALID);
 							continue;
 						}
 
 						if(DEBUG_IO)
-							conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr writing reference %s as rpgent reference: %i %i", saving.name, map, ent);
+							DEBUGF("writing reference %s as rpgent reference: %i %i", saving.name, map, ent);
 						f->putchar(type);
 						f->putlil(map);
 						f->putlil(ent);
@@ -1334,7 +1334,7 @@ namespace rpgio
 						f->putchar(type);
 						int map = maps.find(sav.ptr);
 						f->putlil(map);
-						if(DEBUG_IO) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr writing reference %s as map reference: %i", saving.name, map);
+						if(DEBUG_IO) DEBUGF("writing reference %s as map reference: %i", saving.name, map);
 						break;
 					}
 					case ::reference::T_INV:
@@ -1365,12 +1365,12 @@ namespace rpgio
 						}
 						if(offset < 0)
 						{
-							conoutf(CON_WARN, "\fs\f6WARNING:\fr inv reference \"%s:%i\" points to an item that does not exist", saving.name, j);
+							WARNINGF("inv reference \"%s:%i\" points to an item that does not exist", saving.name, j);
 							f->putchar(::reference::T_INVALID);
 							continue;
 						}
 
-						if(DEBUG_IO) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr writing reference \"%s:%i\" as type T_INV with indices: %i %i %i %i", saving.name, j, map, ent, base, offset);
+						if(DEBUG_IO) DEBUGF("writing reference \"%s:%i\" as type T_INV with indices: %i %i %i %i", saving.name, j, map, ent, base, offset);
 
 						f->putchar(type);
 						f->putlil(map);
@@ -1383,14 +1383,14 @@ namespace rpgio
 
 					//
 					default:
-						conoutf(CON_ERROR, "\fs\f3ERROR:\fr unsupported reference type %i for reference %s, saving as T_INVALID", sav.type, saving.name);
+						ERRORF("unsupported reference type %i for reference %s, saving as T_INVALID", sav.type, saving.name);
 					// Temporary reference types below this line...
 					case ::reference::T_EQUIP:
 					case ::reference::T_VEFFECT:
 					case ::reference::T_AEFFECT:
 						type = ::reference::T_INVALID;
 					case ::reference::T_INVALID:
-						if(DEBUG_IO) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr writing null reference %s", saving.name);
+						if(DEBUG_IO) DEBUGF("writing null reference %s", saving.name);
 						f->putchar(type);
 						break;
 				}
@@ -1431,22 +1431,22 @@ namespace rpgio
 
 						if(map == -1 && ent == -1)
 						{
-							if(DEBUG_IO) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr reading player char reference %s", loading->name);
+							if(DEBUG_IO) DEBUGF("reading player char reference %s", loading->name);
 							loading->pushref(game::player1, true);
 						}
 						else if(maps.inrange(map) && maps[map]->objs.inrange(ent))
 						{
-							if(DEBUG_IO) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr reading valid rpgent reference %s: %i %i", loading->name, map, ent);
+							if(DEBUG_IO) DEBUGF("reading valid rpgent reference %s: %i %i", loading->name, map, ent);
 							loading->pushref(maps[map]->objs[ent], true);
 						}
-						else conoutf(CON_WARN, "\fs\f6WARNING:\fr rpgent reference %s: %i %i - indices out of range", loading->name, map, ent);
+						else WARNINGF("rpgent reference %s: %i %i - indices out of range", loading->name, map, ent);
 
 						break;
 					}
 					case ::reference::T_MAP:
 					{
 						int map = f->getlil<int>();
-						if(DEBUG_IO) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr reading map reference %s: %i", loading->name, map);
+						if(DEBUG_IO) DEBUGF("reading map reference %s: %i", loading->name, map);
 						if(maps.inrange(map)) loading->pushref(maps[map], true);
 						break;
 					}
@@ -1457,7 +1457,7 @@ namespace rpgio
 						int base = f->getlil<int>();
 						int offset = f->getlil<int>();
 
-						if(DEBUG_IO) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr reading T_INV reference with values %i %i %i %i...", map, ent, base, offset);
+						if(DEBUG_IO) DEBUGF("reading T_INV reference with values %i %i %i %i...", map, ent, base, offset);
 						vector <item *> *stack = NULL;
 
 						if(map == -1 && ent == -1)
@@ -1472,11 +1472,11 @@ namespace rpgio
 
 						if(stack && stack->inrange(offset))
 						{
-							if(DEBUG_IO) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Loading T_INV reference to %p successfully", (*stack)[offset]);
+							if(DEBUG_IO) DEBUGF("Loading T_INV reference to %p successfully", (*stack)[offset]);
 							loading->pushref((*stack)[offset], true);
 						}
 						else
-							conoutf(CON_WARN, "\fs\f6WARNING:\fr T_INV has out of range values: %i %i %i %i, loading failed", map, ent, base, offset);
+							WARNINGF("T_INV has out of range values: %i %i %i %i, loading failed", map, ent, base, offset);
 
 						break;
 					}
@@ -1486,11 +1486,11 @@ namespace rpgio
 					case ::reference::T_VEFFECT:
 					case ::reference::T_AEFFECT:
 					case ::reference::T_INVALID:
-						if(DEBUG_IO) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr reading now null reference %s", loading->name);
+						if(DEBUG_IO) DEBUGF("reading now null reference %s", loading->name);
 						loading->pushref(NULL, true);
 						break;
 					default:
-						conoutf(CON_ERROR, "\fs\f3ERROR:\fr unsupported reference type %i for reference %s, this will cause issues; aborting", type, loading->name);
+						ERRORF("unsupported reference type %i for reference %s, this will cause issues; aborting", type, loading->name);
 						abort = true;
 						return;
 				}
@@ -1519,7 +1519,7 @@ namespace rpgio
 
 		if(journ)
 		{
-			conoutf(CON_WARN, "\fs\f6WARNING:\fr additional instance of journal %s exists, merging", name);
+			WARNINGF("additional instance of journal %s exists, merging", name);
 			delete[] name;
 		}
 		else
@@ -1584,7 +1584,7 @@ namespace rpgio
 
 		if(!f)
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr unable to read file: %s", file);
+			ERRORF("unable to read file: %s", file);
 			return;
 		}
 
@@ -1594,12 +1594,12 @@ namespace rpgio
 
 		if(hdr.sversion < COMPAT_VERSION || hdr.sversion > GAME_VERSION || strncmp(hdr.magic, GAME_MAGIC, 4))
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr Unsupported version or corrupt save: %i (%i) - %4.4s (%s)", hdr.sversion, GAME_VERSION, hdr.magic, GAME_MAGIC);
+			ERRORF("Unsupported version or corrupt save: %i (%i) - %4.4s (%s)", hdr.sversion, GAME_VERSION, hdr.magic, GAME_MAGIC);
 			delete f;
 			return;
 		}
 		if(DEBUG_IO)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr supported save: %i  %4.4s", hdr.sversion, hdr.magic);
+			DEBUGF("supported save: %i  %4.4s", hdr.sversion, hdr.magic);
 
 		const char *data = readstring(f);
 		game::newgame(data, true);
@@ -1608,7 +1608,7 @@ namespace rpgio
 
 		if(game::compatversion > hdr.gversion)
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr saved game is of game version %i, last compatible version is %i; aborting", hdr.gversion, game::compatversion);
+			ERRORF("saved game is of game version %i, last compatible version is %i; aborting", hdr.gversion, game::compatversion);
 			delete f;
 			localdisconnect();
 			return;
@@ -1618,7 +1618,7 @@ namespace rpgio
 		if(!curmap)
 		{
 			delete f;
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr no game/map in progress? aborting");
+			ERRORF("no game/map in progress? aborting");
 			rpgscript::cleanlocals();
 			localdisconnect();
 			return;
@@ -1634,11 +1634,11 @@ namespace rpgio
 				if(abort) break; \
 				if(f->end()) \
 				{ \
-					conoutf(CON_ERROR, "\fs\f3ERROR:\fr unexpected EoF, aborting"); \
+					ERRORF("unexpected EoF, aborting"); \
 					abort = true; break; \
 				} \
 				if(DEBUG_IO) \
-					conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr reading " #m " %i of %i", i + 1, num); \
+					DEBUGF("reading " #m " %i of %i", i + 1, num); \
 				b; \
 			}
 
@@ -1665,7 +1665,7 @@ namespace rpgio
 			 const char *n = readstring(f);
 			 const char *v = readstring(f);
 			 if(!rpgscript::setglobal(n, v))
-				 conoutf(CON_WARN, "WARNING: reloading the game added variable \"%s\"", n);
+				 WARNINGF("reloading the game added variable \"%s\"", n);
 		)
 		READ(locals stack,
 			 readlocal(f, i);
@@ -1696,7 +1696,7 @@ namespace rpgio
 
 		if(abort)
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr aborted - something went seriously wrong");
+			ERRORF("aborted - something went seriously wrong");
 			rpgscript::cleanlocals();
 			localdisconnect();
 			delete[] curmap;
@@ -1713,7 +1713,7 @@ namespace rpgio
 		{
 			defformatstring(signal)("import %i", v);
 			if(DEBUG_IO)
-				conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr the game is outdated, currently version %i - sending \"%s\" to do any needed changes", v, signal);
+				DEBUGF("the game is outdated, currently version %i - sending \"%s\" to do any needed changes", v, signal);
 			enumerate(*game::mapdata, mapinfo, map,
 				map.getsignal(signal, true, NULL);
 			)
@@ -1725,7 +1725,7 @@ namespace rpgio
 	{
 		if(!game::mapdata || !game::curmap)
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr No game in progress, can't save");
+			ERRORF("No game in progress, can't save");
 			return;
 		}
 		else if(!game::cansave())
@@ -1739,7 +1739,7 @@ namespace rpgio
 
 		if(!f)
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr failed to create savegame");
+			ERRORF("failed to create savegame");
 			return;
 		}
 
@@ -1759,7 +1759,7 @@ namespace rpgio
 			loopv(v) \
 			{ \
 				if(DEBUG_IO) \
-					conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Writing " #m " %i of %i", i + 1, v.length()); \
+					DEBUGF("Writing " #m " %i of %i", i + 1, v.length()); \
 				b; \
 			}
 

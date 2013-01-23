@@ -28,7 +28,7 @@ void use_armour::apply(rpgchar *user)
 		loopvj(sg->effects)
 		{
 			if(sg->effects[j]->duration >= 0)
-				conoutf(CON_ERROR, "\fs\f3ERROR:\fr statuses[%i]->effect[%i] has a non negative duration, these will not work properly and some will be ridiculously overpowered", effects[i]->status, j);
+				ERRORF("statuses[%i]->effect[%i] has a non negative duration, these will not work properly and some will be ridiculously overpowered", effects[i]->status, j);
 			sg->effects[j]->update(user, user, resist, thresh, base, extra);
 		}
 	}
@@ -106,7 +106,7 @@ bool rpgchar::checkammo(equipment &eq, equipment *quiver, bool remove)
 			if(base.experience < wep->cost)
 			{
 				if(this == game::player1) game::hudline("\f3You lack sufficient exp to perform this action");
-				else if (DEBUG_AI) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr AI attack interrupted for %p, too little exp", this);
+				else if (DEBUG_AI) DEBUGF("AI attack interrupted for %p, too little exp", this);
 				return false;
 			}
 			if(remove) base.experience -= wep->cost;
@@ -116,7 +116,7 @@ bool rpgchar::checkammo(equipment &eq, equipment *quiver, bool remove)
 			if((wep->ammo == -1 ? mana : health) < wep->cost)
 			{
 				if(this == game::player1) game::hudline(wep->ammo == -1 ? "\f3You lack the mana to cast the full spell" : "\f3Doing this would be suicide");
-				else if (DEBUG_AI) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr AI attack interrupted for %p, too little %s", this, wep->ammo == -1 ? "mana" :"health");
+				else if (DEBUG_AI) DEBUGF("AI attack interrupted for %p, too little %s", this, wep->ammo == -1 ? "mana" :"health");
 				return false;
 			}
 			if(remove) (wep->ammo == -1 ? mana : health) -= wep->cost;
@@ -126,7 +126,7 @@ bool rpgchar::checkammo(equipment &eq, equipment *quiver, bool remove)
 		{
 			if(!game::ammotypes.inrange(wep->ammo))
 			{
-				conoutf(CON_ERROR, "\fs\f3ERROR:\fr entity %p trying to attack with weapon using invalid ammotype %i; out of range", this, wep->ammo);
+				ERRORF("entity %p trying to attack with weapon using invalid ammotype %i; out of range", this, wep->ammo);
 				return false;
 			}
 			ammotype *at = game::ammotypes[wep->ammo];
@@ -137,14 +137,14 @@ bool rpgchar::checkammo(equipment &eq, equipment *quiver, bool remove)
 			else
 			{
 				if(this == game::player1) game::hudline("You have the wrong ammo equipped for the current weapon");
-				else if (DEBUG_AI) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr AI attack interrupted for %p, wrong ammo equipped", this);
+				else if (DEBUG_AI) DEBUGF("AI attack interrupted for %p, wrong ammo equipped", this);
 				return false;
 			}
 
 			if(wep->cost > 0 && getcount(it) < wep->cost)
 			{
 				if(this == game::player1) game::hudline("You have too little ammo remaining to attack again");
-				else if (DEBUG_AI) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr AI attack interrupted for %p, too little ammo", this);
+				else if (DEBUG_AI) DEBUGF("AI attack interrupted for %p, too little ammo", this);
 				return false;
 			}
 
@@ -676,7 +676,7 @@ bool rpgchar::dequip(int base, int slots)
 void rpgchar::die(rpgent *killer)
 {
 	if(DEBUG_ENT)
-		conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr ent %p killed by %p%s", this, killer, state != CS_ALIVE ? "; already dead?" : "");
+		DEBUGF("ent %p killed by %p%s", this, killer, state != CS_ALIVE ? "; already dead?" : "");
 	if(state != CS_ALIVE)
 		return;
 
@@ -952,7 +952,7 @@ void rpgchar::compactinventory(int base)
 			if(stack[i]->compare(stack[j]))
 			{
 				if(DEBUG_ENT)
-					conoutf(CON_DEBUG, "DEBUG: Found duplicate item definition, merging %p into %p", stack[i], stack[j]);
+					DEBUGF("Found duplicate item definition, merging %p into %p", stack[i], stack[j]);
 
 				item *it = stack.remove(i);
 				stack[j]->quantity += it->quantity;

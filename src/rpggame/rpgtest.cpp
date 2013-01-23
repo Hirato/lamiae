@@ -24,12 +24,12 @@ namespace test
 
 		if(!curmap)
 		{
-			conoutf("Error: map data currently not available");
+			ERRORF("map data unavailable");
 			return;
 		}
 		if(!effects.length())
 		{
-			conoutf("No effects declared, not creating projectile");
+			ERRORF("No effects declared, not creating projectile");
 			return;
 		}
 
@@ -82,12 +82,12 @@ namespace test
 	{
 		if(!curmap)
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr map data unavailable");
+			ERRORF("map data unavailable");
 			return;
 		}
 		if(!statuses.inrange(ind))
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr statusgroup[%i] has not been defined, aborting test", ind);
+			ERRORF("statusgroup[%i] has not been defined, aborting test", ind);
 			return;
 		}
 
@@ -102,17 +102,17 @@ namespace test
 	{
 		if(!curmap)
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr map data unavailable");
+			ERRORF("map data unavailable");
 			return;
 		}
 		if(!statuses.inrange(ind))
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr statusgroup[%i] has not been defined, aborting test", ind);
+			ERRORF("statusgroup[%i] has not been defined, aborting test", ind);
 			return;
 		}
 		if(!effects.length())
 		{
-			conoutf("\fs\f3ERROR:\fr No particle effects have been declared");
+			ERRORF("No particle effects have been declared");
 			return;
 		}
 

@@ -33,7 +33,7 @@ namespace game
 		static x *check ## x () \
 		{ \
 			if(! loading ## x) \
-				conoutf(CON_ERROR, "\fs\f3ERROR:\fr " #c " not defined or being loaded"); \
+				ERRORF("" #c " not defined or being loaded"); \
 			return loading ## x; \
 		} \
 		ICOMMAND(r_select_ ## c, "se", (const char *ref, uint *contents), \
@@ -69,7 +69,7 @@ namespace game
 				rpgscript::config->setnull(true); \
 			} \
 			else \
-				conoutf(CON_ERROR, "\fs\f3ERROR:\fr unable to select reference %s as type " #c, ref); \
+				ERRORF("unable to select reference %s as type " #c, ref); \
 			loading ## x = old; \
 		) \
 		ICOMMAND(r_num_ ## c, "", (), \
@@ -108,7 +108,7 @@ namespace game
 		static x *check ##x () \
 		{ \
 			if(! loading ## x) \
-				conoutf(CON_ERROR, "\fs\f3ERROR:\fr " #c " not being loaded"); \
+				ERRORF("" #c " not being loaded"); \
 			return loading ## x; \
 		} \
 		ICOMMAND(r_select_ ## c, "se", (const char *ref, uint *body),  \
@@ -127,7 +127,7 @@ namespace game
 			if(loading ## x) \
 				execute(body); \
 			else \
-				conoutf(CON_ERROR, "\fs\f3ERROR:\fr unable to select reference %s as type " #c, ref); \
+				ERRORF("unable to select reference %s as type " #c, ref); \
 			loading ## x = old; \
 		)
 
@@ -149,9 +149,9 @@ namespace game
 	static use *checkuse(int type)
 	{
 		if(!loadinguse)
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr use not defined or being loaded");
+			ERRORF("use not defined or being loaded");
 		else if(loadinguse->type < type)
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr trying to set an unavailable use property");
+			ERRORF("trying to set an unavailable use property");
 		else
 			return loadinguse;
 		return NULL;
@@ -181,7 +181,7 @@ namespace game
 		}
 
 		if(loadinguse) execute(contents);
-		else conoutf(CON_ERROR, "\fs\f3ERROR:\fr unable to select reference %s as type use", ref);
+		else ERRORF("unable to select reference %s as type use", ref);
 		loadinguse = old;
 	)
 	ICOMMAND(r_num_item_use, "", (),
@@ -194,14 +194,14 @@ namespace game
 	/// NOTE: the following variable names are reserved: i, f, s, x, y, z
 	/// #define START(n, f, a, b)  ICOMMAND(r_script ## n, f, a, b)
 	/// #define INIT script *e = checkscript()       parent variable must always be named e, e->var is modified (see below for var)
-	/// #define DEBUG "scripts[%i]"
+	/// #define DEBUG_STR "scripts[%i]"
 	/// #define DEBUG_IND scripts.length() - 1
 
 	#define PREAMBLE(name, prep, lookup, print) \
 		INIT \
 		if(!e) \
 		{ \
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr " #name " requires you to have a valid object selected first"); \
+			ERRORF("" #name " requires you to have a valid object selected first"); \
 			return; \
 		} \
 		if(*numargs <= 0) \
@@ -217,9 +217,9 @@ namespace game
 			PREAMBLE(name, , intret(e->var), printvar(self, e->var)) \
 			e->var = clamp(*i, int(min), int(max)); \
 			if(e->var != *i) \
-				conoutf("\fs\f6WARNING:\fr value provided for " DEBUG "->" #var " exceeded limits", DEBUG_IND); \
+				WARNINGF("value provided for " DEBUG_STR "->" #var " exceeded limits", DEBUG_IND); \
 			if(DEBUG_CONF || e->var != *i) \
-				conoutf(DEBUG "->" #var " = %i (0x%.8X)", DEBUG_IND, e->var, e->var); \
+				conoutf(DEBUG_STR "->" #var " = %i (0x%.8X)", DEBUG_IND, e->var, e->var); \
 		)
 
 	#define INT(var, min, max) INTN(var, var, min, max)
@@ -237,9 +237,9 @@ namespace game
 			PREAMBLE(name, , floatret(e->var), printfvar(self, e->var)) \
 			e->var = clamp(*f, float(min), float(max)); \
 			if(e->var != *f) \
-				conoutf("\fs\f6WARNING:\fr value provided for " DEBUG "->" #var " exceeded limits", DEBUG_IND); \
+				WARNINGF("value provided for " DEBUG_STR "->" #var " exceeded limits", DEBUG_IND); \
 			if(DEBUG_CONF || e->var != *f) \
-				conoutf(DEBUG "->" #var " = %g", DEBUG_IND, e->var); \
+				conoutf(DEBUG_STR "->" #var " = %g", DEBUG_IND, e->var); \
 		)
 
 	#define FLOAT(var, min, max) FLOATN(var, var, min, max)
@@ -259,7 +259,7 @@ namespace game
 			e->var = newstring(s); \
 			body; \
 			if(DEBUG_CONF) \
-				conoutf(CON_DEBUG, DEBUG "->" #var " = %s", DEBUG_IND, e->var); \
+				conoutf(CON_DEBUG, DEBUG_STR "->" #var " = %s", DEBUG_IND, e->var); \
 		)
 
 	#define STRING(var) STRINGN(var, var, )
@@ -281,9 +281,9 @@ namespace game
 			const vec vmax(l1, l2, l3); \
 			e->var = vec(res).min(vmin).max(vmax); \
 			if(e->var != res) \
-				conoutf("\fs\f6WARNING:\fr value provided for " DEBUG "->" #var " exceeded limits", DEBUG_IND); \
+				WARNINGF("value provided for " DEBUG_STR "->" #var " exceeded limits", DEBUG_IND); \
 			if(DEBUG_CONF || e->var != res) \
-				conoutf(DEBUG "->" #var " = (%g, %g, %g)", DEBUG_IND, e->var.x, e->var.y, e->var.z); \
+				conoutf(DEBUG_STR "->" #var " = (%g, %g, %g)", DEBUG_IND, e->var.x, e->var.y, e->var.z); \
 		)
 
 	#define VEC(var, l1, l2, l3, h1, h2, h3) VECN(var, var, l1, l2, l3, h1, h2, h3)
@@ -301,7 +301,7 @@ namespace game
 			PREAMBLE(name, , intret(e->var), printvar(self, e->var)) \
 			e->var = *i != 0; \
 			if(DEBUG_CONF) \
-				conoutf(CON_DEBUG, DEBUG "->" #var " = %i", DEBUG_IND, e->var); \
+				conoutf(CON_DEBUG, DEBUG_STR "->" #var " = %i", DEBUG_IND, e->var); \
 		)
 
 	#define BOOL(var) BOOLN(var, var)
@@ -494,7 +494,7 @@ namespace game
 
 	#define START(n, f, a, b) ICOMMAND(r_effect_ ##n, f, a, b)
 	#define INIT effect *e = checkeffect();
-	#define DEBUG "effect[%i]"
+	#define DEBUG_STR "effect[%i]"
 	#define DEBUG_IND effects.find(e)
 
 	INT(flags, 0, FX_MAX)
@@ -517,18 +517,18 @@ namespace game
 
 	#undef START
 	#undef INIT
-	#undef DEBUG
+	#undef DEBUG_STR
 	#undef DEBUG_IND
 
 	#define START(n, f, a, b) ICOMMAND(r_status_ ##n, f, a, b)
 	#define INIT statusgroup *e = checkstatusgroup();
-	#define DEBUG "statusgroup[%i]"
+	#define DEBUG_STR "statusgroup[%i]"
 	#define DEBUG_IND statuses.find(e)
 
 	ICOMMAND(r_status_addgeneric, "iiif", (int *t, int *s, int *d, float *v),
 		if(STATUS_INVALID_GENERIC(*t))
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr trying to create a generic status effect of non-generic or invalid type, '%i'", *t);
+			ERRORF("trying to create a generic status effect of non-generic or invalid type, '%i'", *t);
 			return;
 		}
 		statusgroup *e = checkstatusgroup();
@@ -543,7 +543,7 @@ namespace game
 		g->variance = clamp(*v, 0.f, 1.0f);
 
 		if(DEBUG_CONF)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr adding generic effect (%i %i %i), to statusgroup %i", *t, *d, *s, DEBUG_IND);
+			DEBUGF("adding generic effect (%i %i %i), to statusgroup %i", *t, *d, *s, DEBUG_IND);
 	)
 
 	ICOMMAND(r_status_addpolymorph, "siif", (const char *m, int *st, int *d, float *v),
@@ -560,7 +560,7 @@ namespace game
 		p->variance = clamp(*v, 0.f, 1.0f);
 
 		if(DEBUG_CONF)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr adding polymorph effect (%s), to statusgroup %i", m, DEBUG_IND);
+			DEBUGF("adding polymorph effect (%s), to statusgroup %i", m, DEBUG_IND);
 	)
 
 	ICOMMAND(r_status_addlight, "fffiif", (float *r, float *g, float *b, int *str, int *d, float *v),
@@ -577,7 +577,7 @@ namespace game
 		l->variance = clamp(*v, 0.f, 1.0f);
 
 		if(DEBUG_CONF)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr adding light effect (%f %f %f --> %i), to statusgroup %i", l->colour.x, l->colour.y, l->colour.z, l->strength, DEBUG_IND);
+			DEBUGF("adding light effect (%f %f %f --> %i), to statusgroup %i", l->colour.x, l->colour.y, l->colour.z, l->strength, DEBUG_IND);
 	)
 
 	ICOMMAND(r_status_addsignal, "siif", (char *s, int *str, int *d, float *v),
@@ -651,12 +651,12 @@ namespace game
 
 	#undef START
 	#undef INIT
-	#undef DEBUG
+	#undef DEBUG_STR
 	#undef DEBUG_IND
 
 	#define START(n, f, a, b) ICOMMAND(r_item_ ##n, f, a, b)
 	#define INIT item *e = checkitem();
-	#define DEBUG "item[%p]"
+	#define DEBUG_STR "item[%p]"
 	#define DEBUG_IND loadingitem
 
 	ICOMMAND(r_item_use_new_consumable, "", (),
@@ -667,7 +667,7 @@ namespace game
 
 		loadinguse = (e->uses.add(new use(e->script)));
 		if(DEBUG_CONF)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr created new consumable use (%i) for " DEBUG, e->uses.length() - 1, DEBUG_IND);
+			DEBUGF("created new consumable use (%i) for " DEBUG_STR, e->uses.length() - 1, DEBUG_IND);
 	)
 
 	ICOMMAND(r_item_use_new_armour, "", (),
@@ -678,7 +678,7 @@ namespace game
 
 		loadinguse = (e->uses.add(new use_armour(e->script)));
 		if(DEBUG_CONF)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr created new armour use (%i) for " DEBUG, e->uses.length() - 1, DEBUG_IND);
+			DEBUGF("created new armour use (%i) for " DEBUG_STR, e->uses.length() - 1, DEBUG_IND);
 	)
 
 	ICOMMAND(r_item_use_new_weapon, "", (),
@@ -689,7 +689,7 @@ namespace game
 
 		loadinguse = (e->uses.add(new use_weapon(e->script)));
 		if(DEBUG_CONF)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr created new weapon use (%i) for " DEBUG, e->uses.length() - 1, DEBUG_IND);
+			DEBUGF("created new weapon use (%i) for " DEBUG_STR, e->uses.length() - 1, DEBUG_IND);
 	)
 
 
@@ -711,12 +711,12 @@ namespace game
 
 	#undef START
 	#undef INIT
-	#undef DEBUG
+	#undef DEBUG_STR
 	#undef DEBUG_IND
 
 	#define START(n, f, a, b) ICOMMAND(r_item_use_ ##n, f, a, b)
 	#define INIT CAST *e = (CAST *) checkuse(TYPE);
-	#define DEBUG "item_base[%p]->uses[%i]"
+	#define DEBUG_STR "item_base[%p]->uses[%i]"
 	#define DEBUG_IND loadingitem, loadingitem->uses.find(loadinguse)
 
 	#define CAST use
@@ -779,21 +779,21 @@ namespace game
 
 	#undef START
 	#undef INIT
-	#undef DEBUG
+	#undef DEBUG_STR
 	#undef DEBUG_IND
 
 	#define START(n, f, a, b) ICOMMAND(r_recipe_ ##n, f, a, b)
 	#define INIT recipe *e = checkrecipe();
-	#define DEBUG "recipe[%i]"
+	#define DEBUG_STR "recipe[%i]"
 	#define DEBUG_IND recipes.find(e)
 
 	ICOMMAND(r_recipe_add_ingredient, "ii", (int *base, int *qty),
 		recipe *e = checkrecipe();
 		if(!e) return;
-		if(*qty <= 0) {conoutf(CON_ERROR, "\fs\f3ERROR:\fr can't add an ingredient with a quantity of <= 0"); return;}
+		if(*qty <= 0) {ERRORF("can't add an ingredient with a quantity of <= 0"); return;}
 
 		if(DEBUG_CONF)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr added ingredient %i (%i) to " DEBUG, *base, *qty, DEBUG_IND);
+			DEBUGF("added ingredient %i (%i) to " DEBUG_STR, *base, *qty, DEBUG_IND);
 
 		e->ingredients.add(recipe::ingredient(*base, *qty));
 		e->optimise()
@@ -802,10 +802,10 @@ namespace game
 	ICOMMAND(r_recipe_add_catalyst, "ii", (int *base, int *qty),
 		recipe *e = checkrecipe();
 		if(!e) return;
-		if(*qty <= 0) {conoutf(CON_ERROR, "\fs\f3ERROR:\fr can't add an ingredient with a quantity of <= 0"); return;}
+		if(*qty <= 0) {ERRORF("can't add an ingredient with a quantity of <= 0"); return;}
 
 		if(DEBUG_CONF)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr added catalyst %i (%i) to " DEBUG, *base, *qty, DEBUG_IND);
+			DEBUGF("added catalyst %i (%i) to " DEBUG_STR, *base, *qty, DEBUG_IND);
 
 		e->catalysts.add(recipe::ingredient(*base, *qty));
 		e->optimise()
@@ -814,10 +814,10 @@ namespace game
 	ICOMMAND(r_recipe_add_product, "ii", (int *base, int *qty),
 		recipe *e = checkrecipe();
 		if(!e) return;
-		if(*qty <= 0) {conoutf(CON_ERROR, "\fs\f3ERROR:\fr can't add an ingredient with a quantity of <= 0"); return;}
+		if(*qty <= 0) {ERRORF("can't add an ingredient with a quantity of <= 0"); return;}
 
 		if(DEBUG_CONF)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr added product %i (%i) to " DEBUG, *base, *qty, DEBUG_IND);
+			DEBUGF("added product %i (%i) to " DEBUG_STR, *base, *qty, DEBUG_IND);
 
 		e->products.add(recipe::ingredient(*base, *qty));
 		e->optimise()
@@ -880,12 +880,12 @@ namespace game
 
 	#undef START
 	#undef INIT
-	#undef DEBUG
+	#undef DEBUG_STR
 	#undef DEBUG_IND
 
 	#define START(n, f, a, b) ICOMMAND(r_ammo_ ##n, f, a, b)
 	#define INIT ammotype *e = checkammotype();
-	#define DEBUG "ammotype[%i]"
+	#define DEBUG_STR "ammotype[%i]"
 	#define DEBUG_IND ammotypes.find(e)
 
 	ICOMMAND(r_ammo_add_item, "i", (int *i),
@@ -894,7 +894,7 @@ namespace game
 
 		e->items.add(*i);
 		if(DEBUG_CONF)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Classified item %i as member of " DEBUG " (%s)", *i, DEBUG_IND, e->name ? e->name : "unnamed");
+			DEBUGF("Classified item %i as member of " DEBUG_STR " (%s)", *i, DEBUG_IND, e->name ? e->name : "unnamed");
 	)
 
 	ICOMMAND(r_ammo_num_item,  "", (),
@@ -915,12 +915,12 @@ namespace game
 
 	#undef START
 	#undef INIT
-	#undef DEBUG
+	#undef DEBUG_STR
 	#undef DEBUG_IND
 
 	#define START(n, f, a, b) ICOMMAND(r_char_ ##n, f, a, b)
 	#define INIT rpgchar *e = checkrpgchar();
-	#define DEBUG "rpgchar[%p]"
+	#define DEBUG_STR "rpgchar[%p]"
 	#define DEBUG_IND loadingrpgchar
 
 	STRING(name)
@@ -935,12 +935,12 @@ namespace game
 
 	#undef START
 	#undef INIT
-	#undef DEBUG
+	#undef DEBUG_STR
 	#undef DEBUG_IND
 
 	#define START(n, f, a, b) ICOMMAND(r_faction_ ##n, f, a, b)
 	#define INIT faction *e = checkfaction();
-	#define DEBUG "faction[%i]"
+	#define DEBUG_STR "faction[%i]"
 	#define DEBUG_IND factions.find(e)
 
 	ICOMMAND(r_faction_set_relation, "ii", (int *o, int *f),
@@ -948,7 +948,7 @@ namespace game
 		if(!e) return;
 		e->setrelation(*o, *f);
 		if(DEBUG_CONF)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr faction %i's liking of faction %i is now %i", DEBUG_IND, *o, *f);
+			DEBUGF("faction %i's liking of faction %i is now %i", DEBUG_IND, *o, *f);
 	)
 
 	ICOMMAND(r_faction_get_relation, "i", (int *o),
@@ -964,12 +964,12 @@ namespace game
 
 	#undef START
 	#undef INIT
-	#undef DEBUG
+	#undef DEBUG_STR
 	#undef DEBUG_IND
 
 	#define START(n, f, a, b) ICOMMAND(r_obstacle_ ##n, f, a, b)
 	#define INIT rpgobstacle *e = checkrpgobstacle();
-	#define DEBUG "rpgobstacle[%p]"
+	#define DEBUG_STR "rpgobstacle[%p]"
 	#define DEBUG_IND loadingrpgobstacle
 
 	MODEL(mdl)
@@ -980,12 +980,12 @@ namespace game
 
 	#undef START
 	#undef INIT
-	#undef DEBUG
+	#undef DEBUG_STR
 	#undef DEBUG_IND
 
 	#define START(n, f, a, b) ICOMMAND(r_container_ ##n, f, a, b)
 	#define INIT rpgcontainer *e = checkrpgcontainer();
-	#define DEBUG "rpgcontainer[%p]"
+	#define DEBUG_STR "rpgcontainer[%p]"
 	#define DEBUG_IND loadingrpgcontainer
 
 	MODEL(mdl)
@@ -1000,12 +1000,12 @@ namespace game
 
 	#undef START
 	#undef INIT
-	#undef DEBUG
+	#undef DEBUG_STR
 	#undef DEBUG_IND
 
 	#define START(n, f, a, b) ICOMMAND(r_platform_ ##n, f, a, b)
 	#define INIT rpgplatform *e = checkrpgplatform();
-	#define DEBUG "rpgplatform[%p]"
+	#define DEBUG_STR "rpgplatform[%p]"
 	#define DEBUG_IND loadingrpgplatform
 
 	MODEL(mdl)
@@ -1021,21 +1021,21 @@ namespace game
 		{
 			detours.add(*to);
 			if(DEBUG_CONF)
-				conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr registered detour; " DEBUG "->routes[%i].add(%i)", DEBUG_IND, *from, *to);
+				DEBUGF("registered detour; " DEBUG_STR "->routes[%i].add(%i)", DEBUG_IND, *from, *to);
 		}
 		else if(DEBUG_CONF)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr route from %i to %i already registred for " DEBUG, *from, *to, DEBUG_IND);
+			DEBUGF("route from %i to %i already registred for " DEBUG_STR, *from, *to, DEBUG_IND);
 	)
 
 
 	#undef START
 	#undef INIT
-	#undef DEBUG
+	#undef DEBUG_STR
 	#undef DEBUG_IND
 
 	#define START(n, f, a, b) ICOMMAND(r_trigger_ ##n, f, a, b)
 	#define INIT rpgtrigger *e = checkrpgtrigger();
-	#define DEBUG "rpgtrigger[%p]"
+	#define DEBUG_STR "rpgtrigger[%p]"
 	#define DEBUG_IND loadingrpgtrigger
 
 
@@ -1046,12 +1046,12 @@ namespace game
 
 	#undef START
 	#undef INIT
-	#undef DEBUG
+	#undef DEBUG_STR
 	#undef DEBUG_IND
 
 	#define START(n, f, a, b) ICOMMAND(r_merchant_ ##n, f, a, b)
 	#define INIT merchant *e = checkmerchant();
-	#define DEBUG "merchants[%i]"
+	#define DEBUG_STR "merchants[%i]"
 	#define DEBUG_IND merchants.find(e)
 
 	INT(currency, 0, 0xFFFF)
@@ -1061,7 +1061,7 @@ namespace game
 		INIT
 		if(!e || *cat < 0) return;
 		if(DEBUG_CONF)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr setting " DEBUG "->rate[%i] to %f%% and %f%%", DEBUG_IND, *cat, *buy * 100, *sell * 100);
+			DEBUGF("setting " DEBUG_STR "->rate[%i] to %f%% and %f%%", DEBUG_IND, *cat, *buy * 100, *sell * 100);
 
 		while(!e->rates.inrange(*cat)) e->rates.add(merchant::rate(0, 0));
 		e->rates[*cat] = merchant::rate(*buy, *sell);
@@ -1069,18 +1069,18 @@ namespace game
 
 	#undef START
 	#undef INIT
-	#undef DEBUG
+	#undef DEBUG_STR
 	#undef DEBUG_IND
 
 	ICOMMAND(r_tip_new, "s", (const char *s),
 		if(DEBUG_CONF)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr added tip...\n%s", s);
+			DEBUGF("added tip...\n%s", s);
 		tips.add(newstring(s));
 	)
 
 	ICOMMAND(r_cat_new, "s", (const char *s),
 		if(DEBUG_CONF)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Registering item category[%i] as  \"%s\"", categories.length(), s);
+			DEBUGF("Registering item category[%i] as  \"%s\"", categories.length(), s);
 		categories.add(newstring(s));
 		intret(categories.length() - 1);
 	)

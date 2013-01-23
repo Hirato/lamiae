@@ -6,7 +6,7 @@ VARP(friendlyfire, 0, 0, 1);
 void projectile::init(rpgchar *d, equipment *w, equipment *a, int fuzzy, float mult, float speed)
 {
 	if(DEBUG_PROJ)
-		conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Creating projectile; Owner %p item %p fuzzy %i mult %f speed %f ...", d, w, fuzzy, mult, speed);
+		DEBUGF("Creating projectile; Owner %p item %p fuzzy %i mult %f speed %f ...", d, w, fuzzy, mult, speed);
 
 	dir = vec(RAD * d->yaw, RAD * d->pitch);
 	if(fuzzy > 0)
@@ -35,7 +35,7 @@ void projectile::init(rpgchar *d, equipment *w, equipment *a, int fuzzy, float m
 	emitpos = o;
 
 	if(DEBUG_PROJ)
-		conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr owner BB collision point: %f %f %f ...", o.x, o.y, o.z);
+		DEBUGF("owner BB collision point: %f %f %f ...", o.x, o.y, o.z);
 
 	if(w)
 	{
@@ -55,7 +55,7 @@ void projectile::init(rpgchar *d, equipment *w, equipment *a, int fuzzy, float m
 		chargeflags = wep->chargeflags;
 
 		if(DEBUG_PROJ)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr weapon was provided... fx: %i %i %i dist: %i time: %i pflags: %i elasticity %f radius: %i speed %f gravity: %i", projfx, trailfx, deathfx, dist, time, pflags, elasticity, radius, dir.magnitude(), gravity);
+			DEBUGF("weapon was provided... fx: %i %i %i dist: %i time: %i pflags: %i elasticity %f radius: %i speed %f gravity: %i", projfx, trailfx, deathfx, dist, time, pflags, elasticity, radius, dir.magnitude(), gravity);
 	}
 	if(a)
 	{
@@ -79,7 +79,7 @@ void projectile::init(rpgchar *d, equipment *w, equipment *a, int fuzzy, float m
 		chargeflags |= wep->chargeflags;
 
 		if(DEBUG_PROJ)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr ammo was provided... fx: %i %i %i dist: %i time: %i pflags: %i elasticity %f radius: %i speed: %f gravity: %i", projfx, trailfx, deathfx, dist, time, pflags, elasticity, radius, dir.magnitude(), gravity);
+			DEBUGF("ammo was provided... fx: %i %i %i dist: %i time: %i pflags: %i elasticity %f radius: %i speed: %f gravity: %i", projfx, trailfx, deathfx, dist, time, pflags, elasticity, radius, dir.magnitude(), gravity);
 	}
 	radius = max(1, radius);
 	dir.mul(speed);
@@ -88,7 +88,7 @@ void projectile::init(rpgchar *d, equipment *w, equipment *a, int fuzzy, float m
 	if(chargeflags & CHARGE_TRAVEL) {dist *= mult; time *= mult;}
 	if(chargeflags & CHARGE_RADIUS) radius *= mult;
 	charge = mult;
-	if(DEBUG_PROJ) conoutf("\fs\f2DEBUG:\fr applied charge flags; speed %f dist %i time %i radius %i", dir.magnitude(), dist, time, radius);
+	if(DEBUG_PROJ) DEBUGF("applied charge flags; speed %f dist %i time %i radius %i", dir.magnitude(), dist, time, radius);
 
 	if(firemethod || d != game::player1)
 	{ //add the actor's velocity, but adjust for it so it doesn't deviate from the intended target
@@ -101,7 +101,7 @@ void projectile::init(rpgchar *d, equipment *w, equipment *a, int fuzzy, float m
 		dir.mul(vel.magnitude());
 
 		if(DEBUG_PROJ)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr compensating for owner velocity, dir: (%f, %f, %f) speed: %f", dir.x, dir.y, dir.z, dir.magnitude());
+			DEBUGF("compensating for owner velocity, dir: (%f, %f, %f) speed: %f", dir.x, dir.y, dir.z, dir.magnitude());
 	}
 	else
 	{
@@ -112,7 +112,7 @@ void projectile::init(rpgchar *d, equipment *w, equipment *a, int fuzzy, float m
 		dir.add(vel);
 
 		if(DEBUG_PROJ)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr adding owner velocity, dir: (%f, %f, %f) speed: %f", dir.x, dir.y, dir.z, dir.magnitude());
+			DEBUGF("adding owner velocity, dir: (%f, %f, %f) speed: %f", dir.x, dir.y, dir.z, dir.magnitude());
 	}
 }
 
@@ -159,7 +159,7 @@ bool projectile::update()
 						continue;
 				}
 
-				if(DEBUG_PROJ) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr freezing projectile %p", this);
+				if(DEBUG_PROJ) DEBUGF("freezing projectile %p", this);
 				if(pflags & P_VOLATILE) deleted = true;
 				else if(pflags & P_PROXIMITY) pflags |= P_STATIONARY;
 				else pflags |= P_VOLATILE|P_STATIONARY; //expire timers first before exploding - handled below
@@ -172,7 +172,7 @@ bool projectile::update()
 
 	if((pflags & (P_STATIONARY|P_PROXIMITY|P_TIME)) == P_STATIONARY)
 	{
-		if(DEBUG_PROJ) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr projectile %p has no timer - nor \"trap\"; forcing delete due to no victims", this);
+		if(DEBUG_PROJ) DEBUGF("projectile %p has no timer - nor \"trap\"; forcing delete due to no victims", this);
 		deleted = true;
 	}
 
@@ -181,14 +181,14 @@ bool projectile::update()
 	   o.z < 0 || o.z >= getworldsize()
 	)
 	{
-		if(DEBUG_PROJ) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr projectile %p out of world - deleting", this);
+		if(DEBUG_PROJ) DEBUGF("projectile %p out of world - deleting", this);
 		pflags &= ~P_VOLATILE;
 		deleted = true;
 	}
 
 	if((pflags & P_TIME && time <= 0) || (pflags & P_DIST && dist <= 0))
 	{
-		if(DEBUG_PROJ) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr projectile %p; timers expired", this);
+		if(DEBUG_PROJ) DEBUGF("projectile %p; timers expired", this);
 		deleted = true;
 	}
 
@@ -210,7 +210,7 @@ bool projectile::update()
 
 	if(victims.length())
 	{
-		if(DEBUG_PROJ) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr projectile %p has victims - hit/bounced of/pierced; applying damage?", this);
+		if(DEBUG_PROJ) DEBUGF("projectile %p has victims - hit/bounced of/pierced; applying damage?", this);
 		if(!(pflags & P_PERSIST)) deleted = true;
 
 		if(wep) loopv(victims)
@@ -367,7 +367,7 @@ float projectile::travel(float &distance, vector<rpgent *> &victims)
 			rpgent *vic = game::curmap->objs[i];
 			if((vic != owner || friendlyfire) && game::intersect(vic, o, pos, tmp))
 			{
-				if(DEBUG_PROJ) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr piercing projectile %p, adding victim %p", this, vic);
+				if(DEBUG_PROJ) DEBUGF("piercing projectile %p, adding victim %p", this, vic);
 				victims.add(vic);
 			}
 		}
@@ -383,7 +383,7 @@ float projectile::travel(float &distance, vector<rpgent *> &victims)
 		rpgent *vic = game::intersectclosest(o, pos, friendlyfire ? NULL : owner, entdist, 2);
 		if(vic && entdist <= 1)
 		{
-			if(DEBUG_PROJ) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr projectile %p has victim %p", this, vic);
+			if(DEBUG_PROJ) DEBUGF("projectile %p has victim %p", this, vic);
 			victims.add(vic);
 
 			pos.sub(o).mul(entdist).add(o);

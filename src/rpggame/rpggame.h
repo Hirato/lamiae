@@ -46,6 +46,10 @@
 
 #define DEBUG_MAX ((1 << 10) - 1)
 
+#define DEBUGF(...)   conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr " __VA_ARGS__)
+#define ERRORF(...)   conoutf(CON_ERROR, "\fs\f3ERROR:\fr " __VA_ARGS__)
+#define WARNINGF(...) conoutf(CON_WARN,  "\fs\f6WARNING:\fr " __VA_ARGS__)
+
 struct ammotype;
 struct delayscript;
 struct effect;
@@ -1764,7 +1768,7 @@ struct reference
 	{
 		if(immutable && !force)
 		{
-			conoutf(CON_ERROR, "ERROR: reference \"%s\" is immutable, and cannot be set manually.", name);
+			ERRORF("reference \"%s\" is immutable, and cannot be set manually.", name);
 			return false;
 		}
 

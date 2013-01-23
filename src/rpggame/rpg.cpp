@@ -167,13 +167,13 @@ namespace game
 		camera::cleanup(true);
 
 		if(DEBUG_WORLD)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr resetting map directory");
+			DEBUGF("resetting map directory");
 		setmapdir(NULL);
 
 		if(mapdata)
 		{
 			if(DEBUG_WORLD)
-				conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr clearing map data: %p %p", mapdata, curmap);
+				DEBUGF("clearing map data: %p %p", mapdata, curmap);
 
 			if(curmap)
 				curmap->objs.removeobj(player1);
@@ -183,7 +183,7 @@ namespace game
 		}
 
 		if(DEBUG_WORLD)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr clearing %i scripts, %i effects, %i status effects, %i ammotypes, %i factions, %i mapscripts, %i recipes, %i merchants, %i item categories, and %i tips",
+			DEBUGF("clearing %i scripts, %i effects, %i status effects, %i ammotypes, %i factions, %i mapscripts, %i recipes, %i merchants, %i item categories, and %i tips",
 				scripts.length(), effects.length(), statuses.length(),
 				ammotypes.length(), factions.length(), mapscripts.length(),
 				recipes.length(), merchants.length(), categories.length(), tips.length());
@@ -222,23 +222,23 @@ namespace game
 			int idx = strtol(files[i], &end, 10);
 			if(end == files[i] || *end != '\0' || idx < 0)
 			{
-				conoutf(CON_ERROR, "\fs\f3ERROR:\fr can't load \"%s/%s.cfg\" - invalid index or file name; skipping", dir, files[i]);
+				ERRORF("can't load \"%s/%s.cfg\" - invalid index or file name; skipping", dir, files[i]);
 				continue;
 			}
 			if(DEBUG_WORLD)
-				conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr idx = %i, vector has %i; expanding if necessary", idx, objects.length());
+				DEBUGF("idx = %i, vector has %i; expanding if necessary", idx, objects.length());
 			while(!objects.inrange(idx)) objects.add(NULL);
 
 			if(objects[idx])
 			{
-				conoutf(CON_ERROR, "\fs\f3ERROR:\fr object with index %i already defined in %s; skipping", idx, dir);
+				ERRORF("object with index %i already defined in %s; skipping", idx, dir);
 				continue;
 			}
 
 			objects[idx] = var = new T();
 
 			formatstring(file)("%s/%s.cfg", dir, files[i]);
-			if(DEBUG_WORLD) conoutf("\fs\f2DEBUG:\fr executing %s for index %i", file, idx);
+			if(DEBUG_WORLD) DEBUGF("executing %s for index %i", file, idx);
 			execfile(file);
 		}
 		files.deletearrays();
@@ -248,7 +248,7 @@ namespace game
 		{
 			if(!objects[i])
 			{
-				conoutf(CON_ERROR, "\fs\f3ERROR:\fr index %i not defined in %s; problems WILL occur if referenced.", i, dir);
+				ERRORF("index %i not defined in %s; problems WILL occur if referenced.", i, dir);
 				abort = true;
 			}
 		}
@@ -274,7 +274,7 @@ namespace game
 		#define RANGECHECK(x) \
 		if(!(x).length()) \
 		{ \
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr " #x " must contain at least one item"); \
+			ERRORF(#x " must contain at least one item"); \
 			abort = true; \
 		}
 
@@ -319,7 +319,7 @@ namespace game
 		loadassets(datapath(), true);
 		if(abort)
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr game breaking errors were encountered while parsing files; aborting current game");
+			ERRORF("game breaking errors were encountered while parsing files; aborting current game");
 			abort = false;
 			localdisconnect();
 		}
@@ -334,14 +334,14 @@ namespace game
 		if(!connected)
 		{
 			if(DEBUG_WORLD)
-				conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Trying to start game but not 'connected' - connecting and temporarily disabling newgame");
+				DEBUGF("Trying to start game but not 'connected' - connecting and temporarily disabling newgame");
 			nonewgame = true;
 			localconnect();
 			nonewgame = false;
 		}
 		if(!game || !*game) game = "default";
 		if(DEBUG_WORLD)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr starting new game: %s", game);
+			DEBUGF("starting new game: %s", game);
 
 		cleangame();
 		rpgscript::init();
@@ -349,7 +349,7 @@ namespace game
 		mapdata = new hashset<mapinfo>();
 		copystring(data, game);
 		if(DEBUG_WORLD)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr setting map directory to: %s", datapath("maps"));
+			DEBUGF("setting map directory to: %s", datapath("maps"));
 		setmapdir(datapath("maps"));
 
 		string dir;
@@ -357,7 +357,7 @@ namespace game
 		loadassets(dir, false);
 		if(abort)
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr Critical errors were encountered while initialising the game; aborting");
+			ERRORF("Critical errors were encountered while initialising the game; aborting");
 			abort = false; localdisconnect();
 			forceverbose--;
 			return;
@@ -365,9 +365,9 @@ namespace game
 		emptymap(0, true, NULL, false);
 		concatstring(dir, ".cfg");
 		if(!execfile(dir))
-			conoutf(CON_WARN, "\fs\f6WARNING:\fr game properties not defined");
+			WARNINGF("game properties not defined");
 		else if(DEBUG_WORLD)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Loaded game properties");
+			DEBUGF("Loaded game properties");
 
 		player1->resetmdl();
 		if(restore) { forceverbose--; return; }
@@ -399,13 +399,13 @@ namespace game
 	{
 		if(!mapdata)
 		{
-			conoutf(CON_ERROR, "\fs\f2ERROR:\fr no map data; cannot access data for \"%s\"", name);
+			ERRORF("no map data; cannot access data for \"%s\"", name);
 			return NULL;
 		}
 
 		mapinfo *dummy = mapdata->access(name);
 		if(DEBUG_WORLD)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr finding map data (%p)", dummy);
+			DEBUGF("finding map data (%p)", dummy);
 
 		if(!dummy)
 		{
@@ -414,7 +414,7 @@ namespace game
 			dummy->name = newname;
 
 			if(DEBUG_WORLD)
-				conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr map data not found - creating (%p)", dummy);
+				DEBUGF("map data not found - creating (%p)", dummy);
 		}
 
 		return dummy;
@@ -458,12 +458,12 @@ namespace game
 		if(curmap)
 		{
 			if(DEBUG_WORLD)
-				conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr removing player from curmap vector");
+				DEBUGF("removing player from curmap vector");
 			curmap->objs.removeobj(player1);
 			if(curmap->flags & mapinfo::F_VOLATILE)
 			{
 				if(DEBUG_WORLD)
-					conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr curmap volatile, clearing before map  change");
+					DEBUGF("curmap volatile, clearing before map  change");
 				clearmap(curmap);
 				curmap->loaded = false;
 			}
@@ -473,13 +473,13 @@ namespace game
 		rpgscript::changemap();
 
 		if(DEBUG_WORLD)
-			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr adding player to curmap vector");
+			DEBUGF("adding player to curmap vector");
 		curmap->objs.add(player1);
 
 		if(!curmap->loaded)
 		{
 			if(DEBUG_WORLD)
-				conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr map not loaded - initialising");
+				DEBUGF("map not loaded - initialising");
 
 			entities::startmap();
 			curmap->getsignal("load", false);
@@ -501,10 +501,10 @@ namespace game
 		if(DEBUG_WORLD)
 		{
 			enumerate(*mapdata, mapinfo, info,
-				conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr map %s", info.name);
-				conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr map objects %i", info.objs.length());
-				conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr loaded %i", info.loaded);
-				conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr deferred actions %i", info.loadactions.length());
+				DEBUGF("map %s", info.name);
+				DEBUGF("map objects %i", info.objs.length());
+				DEBUGF("loaded %i", info.loaded);
+				DEBUGF("deferred actions %i", info.loadactions.length());
 			);
 		}
 
@@ -527,7 +527,7 @@ namespace game
 	{
 		if(!connected)
 		{
-			conoutf(CON_WARN, "WARNING: No game is in progress, starting default game, this may mean things don't work as intended!");
+			WARNINGF("No game is in progress, starting default game, this may mean things don't work as intended!");
 			newgame(NULL);
 		}
 		openworld(name);
@@ -538,7 +538,7 @@ namespace game
 	{
 		if(!connected)
 		{
-			conoutf(CON_WARN, "WARNING: No game is in progress, starting default game, this may mean things don't work as intended!");
+			WARNINGF("No game is in progress, starting default game, this may mean things don't work as intended!");
 			newgame(NULL);
 		}
 		openworld(name);
@@ -557,7 +557,7 @@ namespace game
 		physicsframe();
 		if(firstupdate)
 		{
-			if(DEBUG_WORLD) conoutf("\fs\f2DEBUG:\fr curmap was recently opened; skipping update so entities don't take a %ims step", curtime);
+			if(DEBUG_WORLD) DEBUGF("curmap was recently opened; skipping update so entities don't take a %ims step", curtime);
 			firstupdate = false;
 			return;
 		}
@@ -591,7 +591,7 @@ namespace game
 			if(eye)
 			{
 				if(DEBUG_ENT)
-					conoutf("\fs\f2DEBUG:\fr ent has new eyeheight of %f, applying positional delta of %f", d->eyeheight, eye);
+					DEBUGF("ent has new eyeheight of %f, applying positional delta of %f", d->eyeheight, eye);
 				d->o.z += eye;
 				d->newpos.z += eye;
 			}
@@ -811,7 +811,7 @@ namespace game
 			if(edittogglereset)
 			{
 				if(DEBUG_WORLD)
-					conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr resetting game state for current map");
+					DEBUGF("resetting game state for current map");
 
 				curmap->objs.removeobj(player1);
 				clearmap(curmap);
@@ -846,7 +846,7 @@ namespace game
 		else
 		{
 			if(DEBUG_WORLD)
-				conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr dynent requested while not in a game, returning player");
+				DEBUGF("dynent requested while not in a game, returning player");
 			return player1;
 		}
 

@@ -243,7 +243,7 @@ namespace ai
 	#define getreference(var, name, cond, fail, fun) \
 		if(!*var) \
 		{ \
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr " #fun "; requires a reference to be specified"); \
+			ERRORF("" #fun "; requires a reference to be specified"); \
 			fail; return; \
 		} \
 		int name ## idx; \
@@ -251,7 +251,7 @@ namespace ai
 		reference *name = rpgscript::searchstack(var); \
 		if(!name || !(cond)) \
 		{ \
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr " #fun "; invalid reference \"%s\" or of incompatible type", var); \
+			ERRORF("" #fun "; invalid reference \"%s\" or of incompatible type", var); \
 			fail; return; \
 		}
 
@@ -267,14 +267,14 @@ namespace ai
 		} \
 		if(!n) \
 		{ \
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr location entity with tag %i does not exist", t); \
+			ERRORF("location entity with tag %i does not exist", t); \
 			return; \
 		}
 
 	ICOMMAND(r_action_clear, "s", (const char *ref),
 		getreference(ref, ent, ent->getchar(entidx), , r_action_clear)
 
-		if(DEBUG_AI) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr clearing AI directives for entity %p", ent->getchar(entidx));
+		if(DEBUG_AI) DEBUGF("clearing AI directives for entity %p", ent->getchar(entidx));
 		ent->getchar(entidx)->directives.deletecontents();
 	)
 
@@ -285,7 +285,7 @@ namespace ai
 
 		action = attack(vic->getchar(vicidx), *p);
 		if(isduplicate(ent->getchar(entidx), &action)) return;
-		if(DEBUG_AI) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr adding attack directive to entity %p; target %p priority %i", ent->getchar(entidx), vic->getchar(vicidx), *p);
+		if(DEBUG_AI) DEBUGF("adding attack directive to entity %p; target %p priority %i", ent->getchar(entidx), vic->getchar(vicidx), *p);
 		ent->getchar(entidx)->directives.add(new attack(action));
 	)
 
@@ -295,7 +295,7 @@ namespace ai
 
 		action = animation(*anim, *dur, *p);
 		if(isduplicate(ent->getchar(entidx), &action)) return;
-		if(DEBUG_AI) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr adding animation directive to entity %p; anim %i, duration %i, priority %i", ent->getchar(entidx), *anim, *dur, *p);
+		if(DEBUG_AI) DEBUGF("adding animation directive to entity %p; anim %i, duration %i, priority %i", ent->getchar(entidx), *anim, *dur, *p);
 		ent->getchar(entidx)->directives.add(new animation(action));
 	)
 
@@ -306,7 +306,7 @@ namespace ai
 
 		action = move(l->o, *p);
 		if(isduplicate(ent->getchar(entidx), &action)) return;
-		if(DEBUG_AI) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr adding move directive to entity %p; location %i priority %i", ent->getchar(entidx), *loc, *p);
+		if(DEBUG_AI) DEBUGF("adding move directive to entity %p; location %i priority %i", ent->getchar(entidx), *loc, *p);
 		ent->getchar(entidx)->directives.add(new move(action));
 	)
 
@@ -317,7 +317,7 @@ namespace ai
 
 		action = wander(l->o, max(0, *rad), *p);
 		if(isduplicate(ent->getchar(entidx), &action)) return;
-		if(DEBUG_AI) conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr adding wander directive to entity %p; loc %i, rad %i, priority %i", ent->getchar(entidx), *loc, *rad, *p);
+		if(DEBUG_AI) DEBUGF("adding wander directive to entity %p; loc %i, rad %i, priority %i", ent->getchar(entidx), *loc, *rad, *p);
 		ent->getchar(entidx)->directives.add(new wander(action));
 	)
 }

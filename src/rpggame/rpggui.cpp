@@ -318,7 +318,7 @@ namespace rpggui
 			{
 				scr->curnode = scr->chat.access(cur->choices[n]->dest);
 				if(!scr->curnode)
-					conoutf(CON_ERROR, "ERROR: no such dialogue node: %s", cur->choices[n]->dest);
+					ERRORF("no such dialogue node: %s", cur->choices[n]->dest);
 			}
 
 			uint *code = cur->choices[n]->script;

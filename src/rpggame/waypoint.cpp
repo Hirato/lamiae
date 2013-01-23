@@ -138,7 +138,7 @@ namespace ai
 	{
 		if(!waypoints.inrange(ind))
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr Waypoint %i not inrange", ind);
+			ERRORF("Waypoint %i not inrange", ind);
 			return;
 		}
 
@@ -167,7 +167,7 @@ namespace ai
 	{
 		if(!waypoints.inrange(a) || !waypoints.inrange(b))
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr %i or %i is not inrange", a, b);
+			ERRORF("%i or %i is not inrange", a, b);
 			return;
 		}
 
@@ -296,14 +296,14 @@ namespace ai
 
 		if(!f)
 		{
-			if(msg) conoutf(CON_ERROR, "\fs\f3ERROR:\fr failed to load waypoints");
+			if(msg) ERRORF("failed to load waypoints");
 			return;
 		}
 
 		char magic[4];
 		if(f->read(magic, 4) < 4 || memcmp(magic, "OWPT", 4))
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr magic mismatch (expected OWPT, got %4.4s)", magic);
+			ERRORF("magic mismatch (expected OWPT, got %4.4s)", magic);
 			delete f;
 			return;
 		}
@@ -321,7 +321,7 @@ namespace ai
 			w.o.z = f->getlil<float>();
 			int numlinks = f->getchar();
 			if(numlinks > 10)
-				conoutf("\fs\f6WARNING:\fr links for waypoint #%i are exorbitant (%i)", i, numlinks);
+				WARNINGF("waypoint #%i has a large number of links! (%i)", i, numlinks);
 			loopj(numlinks)
 				w.links.add(f->getlil<ushort>() - 1); //FPS game uses 0 to denote dummy waypoint, and use 1+ to denote real waypoints - we don't
 		}
@@ -346,7 +346,7 @@ namespace ai
 		stream *f = opengzfile(wptname, "wb");
 		if(!f)
 		{
-			conoutf("failed to save waypoints");
+			ERRORF("failed to save waypoints");
 			return;
 		}
 

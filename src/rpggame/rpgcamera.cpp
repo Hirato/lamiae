@@ -805,7 +805,7 @@ namespace camera
 		}
 		else
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr camera entity %i does not exist, using dummy action instead of move", *tag);
+			ERRORF("camera entity %i does not exist, using dummy action instead of move", *tag);
 			actionvec->add(new action(*d, s));
 		}
 	)
@@ -821,7 +821,7 @@ namespace camera
 		}
 		else
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr reference \'%s\' does not exist or is not an entity, using dummy action instead of move", r);
+			ERRORF("reference \'%s\' does not exist or is not an entity, using dummy action instead of move", r);
 			actionvec->add(new action(*d, s));
 		}
 	)
@@ -849,7 +849,7 @@ namespace camera
 		}
 		else
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr camera entity %i does not exist, using dummy action instead of view", *tag);
+			ERRORF("camera entity %i does not exist, using dummy action instead of view", *tag);
 			actionvec->add(new action(*d, s));
 		}
 	)
@@ -865,7 +865,7 @@ namespace camera
 		}
 		else
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr reference \'%s\' does not exist or is not an entity, using dummy action instead of view", r);
+			ERRORF("reference \'%s\' does not exist or is not an entity, using dummy action instead of view", r);
 			actionvec->add(new action(*d, s));
 		}
 	)
@@ -880,7 +880,7 @@ namespace camera
 		}
 		else
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr reference \'%s\' does not exist or is not an entity, using dummy action instead of focus", r);
+			ERRORF("reference \'%s\' does not exist or is not an entity, using dummy action instead of focus", r);
 			actionvec->add(new action(*d, s));
 		}
 	)
@@ -895,7 +895,7 @@ namespace camera
 		}
 		else
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr reference \'%s\' does not exist or is not an entity, using dummy action instead of follow", r);
+			ERRORF("reference \'%s\' does not exist or is not an entity, using dummy action instead of follow", r);
 			actionvec->add(new action(*d, s));
 		}
 	)
@@ -910,7 +910,7 @@ namespace camera
 		}
 		else
 		{
-			conoutf(CON_ERROR, "\fs\f3ERROR:\fr reference \'%s\' does not exist or is not an entity, using dummy action instead of viewport", r);
+			ERRORF("reference \'%s\' does not exist or is not an entity, using dummy action instead of viewport", r);
 			actionvec->add(new action(*d, s));
 		}
 	)

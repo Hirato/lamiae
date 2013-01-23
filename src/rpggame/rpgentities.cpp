@@ -65,7 +65,7 @@ namespace entities
 		ents.deletecontents();
 		intents.setsize(0);
 
-		if (DEBUG_WORLD) conoutf(CON_DEBUG, "DEBUG: Clearing editmode model cache.");
+		if (DEBUG_WORLD) DEBUGF("Clearing editmode model cache.");
 		enumerate(modelcache, const char *, str,
 			delete[] str;
 		);
@@ -100,7 +100,7 @@ namespace entities
 		rpgscript::removereferences(dummy);
 		dummy->resetmdl();
 
-		if(DEBUG_WORLD) conoutf(CON_DEBUG, "DEBUG: Registering model \"%s\" in preview cache as %.8X", dummy->temp.mdl, hash);
+		if(DEBUG_WORLD) DEBUGF("Registering model \"%s\" in preview cache as %.8X", dummy->temp.mdl, hash);
 		m = newstring(dummy->temp.mdl);
 
 #define x(enum, type) \
@@ -181,7 +181,7 @@ namespace entities
 			case ENT_CHAR:
 			{
 				if(DEBUG_ENT)
-					conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Creating creature and instancing to type %i", ind);
+					DEBUGF("Creating creature and instancing to type %i", ind);
 
 				ent = new rpgchar();
 
@@ -190,7 +190,7 @@ namespace entities
 			case ENT_ITEM:
 			{
 				if(DEBUG_ENT)
-					conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Creating item and instancing to type %i", ind);
+					DEBUGF("Creating item and instancing to type %i", ind);
 
 				rpgitem *d = new rpgitem();
 				ent = d;
@@ -202,7 +202,7 @@ namespace entities
 			case ENT_OBSTACLE:
 			{
 				if(DEBUG_ENT)
-					conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Creating obstacle and instancing to type %i", ind);
+					DEBUGF("Creating obstacle and instancing to type %i", ind);
 
 				ent = new rpgobstacle();
 
@@ -211,7 +211,7 @@ namespace entities
 			case ENT_CONTAINER:
 			{
 				if(DEBUG_ENT)
-					conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Creating container and instancing to type %i", ind);
+					DEBUGF("Creating container and instancing to type %i", ind);
 
 				ent = new rpgcontainer();
 
@@ -220,7 +220,7 @@ namespace entities
 			case ENT_PLATFORM:
 			{
 				if(DEBUG_ENT)
-					conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Creating platform and instancing to type %i", ind);
+					DEBUGF("Creating platform and instancing to type %i", ind);
 
 				ent = new rpgplatform();
 
@@ -229,7 +229,7 @@ namespace entities
 			case ENT_TRIGGER:
 			{
 				if(DEBUG_ENT)
-					conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Creating trigger and instancing to type %i", ind);
+					DEBUGF("Creating trigger and instancing to type %i", ind);
 
 				ent = new rpgtrigger();
 
@@ -273,7 +273,7 @@ namespace entities
 				return;
 			}
 		}
-		conoutf("\fs\f3ERROR:\fr no teleport destination %i", dest);
+		ERRORF("no teleport destination %i", dest);
 	}
 
 	void entradius(extentity &e, bool &color)

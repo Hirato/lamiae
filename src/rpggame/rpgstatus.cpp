@@ -136,21 +136,21 @@ void status_generic::update(rpgent *victim, rpgent *owner, int resist, int thres
 			{
 				case STATUS_HEALTH:
 					if(DEBUG_STATUS)
-						conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Applying health effect to %p; %i %i; mult %f", victim, strength, duration, mult);
+						DEBUGF("Applying health effect to %p; %i %i; mult %f", victim, strength, duration, mult);
 					ent->health += strength * mult * (duration != 0 ? curtime / 1000.f : 1);
 					if(strength < 0 && ent->health < 0) ent->die(owner);
 					return;
 
 				case STATUS_MANA:
 					if(DEBUG_STATUS)
-						conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Applying mana effect to %p; %i %i; mult %f", victim, strength, duration, mult);
+						DEBUGF("Applying mana effect to %p; %i %i; mult %f", victim, strength, duration, mult);
 					ent->mana += strength * mult * (duration != 0 ? curtime / 1000.f : 1);
 					ent->mana = max<float>(ent->mana, 0);
 					return;
 
 				case STATUS_DOOM:
 					if(DEBUG_STATUS)
-						conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Applying doom effect to %p; %i %i; mult %f", victim, strength, duration, mult);
+						DEBUGF("Applying doom effect to %p; %i %i; mult %f", victim, strength, duration, mult);
 					//either instant death, or to cater to duration == -1 a gradual percentage wise drain of health
 					if(duration == 0 || (ent->health -= ent->base.getmaxhp() * strength * mult * curtime / 100000.f) < 0)
 						ent->die(owner);
@@ -167,32 +167,32 @@ void status_generic::update(rpgent *victim, rpgent *owner, int resist, int thres
 			{
 				case STATUS_MOVE:
 					if(DEBUG_STATUS)
-						conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Applying movement buff to %p; %i %i; mult %f", victim, strength, duration, mult);
+						DEBUGF("Applying movement buff to %p; %i %i; mult %f", victim, strength, duration, mult);
 					ent->base.deltamovespeed += strength * mult;
 					ent->base.deltajumpvel += strength * mult;
 					return;
 
 				case STATUS_CRIT:
 					if(DEBUG_STATUS)
-						conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Applying crit buff to %p; %i %i; mult %f", victim, strength, duration, mult);
+						DEBUGF("Applying crit buff to %p; %i %i; mult %f", victim, strength, duration, mult);
 					ent->base.deltacrit += strength * mult;
 					return;
 
 				case STATUS_WEIGHT:
 					if(DEBUG_STATUS)
-						conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Applying weight capacity buff to %p; %i %i; mult %f", victim, strength, duration, mult);
+						DEBUGF("Applying weight capacity buff to %p; %i %i; mult %f", victim, strength, duration, mult);
 					ent->base.deltacarry += strength * mult;
 					return;
 
 				case STATUS_HREGEN:
 					if(DEBUG_STATUS)
-						conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Applying healthregen buff to %p; %i %i; mult %f", victim, strength, duration, mult);
+						DEBUGF("Applying healthregen buff to %p; %i %i; mult %f", victim, strength, duration, mult);
 					ent->base.deltahregen += strength * mult;
 					return;
 
 				case STATUS_MREGEN:
 					if(DEBUG_STATUS)
-						conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Applying manaregen buff to %p; %i %i; mult %f", victim, strength, duration, mult);
+						DEBUGF("Applying manaregen buff to %p; %i %i; mult %f", victim, strength, duration, mult);
 					ent->base.deltamregen += strength * mult;
 					return;
 
@@ -204,7 +204,7 @@ void status_generic::update(rpgent *victim, rpgent *owner, int resist, int thres
 				case STATUS_INTELLIGENCE:
 				case STATUS_LUCK:
 					if(DEBUG_STATUS)
-						conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Applying %s buff to %p; %i %i; mult %f", attrs[type-STATUS_STRENGTH], victim, strength, duration, mult);
+						DEBUGF("Applying %s buff to %p; %i %i; mult %f", attrs[type-STATUS_STRENGTH], victim, strength, duration, mult);
 					ent->base.deltaattrs[type - STATUS_STRENGTH] += strength * mult;
 					return;
 
@@ -216,7 +216,7 @@ void status_generic::update(rpgent *victim, rpgent *owner, int resist, int thres
 				case STATUS_STEALTH:
 				case STATUS_CRAFT:
 					if(DEBUG_STATUS)
-						conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Applying %s buff to %p; %i %i; mult %f", skills[type - STATUS_ARMOUR], victim, strength, duration, mult);
+						DEBUGF("Applying %s buff to %p; %i %i; mult %f", skills[type - STATUS_ARMOUR], victim, strength, duration, mult);
 					ent->base.deltaskills[type - STATUS_ARMOUR] += strength * mult;
 					return;
 
@@ -232,7 +232,7 @@ void status_generic::update(rpgent *victim, rpgent *owner, int resist, int thres
 				case STATUS_BLUNT_T:
 				case STATUS_PIERCE_T:
 					if(DEBUG_STATUS)
-						conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Applying %s threshold buff to %p; %i %i; mult %f", resists[type - STATUS_FIRE_T], victim, strength, duration, mult);
+						DEBUGF("Applying %s threshold buff to %p; %i %i; mult %f", resists[type - STATUS_FIRE_T], victim, strength, duration, mult);
 					ent->base.deltathresh[type - STATUS_FIRE_T] += strength * mult;
 					return;
 
@@ -248,7 +248,7 @@ void status_generic::update(rpgent *victim, rpgent *owner, int resist, int thres
 				case STATUS_BLUNT_R:
 				case STATUS_PIERCE_R:
 					if(DEBUG_VSTATUS)
-						conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Applying %s resistance buff to %p; %i %i; mult %f", resists[type - STATUS_FIRE_R], victim, strength, duration, mult);
+						DEBUGF("Applying %s resistance buff to %p; %i %i; mult %f", resists[type - STATUS_FIRE_R], victim, strength, duration, mult);
 					ent->base.deltaresist[type - STATUS_FIRE_R] += strength * mult;
 					return;
 
@@ -292,7 +292,7 @@ void status_generic::update(rpgent *victim, rpgent *owner, int resist, int thres
 
 		case STATUS_INVIS:
 			if(DEBUG_STATUS)
-				conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr Applying invisibility effect to %p; %i %i; mult %f", victim, strength, duration, mult);
+				DEBUGF("Applying invisibility effect to %p; %i %i; mult %f", victim, strength, duration, mult);
 			victim->temp.alpha -= strength * mult / 100.f;
 			break;
 	}
