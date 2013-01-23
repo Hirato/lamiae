@@ -8,32 +8,44 @@ void cutogz(char *s)
     if(ogzp) *ogzp = '\0';
 }
 
+string mapdir = "packages/maps/";
+
+void setmapdir(const char *pth)
+{
+    if(!pth) pth = "packages/maps";
+    copystring(mapdir, pth);
+    concatstring(mapdir, "/");
+}
+ICOMMAND(maproot, "", (), result(mapdir));
+ICOMMAND(setmapdir, "sN", (const char *pth, int *numargs),
+    setmapdir(*numargs > 0 && pth[0] ? pth : NULL);
+)
+
 string mname, mpath; //holds the mapname and mappath
 
-void getmapfilenames(const char *cname, bool fall)
+void getmapfilenames(const char *map)
 {
+    copystring(mpath, mapdir);
     const char *slash = NULL;
     const char *next = NULL;
 
     do
     {
         slash = next;
-        next = strpbrk(next ? (next + 1) : cname, "/\\");
+        next = strpbrk(next ? (next + 1) : map, "/\\");
     } while (next != NULL);
 
     if(slash)
     {
-        copystring(mpath, cname, (slash - cname) + 1);
-        copystring(mname, slash+1);
-    }
-    else
-    {
-        copystring(mpath, "maps/");
-        copystring(mname, cname);
+        slash += 1;
+        int l = strlen(mpath);
+        copystring(mpath + l, map, min<int>(MAXSTRLEN - l, (slash - map) + 1));
+
+        map = slash;
     }
 
-    defformatstring(tmp)("packages/%s", mpath);
-    createdir(tmp);
+    copystring(mname, map);
+    createdir(mpath);
 }
 
 static void fixent(entity &e, int version)
@@ -55,8 +67,8 @@ static void fixent(entity &e, int version)
 
 bool loadents(const char *fname, vector<entity> &ents, uint *crc)
 {
-    getmapfilenames(fname, true);
-    defformatstring(ogzname)("packages/%s/%s.ogz", mpath, mname);
+    getmapfilenames(fname);
+    defformatstring(ogzname)("packages/%s%s.ogz", mpath, mname);
     path(ogzname);
     stream *f = opengzfile(ogzname, "rb");
     if(!f) return false;
@@ -263,16 +275,16 @@ string ogzname, bakname, mcfname, acfname, picname;
 
 VARP(savebak, 0, 2, 2);
 
-void setmapfilenames(const char *fname, bool fall = true)
+void setmapfilenames(const char *fname)
 {
-    getmapfilenames(fname, fall);
+    getmapfilenames(fname);
 
-    formatstring(ogzname)("packages/%s/%s.ogz", mpath, mname);
-    if(savebak==1) formatstring(bakname)("packages/%s/%s.BAK", mpath, mname);
-    else formatstring(bakname)("packages/%s/%s_%d.BAK", mpath, mname, totalmillis);
-    formatstring(mcfname)("packages/%s/%s.cfg", mpath, mname);
-    formatstring(acfname)("packages/%s/%s-art.cfg", mpath, mname);
-    formatstring(picname)("packages/%s/%s", mpath, mname);
+    formatstring(ogzname)("%s%s.ogz", mpath, mname);
+    if(savebak==1) formatstring(bakname)("%s%s.BAK", mpath, mname);
+    else formatstring(bakname)("%s%s_%d.BAK", mpath, mname, totalmillis);
+    formatstring(mcfname)("%s%s.cfg", mpath, mname);
+    formatstring(acfname)("%s%s-art.cfg", mpath, mname);
+    formatstring(picname)("%s%s", mpath, mname);
 
     path(ogzname);
     path(bakname);
@@ -283,7 +295,7 @@ void setmapfilenames(const char *fname, bool fall = true)
 
 void mapcfgname()
 {
-    defformatstring(res)("packages/%s/%s.cfg", mpath, mname);
+    defformatstring(res)("%s%s.cfg", mpath, mname);
     path(res);
     result(res);
 }
@@ -809,14 +821,16 @@ void saveslotconfig(stream *h, Slot &s, int index)
     h->printf("\n");
 }
 
-void writemapcfg(const char *a)
+VARP(writeartcfg, 0, 1, 1);
+void writemapcfg()
 {
-    if(!*a) a = game::getclientmap();
-    setmapfilenames(*a ? a : "untitled");
+    if(!writeartcfg) return;
 
     if (savebak)
     {
-        defformatstring(bak)("packages/%s/%s_%d.cfg.BAK", mpath, mname, totalmillis);
+        string bak;
+        if(savebak == 1) formatstring(bak)("packages/%s%s.cfg.BAK", mpath, mname);
+        else formatstring(bak)("packages/%s%s_%d.cfg.BAK", mpath, mname, totalmillis);
         backup(acfname, bak);
     }
     stream *f = openutf8file(path(acfname, true), "w");
@@ -868,8 +882,6 @@ void writemapcfg(const char *a)
 
     conoutf("successfully generated mapdata cfg: %s", acfname);
 }
-
-COMMAND(writemapcfg, "s");
 
 VAR(dbgvars, 0, 0, 1);
 
@@ -1021,7 +1033,7 @@ void loadvslots(stream *f, int numvslots)
 bool save_world(const char *mname, bool nolms, bool octa)
 {
     if(!*mname) mname = game::getclientmap();
-    setmapfilenames(*mname ? mname : "untitled", false);
+    setmapfilenames(*mname ? mname : "untitled");
     if(savebak) backup(ogzname, bakname);
     stream *f = opengzfile(ogzname, "wb");
     if(!f) { conoutf(CON_WARN, "could not write map to %s", ogzname); return false; }
@@ -1211,7 +1223,6 @@ bool save_world(const char *mname, bool nolms, bool octa)
 
     delete f;
     conoutf("wrote map file %s", ogzname);
-    writemapcfg(mname);
     return true;
 }
 

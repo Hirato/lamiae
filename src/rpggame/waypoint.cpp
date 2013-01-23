@@ -289,7 +289,7 @@ namespace ai
 		if(name && *name)
 			getmapfilenames(name);
 
-		defformatstring(wptname)("packages/%s/%s.wpt", mpath, mname);
+		defformatstring(wptname)("%s/%s.wpt", mpath, mname);
 		path(wptname);
 
 		stream *f = opengzfile(wptname, "rb");
@@ -340,7 +340,7 @@ namespace ai
 		if(name && *name)
 			getmapfilenames(name);
 
-		defformatstring(wptname)("packages/%s/%s.wpt", mpath, mname);
+		defformatstring(wptname)("%s/%s.wpt", mpath, mname);
 		path(wptname);
 
 		stream *f = opengzfile(wptname, "wb");

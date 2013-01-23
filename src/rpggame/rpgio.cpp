@@ -1815,12 +1815,11 @@ namespace rpgio
 		game::curmap->objs.add(game::player1);
 		DELETEP(f);
 
-		string actual, final;
-		formatstring(actual)("%s", findfile(file, "wb"));
-		copystring(final, actual, strlen(actual) - 3);
-		rename(actual, final);
+		string final;
+		copystring(final, file, strlen(file) - 3);
+		backup(final, file);
 
-		conoutf("Game saved successfully to data/rpg/%s.sgz", name);
+		conoutf("Game saved successfully to %s", final);
 
 		copystring(file + strlen(file) - 8, ".png", 5);
 		scaledscreenshot(file, 2, 256, 256);
