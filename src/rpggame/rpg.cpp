@@ -165,6 +165,10 @@ namespace game
 		mergecache.setsize(0);
 		camera::cleanup(true);
 
+		if(DEBUG_WORLD)
+			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr resetting map directory");
+		setmapdir(NULL);
+
 		if(mapdata)
 		{
 			if(DEBUG_WORLD)
@@ -343,6 +347,9 @@ namespace game
 
 		mapdata = new hashset<mapinfo>();
 		copystring(data, game);
+		if(DEBUG_WORLD)
+			conoutf(CON_DEBUG, "\fs\f2DEBUG:\fr setting map directory to: %s", datapath("maps"));
+		setmapdir(datapath("maps"));
 
 		string dir;
 		copystring(dir, datapath());
