@@ -221,7 +221,7 @@ void countselchild(cube *c, const ivec &cor, int size)
     {
         ivec o(i, cor.x, cor.y, cor.z, size);
         if(c[i].children) countselchild(c[i].children, o, size/2);
-        else 
+        else
         {
             selchildcount++;
             if(c[i].material != MAT_AIR && selchildmat != MAT_AIR)
@@ -425,7 +425,7 @@ void rendereditcursor()
             selchildcount = 0;
             selchildmat = -1;
             countselchild(worldroot, ivec(0, 0, 0), worldsize/2);
-            if(mag>=1 && selchildcount==1) 
+            if(mag>=1 && selchildcount==1)
             {
                 selchildmat = c->material;
                 if(mag>1) selchildcount = -mag;
@@ -1199,7 +1199,7 @@ namespace hmap
     {
         if(!(flags[x][y] & MAPPED))
           map[x][y] = v + (z*8);
-      flags[x][y] |= MAPPED;
+        flags[x][y] |= MAPPED;
     }
 
     void select(int x, int y, int z)
@@ -1295,7 +1295,7 @@ namespace hmap
         if(biasup)
             pullhmap(0, >, <, 1, 0, -);
         else
-            pullhmap(worldsize, <, >, 0, 8, +);
+            pullhmap(worldsize*8, <, >, 0, 8, +);
 
         cube **c  = cmap[x][y];
         int e[2][2];
@@ -1441,7 +1441,7 @@ namespace hmap
 }
 
 void edithmap(int dir, int mode) {
-    if((nompedit && multiplayer()) || !hmapsel || gridsize < 8) return;
+    if((nompedit && multiplayer()) || !hmapsel) return;
     hmap::run(dir, mode);
 }
 
@@ -2997,8 +2997,8 @@ void rotatecube(cube &c, int d)   // rotates cube clockwise. see pics in cvs for
 
 void mpflip(selinfo &sel, bool local)
 {
-    if(local) 
-    { 
+    if(local)
+    {
         game::edittrigger(sel, EDIT_FLIP);
         makeundo();
     }
@@ -3024,7 +3024,7 @@ void flip()
 
 void mprotate(int cw, selinfo &sel, bool local)
 {
-    if(local) 
+    if(local)
     {
         game::edittrigger(sel, EDIT_ROTATE, cw);
         makeundo();

@@ -655,10 +655,15 @@ void gl_checkextensions()
 #endif
             if(dbgexts) conoutf(CON_INIT, "Using GL_EXT_texture_compression_s3tc extension.");
         }
+        else if(hasext(exts, "GL_EXT_texture_compression_dxt1") && hasext(exts, "GL_ANGLE_texture_compression_dxt3") && hasext(exts, "GL_ANGLE_texture_compression_dxt5"))
+        {
+            hasS3TC = true;
+            if(dbgexts) conoutf(CON_INIT, "Using GL_EXT_texture_compression_dxt1 extension.");
+        }
         if(hasext(exts, "GL_3DFX_texture_compression_FXT1"))
         {
             hasFXT1 = true;
-            if(mesa) usetexcompress = 1;
+            if(mesa) usetexcompress = max(usetexcompress, 1);
             if(dbgexts) conoutf(CON_INIT, "Using GL_3DFX_texture_compression_FXT1.");
         }
     }
@@ -974,13 +979,12 @@ void findorientation()
 void transplayer()
 {
     // move from RH to Z-up LH quake style worldspace
-    glLoadMatrixf(viewmatrix.v);
-
-    glRotatef(camera1->roll, 0, 1, 0);
-    glRotatef(camera1->pitch, -1, 0, 0);
-    glRotatef(camera1->yaw, 0, 0, -1);
-
-    glTranslatef(-camera1->o.x, -camera1->o.y, -camera1->o.z);
+    mvmatrix = viewmatrix;
+    mvmatrix.rotate_around_y(camera1->roll*RAD);
+    mvmatrix.rotate_around_x(camera1->pitch*-RAD);
+    mvmatrix.rotate_around_z(camera1->yaw*-RAD);
+    mvmatrix.transformedtranslate(camera1->o, -1);
+    glLoadMatrixf(mvmatrix.v);
 }
 
 int vieww = -1, viewh = -1;
@@ -1188,8 +1192,8 @@ glmatrixf mvmatrix, projmatrix, mvpmatrix, invmvmatrix, invmvpmatrix, invprojmat
 
 void readmatrices()
 {
-    glGetFloatv(GL_MODELVIEW_MATRIX, mvmatrix.v);
-    glGetFloatv(GL_PROJECTION_MATRIX, projmatrix.v);
+    //glGetFloatv(GL_MODELVIEW_MATRIX, mvmatrix.v);
+    //glGetFloatv(GL_PROJECTION_MATRIX, projmatrix.v);
 
     mvpmatrix.mul(projmatrix, mvmatrix);
     invmvmatrix.invert(mvmatrix);
@@ -1202,10 +1206,10 @@ FVAR(nearplane, 0.01f, 0.54f, 2.0f);
 void project(float fovy, float aspect, int farplane, float zscale = 1)
 {
     glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    if(zscale!=1) glScalef(1, 1, zscale);
-    GLdouble ydist = nearplane * tan(fovy/2*RAD), xdist = ydist * aspect;
-    glFrustum(-xdist, xdist, -ydist, ydist, nearplane, farplane);
+    projmatrix.perspective(fovy, aspect, nearplane, farplane);
+    if(zscale!=1) projmatrix.scalez(zscale);
+    if(!envmapping) jitteraa();
+    glLoadMatrixf(projmatrix.v);
     glMatrixMode(GL_MODELVIEW);
 }
 
@@ -1806,8 +1810,8 @@ void drawminimap()
     float zscale = max(float(minimapheight), minimapcenter.z + minimapradius.z + 1) + 1;
 
     glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(-minimapradius.x, minimapradius.x, -minimapradius.y, minimapradius.y, 0, 2*zscale);
+    projmatrix.ortho(-minimapradius.x, minimapradius.x, -minimapradius.y, minimapradius.y, 0, 2*zscale);
+    glLoadMatrixf(projmatrix.v);
     glMatrixMode(GL_MODELVIEW);
 
     transplayer();
@@ -1842,9 +1846,8 @@ void drawminimap()
         minimapping = 2;
         camera1->o.z = minimapcenter.z + minimapradius.z + 1;
         glMatrixMode(GL_PROJECTION);
-        glLoadIdentity();
-        glTranslatef(0, 0, 1);
-        glOrtho(-minimapradius.x, minimapradius.x, -minimapradius.y, minimapradius.y, 0, 2*zscale);
+        projmatrix.ortho(-minimapradius.x, minimapradius.x, -minimapradius.y, minimapradius.y, -zscale, zscale);
+        glLoadMatrixf(projmatrix.v);
         glMatrixMode(GL_MODELVIEW);
         transplayer();
         readmatrices();

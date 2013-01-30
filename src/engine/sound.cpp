@@ -340,13 +340,18 @@ void clear_sound()
     samples.clear();
 }
 
-void clearmapsounds()
+void stopmapsounds()
 {
     loopv(channels) if(channels[i].inuse && channels[i].ent)
     {
         Mix_HaltChannel(i);
         freechannel(i);
     }
+}
+
+void clearmapsounds()
+{
+    stopmapsounds();
     mapslots.setsize(0);
     mapsounds.setsize(0);
 }
@@ -424,7 +429,9 @@ void updatesounds()
 {
     updatemumble();
     if(nosound) return;
-    checkmapsounds();
+    if(minimized) stopsounds();
+    else if(UI::mainmenu) stopmapsounds();
+    else checkmapsounds();
     int dirty = 0;
     loopv(channels)
     {
@@ -519,7 +526,7 @@ void preloadmapsounds()
 
 int playsound(int n, const vec *loc, extentity *ent, int flags, int loops, int fade, int chanid, int radius, int expire)
 {
-    if(nosound || !soundvol) return -1;
+    if(nosound || !soundvol || minimized) return -1;
 
     vector<soundslot> &slots = ent || flags&SND_MAP ? mapslots : gameslots;
     vector<soundconfig> &sounds = ent || flags&SND_MAP ? mapsounds : gamesounds;

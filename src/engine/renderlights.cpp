@@ -11,7 +11,7 @@ GLenum bloomformat = 0, hdrformat = 0;
 bool hdrfloat = false;
 int aow = -1, aoh = -1;
 GLuint aofbo[3] = { 0, 0, 0 }, aotex[3] = { 0, 0, 0 }, aonoisetex = 0;
-glmatrixf eyematrix, worldmatrix, linearworldmatrix;
+glmatrixf eyematrix, worldmatrix, linearworldmatrix, screenmatrix;
 
 extern int bloomsize, bloomprec;
 extern int ati_pf_bug;
@@ -68,7 +68,7 @@ void cleanupbloom()
     lasthdraccum = 0;
 }
 
-extern int ao, aotaps, aoreduce, aoreducedepth, aonoise, aobilateral, aopackdepth;
+extern int ao, aotaps, aoreduce, aoreducedepth, aonoise, aobilateral, aopackdepth, aodepthformat;
 
 static Shader *bilateralshader[2] = { NULL, NULL };
 
@@ -80,7 +80,7 @@ Shader *loadbilateralshader(int pass)
     int optslen = 0;
 
     if(aoreduce) opts[optslen++] = 'r';
-    bool linear = hasTRG && hasTF && (aopackdepth || (aoreducedepth && (aoreduce || aoreducedepth > 1)));
+    bool linear = aopackdepth || (aoreducedepth && (aoreduce || aoreducedepth > 1));
     if(linear)
     {
         opts[optslen++] = 'l';
@@ -118,8 +118,10 @@ Shader *loadambientobscuranceshader()
     int optslen = 0;
 
     if(aoreduce) opts[optslen++] = 'r';
-    bool linear = hasTRG && hasTF && (aoreducedepth && (aoreduce || aoreducedepth > 1));
+    bool linear = aoreducedepth && (aoreduce || aoreducedepth > 1);
     if(linear) opts[optslen++] = 'l';
+    if(aobilateral && aopackdepth) opts[optslen++] = 'p';
+
     opts[optslen] = '\0';
 
     defformatstring(name)("ambientobscurance%s%d", opts, aotaps);
@@ -156,18 +158,18 @@ void setupao(int w, int h)
     {
         if(!aotex[i]) glGenTextures(1, &aotex[i]);
         if(!aofbo[i]) glGenFramebuffers_(1, &aofbo[i]);
-        createtexture(aotex[i], w, h, NULL, 3, 1, aobilateral && aopackdepth && hasTRG && hasTF ? GL_RG16F : GL_RGBA8 , GL_TEXTURE_RECTANGLE_ARB);
+        createtexture(aotex[i], w, h, NULL, 3, 1, aobilateral && aopackdepth && aodepthformat ? GL_RG16F : GL_RGBA8 , GL_TEXTURE_RECTANGLE_ARB);
         glBindFramebuffer_(GL_FRAMEBUFFER_EXT, aofbo[i]);
         glFramebufferTexture2D_(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_RECTANGLE_ARB, aotex[i], 0);
         if(glCheckFramebufferStatus_(GL_FRAMEBUFFER_EXT) != GL_FRAMEBUFFER_COMPLETE_EXT)
             fatal("failed allocating AO buffer!");
     }
 
-    if(hasTRG && hasTF && aoreducedepth && (aoreduce || aoreducedepth > 1))
+    if(aoreducedepth && (aoreduce || aoreducedepth > 1))
     {
         if(!aotex[2]) glGenTextures(1, &aotex[2]);
         if(!aofbo[2]) glGenFramebuffers_(1, &aofbo[2]);
-        createtexture(aotex[2], w, h, NULL, 3, 0, GL_R16F, GL_TEXTURE_RECTANGLE_ARB);
+        createtexture(aotex[2], w, h, NULL, 3, 0, aodepthformat ? GL_R16F : GL_RGBA8, GL_TEXTURE_RECTANGLE_ARB);
         glBindFramebuffer_(GL_FRAMEBUFFER_EXT, aofbo[2]);
         glFramebufferTexture2D_(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_RECTANGLE_ARB, aotex[2], 0);
         if(glCheckFramebufferStatus_(GL_FRAMEBUFFER_EXT) != GL_FRAMEBUFFER_COMPLETE_EXT)
@@ -196,6 +198,7 @@ FVARR(aoradius, 0, 5, 256);
 FVAR(aocutoff, 0, 2.0f, 1e3f);
 FVARR(aodark, 1e-3f, 11.0f, 1e3f);
 FVARR(aosharp, 1e-3f, 1, 1e3f);
+FVAR(aoprefilterdepth, 0, 1, 1e3);
 FVARR(aomin, 0, 0.25f, 1);
 VARFR(aosun, 0, 1, 1, cleardeferredlightshaders());
 FVARR(aosunmin, 0, 0.5f, 1);
@@ -204,13 +207,20 @@ FVARP(aosigma, 0.005f, 0.5f, 2.0f);
 VARP(aoiter, 0, 0, 4);
 VARFP(aoreduce, 0, 1, 2, cleanupao());
 VARF(aoreducedepth, 0, 1, 2, cleanupao());
+VARFP(aofloatdepth, 0, 1, 1, initwarning("AO setup", INIT_LOAD, CHANGE_SHADERS));
+VAR(aodepthformat, 1, 0, 0);
 VARF(aonoise, 0, 5, 8, cleanupao());
-VARFP(aobilateral, 0, 7, 10, cleanupao());
+VARFP(aobilateral, 0, 3, 10, cleanupao());
 FVARP(aobilateralsigma, 0, 0.5f, 1e3f);
 FVARP(aobilateraldepth, 0, 4, 1e3f);
 VARF(aopackdepth, 0, 1, 1, cleanupao());
 VARFP(aotaps, 1, 5, 12, cleanupao());
 VAR(debugao, 0, 0, 1);
+
+void initao()
+{
+    aodepthformat = aofloatdepth && hasTRG && hasTF ? 1 : 0;
+}
 
 void viewao()
 {
@@ -236,7 +246,7 @@ void renderao()
 
     glBindTexture(GL_TEXTURE_RECTANGLE_ARB, gdepthtex);
 
-    bool linear = hasTRG && hasTF && aoreducedepth && (aoreduce || aoreducedepth > 1);
+    bool linear = aoreducedepth && (aoreduce || aoreducedepth > 1);
     float xscale = eyematrix.v[0], yscale = eyematrix.v[5];
     if(linear)
     {
@@ -264,11 +274,12 @@ void renderao()
     LOCALPARAM(tapparams, (aoradius*eyematrix.v[14]/xscale, aoradius*eyematrix.v[14]/yscale, aoradius*aoradius*aocutoff*aocutoff));
     LOCALPARAM(contrastparams, ((2.0f*aodark)/aotaps, aosharp));
     LOCALPARAM(offsetscale, (xscale/eyematrix.v[14], yscale/eyematrix.v[14], eyematrix.v[12]/eyematrix.v[14], eyematrix.v[13]/eyematrix.v[14]));
+    LOCALPARAM(prefilterdepth, (aoprefilterdepth));
     screenquad(vieww, viewh, aow/float(1<<aonoise), aoh/float(1<<aonoise));
 
     if(aobilateral)
     {
-        if(!linear && aopackdepth && hasTRG && hasTF) linear = true;
+        if(!linear && aopackdepth) linear = true;
         loopi(2 + 2*aoiter)
         {
             setbilateralshader(aobilateral, i%2, aobilateralsigma, aobilateraldepth, linear, linear && aopackdepth);
@@ -436,6 +447,8 @@ void initgbuffer()
 {
     if(glineardepth >= 2 && (!hasAFBO || !hasTF || !hasTRG)) gdepthformat = 1;
     else gdepthformat = glineardepth;
+
+    initao();
 }
 
 void maskgbuffer(const char *mask)
@@ -1762,7 +1775,7 @@ Shader *loaddeferredlightshader(const char *type = NULL)
 void loaddeferredlightshaders()
 {
     deferredlightshader = loaddeferredlightshader();
-    if(inferlights)
+    if(inferlights && ((gdepthstencil && hasDS) || gstencil))
     {
         inferredprelightshader = loaddeferredlightshader("i");
         inferredlightshader = useshaderbyname("inferredlight");
@@ -3478,21 +3491,21 @@ void preparegbuffer()
     glClear((minimapping < 2 ? GL_DEPTH_BUFFER_BIT : 0)|(gcolorclear ? GL_COLOR_BUFFER_BIT : 0)|(minimapping < 2 && ((gdepthstencil && hasDS) || gstencil) ? GL_STENCIL_BUFFER_BIT : 0));
     if(gdepthformat && gdepthclear) maskgbuffer("cngd");
 
-    glmatrixf screenmatrix;
-    screenmatrix.identity();
-    screenmatrix.scale(2.0f/vieww, 2.0f/viewh, 2.0f);
-    screenmatrix.translate(-1.0f, -1.0f, -1.0f);
-    eyematrix.mul(invprojmatrix, screenmatrix);
+    glmatrixf invscreenmatrix;
+    invscreenmatrix.identity();
+    invscreenmatrix.scale(2.0f/vieww, 2.0f/viewh, 2.0f);
+    invscreenmatrix.translate(-1.0f, -1.0f, -1.0f);
+    eyematrix.mul(invprojmatrix, invscreenmatrix);
     if(minimapping)
     {
-        linearworldmatrix.mul(invmvpmatrix, screenmatrix);
+        linearworldmatrix.mul(invmvpmatrix, invscreenmatrix);
         worldmatrix = linearworldmatrix;
     }
     else
     {
-        linearworldmatrix.mul(invprojmatrix, screenmatrix);
+        linearworldmatrix.mul(invprojmatrix, invscreenmatrix);
         float xscale = linearworldmatrix.v[0], yscale = linearworldmatrix.v[5], xoffset = linearworldmatrix.v[12], yoffset = linearworldmatrix.v[13], zscale = linearworldmatrix.v[14];
-        GLfloat depthmatrix[16] =
+        float depthmatrix[16] =
         {
             xscale/zscale,  0,              0, 0,
             0,              yscale/zscale,  0, 0,
@@ -3501,8 +3514,13 @@ void preparegbuffer()
         };
         linearworldmatrix.mul(invmvmatrix.v, depthmatrix);
         if(gdepthformat) worldmatrix = linearworldmatrix;
-        else worldmatrix.mul(invmvpmatrix, screenmatrix);
+        else worldmatrix.mul(invmvpmatrix, invscreenmatrix);
     }
+
+    screenmatrix.identity();
+    screenmatrix.scale(0.5f*vieww, 0.5f*viewh, 0.5f);
+    screenmatrix.translate(0.5f*vieww, 0.5f*viewh, 0.5f);
+    screenmatrix.mul(mvpmatrix);
 
     GLOBALPARAM(viewsize, (vieww, viewh, 1.0f/vieww, 1.0f/viewh));
     GLOBALPARAM(gdepthscale, (eyematrix.v[14], eyematrix.v[11], eyematrix.v[15]));
@@ -3688,7 +3706,7 @@ void setupframe(int w, int h)
     setupgbuffer(w, h);
     if(hdr && (bloomw < 0 || bloomh < 0)) setupbloom(gw, gh);
     if(ao && (aow < 0 || aoh < 0)) setupao(gw, gh);
-    if(inferlights && !infbo) setupinferred(gw, gh);
+    if(inferlights && ((gdepthstencil && hasDS) || gstencil) && !infbo) setupinferred(gw, gh);
     if(!shadowatlasfbo) setupshadowatlas();
     if(sunlight && csmshadowmap && gi && giscale && gidist && !rhfbo) setupradiancehints();
     if(!deferredlightshader) loaddeferredlightshaders();
