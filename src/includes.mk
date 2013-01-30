@@ -162,6 +162,7 @@ $(filter engine/%,$(CLIENT_OBJS)): $(filter engine/%,$(CLIENT_PCH))
 $(RPGCLIENT_OBJS): CXXFLAGS += $(CLIENT_INCLUDES) -Irpggame
 $(RPGCLIENT_OBJS): $(filter rpggame/%,$(CLIENT_PCH))
 
+
 client: libenet $(CLIENT_OBJS) $(RPGCLIENT_OBJS)
 	$(CXX) $(CXXFLAGS) -o lamiae$(MACHINE).$(BIN_SUFFIX) $(CLIENT_OBJS) $(RPGCLIENT_OBJS) $(CLIENT_LIBS)
 

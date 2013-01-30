@@ -1,5 +1,4 @@
-DEFINES =
 ENET_CFLAGS=
-CXXFLAGS= -g $(DEFINES)
+CXXFLAGS= -g
 
 include includes.mk
