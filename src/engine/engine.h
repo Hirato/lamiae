@@ -266,6 +266,7 @@ extern GLuint lookupenvmap(Slot &slot);
 extern bool reloadtexture(Texture &tex);
 extern bool reloadtexture(const char *name);
 extern void setuptexcompress();
+extern Texture *textureget(const char *name);
 extern void clearslots();
 extern void compacteditvslots();
 extern void compactmruvslots();

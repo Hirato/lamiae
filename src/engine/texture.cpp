@@ -1301,6 +1301,14 @@ Texture *textureload(const char *name, int clamp, bool mipit, bool msg)
     return notexture;
 }
 
+Texture *textureget(const char *name)
+{
+    string tname;
+    copystring(tname, name);
+    Texture *t = textures.access(path(tname));
+    return t ? t : notexture;
+}
+
 bool settexture(const char *name, int clamp)
 {
     Texture *t = textureload(name, clamp, true, false);

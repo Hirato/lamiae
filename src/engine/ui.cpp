@@ -1547,6 +1547,8 @@ namespace UI
         }
     };
 
+    VARP(uialphatest, 0, 1, 1);
+
     struct Image : Filler
     {
         Texture *tex;
@@ -1557,7 +1559,7 @@ namespace UI
         {
             Object *o = Object::target(cx, cy);
             if(o) return o;
-            if(tex->bpp < 32) return this;
+            if(tex->bpp < 32 || !uialphatest) return this;
             return checkalphamask(tex, cx/w, cy/h) ? this : NULL;
         }
 
@@ -1576,6 +1578,52 @@ namespace UI
 
     VAR(thumbtime, 0, 25, 1000);
     static int lastthumbnail = 0;
+
+    struct Thumbnail : Image
+    {
+        const char *img;
+        bool loaded;
+
+        Thumbnail(const char *img, float minw, float minh) : Image(notexture, minw, minw), img(newstring(img)), loaded(false) {}
+        ~Thumbnail() { delete[] img; }
+
+        void load(bool force)
+        {
+            if(loaded) return;
+
+            const char *p = img;
+            Texture *t = textureget(p);
+            if(t != notexture) goto finalise;
+
+            p = makerelpath(NULL, img, "<thumbnail>", NULL);
+            t = textureget(p);
+            if(t != notexture) goto finalise;
+
+            if(force || (totalmillis - lastthumbnail) >= thumbtime)
+                t = textureload(p, 3, true, false);
+
+            if(t != notexture) goto finalise;
+
+            return;
+
+        finalise:
+            lastthumbnail = totalmillis;
+            loaded = true;
+            tex = t;
+        }
+
+        Object *target(float cx, float cy)
+        {
+            load(true);
+            return Image::target(cx, cy);
+        }
+
+        void draw(float sx, float sy)
+        {
+            load(false);
+            Image::draw(sx, sy);
+        }
+    };
 
     struct SlotViewer : Filler
     {
@@ -1699,7 +1747,7 @@ namespace UI
         {
             Object *o = Object::target(cx, cy);
             if(o) return o;
-            if(tex->bpp < 32) return this;
+            if(tex->bpp < 32 || !uialphatest) return this;
             return checkalphamask(tex, cropx + cx/w*cropw, cropy + cy/h*croph) ? this : NULL;
         }
 
@@ -1722,7 +1770,7 @@ namespace UI
         {
             Object *o = Object::target(cx, cy);
             if(o) return o;
-            if(tex->bpp < 32) return this;
+            if(tex->bpp < 32 || !uialphatest) return this;
 
             float mx, my;
             if(w <= minw) mx = cx/w;
@@ -1796,7 +1844,7 @@ namespace UI
         {
             Object *o = Object::target(cx, cy);
             if(o) return o;
-            if(tex->bpp < 32) return this;
+            if(tex->bpp < 32 || !uialphatest) return this;
 
             float mx, my;
             if(cx < screenborder) mx = cx/screenborder*texborder;
@@ -1856,7 +1904,7 @@ namespace UI
         {
             Object *o = Object::target(cx, cy);
             if(o) return o;
-            if(tex->bpp < 32) return this;
+            if(tex->bpp < 32 || !uialphatest) return this;
 
             float dx = fmod(cx, tilew),
                   dy = fmod(cy, tileh);
@@ -2529,6 +2577,9 @@ namespace UI
 
     ICOMMAND(uiimage, "sffe", (char *texname, float *minw, float *minh, uint *children),
         addui(new Image(textureload(texname, 3, true, false), *minw, *minh), children));
+
+    ICOMMAND(uithumbnail, "sffe", (char *texname, float *minw, float *minh, uint *children),
+        addui(new Thumbnail(texname, *minw, *minh), children));
 
     ICOMMAND(uislotview, "iffe", (int *slotnum, float *minw, float *minh, uint *children),
         addui(new SlotViewer(*slotnum, *minw, *minh), children));
