@@ -483,20 +483,26 @@ namespace rpgscript
 		player->immutable = hover->immutable = looter->immutable = trader->immutable = talker-> immutable = map->immutable = config->immutable = true;
 	}
 
-	void removeminorrefs(void *ptr)
+	void replacerefs(void *orig, void *next)
 	{
 		loopvj(stack)
 		{
 			enumerate(*stack[j], reference, ref,
-				loopvk(ref.list) if(ref.list[k].ptr == ptr)
-					ref.list.remove(k--);
+				loopvk(ref.list) if(ref.list[k].ptr == orig)
+				{
+					if(next) ref.list[k].ptr = next;
+					else ref.list.remove(k--);
+				}
 			)
 		}
 		loopvj(delaystack)
 		{
 			enumerate(delaystack[i]->refs, reference, ref,
-				loopvk(ref.list) if(ref.list[k].ptr == ptr)
-					ref.list.remove(k--);
+				loopvk(ref.list) if(ref.list[k].ptr == orig)
+				{
+					if(next) ref.list[k].ptr = next;
+					else ref.list.remove(k--);
+				}
 			)
 		}
 	}

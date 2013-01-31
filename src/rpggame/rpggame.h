@@ -157,8 +157,9 @@ namespace rpgscript
 	extern void update();
 	extern void clean();
 	extern void init();
+	extern void replacerefs(void *orig, void *next);
+	inline void removeminorrefs(void *ptr) { replacerefs(ptr, NULL); }
 	extern void removereferences(rpgent *ptr, bool references = true);
-	extern void removeminorrefs(void *ptr);
 	extern void changemap();
 	extern void doitemscript(item *invokee, rpgent *invoker, uint *code);
 	extern void doentscript(rpgent *invokee, rpgent *invoker, uint *code);
@@ -1439,6 +1440,8 @@ struct rpgchar : rpgent
 	int charge;
 	bool primary, secondary;
 	bool lastprimary, lastsecondary;
+
+	//temporary stuff
 
 	use_weapon *attack;
 

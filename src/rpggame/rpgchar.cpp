@@ -457,6 +457,8 @@ void rpgchar::doai(equipment *eleft, equipment *eright, equipment *quiver)
 	}
 }
 
+status_generic painmat = status_generic(STATUS_HEALTH, -1, -1, 25, 0);
+VARFR(painmat_strength, -1000, 25, 1000, painmat.strength = painmat_strength;);
 VARP(r_aiperiod, 0, 100, 1000);
 
 void rpgchar::update()
@@ -799,12 +801,11 @@ item *rpgchar::additem(item *it)
 
 item *rpgchar::additem(int base, int q)
 {
-	item *it = new item();
-	it->init(base);
-	it->quantity = q;
-	item *ret = additem(it);
-	delete it;
-	return ret;
+	item it;
+	it.init(base);
+	it.quantity = q;
+
+	return additem(&it);
 }
 
 int rpgchar::drop(item *it, int q, bool spawn)
@@ -875,20 +876,27 @@ int rpgchar::pickup(rpgitem *it)
 	if(it->weight)
 		add = clamp(add, 0.f, (base.getmaxcarry() * 2 - getweight()) / it->weight);
 
+	item *n = NULL;
+
 	vector<item *> &inv = inventory.access(it->base, vector<item *>());
 	loopv(inv) if(inv[i]->compare(it))
 	{
-		it->quantity -= add;
-		inv[i]->quantity += add;
-		return add;
+		n = inv[i];
+		break;
 	}
 
-	item *n = inv.add(new item());
-	it->transfer(*n);
+	if(!n)
+	{
+		n = inv.add(new item());
+		it->transfer(*n);
+		n->quantity = 0;
+	}
 
 	it->quantity -= add;
-	n->quantity = add;
+	n->quantity += add;
 
+// 	any point to this?
+// 	compactinventory(it->base);
 	return add;
 }
 
@@ -943,6 +951,7 @@ void rpgchar::compactinventory(int base)
 	{
 		if(!getcount(stack[i]))
 		{
+			rpgscript::removeminorrefs(stack[i]);
 			delete stack.remove(i);
 			continue;
 		}
@@ -954,12 +963,12 @@ void rpgchar::compactinventory(int base)
 				if(DEBUG_ENT)
 					DEBUGF("Found duplicate item definition, merging %p into %p", stack[i], stack[j]);
 
+				rpgscript::replacerefs(stack[i], stack[j]);
 				item *it = stack.remove(i);
 				stack[j]->quantity += it->quantity;
 
 				loopv(equipped) if(equipped[i]->it == it)
 					equipped[i]->it = stack[j];
-
 
 				delete it;
 

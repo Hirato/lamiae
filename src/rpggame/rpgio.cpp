@@ -416,6 +416,7 @@ namespace rpgio
 		}
 	}
 
+	vector<rpgchar *> characters;
 	rpgent *readent(stream *f, rpgent *ent = NULL)
 	{
 		int type = f->getlil<int>();
@@ -428,6 +429,7 @@ namespace rpgio
 			{
 				if(!ent) ent = new rpgchar();
 				rpgchar *loading = (rpgchar *) ent;
+				characters.add(loading);
 
 				delete[] loading->name;
 				delete[] loading->mdl;
@@ -502,8 +504,6 @@ namespace rpgio
 					items[idx]->quantity++;
 					loading->equip(items[idx], use);
 				}
-
-				loading->compactinventory();
 
 				break;
 			}
@@ -1691,7 +1691,11 @@ namespace rpgio
 
 		#undef READ
 
+		if(!abort) loopv(characters)
+			characters[i]->compactinventory(-1);
+
 		delete f;
+		characters.shrink(0);
 		updates.shrink(0);
 
 		if(abort)
