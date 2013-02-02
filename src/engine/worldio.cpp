@@ -1255,6 +1255,9 @@ bool load_world(const char *mname, const char *cname)        // still supports a
         if(hdr.version > LAMIAMAPVERSION) { conoutf(CON_ERROR, "map %s requires a newer version of Lamiae", ogzname); delete f; return false; }
         switch(hdr.version)
         {
+            case 2:
+                octaversion = 33;
+                break;
             case 1:
                 octaversion = 32;
                 break;

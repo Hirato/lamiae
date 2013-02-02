@@ -748,7 +748,7 @@ namespace game
 		return editmode;
 	}
 
-	#ifndef NO_DEBUG
+	#ifdef NO_DEBUG
 	VAR(gamespeed, 1, 100, -1);
 	#else
 	VAR(gamespeed, 10, 100, 1000);

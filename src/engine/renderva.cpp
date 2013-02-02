@@ -2306,11 +2306,11 @@ static void genshadowmeshtris(shadowmesh &m, int sides, shadowdrawinfo draws[6],
 static void genshadowmesh(int idx, extentity &e)
 {
     extern int smminradius;
-    if(e.attr[4]&L_NOSHADOW || (e.attr[0] > 0 && e.attr[0] <= smminradius)) return;
+    if(e.attr[4]&L_NOSHADOW || e.attr[0] <= smminradius) return;
 
     shadowmesh m;
     m.origin = e.o;
-    m.radius = e.attr[0] > 0 ? e.attr[0] : 2*worldsize;
+    m.radius = e.attr[0];
     if(e.attached && e.attached->type == ET_SPOTLIGHT)
     {
         m.type = SM_SPOT;

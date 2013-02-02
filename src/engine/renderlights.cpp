@@ -829,7 +829,7 @@ void processhdr(GLuint outfbo, int aa)
             glActiveTexture_(GL_TEXTURE0_ARB);
             break;
         default: SETSHADER(hdrtonemap); break;
-    }       
+    }
     glBindTexture(GL_TEXTURE_RECTANGLE_ARB, hdrtex);
     glActiveTexture_(GL_TEXTURE1_ARB);
     glBindTexture(GL_TEXTURE_RECTANGLE_ARB, b0tex);
@@ -2476,6 +2476,7 @@ void collectlights()
         int radius, red, green, blue;
         getlightprops(*e, radius, red, green, blue);
 
+        if(radius <= 0) continue;
         if(radius > 0 && smviscull)
         {
             if(isfoggedsphere(radius, e->o)) continue;
@@ -2489,7 +2490,7 @@ void collectlights()
         l.query = NULL;
         l.o = e->o;
         l.color = vec(red, green, blue);
-        l.radius = radius > 0 ? radius : 2*worldsize;
+        l.radius = radius;
         if(e->attached && e->attached->type == ET_SPOTLIGHT)
         {
             l.calcspot(vec(e->attached->o).sub(e->o).normalize(), clamp(int(e->attached->attr[0]), 1, 89));
@@ -3427,7 +3428,7 @@ void rendertransparent()
                 glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
                 glClear(GL_COLOR_BUFFER_BIT);
                 glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-            } 
+            }
             if(scissor) glDisable(GL_SCISSOR_TEST);
             maskgbuffer("cngd");
         }
