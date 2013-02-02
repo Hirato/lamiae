@@ -445,6 +445,8 @@ static inline void masktiles(uint *tiles, float sx1, float sy1, float sx2, float
 
 enum { SM_NONE = 0, SM_REFLECT, SM_CUBEMAP, SM_TETRA, SM_CASCADE, SM_SPOT };
 
+enum { L_NOSHADOW = 1<<0, L_NODYNSHADOW = 1<<1 };
+
 extern int shadowmapping;
 
 extern int smtetra, smtetraclip;
@@ -475,6 +477,8 @@ extern int calcbbtetramask(const vec &bbmin, const vec &bbmax, const vec &lightp
 extern int calcbbsidemask(const vec &bbmin, const vec &bbmax, const vec &lightpos, float lightradius, float bias);
 extern int calcspheresidemask(const vec &p, float radius, float bias);
 extern int calcspheretetramask(const vec &p, float radius, float bias);
+extern int calctrisidemask(const vec &p1, const vec &p2, const vec &p3, float bias);
+extern int calctritetramask(const vec &p1, const vec &p2, const vec &p3, float bias);
 extern int cullfrustumsides(const vec &lightpos, float lightradius, float size, float border);
 extern int cullfrustumtetra(const vec &lightpos, float lightradius, float size, float border);
 extern int calcbbcsmsplits(const ivec &bbmin, const ivec &bbmax);
@@ -499,6 +503,8 @@ extern glmatrixf worldmatrix, screenmatrix;
 extern int gw, gh, gdepthformat, gstencil, gdepthstencil;
 extern GLuint gdepthtex, gcolortex, gnormaltex, gglowtex, gdepthrb, gstencilrb;
 
+enum { AA_UNUSED = 0, AA_LUMA, AA_VELOCITY };
+
 extern void cleanupgbuffer();
 extern void initgbuffer();
 extern void maskgbuffer(const char *mask);
@@ -509,8 +515,8 @@ extern void shademinimap(const vec &color = vec(0, 0, 0));
 extern void shademodelpreview(int x, int y, int w, int h, bool background = true, bool scissor = false);
 extern void rendertransparent();
 extern void renderao();
-extern void loadhdrshaders(bool luma = false);
-extern void processhdr(GLuint outfbo = 0, bool luma = false);
+extern void loadhdrshaders(int aa = AA_UNUSED);
+extern void processhdr(GLuint outfbo = 0, int aa = AA_UNUSED);
 extern void readhdr(int w, int h, GLenum format, GLenum type, void *dst, GLenum target = 0, GLuint tex = 0);
 extern void setupframe(int w, int h);
 extern void setupgbuffer(int w, int h);
@@ -523,7 +529,9 @@ extern void cleanuplights();
 
 extern void setupaa(int w, int h);
 extern void jitteraa();
-extern void doaa(GLuint outfbo, void (*resolve)(GLuint, bool));
+extern bool maskedaa();
+extern void setaavelocityparams();
+extern void doaa(GLuint outfbo, void (*resolve)(GLuint, int));
 extern bool debugaa();
 extern void cleanupaa();
 
@@ -554,7 +562,6 @@ extern void allchanged(bool load = false);
 extern void clearvas(cube *c);
 extern vtxarray *newva(int x, int y, int z, int size);
 extern void destroyva(vtxarray *va, bool reparent = true);
-extern bool readva(vtxarray *va, ushort *&edata, uchar *&vdata);
 extern void updatevabb(vtxarray *va, bool force = false);
 extern void updatevabbs(bool force = false);
 
@@ -594,6 +601,12 @@ extern void drawbb(const ivec &bo, const ivec &br, const vec &camera = camera1->
         extern int ati_oq_bug; \
         if(ati_oq_bug) glFlush(); \
     } while(0)
+
+struct shadowmesh;
+extern void clearshadowmeshes();
+extern void genshadowmeshes();
+extern shadowmesh *findshadowmesh(int idx, extentity &e);
+extern void rendershadowmesh(shadowmesh *m);
 
 // dynlight
 

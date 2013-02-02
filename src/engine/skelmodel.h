@@ -142,11 +142,10 @@ struct skelmodel : animmodel
 
     struct vbocacheentry : animcacheentry
     {
-        uchar *vdata;
         GLuint vbuf;
         int owner;
 
-        vbocacheentry() : vdata(NULL), vbuf(0), owner(-1) {}
+        vbocacheentry() : vbuf(0), owner(-1) {}
     };
 
     struct skelcacheentry : animcacheentry
@@ -154,14 +153,12 @@ struct skelmodel : animmodel
         dualquat *bdata;
         matrix3x4 *mdata;
         int version;
-        bool dirty;
 
-        skelcacheentry() : bdata(NULL), mdata(NULL), version(-1), dirty(false) {}
+        skelcacheentry() : bdata(NULL), mdata(NULL), version(-1) {}
 
         void nextversion()
         {
             version = Shader::uniformlocversion();
-            dirty = true;
         }
     };
 
@@ -972,7 +969,6 @@ struct skelmodel : animmodel
         void interpmatbones(const animstate *as, float pitch, const vec &axis, const vec &forward, int numanimparts, const uchar *partmask, skelcacheentry &sc)
         {
             if(!sc.mdata) sc.mdata = new matrix3x4[numinterpbones];
-            if(lastsdata == sc.mdata) lastsdata = NULL;
             INTERPBONES(
             {
                 matrix3x4 m(d);
@@ -987,7 +983,6 @@ struct skelmodel : animmodel
         void interpbones(const animstate *as, float pitch, const vec &axis, const vec &forward, int numanimparts, const uchar *partmask, skelcacheentry &sc)
         {
             if(!sc.bdata) sc.bdata = new dualquat[numinterpbones];
-            if(lastsdata == sc.bdata) lastsdata = NULL;
             INTERPBONES(
             {
                 d.normalize();
@@ -1075,7 +1070,6 @@ struct skelmodel : animmodel
         void genmatragdollbones(ragdolldata &d, skelcacheentry &sc, part *p)
         {
             if(!sc.mdata) sc.mdata = new matrix3x4[numinterpbones];
-            if(lastsdata == sc.mdata) lastsdata = NULL;
             GENRAGDOLLBONES(
             {
                 sc.mdata[b.interpindex].transposemul(d.tris[j.tri], pos, d.animjoints ? d.animjoints[i] : j.orient);
@@ -1088,7 +1082,6 @@ struct skelmodel : animmodel
         void genragdollbones(ragdolldata &d, skelcacheentry &sc, part *p)
         {
             if(!sc.bdata) sc.bdata = new dualquat[numinterpbones];
-            if(lastsdata == sc.bdata) lastsdata = NULL;
             GENRAGDOLLBONES(
             {
                 matrix3x4 m;
@@ -1141,7 +1134,6 @@ struct skelmodel : animmodel
             }
             skelcache.setsize(0);
             blendoffsets.clear();
-            lastsdata = lastbdata = NULL;
             if(full) loopv(users) users[i]->cleanup();
         }
 
@@ -1290,7 +1282,6 @@ struct skelmodel : animmodel
             }
             loopi(MAXVBOCACHE)
             {
-                DELETEA(vbocache[i].vdata);
                 if(vbocache[i].vbuf) glDeleteBuffers_(1, &vbocache[i].vbuf);
             }
             DELETEA(vdata);
@@ -1329,28 +1320,8 @@ struct skelmodel : animmodel
 
         void genvbo(bool norms, bool tangents, vbocacheentry &vc)
         {
-            if(hasVBO)
-            {
-                if(!vc.vbuf) glGenBuffers_(1, &vc.vbuf);
-                if(ebuf) return;
-            }
-            else if(edata)
-            {
-                #define ALLOCVDATA(vdata) \
-                    do \
-                    { \
-                        DELETEA(vdata); \
-                        vdata = new uchar[vlen*vertsize]; \
-                        loopv(meshes) \
-                        { \
-                            skelmesh &m = *(skelmesh *)meshes[i]; \
-                            m.filltc(vdata, vertsize); \
-                            if(tangents) m.fillbump(vdata, vertsize); \
-                        } \
-                    } while(0)
-                if(!vc.vdata) ALLOCVDATA(vc.vdata);
-                return;
-            }
+            if(!vc.vbuf) glGenBuffers_(1, &vc.vbuf);
+            if(ebuf) return;
 
             vector<ushort> idxs;
 
@@ -1370,8 +1341,13 @@ struct skelmodel : animmodel
                 vertsize = tangents ? sizeof(vvertbump) : (norms ? sizeof(vvertn) : sizeof(vvert));
                 loopv(meshes) vlen += ((skelmesh *)meshes[i])->genvbo(idxs, vlen);
                 DELETEA(vdata);
-                if(hasVBO) ALLOCVDATA(vdata);
-                else ALLOCVDATA(vc.vdata);
+                vdata = new uchar[vlen*vertsize];
+                loopv(meshes)
+                {
+                    skelmesh &m = *(skelmesh *)meshes[i];
+                    m.filltc(vdata, vertsize);
+                    if(tangents) m.fillbump(vdata, vertsize);
+                }
             }
             else
             {
@@ -1392,20 +1368,14 @@ struct skelmodel : animmodel
                     loopv(blendcombos) blendcombos[i].interpindex = -1;
                 }
 
-                if(hasVBO) glBindBuffer_(GL_ARRAY_BUFFER_ARB, vc.vbuf);
+                glBindBuffer_(GL_ARRAY_BUFFER_ARB, vc.vbuf);
                 #define GENVBO(type, args) \
                     do \
                     { \
                         vertsize = sizeof(type); \
                         vector<type> vverts; \
                         loopv(meshes) vlen += ((skelmesh *)meshes[i])->genvbo args; \
-                        if(hasVBO) glBufferData_(GL_ARRAY_BUFFER_ARB, vverts.length()*sizeof(type), vverts.getbuf(), GL_STATIC_DRAW_ARB); \
-                        else \
-                        { \
-                            DELETEA(vc.vdata); \
-                            vc.vdata = new uchar[vverts.length()*sizeof(type)]; \
-                            memcpy(vc.vdata, vverts.getbuf(), vverts.length()*sizeof(type)); \
-                        } \
+                        glBufferData_(GL_ARRAY_BUFFER_ARB, vverts.length()*sizeof(type), vverts.getbuf(), GL_STATIC_DRAW_ARB); \
                     } while(0)
                 #define GENVBOANIM(type) GENVBO(type, (idxs, vlen, vverts))
                 #define GENVBOSTAT(type) GENVBO(type, (idxs, vlen, vverts, htdata, htlen))
@@ -1427,30 +1397,21 @@ struct skelmodel : animmodel
                     else GENVBOSTAT(vvert);
                     delete[] htdata;
                 }
-                if(hasVBO) glBindBuffer_(GL_ARRAY_BUFFER_ARB, 0);
+                #undef GENVBO
+                #undef GENVBOANIM
+                #undef GENVBOSTAT
+                glBindBuffer_(GL_ARRAY_BUFFER_ARB, 0);
             }
 
-            if(hasVBO)
-            {
-                glGenBuffers_(1, &ebuf);
-                glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER_ARB, ebuf);
-                glBufferData_(GL_ELEMENT_ARRAY_BUFFER_ARB, idxs.length()*sizeof(ushort), idxs.getbuf(), GL_STATIC_DRAW_ARB);
-                glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
-            }
-            else
-            {
-                edata = new ushort[idxs.length()];
-                memcpy(edata, idxs.getbuf(), idxs.length()*sizeof(ushort));
-            }
-            #undef GENVBO
-            #undef GENVBOANIM
-            #undef GENVBOSTAT
-            #undef ALLOCVDATA
+            glGenBuffers_(1, &ebuf);
+            glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER_ARB, ebuf);
+            glBufferData_(GL_ELEMENT_ARRAY_BUFFER_ARB, idxs.length()*sizeof(ushort), idxs.getbuf(), GL_STATIC_DRAW_ARB);
+            glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
         }
 
         void bindvbo(const animstate *as, part *p, vbocacheentry &vc, skelcacheentry *sc = NULL, blendcacheentry *bc = NULL)
         {
-            vvertn *vverts = hasVBO ? 0 : (vvertn *)vc.vdata;
+            vvertn *vverts = 0;
             bindpos(ebuf, vc.vbuf, &vverts->pos, vertsize);
             if(as->cur.anim&ANIM_NOSKIN)
             {
@@ -1531,7 +1492,6 @@ struct skelmodel : animmodel
         {
             bc.nextversion();
             if(!bc.mdata) bc.mdata = new matrix3x4[vblends];
-            if(lastbdata == bc.mdata) lastbdata = NULL;
             matrix3x4 *dst = bc.mdata - skel->numgpubones;
             loopv(blendcombos)
             {
@@ -1545,7 +1505,6 @@ struct skelmodel : animmodel
         {
             bc.nextversion();
             if(!bc.bdata) bc.bdata = new dualquat[vblends];
-            if(lastbdata == bc.bdata) lastbdata = NULL;
             dualquat *dst = bc.bdata - skel->numgpubones;
             bool normalize = !skel->usegpuskel || vweights<=1;
             loopv(blendcombos)
@@ -1586,11 +1545,9 @@ struct skelmodel : animmodel
             {
                 vbocacheentry &c = vbocache[i];
                 if(c.vbuf) { glDeleteBuffers_(1, &c.vbuf); c.vbuf = 0; }
-                DELETEA(c.vdata);
                 c.owner = -1;
             }
-            if(hasVBO) { if(ebuf) { glDeleteBuffers_(1, &ebuf); ebuf = 0; } }
-            else DELETEA(vdata);
+            if(ebuf) { glDeleteBuffers_(1, &ebuf); ebuf = 0; }
             if(skel) skel->cleanup(false);
             cleanuphitdata();
         }
@@ -1616,7 +1573,7 @@ struct skelmodel : animmodel
 
         vbocacheentry &checkvbocache(skelcacheentry &sc, int owner)
         {
-            SEARCHCACHE(MAXVBOCACHE, vbocacheentry, vbocache, (hasVBO ? !c.vbuf : !c.vdata) || );
+            SEARCHCACHE(MAXVBOCACHE, vbocacheentry, vbocache, !c.vbuf || );
         }
 
         blendcacheentry &checkblendcache(skelcacheentry &sc, int owner)
@@ -1654,7 +1611,7 @@ struct skelmodel : animmodel
             if(skel->shouldcleanup()) skel->cleanup();
             else if(norms!=vnorms || tangents!=vtangents) cleanup();
             skel->preload();
-            if(hasVBO ? !vbocache->vbuf : !vbocache->vdata) genvbo(norms, tangents, *vbocache);
+            if(!vbocache->vbuf) genvbo(norms, tangents, *vbocache);
         }
 
         void render(const animstate *as, float pitch, const vec &axis, const vec &forward, dynent *d, part *p)
@@ -1667,7 +1624,7 @@ struct skelmodel : animmodel
             {
                 if(!(as->cur.anim&ANIM_NORENDER))
                 {
-                    if(hasVBO ? !vbocache->vbuf : !vbocache->vdata) genvbo(norms, tangents, *vbocache);
+                    if(!vbocache->vbuf) genvbo(norms, tangents, *vbocache);
                     bindvbo(as, p, *vbocache);
                     loopv(meshes)
                     {
@@ -1686,7 +1643,7 @@ struct skelmodel : animmodel
                 int owner = &sc-&skel->skelcache[0];
                 vbocacheentry &vc = skel->usegpuskel ? *vbocache : checkvbocache(sc, owner);
                 vc.millis = lastmillis;
-                if(hasVBO ? !vc.vbuf : !vc.vdata) genvbo(norms, tangents, vc);
+                if(!vc.vbuf) genvbo(norms, tangents, vc);
                 blendcacheentry *bc = NULL;
                 if(vblends)
                 {
@@ -1707,14 +1664,11 @@ struct skelmodel : animmodel
                     loopv(meshes)
                     {
                         skelmesh &m = *(skelmesh *)meshes[i];
-                        if(skel->usematskel) m.interpverts(sc.mdata, bc ? bc->mdata : NULL, norms, tangents, (hasVBO ? vdata : vc.vdata) + m.voffset*vertsize, p->skins[i]);
-                        else m.interpverts(sc.bdata, bc ? bc->bdata : NULL, norms, tangents, (hasVBO ? vdata : vc.vdata) + m.voffset*vertsize, p->skins[i]);
+                        if(skel->usematskel) m.interpverts(sc.mdata, bc ? bc->mdata : NULL, norms, tangents, vdata + m.voffset*vertsize, p->skins[i]);
+                        else m.interpverts(sc.bdata, bc ? bc->bdata : NULL, norms, tangents, vdata + m.voffset*vertsize, p->skins[i]);
                     }
-                    if(hasVBO)
-                    {
-                        glBindBuffer_(GL_ARRAY_BUFFER_ARB, vc.vbuf);
-                        glBufferData_(GL_ARRAY_BUFFER_ARB, vlen*vertsize, vdata, GL_STREAM_DRAW_ARB);
-                    }
+                    glBindBuffer_(GL_ARRAY_BUFFER_ARB, vc.vbuf);
+                    glBufferData_(GL_ARRAY_BUFFER_ARB, vlen*vertsize, vdata, GL_STREAM_DRAW_ARB);
                 }
 
                 bindvbo(as, p, vc, &sc, bc);

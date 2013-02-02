@@ -690,6 +690,7 @@ int batcheddynamicmodelbounds(int mask, vec &bbmin, vec &bbmax)
 
 void rendermodelbatches()
 {
+    float aamask = -1;
     loopv(batches)
     {
         modelbatch &b = batches[i];
@@ -701,7 +702,12 @@ void rendermodelbatches()
             batchedmodel &bm = batchedmodels[j];
             j = bm.next;
             if(!(bm.visible&(1<<shadowside))) continue;
-            if(!rendered) { b.m->startrender(); rendered = true; }
+            if(!rendered)
+            {
+                b.m->startrender();
+                rendered = true;
+                if(aamask!=1) GLOBALPARAM(aamask, (aamask = 1));
+            }
             renderbatchedmodel(b.m, bm);
         }
         else if(b.flags&MDL_MAPMODEL) for(int j = b.batched; j >= 0;)
@@ -714,7 +720,16 @@ void rendermodelbatches()
                 query = bm.query;
                 if(query) startquery(query);
             }
-            if(!rendered) { b.m->startrender(); rendered = true; }
+            if(!rendered)
+            {
+                b.m->startrender();
+                rendered = true;
+                if(b.m->animated())
+                {
+                    if(aamask!=1) GLOBALPARAM(aamask, (aamask = 1));
+                }
+                else if(aamask!=0) GLOBALPARAM(aamask, (aamask = 0));
+            }
             renderbatchedmodel(b.m, bm);
         }
         else for(int j = b.batched; j >= 0;)
@@ -763,12 +778,18 @@ void endmodelquery()
     }
     int minattached = modelattached.length();
     startquery(modelquery);
+    float aamask = -1;
     loopv(batches)
     {
         modelbatch &b = batches[i];
         int j = b.batched;
         if(j < 0 || batchedmodels[j].query != modelquery) continue;
         b.m->startrender();
+        if(b.m->animated())
+        {
+            if(aamask!=1) GLOBALPARAM(aamask, (aamask = 1));
+        }
+        else if(aamask!=0) GLOBALPARAM(aamask, (aamask = 0));
         do
         {
             batchedmodel &bm = batchedmodels[j];
@@ -892,6 +913,7 @@ void rendermodel(const char *mdl, int anim, const vec &o, float yaw, float pitch
             if(d->query) startquery(d->query);
         }
         m->startrender();
+        GLOBALPARAM(aamask, (1.0f));
         if(flags&MDL_FULLBRIGHT) anim |= ANIM_FULLBRIGHT;
         m->render(anim, basetime, basetime2, o, yaw, pitch, roll, d, a, size);
         m->endrender();
@@ -1021,7 +1043,7 @@ void renderclient(dynent *d, const char *mdlname, modelattach *attachments, int 
         basetime = lastpain;
         if(ragdoll)
         {
-            if(!d->ragdoll || d->ragdoll->millis < basetime) 
+            if(!d->ragdoll || d->ragdoll->millis < basetime)
             {
                 DELETEP(d->ragdoll);
                 anim |= ANIM_RAGDOLL;
