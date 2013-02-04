@@ -195,7 +195,8 @@ namespace ai
 		vec lastknown;
 		float distance;
 
-		follow(int p) : directive(p) {}
+		follow() : directive(0), target(NULL), lastknown(vec(0, 0, 0)), distance(0) {}
+		follow(rpgent *vic, float dist, int p) : directive(p), target(vic), lastknown(vic->o), distance(dist) {}
 		~follow() {}
 
 		int type() const { return D_FOLLOW; }
@@ -293,7 +294,8 @@ namespace ai
 		rpgent *target;
 		vec lastknown;
 
-		watch(int p) : directive(p) {}
+		watch(rpgent *vic, int p) : directive(p), target(vic), lastknown(vic->o) {}
+		watch() : directive(0), target(NULL), lastknown(vec(0, 0, 0)) {}
 		~watch() {}
 
 		int type() const { return D_WATCH; }
@@ -336,7 +338,7 @@ namespace ai
 			fail; return; \
 		}
 
-	#define getent(n, t) \
+	#define getentity(n, t) \
 		extentity *n = NULL; \
 		loopv(entities::ents) \
 		{ \
@@ -380,10 +382,22 @@ namespace ai
 		ent->getchar(entidx)->directives.add(new animation(action));
 	)
 
+	ICOMMAND(r_action_follow, "ssfi", (const char *entref, const char *vicref, float *dist, int *p),
+		static follow action;
+		getreference(entref, ent, ent->getchar(entidx), , r_action_follow)
+		getreference(vicref, vic, vic->getent(vicidx), , r_action_follow)
+
+		action = follow(vic->getent(vicidx), *dist, *p);
+		if(isduplicate(ent->getchar(entidx), &action)) return;
+
+		if(DEBUG_AI) DEBUGF("adding follow directive to entity %p; target %p dist %f priority %i", ent->getchar(entidx), vic->getent(vicidx), *dist, *p);
+		ent->getchar(entidx)->directives.add(new follow(action));
+	)
+
 	ICOMMAND(r_action_move, "sii", (const char *entref, int *loc, int *p),
 		static move action;
 		getreference(entref, ent, ent->getchar(entidx), , r_action_move)
-		getent(l, *loc);
+		getentity(l, *loc);
 
 		action = move(l->o, *p);
 		if(isduplicate(ent->getchar(entidx), &action)) return;
@@ -394,11 +408,22 @@ namespace ai
 	ICOMMAND(r_action_wander, "siii", (const char *entref, int *loc, int *rad, int *p),
 		static wander action;
 		getreference(entref, ent, ent->getchar(entidx), , r_action_wander)
-		getent(l, *loc)
+		getentity(l, *loc)
 
 		action = wander(l->o, max(0, *rad), *p);
 		if(isduplicate(ent->getchar(entidx), &action)) return;
 		if(DEBUG_AI) DEBUGF("adding wander directive to entity %p; loc %i, rad %i, priority %i", ent->getchar(entidx), *loc, *rad, *p);
 		ent->getchar(entidx)->directives.add(new wander(action));
+	)
+
+	ICOMMAND(r_action_watch, "ssi", (const char *entref, const char *vicref, int *p),
+		static watch action;
+		getreference(entref, ent, ent->getchar(entidx), , r_action_watch)
+		getreference(vicref, vic, vic->getchar(vicidx), , r_action_watch)
+
+		action = watch(vic->getchar(vicidx), *p);
+		if(isduplicate(ent->getchar(entidx), &action)) return;
+		if(DEBUG_AI) DEBUGF("adding watch directive to entity %p; target %p priority %i", ent->getchar(entidx), vic->getchar(vicidx), *p);
+		ent->getchar(entidx)->directives.add(new watch(action));
 	)
 }
