@@ -419,7 +419,7 @@ namespace ai
 	ICOMMAND(r_action_watch, "ssi", (const char *entref, const char *vicref, int *p),
 		static watch action;
 		getreference(entref, ent, ent->getchar(entidx), , r_action_watch)
-		getreference(vicref, vic, vic->getchar(vicidx), , r_action_watch)
+		getreference(vicref, vic, vic->getent(vicidx), , r_action_watch)
 
 		action = watch(vic->getchar(vicidx), *p);
 		if(isduplicate(ent->getchar(entidx), &action)) return;
