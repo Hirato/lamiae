@@ -38,12 +38,10 @@ item *rpgcontainer::additem(item *it)
 
 item *rpgcontainer::additem(int base, int q)
 {
-	item *it = new item();
-	it->init(base);
-	it->quantity = q;
-	item *ret = additem(it);
-	delete it;
-	return ret;
+	item it;
+	it.init(base);
+	it.quantity = w;
+	return additem(&it);
 }
 
 int rpgcontainer::drop(item *it, int q, bool spawn)
