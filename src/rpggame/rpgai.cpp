@@ -45,7 +45,8 @@ namespace ai
 		D_FLEE,
 		D_FOLLOW,
 		D_GUARD,
-		D_WANDER
+		D_WANDER,
+		D_WATCH,
 	};
 
 	struct animation : directive
@@ -55,7 +56,7 @@ namespace ai
 		animation(int a, int d, int p) : directive(p), anim(a), duration(d) {}
 		~animation() {}
 
-		int type() { return D_ANIMATION; }
+		int type() const { return D_ANIMATION; }
 		bool update(rpgchar *d)
 		{
 			if(d->aiflags & AI_ANIM) return true;
@@ -101,7 +102,7 @@ namespace ai
 		}
 		~attack() {}
 
-		int type() {return D_ATTACK;}
+		int type() const {return D_ATTACK;}
 		bool update(rpgchar *d)
 		{
 			if(target->state == CS_DEAD) return false;
@@ -151,7 +152,7 @@ namespace ai
 		move(vec &o, int p) : directive(p), pos(o) {}
 		~move() {}
 
-		int type() {return D_MOVE;}
+		int type() const {return D_MOVE;}
 		bool update(rpgchar *d)
 		{
 			if(pos.dist(d->feetpos()) <= 6) return false;
@@ -190,8 +191,55 @@ namespace ai
 
 	struct follow : directive
 	{
+		rpgent *target;
+		vec lastknown;
+		float distance;
+
 		follow(int p) : directive(p) {}
 		~follow() {}
+
+		int type() const { return D_FOLLOW; }
+		bool update(rpgchar *d)
+		{
+			float dist = distance;
+			if(d->cansee(target))
+			{
+				lastknown = target->feetpos();
+			}
+			else
+			{
+				dist = 0;
+			}
+
+			if(!(d->aiflags & AI_MOVE))
+			{
+				d->aiflags |= AI_MOVE;
+				if(lastknown.dist(d->o) > dist)
+				{
+					d->lastknown = lastknown;
+					d->dest = vec(lastknown).add(vec(lastknown).sub(d->o).rescale(dist));
+				}
+			}
+
+			if(!(d->aiflags & (AI_ALERT|AI_ATTACK)))
+			{
+				d->aiflags |= AI_ALERT;
+				d->target = target;
+			}
+
+			return true;
+		}
+
+		bool match(directive *action)
+		{
+			follow *o = (follow *) action;
+			if(o->type() == D_FOLLOW && o->target == target)
+			{
+				*this = *o;
+				return true;
+			}
+			return false;
+		}
 	};
 
 	struct guard : directive
@@ -209,7 +257,7 @@ namespace ai
 		wander(vec &o, int r, int p) : directive(p), centre(o), dest(o), radius(r), lastupdate(0) {}
 		~wander() {}
 
-		int type() {return D_WANDER;}
+		int type() const {return D_WANDER;}
 		bool update(rpgchar *d)
 		{
 			if(d->aiflags & AI_MOVE) return true;
@@ -236,6 +284,39 @@ namespace ai
 					return true;
 				}
 			}
+			return false;
+		}
+	};
+
+	struct watch : directive
+	{
+		rpgent *target;
+		vec lastknown;
+
+		watch(int p) : directive(p) {}
+		~watch() {}
+
+		int type() const { return D_WATCH; }
+		bool update(rpgchar *d)
+		{
+			if(d->aiflags & (AI_ALERT | AI_ATTACK)) return true;
+
+			if(d->cansee(target)) lastknown = target->feetpos();
+			d->aiflags |= AI_ALERT;
+			d->target = target;
+			d->lastknown = lastknown;
+
+			return true;
+		}
+		bool match(directive *action)
+		{
+			watch *o = (watch *) action;
+			if(o->type() == D_WATCH && o->target == target)
+			{
+				*this = *o;
+				return true;
+			}
+
 			return false;
 		}
 	};

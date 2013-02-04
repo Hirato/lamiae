@@ -1404,7 +1404,7 @@ struct directive
 	directive(int p) : priority(p) {}
 	virtual ~directive() {}
 
-	virtual int type()=0;
+	virtual int type() const =0;
 	virtual bool match(directive *)=0;
 	virtual bool update(rpgchar *d)=0; // returns false when executed/finished, some (such as follow) don't finish unless explicitly cleared
 
