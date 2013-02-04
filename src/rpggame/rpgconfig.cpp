@@ -103,6 +103,33 @@ namespace game
 
 	//These don't have a vector counter part
 
+	rpgent *loadingrpgent = NULL;
+	static rpgent *checkrpgent ()
+	{
+		if(! loadingrpgent)
+			ERRORF("[rpgent] not being loaded");
+		return loadingrpgent;
+	}
+	ICOMMAND(r_select_ent, "se", (const char *ref, uint *body),
+		rpgent *old = loadingrpgent;
+		loadingrpgent = NULL;
+
+		int objidx;
+		rpgscript::parseref(ref, objidx);
+		reference *obj = rpgscript::searchstack(ref, false);
+		if(obj)
+		{
+			loadingrpgent = obj->getent(objidx);
+			if(loadingrpgent && DEBUG_VCONF)
+				DEBUGF("successfully selected [rpgent] from reference %s", ref);
+		}
+		if(loadingrpgent)
+			execute(body);
+		else
+			ERRORF("unable to select reference %s as type [rpgent]", ref);
+		loadingrpgent = old;
+	)
+
 	#define CHECK(x, c, select) \
 		x *loading ## x = NULL; \
 		static x *check ##x () \
@@ -114,6 +141,7 @@ namespace game
 		ICOMMAND(r_select_ ## c, "se", (const char *ref, uint *body),  \
 			x *old = loading ## x; \
 			loading ## x = NULL; \
+			rpgent *oldrpgent = loadingrpgent; \
 			 \
 			int objidx; \
 			rpgscript::parseref(ref, objidx); \
@@ -121,6 +149,7 @@ namespace game
 			if(obj) \
 			{ \
 				loading ## x = select; \
+				loadingrpgent = obj->getent(objidx); \
 				if(loading ## x && DEBUG_VCONF) \
 					DEBUGF("successfully selected \"" #c "\" from reference %s", ref); \
 			} \
@@ -129,6 +158,7 @@ namespace game
 			else \
 				ERRORF("unable to select reference %s as type " #c, ref); \
 			loading ## x = old; \
+			loadingrpgent = oldrpgent; \
 		)
 
 	//FIXME can generate multiple copies of otherwise identical items.
@@ -648,6 +678,33 @@ namespace game
 	STRING(icon)
 	STRING(name)
 	STRING(description)
+
+	#undef START
+	#undef INIT
+	#undef DEBUG_STR
+	#undef DEBUG_IND
+
+	#define START(n, f, a, b) ICOMMAND(r_ent_ ##n, f, a, b)
+	#define INIT rpgent *e = checkrpgent();
+	#define DEBUG_STR "[rpgent][%p]"
+	#define DEBUG_IND loadingrpgent
+
+	//Generic entity types
+	VEC(o, 0, 0, 0, getworldsize(), getworldsize(), getworldsize())
+	VEC(vel, -10000, -10000, -10000, 10000, 10000, 10000)
+	VEC(falling, 0, 0, -10000, 0, 0, 10000)
+	FLOAT(yaw, 0, 360)
+	FLOAT(pitch, -90, 90)
+	FLOAT(roll, -180, 180)
+
+	//TODO custom bounding boxes for worlspace entities.
+// 	FLOAT(radius)
+// 	FLOAT(eyeheight)
+// 	FLOAT(aboveeye)
+// 	FLOAT(xradius)
+// 	FLOAT(yradius)
+// 	FLOAT(zmargin)
+// 	INT(collidetype, COLLIDE_AABB, COLLIDE_ELLIPSE);
 
 	#undef START
 	#undef INIT

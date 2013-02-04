@@ -40,7 +40,7 @@ item *rpgcontainer::additem(int base, int q)
 {
 	item it;
 	it.init(base);
-	it.quantity = w;
+	it.quantity = q;
 	return additem(&it);
 }
 
