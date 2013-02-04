@@ -50,224 +50,8 @@ void getmapfilenames(const char *map)
 
 static void fixent(entity &e, int version)
 {
-    if(version <= 10 && e.type >= 7) e.type++;
-    if(version <= 12 && e.type >= 8) e.type++;
-    if(version <= 14 && e.type >= ET_MAPMODEL && e.type <= 16)
-    {
-        if(e.type == 16) e.type = ET_MAPMODEL;
-        else e.type++;
-    }
-    if(version <= 20 && e.type >= ET_ENVMAP) e.type++;
-    if(version <= 21 && e.type >= ET_PARTICLES) e.type++;
-    if(version <= 22 && e.type >= ET_SOUND) e.type++;
-    if(version <= 23 && e.type >= ET_SPOTLIGHT) e.type++;
     if(version <= 30 && (e.type == ET_MAPMODEL || e.type == ET_PLAYERSTART)) e.attr[0] = (int(e.attr[0])+180)%360;
     if(version <= 31 && e.type == ET_MAPMODEL) { int yaw = (int(e.attr[0])%360 + 360)%360 + 7; e.attr[0] = yaw - yaw%15; }
-}
-
-bool loadents(const char *fname, vector<entity> &ents, uint *crc)
-{
-    getmapfilenames(fname);
-    defformatstring(ogzname)("packages/%s%s.ogz", mpath, mname);
-    path(ogzname);
-    stream *f = opengzfile(ogzname, "rb");
-    if(!f) return false;
-    octaheader hdr;
-    if(f->read(&hdr, 7*sizeof(int))!=int(7*sizeof(int))) { conoutf(CON_ERROR, "map %s has malformatted header", ogzname); delete f; return false; }
-    lilswap(&hdr.version, 6);
-
-    int maptype = 0, octaversion = 0;
-    if(memcmp(hdr.magic, "OCTA", 4)==0)
-    {
-        maptype = MAP_OCTA;
-        octaversion = hdr.version;
-        if(hdr.version>MAPVERSION) { conoutf(CON_ERROR, "map %s requires a newer version of Lamiae", ogzname); delete f; return false; }
-    }
-    else if(memcmp(hdr.magic, "MLAM", 4)==0)
-    {
-        maptype = MAP_LAMIA;
-        if(hdr.version > LAMIAMAPVERSION) { conoutf(CON_ERROR, "map %s requires a newer version of Lamiae", ogzname); delete f; return false; }
-        switch(hdr.version)
-        {
-            case 2:
-                octaversion = 33;
-                break;
-            case 1:
-                octaversion = 32;
-                break;
-            default:
-                octaversion = MAPVERSION;
-                break;
-        }
-    }
-
-    if((memcmp(hdr.magic, "OCTA", 4) && memcmp(hdr.magic, "MLAM", 4)) || hdr.worldsize <= 0|| hdr.numents < 0)
-    {
-        conoutf("map %s has malformatted header", ogzname);
-        delete f; return false;
-    }
-    compatheader chdr;
-    if(octaversion <= 28)
-    {
-        if(f->read(&chdr.lightprecision, sizeof(chdr) - 7*sizeof(int)) != int(sizeof(chdr) - 7*sizeof(int))) { conoutf(CON_ERROR, "map %s has malformatted header", ogzname); delete f; return false; }
-    }
-    else
-    {
-        int extra = 0;
-        if(octaversion <= 29) extra++;
-        if(f->read(&hdr.blendmap, sizeof(hdr) - (7+extra)*sizeof(int)) != int(sizeof(hdr) - (7+extra)*sizeof(int))) { conoutf(CON_ERROR, "map %s has malformatted header", ogzname); delete f; return false; }
-    }
-
-    if(octaversion <= 28)
-    {
-        lilswap(&chdr.lightprecision, 3);
-        hdr.blendmap = chdr.blendmap;
-        hdr.numvars = 0;
-        hdr.numvslots = 0;
-    }
-    else
-    {
-        lilswap(&hdr.blendmap, 2);
-        if(octaversion <= 29) hdr.numvslots = 0;
-        else lilswap(&hdr.numvslots, 1);
-    }
-
-    loopi(hdr.numvars)
-    {
-        int type = f->getchar(), ilen = f->getlil<ushort>();
-        f->seek(ilen, SEEK_CUR);
-        switch(type)
-        {
-            case ID_VAR: f->getlil<int>(); break;
-            case ID_FVAR: f->getlil<float>(); break;
-            case ID_SVAR: { int slen = f->getlil<ushort>(); f->seek(slen, SEEK_CUR); break; }
-        }
-    }
-
-    string gametype;
-    copystring(gametype, "fps");
-    bool samegame = true;
-    int eif = 0;
-    if(octaversion>=16)
-    {
-        int len = f->getchar();
-        f->read(gametype, len+1);
-    }
-    if(strcmp(gametype, game::gameident()))
-    {
-        samegame = false;
-        conoutf(CON_WARN, "WARNING: loading map from %s game, ignoring entities except for lights/mapmodels", gametype);
-    }
-    if(octaversion>=16)
-    {
-        eif = f->getlil<ushort>();
-        int extrasize = f->getlil<ushort>();
-        f->seek(extrasize, SEEK_CUR);
-    }
-
-    if(octaversion<14)
-    {
-        f->seek(256, SEEK_CUR);
-    }
-    else
-    {
-        ushort nummru = f->getlil<ushort>();
-        f->seek(nummru*sizeof(ushort), SEEK_CUR);
-    }
-
-    loopi(min(hdr.numents, MAXENTS))
-    {
-        entity &e = ents.add();
-
-        e.o.x = f->getlil<float>();
-        e.o.y = f->getlil<float>();
-        e.o.z = f->getlil<float>();
-
-        if(MAP_LAMIA)
-        {
-            uchar numattrs = f->getchar();
-            loopj(numattrs)
-            {
-                e.attr.add(f->getlil<int>());
-            }
-            e.type = f->getchar();
-            while(e.attr.length() < getattrnum(e.type)) e.attr.add(0);
-        }
-        else if(maptype == MAP_OCTA)
-        {
-            loopj(5)
-                e.attr.add(f->getlil<short>());
-            e.type = f->getchar();
-            while(e.attr.length() < getattrnum(e.type)) e.attr.add(0);
-            //OCTA entities have an unused reserved byte at the end
-            f->getchar();
-
-            //need changes for larger attribute size and changed indices.
-            if(e.type == ET_PARTICLES)
-            {
-                switch(e.attr[0])
-                {
-                    case 0:
-                        if(!e.attr[3]) break;
-                    case 4: case 5: case 6: case 7: case 8: case 9: case 10: case 12: case 13: case 14:
-                        e.attr[3] = ((e.attr[3] & 0xF00) << 12) | ((e.attr[3] & 0x0F0) << 8) | ((e.attr[3] & 0x00F) << 4) | 0x0F0F0F;
-                        if(e.attr[0] != 5 && e.attr[0] != 6) break;
-                    case 3: case 11:
-                        e.attr[2] = ((e.attr[2] & 0xF00) << 12) | ((e.attr[2] & 0x0F0) << 8) | ((e.attr[2] & 0x00F) << 4) | 0x0F0F0F;
-                    default:
-                        break;
-                }
-                switch(e.attr[0])
-                {
-                    // fire/smoke
-                    case 13: case 14:
-                        e.attr[0] -= 12;
-                        break;
-                        //fountains and explosion
-                    case 1: case 2: case 3:
-                        e.attr[0] += 2; break;
-
-                        //bars
-                    case 5: case 6:
-                        e.attr[0]++; break;
-
-                        //text
-                    case 11:
-                        e.attr[0] = 8; break;
-
-                        //multi effect
-                    case 4: case 7: case 8: case 9: case 10: case 12:
-                    {
-                        int num[] = {9, 0, 0, 10, 11, 12, 13, 0, 14};
-                        e.attr[0] = num[e.attr[0] - 4];
-                        break;
-                    }
-                }
-            }
-        }
-
-        fixent(e, octaversion);
-        if(eif > 0) f->seek(eif, SEEK_CUR);
-        if(samegame)
-        {
-            entities::readent(e, NULL, octaversion);
-        }
-        else if(e.type>=ET_GAMESPECIFIC || octaversion<=14)
-        {
-            ents.pop();
-            continue;
-        }
-    }
-
-    if(crc)
-    {
-        f->seek(0, SEEK_END);
-        *crc = f->getcrc();
-    }
-
-    delete f;
-
-    return true;
 }
 
 #ifndef STANDALONE
@@ -1050,7 +834,7 @@ bool save_world(const char *mname, bool nolms, bool octa)
 
     octaheader hdr;
     memcpy(hdr.magic, (octa ? "OCTA" : "MLAM"), 4);
-    hdr.version = octa ? MAPVERSION : LAMIAMAPVERSION;
+    hdr.version = octa ? OCTAVERSION : LAMIAMAPVERSION;
     hdr.headersize = sizeof(hdr);
     hdr.worldsize = worldsize;
     hdr.numents = 0;
@@ -1231,98 +1015,29 @@ static uint mapcrc = 0;
 uint getmapcrc() { return mapcrc; }
 void clearmapcrc() { mapcrc = 0; }
 
-bool load_world(const char *mname, const char *cname)        // still supports all map formats that have existed since the earliest cube betas!
+//Limited compat: supports version 29 and beyond.
+bool read_octaworld(stream *f, octaheader &hdr)
 {
-    int loadingstart = SDL_GetTicks();
-    setmapfilenames(mname);
+    int octaversion = hdr.version;
 
-    stream *f = opengzfile(ogzname, "rb");
-    if(!f) { conoutf(CON_ERROR, "could not read map %s", ogzname); return false; }
-    octaheader hdr;
-    if(f->read(&hdr, 7*sizeof(int))!=int(7*sizeof(int))) { conoutf(CON_ERROR, "map %s has malformatted header", ogzname); delete f; return false; }
-    lilswap(&hdr.version, 6);
-
-    int maptype = 0, octaversion = 0;
-    if(memcmp(hdr.magic, "OCTA", 4)==0)
+    if(octaversion < 29 || octaversion > OCTAVERSION)
     {
-        maptype = MAP_OCTA;
-        octaversion = hdr.version;
-        if(hdr.version>MAPVERSION) { conoutf(CON_ERROR, "map %s requires a newer version of Lamiae", ogzname); delete f; return false; }
-    }
-    else if(memcmp(hdr.magic, "MLAM", 4)==0)
-    {
-        maptype = MAP_LAMIA;
-        if(hdr.version > LAMIAMAPVERSION) { conoutf(CON_ERROR, "map %s requires a newer version of Lamiae", ogzname); delete f; return false; }
-        switch(hdr.version)
-        {
-            case 2:
-                octaversion = 33;
-                break;
-            case 1:
-                octaversion = 32;
-                break;
-        }
-    }
-    else
-    {
-        conoutf("Unsupported map format (%s), a newer version of Lamiae might support it", hdr.magic);
-        delete f; return false;
+        conoutf("unable to load map, version %i is too %s", hdr.version, octaversion > OCTAVERSION ? "new" : "old");
+        return false;
     }
 
-    if(hdr.worldsize <= 0|| hdr.numents < 0) { conoutf(CON_ERROR, "map %s has malformatted header", ogzname); delete f; return false; }
-    compatheader chdr;
-    if(octaversion <= 28)
-    {
-        if(f->read(&chdr.lightprecision, sizeof(chdr) - 7*sizeof(int)) != int(sizeof(chdr) - 7*sizeof(int))) { conoutf(CON_ERROR, "map %s has malformatted header", ogzname); delete f; return false; }
-    }
-    else
+    do
     {
         int extra = 0;
         if(octaversion <= 29) extra++;
-        if(f->read(&hdr.blendmap, sizeof(hdr) - (7+extra)*sizeof(int)) != int(sizeof(hdr) - (7+extra)*sizeof(int))) { conoutf(CON_ERROR, "map %s has malformatted header", ogzname); delete f; return false; }
-    }
-
-    resetmap();
-    Texture *mapshot = textureload(picname, 3, true, false);
-    renderbackground("loading...", mapshot, mname, game::getmapinfo()); //checks are done not to render the map
+        if(f->read(&hdr.blendmap, sizeof(hdr) - (7+extra)*sizeof(int)) != int(sizeof(hdr) - (7+extra)*sizeof(int))) { conoutf(CON_ERROR, "map %s has malformatted header", ogzname); return false; }
+    } while(0);
 
     setvar("mapversion", octaversion, true, false);
 
-    if(octaversion <= 28)
-    {
-        lilswap(&chdr.lightprecision, 3);
-        if(chdr.lightprecision) setvar("lightprecision", chdr.lightprecision);
-        if(chdr.lighterror) setvar("lighterror", chdr.lighterror);
-        if(chdr.bumperror) setvar("bumperror", chdr.bumperror);
-        setvar("lightlod", chdr.lightlod);
-        if(chdr.ambient) setvar("ambient", (chdr.ambient<<16) | (chdr.ambient<<8) | chdr.ambient);
-        setvar("skylight", (int(chdr.skylight[0])<<16) | (int(chdr.skylight[1])<<8) | int(chdr.skylight[2]));
-        setvar("watercolour", (int(chdr.watercolour[0])<<16) | (int(chdr.watercolour[1])<<8) | int(chdr.watercolour[2]), true);
-        setvar("waterfallcolour", (int(chdr.waterfallcolour[0])<<16) | (int(chdr.waterfallcolour[1])<<8) | int(chdr.waterfallcolour[2]));
-        setvar("lavacolour", (int(chdr.lavacolour[0])<<16) | (int(chdr.lavacolour[1])<<8) | int(chdr.lavacolour[2]));
-        setvar("fullbright", 0, true);
-        if(chdr.lerpsubdivsize || chdr.lerpangle) setvar("lerpangle", chdr.lerpangle);
-        if(chdr.lerpsubdivsize)
-        {
-            setvar("lerpsubdiv", chdr.lerpsubdiv);
-            setvar("lerpsubdivsize", chdr.lerpsubdivsize);
-        }
-        setsvar("maptitle", chdr.maptitle);
-        hdr.blendmap = chdr.blendmap;
-        hdr.numvars = 0;
-        hdr.numvslots = 0;
-    }
-    else
-    {
-        lilswap(&hdr.blendmap, 2);
-        if(octaversion <= 29) hdr.numvslots = 0;
-        else lilswap(&hdr.numvslots, 1);
-    }
-
-    renderprogress(0, "clearing world...");
-
-    freeocta(worldroot);
-    worldroot = NULL;
+    lilswap(&hdr.blendmap, 2);
+    if(octaversion <= 29) hdr.numvslots = 0;
+    else lilswap(&hdr.numvslots, 1);
 
     setvar("mapsize", hdr.worldsize, true, false);
     int worldscale = 0;
@@ -1386,41 +1101,27 @@ bool load_world(const char *mname, const char *cname)        // still supports a
     }
     if(dbgvars) conoutf(CON_DEBUG, "read %d vars", hdr.numvars);
 
-    string gametype;
-    copystring(gametype, "fps");
+    string gametype = "fps";
     bool samegame = true;
     int eif = 0;
-    if(octaversion>=16)
-    {
-        int len = f->getchar();
-        f->read(gametype, len+1);
-    }
+
+    int len = f->getchar();
+    f->read(gametype, len+1);
     if(strcmp(gametype, game::gameident())!=0)
     {
         samegame = false;
         conoutf(CON_WARN, "WARNING: loading map from %s game, ignoring entities except for lights/mapmodels)", gametype);
     }
-    if(octaversion>=16)
-    {
-        eif = f->getlil<ushort>();
-        int extrasize = f->getlil<ushort>();
-        vector<char> extras;
-        f->read(extras.pad(extrasize), extrasize);
-        if(samegame) game::readgamedata(extras);
-    }
+
+    eif = f->getlil<ushort>();
+    int extrasize = f->getlil<ushort>();
+    vector<char> extras;
+    f->read(extras.pad(extrasize), extrasize);
+    if(samegame) game::readgamedata(extras);
 
     texmru.shrink(0);
-    if(octaversion<14)
-    {
-        uchar oldtl[256];
-        f->read(oldtl, sizeof(oldtl));
-        loopi(256) texmru.add(oldtl[i]);
-    }
-    else
-    {
-        ushort nummru = f->getlil<ushort>();
-        loopi(nummru) texmru.add(f->getlil<ushort>());
-    }
+    ushort nummru = f->getlil<ushort>();
+    loopi(nummru) texmru.add(f->getlil<ushort>());
 
     renderprogress(0, "loading entities...");
 
@@ -1435,65 +1136,52 @@ bool load_world(const char *mname, const char *cname)        // still supports a
         e.o.y = f->getlil<float>();
         e.o.z = f->getlil<float>();
 
-        if(MAP_LAMIA)
+        loopj(5)
+            e.attr.add(f->getlil<short>());
+        e.type = f->getchar();
+        while(e.attr.length() < getattrnum(e.type)) e.attr.add(0);
+        //OCTA entities have an unused reserved byte at the end
+        f->getchar();
+
+        //need changes for larger attribute size and changed indices.
+        if(e.type == ET_PARTICLES)
         {
-            uchar numattrs = f->getchar();
-            loopj(numattrs)
+            switch(e.attr[0])
             {
-                e.attr.add(f->getlil<int>());
+                case 0:
+                    if(!e.attr[3]) break;
+                case 4: case 5: case 6: case 7: case 8: case 9: case 10: case 12: case 13: case 14:
+                    e.attr[3] = ((e.attr[3] & 0xF00) << 12) | ((e.attr[3] & 0x0F0) << 8) | ((e.attr[3] & 0x00F) << 4) | 0x0F0F0F;
+                    if(e.attr[0] != 5 && e.attr[0] != 6) break;
+                case 3: case 11:
+                    e.attr[2] = ((e.attr[2] & 0xF00) << 12) | ((e.attr[2] & 0x0F0) << 8) | ((e.attr[2] & 0x00F) << 4) | 0x0F0F0F;
+                default:
+                    break;
             }
-            e.type = f->getchar();
-            while(e.attr.length() < getattrnum(e.type)) e.attr.add(0);
-        }
-        else if(maptype == MAP_OCTA)
-        {
-            loopj(5)
-                e.attr.add(f->getlil<short>());
-            e.type = f->getchar();
-            while(e.attr.length() < getattrnum(e.type)) e.attr.add(0);
-            //OCTA entities have an unused reserved byte at the end
-            f->getchar();
-
-            //need changes for larger attribute size and changes indices.
-            if(e.type == ET_PARTICLES)
+            switch(e.attr[0])
             {
-                switch(e.attr[0])
+                // fire/smoke
+                case 13: case 14:
+                    e.attr[0] -= 12;
+                    break;
+                    //fountains and explosion
+                case 1: case 2: case 3:
+                    e.attr[0] += 2; break;
+
+                    //bars
+                case 5: case 6:
+                    e.attr[0]++; break;
+
+                    //text
+                case 11:
+                    e.attr[0] = 8; break;
+
+                    //multi effect
+                case 4: case 7: case 8: case 9: case 10: case 12:
                 {
-                    case 0:
-                        if(!e.attr[3]) break;
-                    case 4: case 5: case 6: case 7: case 8: case 9: case 10: case 12: case 13: case 14:
-                        e.attr[3] = ((e.attr[3] & 0xF00) << 12) | ((e.attr[3] & 0x0F0) << 8) | ((e.attr[3] & 0x00F) << 4) | 0x0F0F0F;
-                        if(e.attr[0] != 5 && e.attr[0] != 6) break;
-                    case 3: case 11:
-                        e.attr[2] = ((e.attr[2] & 0xF00) << 12) | ((e.attr[2] & 0x0F0) << 8) | ((e.attr[2] & 0x00F) << 4) | 0x0F0F0F;
-                    default:
-                        break;
-                }
-                switch(e.attr[0])
-                {
-                    // fire/smoke
-                    case 13: case 14:
-                        e.attr[0] -= 12;
-                        break;
-                        //fountains and explosion
-                    case 1: case 2: case 3:
-                        e.attr[0] += 2; break;
-
-                        //bars
-                    case 5: case 6:
-                        e.attr[0]++; break;
-
-                        //text
-                    case 11:
-                        e.attr[0] = 8; break;
-
-                        //multi effect
-                    case 4: case 7: case 8: case 9: case 10: case 12:
-                    {
-                        int num[] = {9, 0, 0, 10, 11, 12, 13, 0, 14};
-                        e.attr[0] = num[e.attr[0] - 4];
-                        break;
-                    }
+                    int num[] = {9, 0, 0, 10, 11, 12, 13, 0, 14};
+                    e.attr[0] = num[e.attr[0] - 4];
+                    break;
                 }
             }
         }
@@ -1509,7 +1197,7 @@ bool load_world(const char *mname, const char *cname)        // still supports a
         else
         {
             f->seek(eif, SEEK_CUR);
-            if(e.type>=ET_GAMESPECIFIC || octaversion<=14)
+            if(e.type>=ET_GAMESPECIFIC)
             {
                 entities::deleteentity(ents.pop());
                 continue;
@@ -1521,12 +1209,6 @@ bool load_world(const char *mname, const char *cname)        // still supports a
             {
                 conoutf(CON_WARN, "warning: ent outside of world: enttype[%s] index %d (%f, %f, %f)", entities::entname(e.type), i, e.o.x, e.o.y, e.o.z);
             }
-        }
-        if(octaversion <= 14 && e.type == ET_MAPMODEL)
-        {
-            e.o.z += e.attr[2];
-            if(e.attr[3]) conoutf(CON_WARN, "warning: mapmodel ent (index %d) uses texture slot %d", i, e.attr[3]);
-            e.attr[2] = e.attr[3] = 0;
         }
     }
     if(ebuf) delete[] ebuf;
@@ -1550,57 +1232,303 @@ bool load_world(const char *mname, const char *cname)        // still supports a
 
     if(!failed)
     {
-        if(octaversion >= 7) loopi(hdr.lightmaps)
+        loopi(hdr.lightmaps)
         {
-            int type = 0;
-            if(octaversion >= 17)
+            int type = f->getchar();
+            if(type&0x80)
             {
-                type = f->getchar();
-                if(octaversion >= 20 && type&0x80)
-                {
-                    f->getlil<ushort>();
-                    f->getlil<ushort>();
-                }
+                f->getlil<ushort>();
+                f->getlil<ushort>();
             }
+
             int bpp = 3;
             if(type&(1<<4) && (type&0x0F)!=2) bpp = 4;
             f->seek(bpp*512*512, SEEK_CUR);
         }
 
-        if(octaversion >= 25 && hdr.numpvs > 0) loadpvs(f, hdr.numpvs);
-        if(octaversion >= 28 && hdr.blendmap) loadblendmap(f, hdr.blendmap);
+        if(hdr.numpvs > 0) loadpvs(f, hdr.numpvs);
+        if(hdr.blendmap) loadblendmap(f, hdr.blendmap);
     }
 
-    mapcrc = f->getcrc();
+    return !failed;
+}
+
+bool read_lamiaeworld(stream *f, octaheader &hdr)
+{
+    if(hdr.version > LAMIAMAPVERSION)
+    {
+        conoutf("A newer version of lamiae is required to load this map");
+        return false;
+    }
+
+    //corresponding octaversions
+    static const int versions[] = {
+        32, 33
+    };
+
+    if(hdr.version <= 0 || hdr.version > int(sizeof(versions)/sizeof(versions[0])))
+    {
+        conoutf("no corresponding map format for Lamiae map version %i - report a bug", hdr.version);
+        return false;
+    }
+
+    int octaversion = versions[hdr.version - 1];
+
+    if(f->read(&hdr.blendmap, sizeof(hdr) - 7*sizeof(int)) != int(sizeof(hdr) - 7*sizeof(int)))
+    {
+        conoutf(CON_ERROR, "map %s has malformatted header", ogzname);
+        return false;
+    }
+
+    setvar("mapversion", octaversion, true, false);
+
+    lilswap(&hdr.blendmap, 2);
+    lilswap(&hdr.numvslots, 1);
+
+    setvar("mapsize", hdr.worldsize, true, false);
+    int worldscale = 0;
+    while(1<<worldscale < hdr.worldsize) worldscale++;
+    setvar("mapscale", worldscale, true, false);
+
+    renderprogress(0, "loading vars...");
+
+    loopi(hdr.numvars)
+    {
+        int type = f->getchar(), ilen = f->getlil<ushort>();
+        string name;
+        f->read(name, min(ilen, MAXSTRLEN-1));
+        name[min(ilen, MAXSTRLEN-1)] = '\0';
+        if(ilen >= MAXSTRLEN) f->seek(ilen - (MAXSTRLEN-1), SEEK_CUR);
+        ident *id = getident(name);
+        tagval val;
+        string str;
+        switch(type)
+        {
+            case ID_VAR: val.setint(f->getlil<int>()); break;
+            case ID_FVAR: val.setfloat(f->getlil<float>()); break;
+            case ID_SVAR:
+            {
+                int slen = f->getlil<ushort>();
+                f->read(str, min(slen, MAXSTRLEN-1));
+                str[min(slen, MAXSTRLEN-1)] = '\0';
+                if(slen >= MAXSTRLEN) f->seek(slen - (MAXSTRLEN-1), SEEK_CUR);
+                val.setstr(str);
+                break;
+            }
+            default: continue;
+        }
+        if(id && id->flags&IDF_OVERRIDE) switch(id->type)
+        {
+            case ID_VAR:
+            {
+                int i = val.getint();
+                if(id->minval <= id->maxval && i >= id->minval && i <= id->maxval)
+                {
+                    setvar(name, i);
+                    if(dbgvars) conoutf(CON_DEBUG, "read var %s: %d", name, i);
+                }
+                break;
+            }
+            case ID_FVAR:
+            {
+                float f = val.getfloat();
+                if(id->minvalf <= id->maxvalf && f >= id->minvalf && f <= id->maxvalf)
+                {
+                    setfvar(name, f);
+                    if(dbgvars) conoutf(CON_DEBUG, "read fvar %s: %f", name, f);
+                }
+                break;
+            }
+            case ID_SVAR:
+                setsvar(name, val.getstr());
+                if(dbgvars) conoutf(CON_DEBUG, "read svar %s: %s", name, val.getstr());
+                break;
+        }
+    }
+    if(dbgvars) conoutf(CON_DEBUG, "read %d vars", hdr.numvars);
+
+    string gametype = "fps";
+    bool samegame = true;
+    int eif = 0;
+
+    int len = f->getchar();
+    f->read(gametype, len+1);
+    if(strcmp(gametype, game::gameident())!=0)
+    {
+        samegame = false;
+        conoutf(CON_WARN, "WARNING: loading map from %s game, ignoring entities except for lights/mapmodels)", gametype);
+    }
+
+    eif = f->getlil<ushort>();
+    int extrasize = f->getlil<ushort>();
+    vector<char> extras;
+    f->read(extras.pad(extrasize), extrasize);
+    if(samegame) game::readgamedata(extras);
+
+    texmru.shrink(0);
+    ushort nummru = f->getlil<ushort>();
+    loopi(nummru) texmru.add(f->getlil<ushort>());
+
+    renderprogress(0, "loading entities...");
+
+    vector<extentity *> &ents = entities::getents();
+    char *ebuf = eif > 0 ? new char[eif] : NULL;
+    loopi(min(hdr.numents, MAXENTS))
+    {
+        extentity &e = *entities::newentity();
+        ents.add(&e);
+
+        e.o.x = f->getlil<float>();
+        e.o.y = f->getlil<float>();
+        e.o.z = f->getlil<float>();
+
+        uchar numattrs = f->getchar();
+        loopj(numattrs)
+        {
+            e.attr.add(f->getlil<int>());
+        }
+        e.type = f->getchar();
+        while(e.attr.length() < getattrnum(e.type)) e.attr.add(0);
+
+        e.spawned = false;
+        e.inoctanode = false;
+        fixent(e, octaversion);
+        if(samegame)
+        {
+            if(eif > 0) f->read(ebuf, eif);
+            entities::readent(e, ebuf, mapversion);
+        }
+        else
+        {
+            f->seek(eif, SEEK_CUR);
+            if(e.type>=ET_GAMESPECIFIC)
+            {
+                entities::deleteentity(ents.pop());
+                continue;
+            }
+        }
+        if(!insideworld(e.o))
+        {
+            if(e.type != ET_LIGHT && e.type != ET_SPOTLIGHT)
+            {
+                conoutf(CON_WARN, "warning: ent outside of world: enttype[%s] index %d (%f, %f, %f)", entities::entname(e.type), i, e.o.x, e.o.y, e.o.z);
+            }
+        }
+    }
+    if(ebuf) delete[] ebuf;
+
+    if(hdr.numents > MAXENTS)
+    {
+        conoutf(CON_WARN, "warning: map has %d entities", hdr.numents);
+        f->seek((hdr.numents-MAXENTS)*(sizeof(entity) + eif), SEEK_CUR);
+    }
+
+    renderprogress(0, "loading slots...");
+    loadvslots(f, hdr.numvslots);
+
+    renderprogress(0, "loading octree...");
+    bool failed = false;
+    worldroot = loadchildren(f, ivec(0, 0, 0), hdr.worldsize>>1, failed);
+    if(failed) conoutf(CON_ERROR, "garbage in map");
+
+    renderprogress(0, "validating...");
+    validatec(worldroot, hdr.worldsize>>1);
+
+    if(!failed)
+    {
+        loopi(hdr.lightmaps)
+        {
+            int type = f->getchar();
+            if(type&0x80)
+            {
+                f->getlil<ushort>();
+                f->getlil<ushort>();
+            }
+
+            int bpp = 3;
+            if(type&(1<<4) && (type&0x0F)!=2) bpp = 4;
+            f->seek(bpp*512*512, SEEK_CUR);
+        }
+
+        if(hdr.numpvs > 0) loadpvs(f, hdr.numpvs);
+        if(hdr.blendmap) loadblendmap(f, hdr.blendmap);
+    }
+
+    return !failed;
+}
+
+bool load_world(const char *mname, const char *cname)
+{
+    int loadingstart = SDL_GetTicks();
+    setmapfilenames(mname);
+
+    stream *f = opengzfile(ogzname, "rb");
+    if(!f) { conoutf(CON_ERROR, "could not read map %s", ogzname); return false; }
+
+    octaheader hdr;
+    if(f->read(&hdr, 7*sizeof(int))!=int(7*sizeof(int))) { conoutf(CON_ERROR, "map %s has malformatted header", ogzname); delete f; return false; }
+    lilswap(&hdr.version, 6);
+
+    bool loaded = false;
+    resetmap();
+
+    Texture *mapshot = textureload(picname, 3, true, false);
+    renderbackground("loading...", mapshot, mname, game::getmapinfo());
+    renderprogress(0, "clearing world...");
+    freeocta(worldroot);
+    worldroot = NULL;
+
+    if(hdr.worldsize <= 0 || hdr.numents < 0 || hdr.version <= 0)
+    {
+        conoutf("map has malformatted header!");
+    }
+    else if(memcmp(hdr.magic, "MLAM", 4)==0)
+    {
+        loaded = read_lamiaeworld(f, hdr);
+    }
+    else if(memcmp(hdr.magic, "OCTA", 4)==0)
+    {
+        conoutf("Importing map from native cube 2 format...");
+        loaded = read_octaworld(f, hdr);
+    }
+    else
+    {
+        conoutf("garbage in header or unsupported map format (%4.4s)", hdr.magic);
+    }
+
+    if(loaded)
+    {
+        mapcrc = f->getcrc();
+
+        conoutf("read map %s (%.1f seconds)", ogzname, (SDL_GetTicks()-loadingstart)/1000.0f);
+
+        UI::clearmainmenu();
+
+        identflags |= IDF_OVERRIDDEN;
+
+        execfile("data/default_map_settings.cfg", false);
+        execfile(acfname, false);
+        execfile(mcfname, false);
+
+        identflags &= ~IDF_OVERRIDDEN;
+
+        preloadusedmapmodels(true);
+        game::preload();
+        flushpreloadedmodels();
+
+        preloadmapsounds();
+
+        entitiesinoctanodes();
+        attachentities();
+        initlights();
+        allchanged(true);
+        startmap(cname ? cname : mname);
+
+        if(maptitle[0] && strcmp(maptitle, "Untitled Map by Unknown")) conoutf(CON_ECHO, "%s", maptitle);
+    }
+
     delete f;
-
-    conoutf("read map %s (%.1f seconds)", ogzname, (SDL_GetTicks()-loadingstart)/1000.0f);
-
-    UI::clearmainmenu();
-
-    identflags |= IDF_OVERRIDDEN;
-
-    execfile("data/default_map_settings.cfg", false);
-    execfile(acfname, false);
-    execfile(mcfname, false);
-
-    identflags &= ~IDF_OVERRIDDEN;
-
-    preloadusedmapmodels(true);
-    game::preload();
-    flushpreloadedmodels();
-
-    preloadmapsounds();
-
-    entitiesinoctanodes();
-    attachentities();
-    initlights();
-    allchanged(true);
-    startmap(cname ? cname : mname);
-
-    if(maptitle[0] && strcmp(maptitle, "Untitled Map by Unknown")) conoutf(CON_ECHO, "%s", maptitle);
-
-    return true;
+    return loaded;
 }
 
 void savecurrentmap() { save_world(game::getclientmap()); }

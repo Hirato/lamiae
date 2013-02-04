@@ -526,16 +526,6 @@ namespace entities
 		}
 	}
 
-	int *getmodelattr(extentity &e)
-	{
-		return NULL;
-	}
-
-	bool checkmodelusage(extentity &e, int i)
-	{
-		return false;
-	}
-
 	//mapmodels to be purely decorative
 	void rumble(const extentity &e) {}
 	void trigger(extentity &e){}

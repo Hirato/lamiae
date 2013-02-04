@@ -2,7 +2,7 @@
 
 #include "engine.h"
 
-VARR(mapversion, 1, MAPVERSION, 0);
+VARR(mapversion, 1, OCTAVERSION, 0);
 VARNR(mapscale, worldscale, 1, 0, 0);
 VARNR(mapsize, worldsize, 1, 0, 0);
 SVARR(maptitle, "Untitled Map by Unknown");

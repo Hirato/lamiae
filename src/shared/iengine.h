@@ -340,7 +340,6 @@ extern void setmapdir(const char *pth = NULL);
 extern void getmapfilenames(const char *cname);
 extern uint getmapcrc();
 extern void clearmapcrc();
-extern bool loadents(const char *fname, vector<entity> &ents, uint *crc = NULL);
 
 // physics
 extern void moveplayer(physent *pl, int moveres, bool local);

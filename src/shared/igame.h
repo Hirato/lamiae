@@ -24,8 +24,6 @@ namespace entities
     extern void renderhelpertext(extentity &e, int &colour, vec &pos, string &tmp);
     extern const char *entmodel(const entity &e);
     extern void animatemapmodel(const extentity &e, int &anim, int &basetime);
-    extern int *getmodelattr(extentity &e);
-    extern bool checkmodelusage(extentity &e, int i);
 }
 
 namespace game
