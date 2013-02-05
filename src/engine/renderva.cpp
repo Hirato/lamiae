@@ -1254,9 +1254,9 @@ struct renderstate
     Slot *slot, *texgenslot;
     VSlot *vslot, *texgenvslot;
     float texgenscrollS, texgenscrollT;
-    int texgendim;
+    int texgendim, texgenmillis;
 
-    renderstate() : colormask(true), depthmask(true), alphaing(0), vbuf(0), diffusetmu(0), colorscale(1, 1, 1), alphascale(0), refractscale(0), refractcolor(1, 1, 1), blendx(-1), blendy(-1), slot(NULL), texgenslot(NULL), vslot(NULL), texgenvslot(NULL), texgenscrollS(0), texgenscrollT(0), texgendim(-1)
+    renderstate() : colormask(true), depthmask(true), alphaing(0), vbuf(0), diffusetmu(0), colorscale(1, 1, 1), alphascale(0), refractscale(0), refractcolor(1, 1, 1), blendx(-1), blendy(-1), slot(NULL), texgenslot(NULL), vslot(NULL), texgenvslot(NULL), texgenscrollS(0), texgenscrollT(0), texgendim(-1), texgenmillis(lastmillis)
     {
         loopk(4) color[k] = 1;
         loopk(8) textures[k] = 0;
@@ -1530,8 +1530,8 @@ static void changetexgen(renderstate &cur, int dim, Slot &slot, VSlot &vslot)
                   ys = (vslot.rotation>=1 && vslot.rotation<=2) || vslot.rotation==5 ? -tex->ys : tex->ys,
                   scrollS = vslot.scrollS, scrollT = vslot.scrollT;
             if((vslot.rotation&5)==1) swap(scrollS, scrollT);
-            scrollS *= lastmillis*tex->xs/xs;
-            scrollT *= lastmillis*tex->ys/ys;
+            scrollS *= cur.texgenmillis*tex->xs/xs;
+            scrollT *= cur.texgenmillis*tex->ys/ys;
             if(cur.texgenscrollS != scrollS || cur.texgenscrollT != scrollT)
             {
                 cur.texgenscrollS = scrollS;
@@ -1739,8 +1739,7 @@ extern void renderradiancehints();
 
 void rendergeom()
 {
-    bool mainpass = !envmapping,
-         doOQ = hasOQ && oqfrags && oqgeom && mainpass,
+    bool doOQ = hasOQ && oqfrags && oqgeom && !drawtex,
          doZP = doOQ && zpass;
     renderstate cur;
     if(!doZP)
@@ -1873,7 +1872,7 @@ void rendergeom()
     glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
     glDisableClientState(GL_VERTEX_ARRAY);
 
-    if(!doZP && !minimapping)
+    if(!doZP && drawtex != DRAWTEX_MINIMAP)
     {
         glFlush();
         if(cur.colormask) { cur.colormask = false; glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); }
@@ -1881,7 +1880,7 @@ void rendergeom()
         collectlights();
         if(!cur.colormask) { cur.colormask = true; glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE); }
         if(!cur.depthmask) { cur.depthmask = true; glDepthMask(GL_TRUE); }
-        if(mainpass && rhinoq) renderradiancehints();
+        if(!drawtex && rhinoq) renderradiancehints();
         glFlush();
     }
 }
@@ -1901,9 +1900,11 @@ int dynamicshadowvabounds(int mask, vec &bbmin, vec &bbmax)
     return vis;
 }
 
-void renderrsmgeom()
+void renderrsmgeom(bool dyntex)
 {
     renderstate cur;
+	if(!dyntex) cur.texgenmillis = 0;
+
     glEnableClientState(GL_VERTEX_ARRAY);
 
     if(skyshadow)
@@ -2167,7 +2168,7 @@ struct shadowmesh
 {
     vec origin;
     float radius;
-    vec spotdir;
+    vec spotloc;
     int spotangle;
     int type;
     int draws[6];
@@ -2305,37 +2306,15 @@ static void genshadowmeshtris(shadowmesh &m, int sides, shadowdrawinfo draws[6],
 
 static void genshadowmesh(int idx, extentity &e)
 {
-    extern int smminradius;
-    if(e.attr[4]&L_NOSHADOW || e.attr[0] <= smminradius) return;
-
     shadowmesh m;
-    m.origin = e.o;
-    m.radius = e.attr[0];
-    if(e.attached && e.attached->type == ET_SPOTLIGHT)
-    {
-        m.type = SM_SPOT;
-        m.spotdir = e.attached->o;
-        m.spotangle = clamp(int(e.attached->attr[0]), 1, 89);
-    }
-    else
-    {
-        m.type = smtetra && glslversion >= 130 ? SM_TETRA : SM_CUBEMAP;
-        m.spotdir = e.o;
-        m.spotangle = 0;
-    }
+    m.type = calcshadowinfo(e, m.origin, m.radius, m.spotloc, m.spotangle, shadowbias);
+    if(!m.type) return;
     memset(m.draws, -1, sizeof(m.draws));
-
-    extern float smspotprec, smtetraprec, smcubeprec;
-    extern int smfilter, smborder, smborder2, smminsize;
-
-    float lod = m.type == SM_SPOT ? smspotprec : (m.type == SM_TETRA ? smtetraprec : smcubeprec);
-    int size = clamp(int(ceil(lod * smminsize)), 1, 1024), border = smfilter > 2 ? smborder2 : smborder;
 
     shadowmapping = m.type;
     shadoworigin = m.origin;
     shadowradius = m.radius;
-    shadowbias = border / float(size - border);
-    shadowdir = m.type == SM_SPOT ? vec(m.spotdir).sub(m.origin).normalize() : vec(0, 0, 0);
+    shadowdir = m.type == SM_SPOT ? vec(m.spotloc).sub(m.origin).normalize() : vec(0, 0, 0);
     shadowspot = m.spotangle;
 
     findshadowvas();
@@ -2384,11 +2363,11 @@ void genshadowmeshes()
 shadowmesh *findshadowmesh(int idx, extentity &e)
 {
     shadowmesh *m = shadowmeshes.access(idx);
-    if(!m || m->type != shadowmapping || m->origin != shadoworigin || m->radius != shadowradius) return NULL;
+    if(!m || m->type != shadowmapping || m->origin != shadoworigin || m->radius < shadowradius) return NULL;
     switch(m->type)
     {
         case SM_SPOT:
-            if(!e.attached || e.attached->type != ET_SPOTLIGHT || m->spotdir != e.attached->o || m->spotangle != clamp(int(e.attached->attr[0]), 1, 89))
+            if(!e.attached || e.attached->type != ET_SPOTLIGHT || m->spotloc != e.attached->o || m->spotangle < clamp(int(e.attached->attr[0]), 1, 89))
                 return NULL;
             break;
     }
