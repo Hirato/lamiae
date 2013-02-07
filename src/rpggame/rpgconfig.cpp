@@ -242,17 +242,20 @@ namespace game
 			return; \
 		} \
 
-	#define INTN(name, var, min, max) \
+	#define INTNF(name, var, min, max, body) \
 		START(name, "iN$", (int *i, int *numargs, ident *self), \
 			PREAMBLE(name, , intret(e->var), printvar(self, e->var)) \
 			e->var = clamp(*i, int(min), int(max)); \
+			body; \
 			if(e->var != *i) \
 				WARNINGF("value provided for " DEBUG_STR "->" #var " exceeded limits", DEBUG_IND); \
 			if(DEBUG_CONF || e->var != *i) \
 				conoutf(DEBUG_STR "->" #var " = %i (0x%.8X)", DEBUG_IND, e->var, e->var); \
 		)
 
-	#define INT(var, min, max) INTN(var, var, min, max)
+	#define INTF(var, min, max, body) INTNF(var, var, min, max, body)
+	#define INTN(name, var, min, max) INTNF(name, var, min, max, )
+	#define INT(var, min, max) INTF(var, min, max, )
 
 	#define INTNRO(name, var) \
 		START(name, "N$", (int *numargs, ident *self), \
@@ -262,17 +265,20 @@ namespace game
 
 	#define INTRO(var) INTNRO(var, var)
 
-	#define FLOATN(name, var, min, max) \
+	#define FLOATNF(name, var, min, max, body) \
 		START(name, "fN$", (float *f, int *numargs, ident *self), \
 			PREAMBLE(name, , floatret(e->var), printfvar(self, e->var)) \
 			e->var = clamp(*f, float(min), float(max)); \
+			body; \
 			if(e->var != *f) \
 				WARNINGF("value provided for " DEBUG_STR "->" #var " exceeded limits", DEBUG_IND); \
 			if(DEBUG_CONF || e->var != *f) \
 				conoutf(DEBUG_STR "->" #var " = %g", DEBUG_IND, e->var); \
 		)
 
-	#define FLOAT(var, min, max) FLOATN(var, var, min, max)
+	#define FLOATF(var, min, max, body) FLOATNF(var, var, min, max, body)
+	#define FLOATN(name, var, min, max) FLOATNF(name, var, min, max, )
+	#define FLOAT(var, min, max) FLOATF(var, min, max, )
 
 	#define FLOATNRO(name, var) \
 		START(name, "N$", (int *numargs, ident *self), \
@@ -282,7 +288,7 @@ namespace game
 
 	#define FLOATRO(var) INTNRO(var, var)
 
-	#define STRINGN(name, var, body) \
+	#define STRINGNF(name, var, body) \
 		START(name, "sN$", (const char *s, int *numargs, ident *self), \
 			PREAMBLE(name, , result(e->var ? e->var : ""), printsvar(self, e->var ? e->var : "")) \
 			if(e->var) delete[] e->var; \
@@ -292,8 +298,10 @@ namespace game
 				conoutf(CON_DEBUG, DEBUG_STR "->" #var " = %s", DEBUG_IND, e->var); \
 		)
 
-	#define STRING(var) STRINGN(var, var, )
-	#define MODEL(var) STRINGN(var, var, preloadmodel(e->var))
+	#define STRINGF(var, body) STRINGNF(var, var, body)
+	#define STRINGN(name, var) STRINGNF(name, var, )
+	#define STRING(var) STRINGN(var, var)
+	#define MODEL(var) STRINGF(var, preloadmodel(e->var))
 
 	#define STRINGNRO(name, var) \
 		START(name, "N$", (int *numargs, ident *self), \
@@ -303,20 +311,24 @@ namespace game
 
 	#define STRINGRO(var) STRINGNRO(var, var);
 
-	#define VECN(name, var, l1, l2, l3, h1, h2, h3) \
+	#define VECNF(name, var, l1, l2, l3, h1, h2, h3, body) \
 		START(name, "fffN$", (float *x, float *y, float *z, int *numargs, ident *self), \
 			PREAMBLE(name, defformatstring(res)("%g %g %g", e->var.x, e->var.y, e->var.z);, result(res), printsvar(self, res)) \
 			const vec res(*x, *y, *z); \
 			const vec vmin(h1, h2, h3); \
 			const vec vmax(l1, l2, l3); \
 			e->var = vec(res).min(vmin).max(vmax); \
+			body; \
 			if(e->var != res) \
 				WARNINGF("value provided for " DEBUG_STR "->" #var " exceeded limits", DEBUG_IND); \
 			if(DEBUG_CONF || e->var != res) \
 				conoutf(DEBUG_STR "->" #var " = (%g, %g, %g)", DEBUG_IND, e->var.x, e->var.y, e->var.z); \
 		)
 
-	#define VEC(var, l1, l2, l3, h1, h2, h3) VECN(var, var, l1, l2, l3, h1, h2, h3)
+
+	#define VECF(var, l1, l2, l3, h1, h2, h3, body) VECNF(var, var, l1, l2, l3, h1, h2, h3, body)
+	#define VECN(name, var, l1, l2, l3, h1, h2, h3) VECNF(name, var, l1, l2, l3, h1, h2, h3, )
+	#define VEC(var, l1, l2, l3, h1, h2, h3) VECF(var, l1, l2, l3, h1, h2, h3, )
 
 	#define VECNRO(name, var) \
 		START(name, "N$", (int *numargs, ident *self), \
@@ -326,15 +338,19 @@ namespace game
 
 	#define VECRO(var) VECNRO(var, var)
 
-	#define BOOLN(name, var) \
+	#define BOOLFN(name, var, body) \
 		START(name, "iN$", (int *i, int *numargs, ident *self), \
 			PREAMBLE(name, , intret(e->var), printvar(self, e->var)) \
 			e->var = *i != 0; \
+			body; \
 			if(DEBUG_CONF) \
 				conoutf(CON_DEBUG, DEBUG_STR "->" #var " = %i", DEBUG_IND, e->var); \
 		)
 
-	#define BOOL(var) BOOLN(var, var)
+	#define BOOLF(var, body) BOOLFN(var, var, body)
+	#define BOOLN(name, var) BOOLFN(name, var, )
+	#define BOOL(var) BOOLF(var, )
+
 	#define BOOLNRO(var, name) INTNRO(var, name);
 	#define BOOLRO(var) INTNRO(var, var)
 
@@ -690,7 +706,7 @@ namespace game
 	#define DEBUG_IND loadingrpgent
 
 	//Generic entity types
-	VEC(o, 0, 0, 0, getworldsize(), getworldsize(), getworldsize())
+	VECF(o, 0, 0, 0, getworldsize(), getworldsize(), getworldsize(), e->resetinterp())
 	VEC(vel, -10000, -10000, -10000, 10000, 10000, 10000)
 	VEC(falling, 0, 0, -10000, 0, 0, 10000)
 	FLOAT(yaw, 0, 360)
