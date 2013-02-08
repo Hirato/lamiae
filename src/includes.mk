@@ -123,6 +123,7 @@ RPGCLIENT_OBJS = \
 	rpggame/rpgrender.o \
 	rpggame/rpgtest.o \
 	rpggame/rpgtrigger.o \
+	rpggame/rpgvehicle.o \
 	rpggame/waypoint.o
 
 CLIENT_PCH = \
@@ -434,6 +435,9 @@ rpggame/rpgtest.o: shared/iengine.h shared/igame.h
 rpggame/rpgtrigger.o: rpggame/rpggame.h shared/cube.h shared/tools.h
 rpggame/rpgtrigger.o: shared/geom.h shared/ents.h shared/command.h
 rpggame/rpgtrigger.o: shared/iengine.h shared/igame.h
+rpggame/rpgvehicle.o: rpggame/rpggame.h shared/cube.h shared/tools.h
+rpggame/rpgvehicle.o: shared/geom.h shared/ents.h shared/command.h
+rpggame/rpgvehicle.o: shared/iengine.h shared/igame.h
 rpggame/waypoint.o: rpggame/rpggame.h shared/cube.h shared/tools.h
 rpggame/waypoint.o: shared/geom.h shared/ents.h shared/command.h
 rpggame/waypoint.o: shared/iengine.h shared/igame.h

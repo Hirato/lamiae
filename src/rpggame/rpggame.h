@@ -69,6 +69,7 @@ struct rpgitem;
 struct rpgobstacle;
 struct rpgplatform;
 struct rpgtrigger;
+struct rpgvehicle;
 struct rpgvar;
 struct script;
 struct statusgroup;
@@ -122,6 +123,7 @@ namespace game
 	extern rpgcontainer *loadingrpgcontainer;
 	extern rpgplatform *loadingrpgplatform;
 	extern rpgtrigger *loadingrpgtrigger;
+	extern rpgvehicle *loadingrpgvehicle;
 	extern mapscript *loadingmapscript;
 	extern recipe *loadingrecipe;
 	extern merchant *loadingmerchant;
@@ -236,6 +238,7 @@ enum                            // static entity types
 	CONTAINER,
 	PLATFORM,
 	TRIGGER,
+	VEHICLE,
 	MAXENTTYPES
 };
 
@@ -719,7 +722,8 @@ enum
 	ENT_OBSTACLE,
 	ENT_CONTAINER,
 	ENT_PLATFORM,
-	ENT_TRIGGER
+	ENT_TRIGGER,
+	ENT_VEHICLE
 };
 
 struct rpgent : dynent
@@ -1492,8 +1496,6 @@ struct rpgchar : rpgent
 	bool useitem(item *it, equipment *slot = NULL, int u = -1);
 	void compactinventory(int base = -1);
 
-	void cleanup();
-
 	rpgchar() : name(NULL), mdl(newstring(DEFAULTMODEL)), portrait(NULL), base(stats(this)), script(1), faction(0), merchant(-1), lastaction(0), lastai(0), charge(0), primary(false), secondary(false), lastprimary(false), lastsecondary(false), attack(NULL), aiflags(0), target(NULL), forceanim(0)
 	{
 		health = base.getmaxhp();
@@ -1508,6 +1510,39 @@ struct rpgchar : rpgent
 		enumerate(inventory, vector<item *>, stack, stack.deletecontents());
 		directives.deletecontents();
 		equipped.deletecontents();
+	}
+};
+
+struct rpgvehicle : rpgent
+{
+	vector<rpgchar *> passengers;
+
+	const char *name;
+	const char *mdl;
+
+	int script;
+	int faction;
+	int maxpassengers;
+
+	///global
+	void resetmdl() { temp.mdl = (mdl && mdl[0]) ? mdl : DEFAULTMODEL; }
+	const char *getname() const { return name; }
+	const int type() {return ENT_VEHICLE;}
+	int getscript() {return script;}
+
+	void update();
+	void render();
+	void init(int base);
+
+	///character/AI
+	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
+
+	rpgvehicle() : name(NULL), mdl(newstring(DEFAULTMODEL)), script(0), faction(0), maxpassengers(4) {}
+
+	~rpgvehicle()
+	{
+		delete[] name;
+		delete[] mdl;
 	}
 };
 
@@ -1747,6 +1782,7 @@ struct reference
 		T_CONTAINER,
 		T_PLATFORM,
 		T_TRIGGER,
+		T_VEHICLE,
 		T_INV,
 		T_EQUIP,
 		T_MAP,
@@ -1784,6 +1820,7 @@ struct reference
 	rpgcontainer *getcontainer(int i) const;
 	rpgplatform *getplatform(int i) const;
 	rpgtrigger *gettrigger(int i) const;
+	rpgvehicle *getvehicle(int i) const;
 	rpgent *getent(int i) const;
 	item *getinv(int i) const;
 	equipment *getequip(int i) const;
@@ -1797,6 +1834,7 @@ struct reference
 	void pushref(rpgcontainer *d, bool force = false);
 	void pushref(rpgplatform *d, bool force = false);
 	void pushref(rpgtrigger *d, bool force = false);
+	void pushref(rpgvehicle *d, bool force = false);
 	void pushref(rpgent *d, bool force = false);
 	void pushref(item *d, bool force = false);
 	void pushref(vector<item *> *d, bool force = false);

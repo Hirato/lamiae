@@ -10,6 +10,7 @@ namespace entities
 	rpgcontainer *dummycontainer = new rpgcontainer();
 	rpgplatform  *dummyplatform  = new rpgplatform ();
 	rpgtrigger   *dummytrigger   = new rpgtrigger  ();
+	rpgvehicle   *dummyvehicle   = new rpgvehicle  ();
 
 	vector<extentity *> ents;
 	vector<extentity *> &getents() { return ents; }
@@ -94,6 +95,7 @@ namespace entities
 			case CONTAINER: dummy = dummycontainer; break;
 			case PLATFORM:  dummy = dummyplatform;  break;
 			case TRIGGER:   dummy = dummytrigger;   break;
+			case VEHICLE:   dummy = dummyvehicle;   break;
 		}
 
 		dummy->init(e.attr[1]);
@@ -117,6 +119,7 @@ namespace entities
 			x(CONTAINER, container);
 			x(PLATFORM,  platform );
 			x(TRIGGER,   trigger  );
+			x(VEHICLE,   vehicle  );
 		}
 #undef x
 
@@ -168,6 +171,9 @@ namespace entities
 					break;
 				case TRIGGER:
 					spawn(e, e.attr[1], ENT_TRIGGER, 1);
+					break;
+				case VEHICLE:
+					spawn(e, e.attr[1], ENT_VEHICLE, 1);
 					break;
 			}
 		}
@@ -232,6 +238,15 @@ namespace entities
 					DEBUGF("Creating trigger and instancing to type %i", ind);
 
 				ent = new rpgtrigger();
+
+				break;
+			}
+			case ENT_VEHICLE:
+			{
+				if(DEBUG_ENT)
+					DEBUGF("Creating vehicle and instancing to type %i", ind);
+
+				ent = new rpgvehicle();
 
 				break;
 			}
@@ -354,6 +369,7 @@ namespace entities
 			case CONTAINER:
 			case PLATFORM:
 			case TRIGGER:
+			case VEHICLE:
 			case SPAWN:
 				e.attr.pop();
 				e.attr.insert(0, game::player1->yaw);
@@ -426,6 +442,7 @@ namespace entities
 			case CONTAINER:
 			case PLATFORM:
 			case TRIGGER:
+			case VEHICLE:
 				pos.z += 3.0f;
 				formatstring(tmp)("Yaw: %i\nIndex: %i",
 					e.attr[0],
@@ -447,7 +464,7 @@ namespace entities
 		static const char *entnames[] =
 		{
 			"none?", "light", "mapmodel", "playerstart", "envmap", "particles", "sound", "spotlight",
-			"teledest", "jumppad", "checkpoint", "spawn", "location", "reserved", "blip", "camera", "platformroute", "critter", "item", "obstacle", "container", "platform", "trigger"
+			"teledest", "jumppad", "checkpoint", "spawn", "location", "reserved", "blip", "camera", "platformroute", "critter", "item", "obstacle", "container", "platform", "trigger", "vehicle"
 		};
 		return i>=0 && size_t(i)<sizeof(entnames)/sizeof(entnames[0]) ? entnames[i] : "";
 	}
@@ -471,6 +488,7 @@ namespace entities
 			2, //container
 			2, //platform
 			2, //trigger
+			2, //vehicle
 		};
 
 		type -= ET_GAMESPECIFIC;
@@ -516,6 +534,7 @@ namespace entities
 			case CONTAINER:
 			case PLATFORM:
 			case TRIGGER:
+			case VEHICLE:
 			case SPAWN:
 			case CAMERA:
 				return true;

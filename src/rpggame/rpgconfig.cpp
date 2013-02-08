@@ -172,6 +172,7 @@ namespace game
 	CHECK(rpgcontainer, container, obj->getcontainer(objidx))
 	CHECK(rpgplatform, platform, obj->getplatform(objidx))
 	CHECK(rpgtrigger, trigger, obj->gettrigger(objidx))
+	CHECK(rpgvehicle, vehicle, obj->getvehicle(objidx))
 
 	#undef CHECK
 
@@ -1116,6 +1117,21 @@ namespace game
 	STRING(name)
 	INT(flags, 0, rpgtrigger::F_MAX)
 	INT(script, 0, scripts.length() - 1)
+
+	#undef START
+	#undef INIT
+	#undef DEBUG_STR
+	#undef DEBUG_IND
+
+	#define START(n, f, a, b) ICOMMAND(r_vehicle_ ##n, f, a, b)
+	#define INIT rpgvehicle *e = checkrpgvehicle();
+	#define DEBUG_STR "rpgvehicle[%p]"
+	#define DEBUG_IND loadingrpgvehicle
+
+	MODEL(mdl)
+	STRING(name)
+	INT(script, 0, scripts.length() - 1)
+	INT(maxpassengers, 1, 128)
 
 	#undef START
 	#undef INIT

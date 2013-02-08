@@ -50,6 +50,12 @@ rpgtrigger *reference::gettrigger(int i) const
 	if(list[i].type == T_TRIGGER) return (rpgtrigger *) list[i].ptr;
 	return NULL;
 }
+rpgvehicle *reference::getvehicle(int i) const
+{
+	if(!list.inrange(i)) return NULL;
+	if(list[i].type == T_VEHICLE) return (rpgvehicle *) list[i].ptr;
+	return NULL;
+}
 item *reference::getinv(int i) const
 {
 	if(!list.inrange(i)) return NULL;
@@ -126,6 +132,13 @@ void reference::pushref(rpgtrigger *d, bool force)
 	list.add(ref(d, T_TRIGGER));
 	if(DEBUG_VSCRIPT) DEBUGF("pushed trigger type %p onto reference %s", d, name);
 }
+void reference::pushref(rpgvehicle *d, bool force)
+{
+	if(!canset(force)) return;
+
+	list.add(ref(d, T_VEHICLE));
+	if(DEBUG_VSCRIPT) DEBUGF("pushed vehicle type %p onto reference %s", d, name);
+}
 void reference::pushref(rpgent *d, bool force)
 {
 	if(!d || !canset(force)) return;
@@ -138,6 +151,7 @@ void reference::pushref(rpgent *d, bool force)
 		case ENT_CONTAINER: pushref((rpgcontainer *) d, force); return;
 		case ENT_PLATFORM: pushref((rpgplatform *) d, force); return;
 		case ENT_TRIGGER: pushref((rpgtrigger *) d, force); return;
+		case ENT_VEHICLE: pushref((rpgvehicle *) d, force); return;
 	}
 	ERRORF("reference::pushref(rpgent *d), if you see this, an unknown entity was encountered (%i), report this as a bug!", d->type());
 }
@@ -1934,6 +1948,8 @@ namespace rpgscript
 	SPAWNCOMMAND(platform, (*attra, ENT_PLATFORM, *attrb, *attrc, 1))
 	//tag, index, number
 	SPAWNCOMMAND(trigger, (*attra, ENT_TRIGGER, *attrb, *attrc, 1))
+	//tag, index, number
+	SPAWNCOMMAND(vehicle, (*attra, ENT_VEHICLE, *attrb, *attrc, 1))
 
 	#undef SPAWNCOMMAND
 
