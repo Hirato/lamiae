@@ -173,14 +173,12 @@ struct animmodel : model
                     }
                     setshaderparams(b, as, false, true, false);
                     /*if(as->cur.anim&ANIM_SHADOW)*/
-                    if(shadowmapping == SM_TETRA) SETMODELSHADER(b, alphashadowtetramodel);
-                    else SETMODELSHADER(b, alphashadowmodel);
+                    SETMODELSHADER(b, alphashadowmodel);
                 }
                 else
                 {
                     /*if(as->cur.anim&ANIM_SHADOW)*/
-                    if(shadowmapping == SM_TETRA) SETMODELSHADER(b, tetramodel);
-                    else SETMODELSHADER(b, shadowmodel);
+                    SETMODELSHADER(b, shadowmodel);
                 }
                 return;
             }
@@ -886,18 +884,7 @@ struct animmodel : model
                 glMultMatrixf(matrixstack[matrixpos].v);
                 if(resize!=1) glScalef(resize, resize, resize);
                 if(!translate.iszero()) glTranslatef(translate.x, translate.y, translate.z);
-                if(anim&ANIM_NOSKIN)
-                {
-                    if(shadowmapping == SM_TETRA)
-                    {
-                        plane p;
-                        matrixstack[matrixpos].transposedtransform(smtetraclipplane, p);
-                        p.scale(model->scale);
-                        p.translate(translate);
-                        GLOBALPARAM(tetramodelclip, (p));
-                    }
-                }
-                else
+                if(!(anim&ANIM_NOSKIN))
                 {
                     glMatrixMode(GL_TEXTURE);
                     glLoadMatrixf(matrixstack[matrixpos].v);
@@ -1459,7 +1446,7 @@ bool animmodel::enabletc = false, animmodel::enablealphablend = false,
      animmodel::enablenormals = false, animmodel::enabletangents = false,
      animmodel::enablebones = false, animmodel::enabledepthoffset = false;
 float animmodel::sizescale = 1;
-GLuint animmodel::lastvbuf = 0, animmodel::lasttcbuf = 0, animmodel::lastnbuf = 0, animmodel::lastxbuf = 0, animmodel::lastbbuf = 0, animmodel::lastebuf = 0, 
+GLuint animmodel::lastvbuf = 0, animmodel::lasttcbuf = 0, animmodel::lastnbuf = 0, animmodel::lastxbuf = 0, animmodel::lastbbuf = 0, animmodel::lastebuf = 0,
        animmodel::lastenvmaptex = 0, animmodel::closestenvmaptex = 0;
 Texture *animmodel::lasttex = NULL, *animmodel::lastdecal = NULL, *animmodel::lastmasks = NULL, *animmodel::lastnormalmap = NULL;
 int animmodel::envmaptmu = -1, animmodel::matrixpos = 0;
