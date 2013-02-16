@@ -8,12 +8,13 @@
 
 #define DEFAULTMODEL "xonotic/gak"
 
-#define DEFAULTITEMSCR "default item"
-#define DEFAULTCHARSCR "default critter"
-#define DEFAULTOBSTSCR "default obstacle"
-#define DEFAULTCONTSCR "default container"
-#define DEFAULTPLATSCR "default platform"
-#define DEFAULTTRIGSCR "default trigger"
+#define DEFAULTITEMSCR game::queryhashpool("default item")
+#define DEFAULTCHARSCR game::queryhashpool("default critter")
+#define DEFAULTOBSTSCR game::queryhashpool("default obstacle")
+#define DEFAULTCONTSCR game::queryhashpool("default container")
+#define DEFAULTPLATSCR game::queryhashpool("default platform")
+#define DEFAULTTRIGSCR game::queryhashpool("default trigger")
+#define DEFAULTMAPSCR  game::queryhashpool("default map")
 
 #ifdef NO_DEBUG
 
@@ -575,7 +576,7 @@ struct projectile
 	void dynlight();
 
 	projectile() : owner(NULL), item(NULL), ammo(NULL), o(vec(0, 0, 0)), dir(vec(0, 0, 0)), emitpos(vec(0, 0, 0)), lastemit(lastmillis), gravity(0), deleted(false), pflags(0), time(10000), dist(25000), projfx(NULL), trailfx(NULL), deathfx(NULL), radius(32), elasticity(.8), charge (1.0f), chargeflags(0) {}
-	~projectile() { delete[] projfx; delete[] trailfx; delete[] deathfx; }
+	~projectile() { }
 };
 
 struct status
@@ -707,7 +708,7 @@ struct areaeffect
 	void dynlight();
 
 	areaeffect() : owner(NULL), o(vec(0, 0, 0)), group(NULL), lastemit(lastmillis), elem(ATTACK_NONE), radius(0), fx(0) {}
-	~areaeffect() { delete[] group; effects.deletecontents(); }
+	~areaeffect() { effects.deletecontents(); }
 };
 
 struct inflict;
@@ -721,7 +722,7 @@ struct victimeffect
 	bool update(rpgent *victim);
 	victimeffect(rpgent *o, inflict *inf, int chargeflags, float mul);
 	victimeffect() : owner(NULL), group(NULL), elem(ATTACK_NONE) {}
-	~victimeffect() { delete[] group; effects.deletecontents(); }
+	~victimeffect() { effects.deletecontents(); }
 };
 
 enum
@@ -956,11 +957,11 @@ struct inflict
 
 	bool compare(inflict *o)
 	{
-		if(strcmp(status, o->status) || element != o->element || mul != o->mul)
+		if(status != o->status || element != o->element || mul != o->mul)
 			return false;
 		return true;
 	}
-	inflict(const char *st, int el, float m) : status(newstring(st)), element(el), mul(m) {}
+	inflict(const char *st, int el, float m) : status(st), element(el), mul(m) {}
 	~inflict() { delete[] status; }
 };
 
@@ -979,13 +980,11 @@ struct use
 		if(!o)
 		{
 			o = new use(script);
-			delete[] o->script;
 			*o = *this;
 		}
 		if(name) o->name = newstring(name);
 		if(description)  o->description = newstring(description);
 		if(icon)  o->icon = newstring(icon);
-		if(script) o->script = script;
 		loopv(effects)
 			o->effects[i] = new inflict(effects[i]->status, effects[i]->element, effects[i]->mul);
 
@@ -994,7 +993,7 @@ struct use
 	virtual void apply(rpgchar *user);
 	virtual bool compare(use *o)
 	{
-		if(type != o->type || strcmp(script, o->script) || cooldown != o->cooldown || chargeflags != o->chargeflags ||
+		if(type != o->type || script != o->script || cooldown != o->cooldown || chargeflags != o->chargeflags ||
 			!name ^ !o->name || (name && strcmp(name, o->name)) ||
 			!description ^ !o->description || (description && strcmp(description, o->description)) ||
 			!icon ^ !o->icon || (icon && strcmp(icon, o->icon)) ||
@@ -1011,7 +1010,6 @@ struct use
 		delete[] name;
 		delete[] description;
 		delete[] icon;
-		delete[] script;
 		effects.deletecontents();}
 };
 
@@ -1030,7 +1028,6 @@ struct use_armour : use
 		if(!uw)
 		{
 			uw = new use_armour(script);
-			delete[] o->script;
 			*uw = *this;
 		}
 
@@ -1054,7 +1051,7 @@ struct use_armour : use
 		return use::compare(o);
 	}
 	use_armour(const char *scr) : use(scr), vwepmdl(NULL), hudmdl(NULL), idlefx(-1), reqs(statreq()), slots(0), skill(SKILL_ARMOUR) {type = USE_ARMOUR;}
-	~use_armour() { /*conoutf("use_arm: freeing, %p %p", vwepmdl, hudmdl);*/   delete[] vwepmdl; delete[] hudmdl;}
+	~use_armour() { delete[] vwepmdl; delete[] hudmdl;}
 };
 
 struct use_weapon : use_armour
@@ -1093,21 +1090,17 @@ struct use_weapon : use_armour
 		use_weapon *uw = (use_weapon *) o;
 
 		if(range != uw->range || angle != uw->angle || lifetime != uw->lifetime || gravity != uw->gravity ||
+			projeffect != uw->projeffect || traileffect != uw->traileffect || deatheffect != uw->deatheffect ||
 			cost != uw->cost || pflags != uw->pflags || ammo != uw->ammo || target != uw->target ||
 			radius != uw->radius || kickback != uw->kickback || recoil != uw->recoil || charge != uw->charge ||
 			basecharge != uw->basecharge || mincharge != uw->mincharge || maxcharge != uw->maxcharge ||
 			elasticity != uw->elasticity || speed != uw->speed)
 			return false;
 
-		if( !projeffect ^ !uw->projeffect || (projeffect && strcmp(projeffect, uw->projeffect)) ||
-			!traileffect ^ !uw->traileffect || (traileffect && strcmp(traileffect, uw->traileffect)) ||
-			!deatheffect ^ !uw->deatheffect || (deatheffect && strcmp(deatheffect, uw->deatheffect))
-		) return false;
-
 		return use_armour::compare(o);
 	}
 	use_weapon(const char *scr) : use_armour(scr), range(256), angle(60), lifetime(10000), gravity(0), projeffect(NULL), traileffect(NULL), deatheffect(NULL), cost(10), pflags(P_DIST|P_TIME), ammo(-1), target(T_SINGLE), radius(32), kickback(10), recoil(0), charge(0), basecharge(.5f), mincharge(.5f), maxcharge(1.0f), elasticity(0.8), speed(1.0f) {type = USE_WEAPON;}
-	~use_weapon() { delete[] projeffect; delete[] traileffect; delete[] deatheffect; }
+	~use_weapon() {}
 };
 
 struct item
@@ -1121,9 +1114,9 @@ struct item
 		F_MAX = (1 << 4) -1
 	};
 	const char *name, *icon, *description, *mdl;
-	const char *script; //id
 	// NOTE: this points to a pointer in the hashpool - DO NOT FREE!
 	// it also allows cheap equivalency testing
+	const char *script; //id
 	const char *base;
 
 	int quantity;
@@ -1150,7 +1143,6 @@ struct item
 		delete[] o.icon;
 		delete[] o.description;
 		delete[] o.mdl;
-		delete[] o.script;
 		o.uses.deletecontents();
 
 		o = *this;
@@ -1158,7 +1150,6 @@ struct item
 		if(icon) o.icon = newstring(icon);
 		if(description) o.description = newstring(description);
 		if(mdl) o.mdl = newstring(mdl);
-		if(script) o.script = newstring(script);
 
 		loopv(uses)
 			o.uses[i] = uses[i]->dup();
@@ -1168,7 +1159,7 @@ struct item
 
 	bool compare(item *o)
 	{
-		if(base != o->base || durability != o->durability || recovery != o->recovery || category != o->category ||
+		if(base != o->base || script != o->script || durability != o->durability || recovery != o->recovery || category != o->category ||
 			flags != o->flags || value != o->value || maxdurability != o->maxdurability || charges != o->charges || weight != o->weight || uses.length() != o->uses.length())
 			return false;
 
@@ -1177,8 +1168,7 @@ struct item
 		loopv(uses) if(!uses[i]->compare(o->uses[i]))
 			return false;
 
-		if(strcmp(script, o->script) ||
-			!name ^ !o->name || (name && strcmp(name, o->name)) || !icon ^ !o->icon || (icon && strcmp(icon, o->icon)) ||
+		if( !name ^ !o->name || (name && strcmp(name, o->name)) || !icon ^ !o->icon || (icon && strcmp(icon, o->icon)) ||
 			!description ^ !o->description || (description && strcmp(description, o->description)) ||
 			!mdl ^ !o->mdl || (mdl && strcmp(mdl, o->mdl)))
 			return false;
@@ -1186,14 +1176,13 @@ struct item
 		return true;
 	}
 
-	item() : name(NULL), icon(NULL), description(NULL), mdl(newstring(DEFAULTMODEL)), script(newstring(DEFAULTITEMSCR)), base(NULL), quantity(1), category(0), flags(0), value(0), maxdurability(0), charges(-2), weight(0), durability(0), recovery(1), locals(-1) {}
+	item() : name(NULL), icon(NULL), description(NULL), mdl(newstring(DEFAULTMODEL)), script(DEFAULTITEMSCR), base(NULL), quantity(1), category(0), flags(0), value(0), maxdurability(0), charges(-2), weight(0), durability(0), recovery(1), locals(-1) {}
 	~item()
 	{
 		delete[] name;
 		delete[] icon;
 		delete[] description;
 		delete[] mdl;
-		delete[] script;
 		uses.deletecontents();
 		rpgscript::freelocal(locals);
 	}
@@ -1252,8 +1241,8 @@ struct rpgobstacle : rpgent
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
 
 
-	rpgobstacle() : mdl(newstring(DEFAULTMODEL)), script(newstring(DEFAULTOBSTSCR)), weight(100), flags(0), lastupdate(0) { physent::type = ENT_INANIMATE;}
-	~rpgobstacle() { delete[] mdl; delete[] script; }
+	rpgobstacle() : mdl(newstring(DEFAULTMODEL)), script(DEFAULTOBSTSCR), weight(100), flags(0), lastupdate(0) { physent::type = ENT_INANIMATE;}
+	~rpgobstacle() { delete[] mdl; }
 };
 
 struct rpgcontainer : rpgent
@@ -1289,14 +1278,11 @@ struct rpgcontainer : rpgent
 	int getcount(item *it);
 	float getweight();
 
-	rpgcontainer() : mdl(newstring(DEFAULTMODEL)), name(NULL), capacity(200), faction(NULL), merchant(NULL), script(newstring(DEFAULTCONTSCR)), lock(0), magelock(0) {physent::type = ENT_INANIMATE;}
+	rpgcontainer() : mdl(newstring(DEFAULTMODEL)), name(NULL), capacity(200), faction(NULL), merchant(NULL), script(DEFAULTCONTSCR), lock(0), magelock(0) {physent::type = ENT_INANIMATE;}
 	~rpgcontainer()
 	{
 		delete[] name;
 		delete[] mdl;
-		delete[] faction;
-		delete[] merchant;
-		delete[] script;
 		enumerate(inventory, vector<item *>, stack, stack.deletecontents());
 	}
 };
@@ -1334,8 +1320,8 @@ struct rpgplatform : rpgent
 	void die(rpgent *killer = NULL) {}
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
 
-	rpgplatform() : mdl(newstring(DEFAULTMODEL)), script(newstring(DEFAULTPLATSCR)), speed(100), flags(0), routes(hashtable<int, vector<int> >(16)), target(-1) {physent::type = ENT_INANIMATE;}
-	~rpgplatform() { delete[] mdl; delete[] script; }
+	rpgplatform() : mdl(newstring(DEFAULTMODEL)), script(DEFAULTPLATSCR), speed(100), flags(0), routes(hashtable<int, vector<int> >(16)), target(-1) {physent::type = ENT_INANIMATE;}
+	~rpgplatform() { delete[] mdl; }
 };
 
 struct rpgtrigger : rpgent
@@ -1367,12 +1353,11 @@ struct rpgtrigger : rpgent
 	void die(rpgent *killer = NULL) {}
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
 
-	rpgtrigger() : mdl(newstring(DEFAULTMODEL)), name(NULL), script(newstring(DEFAULTTRIGSCR)), flags(0), lasttrigger(lastmillis) {physent::type = ENT_INANIMATE;}
+	rpgtrigger() : mdl(newstring(DEFAULTMODEL)), name(NULL), script(DEFAULTTRIGSCR), flags(0), lasttrigger(lastmillis) {physent::type = ENT_INANIMATE;}
 	~rpgtrigger()
 	{
 		delete[] mdl;
 		delete[] name;
-		delete[] script;
 	}
 };
 
@@ -1508,7 +1493,7 @@ struct rpgchar : rpgent
 
 	void cleanup();
 
-	rpgchar() : name(NULL), mdl(newstring(DEFAULTMODEL)), portrait(NULL), script(newstring(DEFAULTCHARSCR)), faction(NULL), merchant(NULL), base(stats(this)), lastaction(0), lastai(0), charge(0), primary(false), secondary(false), lastprimary(false), lastsecondary(false), attack(NULL), aiflags(0), target(NULL), forceanim(0)
+	rpgchar() : name(NULL), mdl(newstring(DEFAULTMODEL)), portrait(NULL), script(DEFAULTCHARSCR), faction(NULL), merchant(NULL), base(stats(this)), lastaction(0), lastai(0), charge(0), primary(false), secondary(false), lastprimary(false), lastsecondary(false), attack(NULL), aiflags(0), target(NULL), forceanim(0)
 	{
 		health = base.getmaxhp();
 		mana = base.getmaxmp();
@@ -1519,9 +1504,6 @@ struct rpgchar : rpgent
 		delete[] name;
 		delete[] mdl;
 		delete[] portrait;
-		delete[] script;
-		delete[] faction;
-		delete[] merchant;
 		enumerate(inventory, vector<item *>, stack, stack.deletecontents());
 		directives.deletecontents();
 		equipped.deletecontents();
@@ -1730,11 +1712,10 @@ struct mapinfo
 	int locals;
 
 	void getsignal(const char *sig, bool prop = true, rpgent *sender = NULL);
-	mapinfo() : name(NULL), script(0), flags(0), loaded(false), locals(-1) {}
+	mapinfo() : name(NULL), script(DEFAULTMAPSCR), flags(0), loaded(false), locals(-1) {}
 	~mapinfo()
 	{
 		delete[] name;
-		delete[] script;
 		objs.deletecontents();
 		loadactions.deletecontents();
 		projs.deletecontents();
