@@ -6,15 +6,17 @@ namespace game
 	VAR(forceverbose, 1, 0, -1);
 	rpgchar *player1 = new rpgchar();
 
+	hashset<const char *> hashpool;
+
 	// GAME DEFINITIONS
-	vector<script *> scripts; ///scripts, includes dialogue
-	vector<effect *> effects; ///pretty particle effects for spells and stuff
-	vector<statusgroup *> statuses; ///status effect definitions to transfer onto victims
-	vector<faction *> factions;
-	vector<ammotype *> ammotypes;
-	vector<mapscript *> mapscripts;
-	vector<recipe *> recipes;
-	vector<merchant *> merchants;
+	hashtable<const char *, script> scripts;       ///scripts, includes dialogue
+	hashtable<const char *, effect> effects;       ///pretty particle effects for spells and stuff
+	hashtable<const char *, statusgroup> statuses; ///status effect definitions to transfer onto victims
+	hashtable<const char *, faction> factions;
+	hashtable<const char *, ammotype> ammotypes;
+	hashtable<const char *, mapscript> mapscripts;
+	hashtable<const char *, recipe> recipes;
+	hashtable<const char *, merchant> merchants;
 
 	vector<const char *> categories, tips;
 	hashset<rpgvar> variables;
@@ -26,6 +28,13 @@ namespace game
 	bool connected = false;
 	bool transfer = false;
 	bool abort = false;
+
+	const char *queryhashpool(const char *str)
+	{
+		const char *ret = *hashpool.access(str);
+		if(ret) return ret;
+		return hashpool.access(str, newstring(str));
+	}
 
 	//important variables/configuration
 	SVAR(firstmap, "");
@@ -183,23 +192,52 @@ namespace game
 		}
 
 		if(DEBUG_WORLD)
-			DEBUGF("clearing %i scripts, %i effects, %i status effects, %i ammotypes, %i factions, %i mapscripts, %i recipes, %i merchants, %i item categories, and %i tips",
-				scripts.length(), effects.length(), statuses.length(),
-				ammotypes.length(), factions.length(), mapscripts.length(),
-				recipes.length(), merchants.length(), categories.length(), tips.length());
+			DEBUGF("Clearing hashpool of %i entries", hashpool.length());
 
-		scripts.deletecontents();
-		effects.deletecontents();
-		statuses.deletecontents();
-		ammotypes.deletecontents();
-		factions.deletecontents();
-		mapscripts.deletecontents();
-		recipes.deletecontents();
-		merchants.deletecontents();
+		enumerate(hashpool, const char *, str,
+			delete[] str;
+		)
+		hashpool.clear();
+
+		if(DEBUG_WORLD)
+			DEBUGF(
+				"clearing %i scripts, "
+				"%i effects, "
+				"%i status effects, "
+				"%i ammotypes, "
+				"%i factions, "
+				"%i mapscripts, "
+				"%i recipes, "
+				"%i merchants, "
+				"%i journal buckets, "
+				"%i variables, "
+				"%i item categories, "
+				"and %i tips",
+				scripts.length(),
+				effects.length(),
+				statuses.length(),
+				ammotypes.length(),
+				factions.length(),
+				mapscripts.length(),
+				recipes.length(),
+				merchants.length(),
+				journals.length(),
+				variables.length(),
+				categories.length(),
+				tips.length());
+
+		scripts.clear();
+		effects.clear();
+		statuses.clear();
+		ammotypes.clear();
+		factions.clear();
+		mapscripts.clear();
+		recipes.clear();
+		merchants.clear();
+		journals.clear();
+		variables.clear();
 		categories.deletearrays();
 		tips.deletearrays();
-		variables.clear();
-		journals.clear();
 
 		//We reset the player here so he has a clean slate on a new game.
 		player1->~rpgchar();
@@ -209,49 +247,35 @@ namespace game
 	}
 
 	template<class T>
-	static inline void loadassets(const char *dir, T *&var, vector<T*> &objects)
+	static inline void loadassets(const char *dir, T *&var, hashtable<const char*, T> &objects)
 	{
-		objects.deletecontents();
+		objects.clear();
 		vector<char *> files;
 		string file;
 
 		listfiles(dir, "cfg", files);
 		loopv(files)
 		{
-			char *end;
-			int idx = strtol(files[i], &end, 10);
-			if(end == files[i] || *end != '\0' || idx < 0)
+			const char *hash = queryhashpool(files[i]);
+
+			if(objects.access(hash))
 			{
-				ERRORF("can't load \"%s/%s.cfg\" - invalid index or file name; skipping", dir, files[i]);
-				continue;
+				ERRORF("\"%s/%s.cfg\" appears to have already been loaded. This should not be possible, aborting", dir, files[i]);
+				abort = true;
+				goto cleanup;
 			}
+
 			if(DEBUG_WORLD)
-				DEBUGF("idx = %i, vector has %i; expanding if necessary", idx, objects.length());
-			while(!objects.inrange(idx)) objects.add(NULL);
+				DEBUGF("registering hash %s from \"%s/%s.cfg\"", hash, dir, files[i]);
 
-			if(objects[idx])
-			{
-				ERRORF("object with index %i already defined in %s; skipping", idx, dir);
-				continue;
-			}
-
-			objects[idx] = var = new T();
-
+			var = &objects[hash];
 			formatstring(file)("%s/%s.cfg", dir, files[i]);
-			if(DEBUG_WORLD) DEBUGF("executing %s for index %i", file, idx);
 			execfile(file);
 		}
+
+	cleanup:
 		files.deletearrays();
 		var = NULL;
-
-		loopv(objects)
-		{
-			if(!objects[i])
-			{
-				ERRORF("index %i not defined in %s; problems WILL occur if referenced.", i, dir);
-				abort = true;
-			}
-		}
 	}
 
 	void loadassets(const char *dir, bool definitions = false)
@@ -261,8 +285,10 @@ namespace game
 
 		if(!definitions)
 		{
+			if(DEBUG_WORLD) DEBUGF("loading variables");
 			formatstring(pth)("%s/variables.cfg", dir);
 			execfile(pth);
+			if(DEBUG_WORLD) DEBUGF("loading tips");
 			formatstring(pth)("%s/tips.cfg", dir);
 			execfile(pth);
 		}
@@ -278,33 +304,51 @@ namespace game
 			abort = true; \
 		}
 
+		if(DEBUG_WORLD) DEBUGF("loading categories");
 		categories.deletearrays();
 		formatstring(pth)("%s/categories.cfg", dir);
 		execfile(pth);
 		RANGECHECK(categories);
+
+		if(DEBUG_WORLD) DEBUGF("loading merchants");
 		formatstring(pth)("%s/merchants", dir);
 		loadassets(pth, loadingmerchant, merchants);
+
+		if(DEBUG_WORLD) DEBUGF("loading scripts");
 		formatstring(pth)("%s/scripts", dir);
 		loadassets(pth, loadingscript, scripts);
 		RANGECHECK(scripts);
+
+		if(DEBUG_WORLD) DEBUGF("loading particle effects");
 		formatstring(pth)("%s/effects", dir);
 		loadassets(pth, loadingeffect, effects);
+
+		if(DEBUG_WORLD) DEBUGF("loading statuses");
 		formatstring(pth)("%s/statuses", dir);
 		loadassets(pth, loadingstatusgroup, statuses);
+
+		if(DEBUG_WORLD) DEBUGF("loading ammotypes");
 		formatstring(pth)("%s/ammo", dir);
 		loadassets(pth, loadingammotype, ammotypes);
+
+		if(DEBUG_WORLD) DEBUGF("loading factions");
 		formatstring(pth)("%s/factions", dir);
 		loadassets(pth, loadingfaction, factions);
 		RANGECHECK(factions);
+
+		if(DEBUG_WORLD) DEBUGF("loading mapscripts");
 		formatstring(pth)("%s/mapscripts", dir);
 		loadassets(pth, loadingmapscript, mapscripts);
 		RANGECHECK(mapscripts);
+
+		if(DEBUG_WORLD) DEBUGF("loading recipes");
 		formatstring(pth)("%s/recipes", dir);
 		loadassets(pth, loadingrecipe, recipes);
 
 
 		if(!definitions)
 		{
+			if(DEBUG_WORLD) DEBUGF("loading player");
 			loadingrpgchar = player1;
 			formatstring(pth)("%s/player.cfg", dir);
 			execfile(pth);

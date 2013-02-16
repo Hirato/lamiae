@@ -19,7 +19,7 @@ void action_spawn::exec()
 	}
 	if(!matches.length())
 	{
-		WARNINGF("spawn action spawned nothing: %i %i %i %i %i", tag, ent, id, amount, qty);
+		WARNINGF("spawn action spawned nothing: %i %i %s %i %i", tag, ent, id, amount, qty);
 		return;
 	}
 
