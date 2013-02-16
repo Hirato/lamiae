@@ -66,13 +66,15 @@ void rpgplatform::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, fl
 {
 	loopv(weapon->effects)
 	{
-		if(!game::statuses.inrange(weapon->effects[i]->status)) continue;
+		statusgroup *sg = game::statuses.access(weapon->effects[i]->status);
+		if(!sg) continue;
 		seffects.add(new victimeffect(attacker, weapon->effects[i], weapon->chargeflags, mul));
 	}
 
 	if(ammo) loopv(ammo->effects)
 	{
-		if(!game::statuses.inrange(ammo->effects[i]->status)) continue;
+		statusgroup *sg = game::statuses.access(ammo->effects[i]->status);
+		if(!sg) continue;
 		seffects.add(new victimeffect(attacker, ammo->effects[i], weapon->chargeflags, mul));
 	}
 

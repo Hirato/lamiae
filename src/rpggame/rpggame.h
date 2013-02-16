@@ -698,8 +698,8 @@ struct areaeffect
 {
 	rpgent *owner;
 	vec o;
-	const char *group;
-	int lastemit, elem, radius, fx;
+	const char *group, *fx;
+	int lastemit, elem, radius;
 
 	vector<status *> effects;
 
@@ -707,7 +707,7 @@ struct areaeffect
 	void render();
 	void dynlight();
 
-	areaeffect() : owner(NULL), o(vec(0, 0, 0)), group(NULL), lastemit(lastmillis), elem(ATTACK_NONE), radius(0), fx(0) {}
+	areaeffect() : owner(NULL), o(vec(0, 0, 0)), group(NULL), fx(NULL), lastemit(lastmillis), elem(ATTACK_NONE), radius(0) {}
 	~areaeffect() { effects.deletecontents(); }
 };
 
@@ -1519,7 +1519,7 @@ struct merchant
 	};
 
 	vector<rate> rates;
-	int currency;
+	const char *currency;
 	int credit; //store credit, a measure of how much money the merchant owes you.
 
 	rate getrate(const rpgchar &buyer, int cat) const
@@ -1535,7 +1535,7 @@ struct merchant
 		return r;
 	}
 
-	merchant() : currency(0), credit(0) {}
+	merchant() : currency(NULL), credit(0) {}
 };
 
 struct recipe

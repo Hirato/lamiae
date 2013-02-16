@@ -15,8 +15,8 @@ void use_armour::apply(rpgchar *user)
 
 	loopv(effects)
 	{
-		if(!game::statuses.inrange(effects[i]->status)) continue;
-		statusgroup *sg = game::statuses[effects[i]->status];
+		statusgroup *sg = game::statuses.access(effects[i]->status);
+		if(!sg) continue;
 		int resist = 0;
 		int thresh = 0;
 		if(!sg->friendly)
@@ -100,63 +100,50 @@ bool rpgchar::checkammo(equipment &eq, equipment *quiver, bool remove)
 {
 	//it is assumed it's valid
 	use_weapon *wep = (use_weapon *) eq.it->uses[eq.use];
-	switch(wep->ammo)
+	if(!wep->ammo)
 	{
-		case -3:
-			if(base.experience < wep->cost)
-			{
-				if(this == game::player1) game::hudline("\f3You lack sufficient exp to perform this action");
-				else if (DEBUG_AI) DEBUGF("AI attack interrupted for %p, too little exp", this);
-				return false;
-			}
-			if(remove) base.experience -= wep->cost;
-			return true;
-		case -2: case -1:
+		if(mana < wep->cost)
 		{
-			if((wep->ammo == -1 ? mana : health) < wep->cost)
-			{
-				if(this == game::player1) game::hudline(wep->ammo == -1 ? "\f3You lack the mana to cast the full spell" : "\f3Doing this would be suicide");
-				else if (DEBUG_AI) DEBUGF("AI attack interrupted for %p, too little %s", this, wep->ammo == -1 ? "mana" :"health");
-				return false;
-			}
-			if(remove) (wep->ammo == -1 ? mana : health) -= wep->cost;
-			return true;
+			if(this == game::player1) game::hudline("\f3You lack the mana to cast the full spell");
+			else if (DEBUG_AI) DEBUGF("AI attack interrupted for %p, too little mana", this);
+			return false;
 		}
-		default:
-		{
-			if(!game::ammotypes.inrange(wep->ammo))
-			{
-				ERRORF("entity %p trying to attack with weapon using invalid ammotype %i; out of range", this, wep->ammo);
-				return false;
-			}
-			ammotype *at = game::ammotypes[wep->ammo];
-			item *it = NULL;
-
-			if(quiver && at->items.find(quiver->it->base) >= 0) it = quiver->it;
-			else if (at->items.find(eq.it->base) >= 0) it = eq.it;
-			else
-			{
-				if(this == game::player1) game::hudline("You have the wrong ammo equipped for the current weapon");
-				else if (DEBUG_AI) DEBUGF("AI attack interrupted for %p, wrong ammo equipped", this);
-				return false;
-			}
-
-			if(wep->cost > 0 && getcount(it) < wep->cost)
-			{
-				if(this == game::player1) game::hudline("You have too little ammo remaining to attack again");
-				else if (DEBUG_AI) DEBUGF("AI attack interrupted for %p, too little ammo", this);
-				return false;
-			}
-
-			if(remove)
-			{
-				drop(it, wep->cost, false);
-				//this is the remove ammo pass - let it be known the quiver is no longer valid
-				if(getcount(it) == 0) return false;
-			}
-			return true;
-		}
+		if(remove) mana -= wep->cost;
+		return true;
 	}
+
+	ammotype *at = game::ammotypes.access(wep->ammo);
+	item *it = NULL;
+
+	if(!at)
+	{
+		ERRORF("entity %p trying to attack with weapon using invalid ammotype %s; out of range", this, wep->ammo);
+		return false;
+	}
+
+	if(quiver && at->items.find(quiver->it->base) >= 0) it = quiver->it;
+	else if (at->items.find(eq.it->base) >= 0) it = eq.it;
+	else
+	{
+		if(this == game::player1) game::hudline("You have the wrong ammo equipped for the current weapon");
+		else if (DEBUG_AI) DEBUGF("AI attack interrupted for %p, wrong ammo equipped", this);
+		return false;
+	}
+
+	if(wep->cost > 0 && getcount(it) < wep->cost)
+	{
+		if(this == game::player1) game::hudline("You have too little ammo remaining to attack again");
+		else if (DEBUG_AI) DEBUGF("AI attack interrupted for %p, too little ammo", this);
+		return false;
+	}
+
+	if(remove)
+	{
+		drop(it, wep->cost, false);
+		//this is the remove ammo pass - let it be known the quiver is no longer valid
+		if(getcount(it) == 0) return false;
+	}
+	return true;
 }
 
 VAR(lefthand, 1, 0, -1);
@@ -195,9 +182,11 @@ void rpgchar::doattack(equipment *eleft, equipment *eright, equipment *quiver)
 				primary = secondary = 0;
 				return; //we lack the catalysts, don't attack
 			}
-			if(quiver && (!game::ammotypes.inrange(attack->ammo) || -1 == game::ammotypes[attack->ammo]->items.find(quiver->it->base))) quiver = NULL;
+
+			ammotype *at = game::ammotypes.access(attack->ammo);
+			if(quiver && (!at || at->items.find(quiver->it->base) == -1)) quiver = NULL;
 		}
-		ammo = (use_weapon *) ((quiver && attack->ammo >= 0) ? quiver->it->uses[quiver->use] : NULL);
+		ammo = (use_weapon *) ((quiver && attack->ammo != NULL) ? quiver->it->uses[quiver->use] : NULL);
 
 		float mult = attack->maxcharge;
 		if(attack->charge)
@@ -233,6 +222,8 @@ void rpgchar::doattack(equipment *eleft, equipment *eright, equipment *quiver)
 		}
 
 		int flags = attack->chargeflags | (ammo ? ammo->chargeflags : 0);
+		effect *death = game::effects.access(attack->deatheffect);
+		effect *trail = game::effects.access(attack->traileffect);
 
 		switch(attack->target)
 		{
@@ -241,21 +232,20 @@ void rpgchar::doattack(equipment *eleft, equipment *eright, equipment *quiver)
 			case T_AREA:
 			{
 				projectile *p = game::curmap->projs.add(new projectile());
-				p->init(this, attack == left ? eleft : eright, attack->ammo >= 0 ? quiver : NULL, 0, mult);
+				p->init(this, attack == left ? eleft : eright, attack->ammo != NULL ? quiver : NULL, 0, mult);
 				break;
 			}
 
 			case T_SELF:
 				hit(this, attack, ammo, mult, flags, vec(0, 0, 1));
-				if(game::effects.inrange(attack->deatheffect))
-					game::effects[attack->deatheffect]->drawaura(this, mult, effect::DEATH, 0);
+				if(death) death->drawaura(this, mult, effect::DEATH, 0);
 				break;
 
 			case T_SMULTI:
 			case T_SAREA:
 			{
 				projectile *p = game::curmap->projs.add(new projectile());
-				p->init(this, attack == left ? eleft : eright, attack->ammo >= 0 ? quiver : NULL, 0, mult);
+				p->init(this, attack == left ? eleft : eright, attack->ammo != NULL ? quiver : NULL, 0, mult);
 				p->pflags = P_VOLATILE|P_STATIONARY;
 
 				break;
@@ -298,11 +288,9 @@ void rpgchar::doattack(equipment *eleft, equipment *eright, equipment *quiver)
 				loopv(hits)
 				{
 					vec pos = vec(hits[i]).add(orig);
-					if(game::effects.inrange(attack->deatheffect))
-						game::effects[attack->deatheffect]->drawsplash(pos, vec(0, 0, 0), 5, 1, effect::DEATH, 1);
+					if(death) death->drawsplash(pos, vec(0, 0, 0), 5, 1, effect::DEATH, 1);
 				}
-				if(game::effects.inrange(attack->traileffect))
-					game::effects[attack->traileffect]->drawcircle(this, attack, mult, effect::TRAIL_SINGLE, 0);
+				if(trail) trail->drawcircle(this, attack, mult, effect::TRAIL_SINGLE, 0);
 
 				break;
 			}
@@ -327,15 +315,11 @@ void rpgchar::doattack(equipment *eleft, equipment *eright, equipment *quiver)
 					{
 						d->hit(this, attack, ammo, mult, flags, other);
 
-						if(game::effects.inrange(attack->deatheffect))
-						{
-							game::effects[attack->deatheffect]->drawsplash(vec(d->o).sub(vec(0, 0, d->eyeheight / 2)), vec(0, 0, 1), 5, 1, effect::DEATH, 1);
-						}
+						if(death) death->drawsplash(vec(d->o).sub(vec(0, 0, d->eyeheight / 2)), vec(0, 0, 1), 5, 1, effect::DEATH, 1);
 					}
 				}
 
-				if(game::effects.inrange(attack->traileffect))
-					game::effects[attack->traileffect]->drawcone(this, attack, mult, effect::TRAIL_SINGLE, 0);
+				if(trail) trail->drawcone(this, attack, mult, effect::TRAIL_SINGLE, 0);
 				break;
 			}
 		}
@@ -413,14 +397,14 @@ void rpgchar::doai(equipment *eleft, equipment *eright, equipment *quiver)
 		if(eleft)
 		{
 			attack = (use_weapon *) eleft->it->uses[eleft->use];
-			if(attack->type < USE_WEAPON || !attack->effects.length() || game::statuses[attack->effects[0]->status]->friendly)
+			if(attack->type < USE_WEAPON || !attack->effects.length() || game::statuses.access(attack->effects[0]->status)->friendly)
 				attack = NULL;
 		}
 		if(!attack && eright)
 		{
 			left = false;
 			attack = (use_weapon *) eright->it->uses[eright->use];
-			if(attack->type < USE_WEAPON || !attack->effects.length() || game::statuses[attack->effects[0]->status]->friendly)
+			if(attack->type < USE_WEAPON || !attack->effects.length() || game::statuses.access(attack->effects[0]->status)->friendly)
 				attack = NULL;
 		}
 
@@ -578,7 +562,7 @@ void rpgchar::render()
 		else if(use->slots & SLOT_QUIVER) tag = "tag_quiver";
 		attachments.add(modelattach(tag, use->vwepmdl));
 
-		if(use->idlefx >= 0)
+		if(use->idlefx)
 		{
 			attachments.add(modelattach("tag_partstart", emitter));
 			attachments.add(modelattach("tag_partend", emitter + 1));
@@ -595,10 +579,10 @@ void rpgchar::render()
 	loopv(equipped)
 	{
 		use_armour *use = (use_armour *) equipped[i]->it->uses[equipped[i]->use];
-		if(use->type < USE_ARMOUR || !use->vwepmdl || use->idlefx < 0 || !use->slots)
+		if(use->type < USE_ARMOUR || !use->vwepmdl || ! use->idlefx || !use->slots)
 			continue;
 
-		game::effects[use->idlefx]->drawwield(emitter[0], emitter[1], 1, effect::TRAIL);
+		game::effects.access(use->idlefx)->drawwield(emitter[0], emitter[1], 1, effect::TRAIL);
 		emitter[0] = emitter[1] = vec(-1, -1, -1);
 		emitter += 2;
 	}
@@ -635,7 +619,7 @@ void rpgchar::equip(item *it, int u)
 		return;
 	}
 
-	if(!usecase->slots || dequip(-1, usecase->slots))
+	if(!usecase->slots || dequip(NULL, usecase->slots))
 	{
 		equipped.add(new equipment(it, u));
 		it->quantity--;
@@ -661,7 +645,7 @@ bool rpgchar::dequip(const char *base, int slots)
 	{
 		use_armour *arm = (use_armour *) equipped[i]->it->uses[equipped[i]->use];
 
-		if((base == -1 ? true : equipped[i]->it->base == base) && (slots ? arm->slots & slots : true))
+		if((!base ? true : equipped[i]->it->base == base) && (slots ? arm->slots & slots : true))
 		{
 			if(equipped[i]->it->flags & item::F_CURSED)
 				rem++;
@@ -719,16 +703,18 @@ void rpgchar::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float 
 	hit_total = 0;
 	loopv(weapon->effects)
 	{
-		if(!game::statuses.inrange(weapon->effects[i]->status)) continue;
-		if(!game::statuses[weapon->effects[i]->status]->friendly) hit_friendly = 0;
+		statusgroup *sg = game::statuses.access(weapon->effects[i]->status);
+		if(!sg) continue;
+		if(!sg->friendly) hit_friendly = 0;
 		victimeffect &v = *seffects.add(new victimeffect(attacker, weapon->effects[i], weapon->chargeflags, mul));
 		loopvj(v.effects) hit_total += v.effects[j]->value();
 	}
 
 	if(ammo) loopv(ammo->effects)
 	{
-		if(!game::statuses.inrange(ammo->effects[i]->status)) continue;
-		if(!game::statuses[ammo->effects[i]->status]->friendly) hit_friendly = 0;
+		statusgroup *sg = game::statuses.access(ammo->effects[i]->status);
+		if(!sg) continue;
+		if(!sg->friendly) hit_friendly = 0;
 		victimeffect &v = *seffects.add(new victimeffect(attacker, ammo->effects[i], weapon->chargeflags, mul));
 		loopvj(v.effects) hit_total += v.effects[j]->value();
 	}

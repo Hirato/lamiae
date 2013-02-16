@@ -1144,7 +1144,7 @@ namespace game
 	#define DEBUG_STR "merchants[%p]"
 	#define DEBUG_IND e
 
-	INT(currency, 0, 0xFFFF)
+	HASH(currency, true)
 	INT(credit, 0, 0xFFFFFF)
 
 	START(setrate, "iff", (int *cat, float *buy, float *sell),

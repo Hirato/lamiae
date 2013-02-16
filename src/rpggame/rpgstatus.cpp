@@ -2,11 +2,12 @@
 
 victimeffect::victimeffect(rpgent *o, inflict *inf, int chargeflags, float mul) : owner(o)
 {
+	statusgroup *sg = game::statuses.access(inf->status);
+
 	group = inf->status;
-	elem = game::statuses[group]->friendly ? ATTACK_NONE : inf->element;
+	elem = sg->friendly ? ATTACK_NONE : inf->element;
 	mul *= inf->mul;
 
-	statusgroup *sg = game::statuses[inf->status];
 	loopv(sg->effects)
 	{
 		status *st = effects.add(sg->effects[i]->dup());
@@ -82,8 +83,8 @@ extern int projallowflare;
 
 void areaeffect::render()
 {
-	if(!game::effects.inrange(fx)) return;
-	effect *e = game::effects[fx];
+	effect *e = game::effects.access(fx);
+	if(!e) return;
 
 	switch(e->particle)
 	{
@@ -110,8 +111,8 @@ void areaeffect::render()
 
 void areaeffect::dynlight()
 {
-	if(!game::effects.inrange(fx)) return;
-	effect *e = game::effects[fx];
+	effect *e = game::effects.access(fx);
+	if(!e) return;
 
 	if(!(e->flags & FX_DYNLIGHT)) return;
 
