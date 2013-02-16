@@ -33,20 +33,20 @@ const char *rpgitem::getname() const
 	return "";
 }
 
-int rpgitem::getscript()
+const char *rpgitem::getscript() const
 {
 	return script;
 }
 
-void item::init(int base, bool world)
+void item::init(const char *base, bool world)
 {
 	if(world) rpgscript::config->setref( (rpgitem *) this, true);
 	else rpgscript::config->setref(this, true);
 
-	this->base = base;
+	this->base = game::queryhashpool(base);
 	game::loadingitem = this;
 
-	defformatstring(file)("%s/%i.cfg", game::datapath("items"), base);
+	defformatstring(file)("%s/%s.cfg", game::datapath("items"), base);
 	execfile(file);
 
 	game::loadingitem = NULL;
@@ -55,14 +55,15 @@ void item::init(int base, bool world)
 	rpgscript::config->setnull(true);
 }
 
-void rpgitem::init(int base)
+void rpgitem::init(const char *base)
 {
 	item::init(base, true);
 }
 
-item *rpgitem::additem(int base, int q)
+item *rpgitem::additem(const char *base, int q)
 {
-	if(base != base) return NULL;
+	base = game::hashpool.find(base, NULL);
+	if(this->base != base) return NULL;
 
 	quantity += q;
 	return this;
@@ -77,11 +78,11 @@ item *rpgitem::additem(item *it) {
 	return NULL;
 }
 
-int rpgitem::getitemcount(int i)
+int rpgitem::getitemcount(const char *base)
 {
-	if(i == base)
-		return quantity;
-	return 0;
+	base = game::hashpool.find(base, NULL);
+
+	return this->base == base ? quantity : 0;
 }
 
 int rpgitem::getcount(item *it)

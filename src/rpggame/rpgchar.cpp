@@ -28,7 +28,7 @@ void use_armour::apply(rpgchar *user)
 		loopvj(sg->effects)
 		{
 			if(sg->effects[j]->duration >= 0)
-				ERRORF("statuses[%i]->effect[%i] has a non negative duration, these will not work properly and some will be ridiculously overpowered", effects[i]->status, j);
+				ERRORF("statuses[%s]->effect[%i] has a non negative duration, these will not work properly and some will be ridiculously overpowered", effects[i]->status, j);
 			sg->effects[j]->update(user, user, resist, thresh, base, extra);
 		}
 	}
@@ -645,7 +645,7 @@ void rpgchar::equip(item *it, int u)
 		game::hudline("Unable to equip: requires slot unavailable");
 }
 
-bool rpgchar::dequip(int base, int slots)
+bool rpgchar::dequip(const char *base, int slots)
 {
 	if(primary || secondary || lastprimary || lastsecondary)
 	{
@@ -653,7 +653,8 @@ bool rpgchar::dequip(int base, int slots)
 		return false;
 	}
 
-
+	base = game::hashpool.find(base, NULL);
+	if(!base) return false;
 
 	int rem = 0;
 	loopv(equipped)
@@ -766,12 +767,12 @@ void rpgchar::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float 
 }
 
 ///Inventory
-void rpgchar::init(int base)
+void rpgchar::init(const char *base)
 {
 	game::loadingrpgchar = this;
 	rpgscript::config->setref(this, true);
 
-	defformatstring(file)("%s/%i.cfg", game::datapath("critters"), base);
+	defformatstring(file)("%s/%s.cfg", game::datapath("critters"), base);
 	execfile(file);
 
 	game::loadingrpgchar = NULL;
@@ -799,7 +800,7 @@ item *rpgchar::additem(item *it)
 	return newit;
 }
 
-item *rpgchar::additem(int base, int q)
+item *rpgchar::additem(const char *base, int q)
 {
 	item it;
 	it.init(base);
@@ -842,8 +843,11 @@ int rpgchar::drop(item *it, int q, bool spawn)
 	return rem;
 }
 
-int rpgchar::drop(int base, int q, bool spawn)
+int rpgchar::drop(const char *base, int q, bool spawn)
 {
+	base = game::hashpool.find(base, NULL);
+	if(base) return 0;
+
 	vector<item *> &inv = inventory.access(base, vector<item *>());
 	int rem = 0;
 
@@ -900,8 +904,11 @@ int rpgchar::pickup(rpgitem *it)
 	return add;
 }
 
-int rpgchar::getitemcount(int base)
+int rpgchar::getitemcount(const char *base)
 {
+	base = game::hashpool.find(base, NULL);
+	if(!base) return 0;
+
 	vector<item *> &inv = inventory.access(base, vector<item *>());
 
 	int count = 0;
@@ -935,9 +942,9 @@ float rpgchar::getweight()
 	return ret;
 }
 
-void rpgchar::compactinventory(int base)
+void rpgchar::compactinventory(const char *base)
 {
-	if(base < 0)
+	if(!base)
 	{
 		enumerate(inventory, vector<item *>, itemstack,
 			if(itemstack.length()) compactinventory(itemstack[0]->base);
@@ -945,6 +952,9 @@ void rpgchar::compactinventory(int base)
 
 		return;
 	}
+
+	base = game::hashpool.find(base, NULL);
+	if(!base) return;
 
 	vector<item *> &stack = *inventory.access(base);
 	loopvrev(stack)

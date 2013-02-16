@@ -37,12 +37,12 @@ void rpgobstacle::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, fl
 	getsignal("hit", false, attacker);
 }
 
-void rpgobstacle::init(int base)
+void rpgobstacle::init(const char *base)
 {
 	game::loadingrpgobstacle = this;
 	rpgscript::config->setref(this, true);
 
-	defformatstring(file)("%s/%i.cfg", game::datapath("obstacles"), base);
+	defformatstring(file)("%s/%s.cfg", game::datapath("obstacles"), base);
 	execfile(file);
 
 	game::loadingrpgobstacle = NULL;

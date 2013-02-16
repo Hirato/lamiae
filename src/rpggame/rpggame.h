@@ -3,6 +3,9 @@
 
 #include "cube.h"
 
+#define STATUS_INVALID_GENERIC(type) (((type) <= STATUS_SCRIPT && (type) >= STATUS_LIGHT) || (type) >= STATUS_MAX || (type) <= -1)
+#define HASINVENTORY(type) ((type) == ENT_CHAR || (type) == ENT_CONTAINER)
+
 #define DEFAULTMODEL "xonotic/gak"
 
 #define DEFAULTITEMSCR "default item"
@@ -72,6 +75,7 @@ struct reference;
 struct rpgent;
 struct rpgchar;
 struct rpgcontainer;
+struct rpgentity;
 struct rpgitem;
 struct rpgobstacle;
 struct rpgplatform;
@@ -100,6 +104,10 @@ namespace game
 {
 	extern string data;
 	extern const char *datapath(const char *subdir = "");
+	//NOTE: queryhashpool will register the string
+	extern const char *queryhashpool(const char *str);
+
+	extern hashset<const char *> hashpool;
 
 	extern hashtable<const char *, script> scripts;       ///scripts, includes dialogue
 	extern hashtable<const char *, effect> effects;       ///pretty particle effects for spells and stuff
@@ -192,7 +200,7 @@ namespace entities
 	extern vector<extentity *> ents;
 	extern vector<int> intents;
 	extern void startmap();
-	extern void spawn(const extentity &e, int ind, int type, int qty);
+	extern void spawn(const extentity &e, const char *ind, int type, int qty);
 	extern void teleport(rpgent *d, int dest);
 	extern void genentlist();
 	extern void touchents(rpgent *d);
@@ -248,11 +256,8 @@ enum                            // static entity types
 
 struct rpgentity : extentity
 {
-	//extend if needed
+	char id[64]; //literal name for an entity spawn
 };
-
-#define STATUS_INVALID_GENERIC(type) (((type) <= STATUS_SCRIPT && (type) >= STATUS_LIGHT) || (type) >= STATUS_MAX || (type) <= -1)
-#define HASINVENTORY(type) ((type) == ENT_CHAR || (type) == ENT_CONTAINER)
 
 enum
 {
@@ -753,24 +758,24 @@ struct rpgent : dynent
 	virtual vec blipcol() { return vec(1, 1, 1);}
 	virtual const char *getname() const =0;
 	virtual const int type()=0;
-	virtual void init(int base)=0;
+	virtual void init(const char *base)=0;
 	virtual void getsignal(const char *sig, bool prop = true, rpgent *sender = NULL);
 
 	///character/AI
 	virtual void givexp(int xp) {}
 	virtual void equip(item *it, int u = 0) {}
-	virtual bool dequip(int base, int slots = 0) {return false;}
+	virtual bool dequip(const char *base, int slots = 0) {return false;}
 	virtual void die(rpgent *killer = NULL) {}
 	virtual void revive(bool spawn = true) {}
 	virtual void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir) = 0;
 
 	///inventory
-	virtual item *additem(int base, int q) {return NULL;}
+	virtual item *additem(const char *base, int q) {return NULL;}
 	virtual item *additem(item *it) {return NULL;}
 	virtual int drop(item *it, int q, bool spawn) {return 0;}
-	virtual int drop(int base, int q, bool spawn = false) {return 0;}
+	virtual int drop(const char *base, int q, bool spawn = false) {return 0;}
 	virtual int pickup(rpgitem *it) {return 0;}
-	virtual int getitemcount(int base) {return 0;}
+	virtual int getitemcount(const char *base) {return 0;}
 	virtual int getcount(item *it) {return 0;}
 	virtual float getweight() {return 0;}
 
@@ -1097,7 +1102,7 @@ struct use_weapon : use_armour
 		if( !projeffect ^ !uw->projeffect || (projeffect && strcmp(projeffect, uw->projeffect)) ||
 			!traileffect ^ !uw->traileffect || (traileffect && strcmp(traileffect, uw->traileffect)) ||
 			!deatheffect ^ !uw->deatheffect || (deatheffect && strcmp(deatheffect, uw->deatheffect))
-		)
+		) return false;
 
 		return use_armour::compare(o);
 	}
@@ -1117,9 +1122,11 @@ struct item
 	};
 	const char *name, *icon, *description, *mdl;
 	const char *script; //id
+	// NOTE: this points to a pointer in the hashpool - DO NOT FREE!
+	// it also allows cheap equivalency testing
+	const char *base;
 
 	int quantity;
-	int base;
 
 	int category;
 	int flags;
@@ -1135,7 +1142,7 @@ struct item
 
 	void getsignal(const char *sig, bool prop = true, rpgent *sender = NULL, int use = -1);
 
-	void init(int base, bool world = false);
+	void init(const char *base, bool world = false);
 
 	void transfer(item &o)
 	{
@@ -1179,7 +1186,7 @@ struct item
 		return true;
 	}
 
-	item() : name(NULL), icon(NULL), description(NULL), mdl(newstring(DEFAULTMODEL)), script(newstring(DEFAULTITEMSCR)), quantity(1), base(-1), category(0), flags(0), value(0), maxdurability(0), charges(-2), weight(0), durability(0), recovery(1), locals(-1) {}
+	item() : name(NULL), icon(NULL), description(NULL), mdl(newstring(DEFAULTMODEL)), script(newstring(DEFAULTITEMSCR)), base(NULL), quantity(1), category(0), flags(0), value(0), maxdurability(0), charges(-2), weight(0), durability(0), recovery(1), locals(-1) {}
 	~item()
 	{
 		delete[] name;
@@ -1203,12 +1210,12 @@ struct rpgitem : rpgent, item
 	vec blipcol() { return vec(0, .75, 1);}
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
 	const int type() {return ENT_ITEM;}
-	void init(int base);
-	item *additem(int base, int q);
+	void init(const char *base);
+	item *additem(const char *base, int q);
 	item *additem(item *it);
-	int getscript();
+	const char *getscript() const;
 	int getcount(item *it);
-	int getitemcount(int i);
+	int getitemcount(const char *base);
 	float getweight();
 
 	rpgitem() : lastupdate(0) {physent::type = ENT_INANIMATE;}
@@ -1236,7 +1243,7 @@ struct rpgobstacle : rpgent
 	vec blipcol() { return vec(1, 1, 1);}
 	const char *getname() const { return NULL; }
 	const int type() { return ENT_OBSTACLE; }
-	void init(int base);
+	void init(const char *base);
 
 	///character/AI
 	void givexp(int xp) {}
@@ -1252,7 +1259,7 @@ struct rpgobstacle : rpgent
 struct rpgcontainer : rpgent
 {
 	const char *mdl, *name;
-	hashtable<int, vector<item *> > inventory;
+	hashtable<const char *, vector<item *> > inventory;
 	int capacity;
 	const char *faction, *merchant, *script;
 	int lock, magelock;
@@ -1264,7 +1271,7 @@ struct rpgcontainer : rpgent
 	vec blipcol() { return vec(1, 1, 1);}
 	const char *getname() const { return name; }
 	const int type() { return ENT_CONTAINER; }
-	void init(int base);
+	void init(const char *base);
 	//void getsignal(const char *sig, bool prop = true, rpgent *sender = NULL) {}
 
 	///character/AI
@@ -1275,10 +1282,10 @@ struct rpgcontainer : rpgent
 
 	///inventory
 	item *additem(item *it);
-	item *additem(int base, int q);
+	item *additem(const char *base, int q);
 	int drop(item *it, int q, bool spawn);
-	int drop(int base, int q, bool spawn);
-	int getitemcount(int base);
+	int drop(const char *base, int q, bool spawn);
+	int getitemcount(const char *base);
 	int getcount(item *it);
 	float getweight();
 
@@ -1319,7 +1326,7 @@ struct rpgplatform : rpgent
 	vec blipcol() { return vec(1, 1, 1);}
 	const char *getname() const { return NULL; }
 	const int type() { return ENT_PLATFORM; }
-	void init(int base);
+	void init(const char *base);
 
 	///character/AI
 	void givexp(int xp) {}
@@ -1352,7 +1359,7 @@ struct rpgtrigger : rpgent
 	vec blipcol() { return vec(1, 1, 1);}
 	const char *getname() const { return name; }
 	const int type() { return ENT_TRIGGER; }
-	void init(int base);
+	void init(const char *base);
 
 	///character/AI
 	void givexp(int xp) {}
@@ -1372,7 +1379,7 @@ struct rpgtrigger : rpgent
 struct ammotype
 {
 	const char *name;
-	vector<int> items;
+	vector<const char *> items;
 
 	ammotype() : name(NULL) {}
 	~ammotype() { delete[] name; }
@@ -1439,7 +1446,7 @@ struct rpgchar : rpgent
 	const char *script, *faction, *merchant; //id
 
 	stats base;
-	hashtable<int, vector<item *> > inventory;
+	hashtable<const char *, vector<item *> > inventory;
 
 	float health, mana;
 
@@ -1473,23 +1480,23 @@ struct rpgchar : rpgent
 	const char *getname() const;
 	const int type() {return ENT_CHAR;}
 	const char *getscript() const { return script;}
-	void init(int base);
+	void init(const char *base);
 
 	///character/AI
 	void givexp(int xp);
 	void equip(item *it, int u = 0);
-	bool dequip(int base, int slots = 0);
+	bool dequip(const char *base, int slots = 0);
 	void die(rpgent *killer);
 	void revive(bool spawn = true);
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
 
 	///inventory
 	item *additem(item *it);
-	item *additem(int base, int q);
+	item *additem(const char *base, int q);
 	int drop(item *it, int q, bool spawn);
-	int drop(int base, int q, bool spawn);
+	int drop(const char *base, int q, bool spawn);
 	int pickup(rpgitem *it);
-	int getitemcount(int base);
+	int getitemcount(const char *base);
 	int getcount(item *it);
 	float getweight();
 
@@ -1497,7 +1504,7 @@ struct rpgchar : rpgent
 	bool checkammo(equipment &eq, equipment *quiver, bool remove = false);
 	void doattack(equipment *eleft, equipment *eright, equipment *quiver);
 	bool useitem(item *it, equipment *slot = NULL, int u = -1);
-	void compactinventory(int base = -1);
+	void compactinventory(const char *base = NULL);
 
 	void cleanup();
 
@@ -1562,8 +1569,9 @@ struct recipe
 
 	struct ingredient
 	{
-		int base, quantity;
-		ingredient(int b, int q) : base(b), quantity(q) {}
+		const char *base;
+		int quantity;
+		ingredient(const char *b, int q) : base(b), quantity(q) {}
 	};
 
 	vector<ingredient> ingredients, // meat.. veggies.. seasoning... butane...

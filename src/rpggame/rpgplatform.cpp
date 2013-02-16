@@ -79,12 +79,12 @@ void rpgplatform::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, fl
 	getsignal("hit", false, attacker);
 }
 
-void rpgplatform::init(int base)
+void rpgplatform::init(const char *base)
 {
 	game::loadingrpgplatform = this;
 	rpgscript::config->setref(this, true);
 
-	defformatstring(file)("%s/%i.cfg", game::datapath("platforms"), base);
+	defformatstring(file)("%s/%s.cfg", game::datapath("platforms"), base);
 	execfile(file);
 
 	game::loadingrpgplatform = NULL;

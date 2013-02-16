@@ -18,14 +18,19 @@ namespace entities
 
 	bool mayattach(extentity &e) { return false; }
 	bool attachent(extentity &e, extentity &a) { return false; }
-	int extraentinfosize() {return 0;}
+	int extraentinfosize() { return 64; }
 
 	void animatemapmodel(const extentity &e, int &anim, int &basetime)
 	{
 		anim = ANIM_MAPMODEL|ANIM_LOOP;
 	}
 
-	extentity *newentity() { return new rpgentity(); }
+	extentity *newentity()
+	{
+		rpgentity *ent = new rpgentity();
+		memset(ent->id, '0', 64);
+		return ent;
+	}
 	void deleteentity(extentity *e) { intents.setsize(0); delete (rpgentity *)e; }
 
 	void genentlist() //filters all interactive ents
@@ -72,13 +77,13 @@ namespace entities
 		modelcache.clear();
 	}
 
-	const char *entmodel(const entity &e)
+	const char *entmodel(const rpgentity &e)
 	{
 		if(e.type < CRITTER || e.type > TRIGGER) return NULL;
 		// 500 million should be enough for anyone
 		// we've moved way beyond 640k here!
 		uint hash = (e.type - CRITTER) << 29;
-		hash |= e.attr[1] & ((1 << 29) - 1);
+		hash |= hthash(e.id) & ((1 << 29) - 1);
 
 		const char **mdl = modelcache.access(hash);
 		if(mdl) return *mdl;
@@ -96,7 +101,7 @@ namespace entities
 			case TRIGGER:   dummy = dummytrigger;   break;
 		}
 
-		dummy->init(e.attr[1]);
+		dummy->init(e.id);
 		rpgscript::removereferences(dummy);
 		dummy->resetmdl();
 
@@ -129,7 +134,7 @@ namespace entities
 	{
 		loopv(ents)
 		{
-			extentity &e = *ents[i];
+			rpgentity &e = *((rpgentity *) ents[i]);
 			const char *mdl = entmodel(e);
 
 			if(mdl && entpreviewalpha)
@@ -148,32 +153,32 @@ namespace entities
 	{
 		loopv(ents)
 		{
-			extentity &e = *ents[i];
+			rpgentity &e = *((rpgentity *) ents[i]);
 			switch(e.type)
 			{
 				case CRITTER:
-					spawn(e, e.attr[1], ENT_CHAR, 1);
+					spawn(e, e.id, ENT_CHAR, 1);
 					break;
 				case ITEM:
-					spawn(e, e.attr[1], ENT_ITEM, e.attr[2]);
+					spawn(e, e.id, ENT_ITEM, e.attr[2]);
 					break;
 				case OBSTACLE:
-					spawn(e, e.attr[1], ENT_OBSTACLE, 1);
+					spawn(e, e.id, ENT_OBSTACLE, 1);
 					break;
 				case CONTAINER:
-					spawn(e, e.attr[1], ENT_CONTAINER, 1);
+					spawn(e, e.id, ENT_CONTAINER, 1);
 					break;
 				case PLATFORM:
-					spawn(e, e.attr[1], ENT_PLATFORM, 1);
+					spawn(e, e.id, ENT_PLATFORM, 1);
 					break;
 				case TRIGGER:
-					spawn(e, e.attr[1], ENT_TRIGGER, 1);
+					spawn(e, e.id, ENT_TRIGGER, 1);
 					break;
 			}
 		}
 	}
 
-	void spawn(const extentity &e, int ind, int type, int qty)
+	void spawn(const extentity &e, const char *id, int type, int qty)
 	{
 		rpgent *ent = NULL;
 		switch(type)
@@ -181,7 +186,7 @@ namespace entities
 			case ENT_CHAR:
 			{
 				if(DEBUG_ENT)
-					DEBUGF("Creating creature and instancing to type %i", ind);
+					DEBUGF("Creating creature and instancing to type %s", id);
 
 				ent = new rpgchar();
 
@@ -190,7 +195,7 @@ namespace entities
 			case ENT_ITEM:
 			{
 				if(DEBUG_ENT)
-					DEBUGF("Creating item and instancing to type %i", ind);
+					DEBUGF("Creating item and instancing to type %s", id);
 
 				rpgitem *d = new rpgitem();
 				ent = d;
@@ -202,7 +207,7 @@ namespace entities
 			case ENT_OBSTACLE:
 			{
 				if(DEBUG_ENT)
-					DEBUGF("Creating obstacle and instancing to type %i", ind);
+					DEBUGF("Creating obstacle and instancing to type %s", id);
 
 				ent = new rpgobstacle();
 
@@ -211,7 +216,7 @@ namespace entities
 			case ENT_CONTAINER:
 			{
 				if(DEBUG_ENT)
-					DEBUGF("Creating container and instancing to type %i", ind);
+					DEBUGF("Creating container and instancing to type %s", id);
 
 				ent = new rpgcontainer();
 
@@ -220,7 +225,7 @@ namespace entities
 			case ENT_PLATFORM:
 			{
 				if(DEBUG_ENT)
-					DEBUGF("Creating platform and instancing to type %i", ind);
+					DEBUGF("Creating platform and instancing to type %s", id);
 
 				ent = new rpgplatform();
 
@@ -229,7 +234,7 @@ namespace entities
 			case ENT_TRIGGER:
 			{
 				if(DEBUG_ENT)
-					DEBUGF("Creating trigger and instancing to type %i", ind);
+					DEBUGF("Creating trigger and instancing to type %s", id);
 
 				ent = new rpgtrigger();
 
@@ -237,7 +242,7 @@ namespace entities
 			}
 		}
 
-		ent->init(ind);
+		ent->init(id);
 		ent->resetmdl();
 		setbbfrommodel(ent, ent->temp.mdl);
 		ent->o = e.o;
@@ -427,17 +432,15 @@ namespace entities
 			case PLATFORM:
 			case TRIGGER:
 				pos.z += 3.0f;
-				formatstring(tmp)("Yaw: %i\nIndex: %i",
-					e.attr[0],
-					e.attr[1]
+				formatstring(tmp)("Yaw: %i",
+					e.attr[0]
 				);
 				break;
 			case ITEM:
 				pos.z += 4.5f;
-				formatstring(tmp)("Yaw: %i\nIndex: %i\nQuantity: %i",
+				formatstring(tmp)("Yaw: %i\nQuantity: %i",
 					e.attr[0],
-					e.attr[1],
-					max(1, e.attr[2])
+					max(1, e.attr[1])
 				);
 		}
 	}
@@ -465,12 +468,12 @@ namespace entities
 			2, //blip
 			4, //camera
 			1, //platformroute
-			2, //critter
-			3, //item
-			2, //obstacle
-			2, //container
-			2, //platform
-			2, //trigger
+			1, //critter
+			2, //item
+			1, //obstacle
+			1, //container
+			1, //platform
+			1, //trigger
 		};
 
 		type -= ET_GAMESPECIFIC;
