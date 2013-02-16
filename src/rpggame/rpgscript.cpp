@@ -347,8 +347,6 @@ namespace rpgscript
 
 	reference *searchstack(const char *name, bool create)
 	{
-		static reference dummy("");
-
 		if(!stack.length())
 		{
 			ERRORF("no stack");
@@ -372,9 +370,9 @@ namespace rpgscript
 		}
 		if(create)
 		{
-			if(DEBUG_VSCRIPT) DEBUGF("reference \"%s\" not found, creating", name);
+			if(DEBUG_VSCRIPT) DEBUGF("reference \"%s\" not found, creating", lookup);
 			const char *refname = newstring(lookup);
-			reference *ref = &stack[0]->access(refname, dummy);
+			reference *ref = &(*stack[0])[refname];
 			ref->name = refname;
 			return ref;
 
@@ -400,8 +398,6 @@ namespace rpgscript
 	template<typename T>
 	reference *registertemp(const char *name, T ref)
 	{
-		static reference dummy("");
-
 		if(DEBUG_VSCRIPT) DEBUGF("registering end-of-stack reference %p to name %s", ref, name);
 		reference *r = NULL;
 		if(stack.length())
@@ -410,7 +406,7 @@ namespace rpgscript
 			if(!r)
 			{
 				const char *n = newstring(name);
-				r = &stack.last()->access(n, dummy);
+				r = &(*stack.last())[n];
 				r->name = n;
 			}
 			r->setref(ref);
@@ -425,7 +421,6 @@ namespace rpgscript
 
 	void copystack(hashset<reference> &dst)
 	{
-		static reference dummy("");
 		loopvj(stack)
 		{
 			enumerate(*stack[j], reference, ref,
@@ -433,7 +428,7 @@ namespace rpgscript
 				if(!newref)
 				{
 					const char *n = newstring(ref.name);
-					newref = &dst.access(n, dummy);
+					newref = &(*stack.last())[n];
 					newref->name = n;
 				}
 				newref->setnull();

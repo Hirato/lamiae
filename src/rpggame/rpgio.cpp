@@ -1400,18 +1400,25 @@ namespace rpgio
 
 	void readreferences(stream *f, const vector<mapinfo *> &maps, hashset< ::reference> &stack)
 	{
-		static ::reference dummy("");
 		int num = f->getlil<int>();
 		loopi(num)
 		{
 			CHECKEOF(*f, )
 			const char *name = readstring(f);
-			::reference *loading = &stack.access(name, dummy);
-			loading->immutable = f->getchar();
-			if(dummy.name != loading->name)
-				delete[] name;
+			::reference *loading = stack.access(name);
+			if(loading)
+			{
+				WARNINGF("reference \"%s\" appears to have already been loaded", name);
+				DELETEA(name);
+			}
 			else
+			{
+				if(DEBUG_IO) DEBUGF("Creating reference \"%s\"", name);
+				loading = &stack[name];
 				loading->name = name;
+				name = NULL;
+			}
+			loading->immutable = f->getchar();
 
 			int len = f->getlil<int>();
 			loopj(len)
