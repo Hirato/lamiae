@@ -1017,7 +1017,7 @@ struct use_armour : use
 {
 	const char *vwepmdl;
 	const char *hudmdl;
-	int idlefx;
+	const char *idlefx;
 	statreq reqs;
 	int slots;
 	int skill;
@@ -1050,20 +1050,20 @@ struct use_armour : use
 
 		return use::compare(o);
 	}
-	use_armour(const char *scr) : use(scr), vwepmdl(NULL), hudmdl(NULL), idlefx(-1), reqs(statreq()), slots(0), skill(SKILL_ARMOUR) {type = USE_ARMOUR;}
+	use_armour(const char *scr) : use(scr), vwepmdl(NULL), hudmdl(NULL), idlefx(NULL), reqs(statreq()), slots(0), skill(SKILL_ARMOUR) {type = USE_ARMOUR;}
 	~use_armour() { delete[] vwepmdl; delete[] hudmdl;}
 };
 
 struct use_weapon : use_armour
 {
+	const char *projeffect, *traileffect, *deatheffect;
+	const char *ammo; //refers to item in ammotype vector<>, -ves use mana
 	int range;
 	int angle;
 	int lifetime;
 	int gravity;
-	const char *projeffect, *traileffect, *deatheffect;
 	int cost; //mana/items consumed in use
 	int pflags;
-	int ammo; //refers to item in ammotype vector<>, -ves use mana
 	int target; //self, others, etc
 	int radius;
 	int kickback, recoil;
@@ -1099,7 +1099,7 @@ struct use_weapon : use_armour
 
 		return use_armour::compare(o);
 	}
-	use_weapon(const char *scr) : use_armour(scr), range(256), angle(60), lifetime(10000), gravity(0), projeffect(NULL), traileffect(NULL), deatheffect(NULL), cost(10), pflags(P_DIST|P_TIME), ammo(-1), target(T_SINGLE), radius(32), kickback(10), recoil(0), charge(0), basecharge(.5f), mincharge(.5f), maxcharge(1.0f), elasticity(0.8), speed(1.0f) {type = USE_WEAPON;}
+	use_weapon(const char *scr) : use_armour(scr), projeffect(NULL), traileffect(NULL), deatheffect(NULL), ammo(NULL), range(256), angle(60), lifetime(10000), gravity(0), cost(10), pflags(P_DIST|P_TIME), target(T_SINGLE), radius(32), kickback(10), recoil(0), charge(0), basecharge(.5f), mincharge(.5f), maxcharge(1.0f), elasticity(0.8), speed(1.0f) {type = USE_WEAPON;}
 	~use_weapon() {}
 };
 

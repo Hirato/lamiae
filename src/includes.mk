@@ -186,7 +186,7 @@ depend:
 	makedepend -fincludes.mk -a -o.h.gch -Y -Ishared -Iengine -Irpggame $(subst .h.gch,.h,$(CLIENT_PCH))
 
 engine/engine.h.gch: shared/cube.h.gch
-rpggame/game.h.gch: shared/cube.h.gch
+rpggame/rpggame.h.gch: shared/cube.h.gch
 
 # DO NOT DELETE
 

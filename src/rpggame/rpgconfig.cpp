@@ -45,22 +45,15 @@ namespace game
 			reference *obj = rpgscript::searchstack(ref, false); \
 			if(obj) \
 			{ \
-				int idx = select; \
-				if((vec).inrange(idx)) \
-					loading ## x = (vec)[idx]; \
-				if(loading ## x && DEBUG_VCONF) \
+				const char *idx = select; \
+				if((loading ## x = (vec).access(idx)) && DEBUG_VCONF) \
 					DEBUGF("successfully selected \"" #c "\" from reference %s", ref); \
 			} \
 			\
 			if(!loading ##x) \
 			{ \
-				int idx = parseint(ref); \
-				if(vec.inrange(idx)) \
-				{ \
-					if(DEBUG_VCONF) \
-						DEBUGF("successfully selected \"" #c "\" using index %i", idx); \
-					loading ## x = vec[idx]; \
-				} \
+				if((loading ## x = vec.access(ref)) && DEBUG_VCONF) \
+					DEBUGF("successfully selected \"" #c "\" using hash %s", ref); \
 			} \
 			if(loading ## x) \
 			{\
@@ -78,25 +71,25 @@ namespace game
 			intret(vec.length()); \
 		)
 
-	CHECK(script, script, scripts, -1)
-	CHECK(effect, effect, effects, -1)
+	CHECK(script, script, scripts, NULL)
+	CHECK(effect, effect, effects, NULL)
 	CHECK(statusgroup, status, statuses,
 		obj->getveffect(objidx) ? obj->getveffect(objidx)->group :
 		obj->getaeffect(objidx) ? obj->getaeffect(objidx)->group :
-		-1
+		NULL
 	)
 	CHECK(faction, faction, factions,
 		  obj->getchar(objidx) ? obj->getchar(objidx)->faction :
 		  obj->getcontainer(objidx) ? obj->getcontainer(objidx)->faction :
-		  -1
+		  NULL
 	)
-	CHECK(recipe, recipe, recipes, -1)
-	CHECK(ammotype, ammo, ammotypes, -1)
-	CHECK(mapscript, mapscript, mapscripts, -1)
+	CHECK(recipe, recipe, recipes, NULL)
+	CHECK(ammotype, ammo, ammotypes, NULL)
+	CHECK(mapscript, mapscript, mapscripts, NULL)
 	CHECK(merchant, merchant, merchants,
 		obj->getchar(objidx) ? obj->getchar(objidx)->merchant :
 		obj->getcontainer(objidx) ? obj->getcontainer(objidx)->merchant :
-		-1
+		NULL
 	)
 
 	#undef CHECK
@@ -325,6 +318,24 @@ namespace game
 				conoutf(DEBUG_STR "->" #var " = (%g, %g, %g)", DEBUG_IND, e->var.x, e->var.y, e->var.z); \
 		)
 
+	#define HASHNF(name, var, verify, body) \
+		START(name, "sN$", (const char *s, int *numargs, ident *self), \
+			PREAMBLE(name, , result(e->var), printsvar(self, e->var)) \
+			if(!(verify)) \
+			{ \
+				ERRORF("\"%s\" is not a valid hash value for " DEBUG_STR "->" #var " - The command was ignored", s, DEBUG_IND); \
+				return; \
+			} \
+			if(! *s ) e->var = NULL; \
+			else e->var = queryhashpool(s); \
+			body; \
+			if(DEBUG_CONF) \
+				conoutf(DEBUG_STR "->" #var " = %s", DEBUG_IND, s); \
+		)
+
+	#define HASHF(var, verify, body) HASHNF(var, var, verify, body)
+	#define HASHN(name, var, verify) HASHNF(name, var, verify, )
+	#define HASH(var, verify) HASHF(var, verify, )
 
 	#define VECF(var, l1, l2, l3, h1, h2, h3, body) VECNF(var, var, l1, l2, l3, h1, h2, h3, body)
 	#define VECN(name, var, l1, l2, l3, h1, h2, h3) VECNF(name, var, l1, l2, l3, h1, h2, h3, )
@@ -539,8 +550,8 @@ namespace game
 
 	#define START(n, f, a, b) ICOMMAND(r_effect_ ##n, f, a, b)
 	#define INIT effect *e = checkeffect();
-	#define DEBUG_STR "effect[%i]"
-	#define DEBUG_IND effects.find(e)
+	#define DEBUG_STR "effect[%p]"
+	#define DEBUG_IND e
 
 	INT(flags, 0, FX_MAX)
 	INT(decal, -1, DECAL_MAX - 1)
@@ -567,8 +578,8 @@ namespace game
 
 	#define START(n, f, a, b) ICOMMAND(r_status_ ##n, f, a, b)
 	#define INIT statusgroup *e = checkstatusgroup();
-	#define DEBUG_STR "statusgroup[%i]"
-	#define DEBUG_IND statuses.find(e)
+	#define DEBUG_STR "statusgroup[%p]"
+	#define DEBUG_IND e
 
 	ICOMMAND(r_status_addgeneric, "iiif", (int *t, int *s, int *d, float *v),
 		if(STATUS_INVALID_GENERIC(*t))
@@ -588,7 +599,7 @@ namespace game
 		g->variance = clamp(*v, 0.f, 1.0f);
 
 		if(DEBUG_CONF)
-			DEBUGF("adding generic effect (%i %i %i), to statusgroup %i", *t, *d, *s, DEBUG_IND);
+			DEBUGF("adding generic effect (%i %i %i), to " DEBUG_STR, *t, *d, *s, DEBUG_IND);
 	)
 
 	ICOMMAND(r_status_addpolymorph, "siif", (const char *m, int *st, int *d, float *v),
@@ -605,7 +616,7 @@ namespace game
 		p->variance = clamp(*v, 0.f, 1.0f);
 
 		if(DEBUG_CONF)
-			DEBUGF("adding polymorph effect (%s), to statusgroup %i", m, DEBUG_IND);
+			DEBUGF("adding polymorph effect (%s), to " DEBUG_STR, m, DEBUG_IND);
 	)
 
 	ICOMMAND(r_status_addlight, "fffiif", (float *r, float *g, float *b, int *str, int *d, float *v),
@@ -622,7 +633,7 @@ namespace game
 		l->variance = clamp(*v, 0.f, 1.0f);
 
 		if(DEBUG_CONF)
-			DEBUGF("adding light effect (%f %f %f --> %i), to statusgroup %i", l->colour.x, l->colour.y, l->colour.z, l->strength, DEBUG_IND);
+			DEBUGF("adding light effect (%f %f %f --> %i), to " DEBUG_STR, l->colour.x, l->colour.y, l->colour.z, l->strength, DEBUG_IND);
 	)
 
 	ICOMMAND(r_status_addsignal, "siif", (char *s, int *str, int *d, float *v),
@@ -769,9 +780,9 @@ namespace game
 	STRING(icon)
 	STRING(description)
 	MODEL(mdl)
+	HASH(script, scripts.access(s))
 
 	INT(quantity, 0, 0xFFFFFF)
-	INT(script, 0, scripts.length() - 1)
 	INT(category, 0, categories.length() - 1)
 	INT(flags, 0, item::F_MAX)
 	INT(value, 0, 0xFFFFFF)
@@ -795,17 +806,20 @@ namespace game
 	#define TYPE USE_CONSUME
 
 	INTRO(type)
+	HASH(script, scripts.access(s))
 
 	STRING(name)
 	STRING(description)
 	STRING(icon)
-	INT(script, 0, scripts.length() - 1)
 	INT(cooldown, 0, 0xFFFF)
 	INT(chargeflags, 0, CHARGE_MAX)
 
-	START(new_status, "iif", (int *st, int *el, float *m),
+	START(new_status, "sif", (const char *st, int *el, float *m),
 		INIT if(!e) return;
-		e->effects.add(new inflict(*st, *el, *m));
+		if(statuses.access(st))
+			e->effects.add(new inflict(queryhashpool(st), *el, *m));
+		else
+			ERRORF("r_item_use_new_status: statuseffect \"%s\" does not exist", st);
 	)
 
 	#undef CAST
@@ -815,7 +829,8 @@ namespace game
 
 	MODEL(vwepmdl)
 	MODEL(hudmdl)
-	INT(idlefx, -1, effects.length() - 1)
+	HASH(idlefx, !*s || effects.access(s))
+
 	STATREQ(reqs)
 	INT(slots, 0, SLOT_MAX)
 	INT(skill, -1, SKILL_MAX - 1)
@@ -825,16 +840,17 @@ namespace game
 	#define CAST use_weapon
 	#define TYPE USE_WEAPON
 
+	HASH(projeffect, !*s || effects.access(s))
+	HASH(traileffect, !*s || effects.access(s))
+	HASH(deatheffect, !*s || effects.access(s))
+	HASH(ammo, !*s || ammotypes.access(s))
+
 	INT(range, 0, 1024)
 	INT(angle, 0, 360)
 	INT(lifetime, 0, 0xFFFF)
 	INT(gravity, -1000, 1000)
-	INT(projeffect, -1, effects.length() - 1)
-	INT(traileffect, -1, effects.length() - 1)
-	INT(deatheffect, -1, effects.length() - 1)
 	INT(cost, 0, 0xFFFF)
 	INT(pflags, 0, P_MAX)
-	INT(ammo, -3, ammotypes.length() - 1)
 	INT(target, 0, T_MAX - 1)
 	INT(radius, 0, 0xFFFF)
 	INT(kickback, -0xFFFF, 0xFFFF)
@@ -856,42 +872,42 @@ namespace game
 
 	#define START(n, f, a, b) ICOMMAND(r_recipe_ ##n, f, a, b)
 	#define INIT recipe *e = checkrecipe();
-	#define DEBUG_STR "recipe[%i]"
-	#define DEBUG_IND recipes.find(e)
+	#define DEBUG_STR "recipe[%p]"
+	#define DEBUG_IND e
 
-	ICOMMAND(r_recipe_add_ingredient, "ii", (int *base, int *qty),
+	ICOMMAND(r_recipe_add_ingredient, "si", (const char *base, int *qty),
 		recipe *e = checkrecipe();
 		if(!e) return;
 		if(*qty <= 0) {ERRORF("can't add an ingredient with a quantity of <= 0"); return;}
 
 		if(DEBUG_CONF)
-			DEBUGF("added ingredient %i (%i) to " DEBUG_STR, *base, *qty, DEBUG_IND);
+			DEBUGF("added ingredient %s (%i) to " DEBUG_STR, base, *qty, DEBUG_IND);
 
-		e->ingredients.add(recipe::ingredient(*base, *qty));
+		e->ingredients.add(recipe::ingredient(queryhashpool(base), *qty));
 		e->optimise()
 	)
 
-	ICOMMAND(r_recipe_add_catalyst, "ii", (int *base, int *qty),
+	ICOMMAND(r_recipe_add_catalyst, "si", (const char *base, int *qty),
 		recipe *e = checkrecipe();
 		if(!e) return;
 		if(*qty <= 0) {ERRORF("can't add an ingredient with a quantity of <= 0"); return;}
 
 		if(DEBUG_CONF)
-			DEBUGF("added catalyst %i (%i) to " DEBUG_STR, *base, *qty, DEBUG_IND);
+			DEBUGF("added catalyst %s (%i) to " DEBUG_STR, base, *qty, DEBUG_IND);
 
-		e->catalysts.add(recipe::ingredient(*base, *qty));
+		e->catalysts.add(recipe::ingredient(queryhashpool(base), *qty));
 		e->optimise()
 	)
 
-	ICOMMAND(r_recipe_add_product, "ii", (int *base, int *qty),
+	ICOMMAND(r_recipe_add_product, "si", (const char *base, int *qty),
 		recipe *e = checkrecipe();
 		if(!e) return;
 		if(*qty <= 0) {ERRORF("can't add an ingredient with a quantity of <= 0"); return;}
 
 		if(DEBUG_CONF)
-			DEBUGF("added product %i (%i) to " DEBUG_STR, *base, *qty, DEBUG_IND);
+			DEBUGF("added product %s (%i) to " DEBUG_STR, base, *qty, DEBUG_IND);
 
-		e->products.add(recipe::ingredient(*base, *qty));
+		e->products.add(recipe::ingredient(queryhashpool(base), *qty));
 		e->optimise()
 	)
 
@@ -902,7 +918,7 @@ namespace game
 			result("-1 0");
 			return;
 		}
-		defformatstring(str)("%i %i", e->ingredients[*idx].base, e->ingredients[*idx].quantity);
+		defformatstring(str)("\"%s\" %i", e->ingredients[*idx].base, e->ingredients[*idx].quantity);
 		result(str);
 	)
 
@@ -913,7 +929,7 @@ namespace game
 			result("-1 0");
 			return;
 		}
-		defformatstring(str)("%i %i", e->catalysts[*idx].base, e->catalysts[*idx].quantity);
+		defformatstring(str)("\"%s\" %i", e->catalysts[*idx].base, e->catalysts[*idx].quantity);
 		result(str);
 	)
 
@@ -924,7 +940,7 @@ namespace game
 			result("-1 0");
 			return;
 		}
-		defformatstring(str)("%i %i", e->products[*idx].base, e->products[*idx].quantity);
+		defformatstring(str)("\"%s\" %i", e->products[*idx].base, e->products[*idx].quantity);
 		result(str);
 	)
 
@@ -957,16 +973,16 @@ namespace game
 
 	#define START(n, f, a, b) ICOMMAND(r_ammo_ ##n, f, a, b)
 	#define INIT ammotype *e = checkammotype();
-	#define DEBUG_STR "ammotype[%i]"
-	#define DEBUG_IND ammotypes.find(e)
+	#define DEBUG_STR "ammotype[%p]"
+	#define DEBUG_IND e
 
-	ICOMMAND(r_ammo_add_item, "i", (int *i),
+	ICOMMAND(r_ammo_add_item, "s", (const char *s),
 		INIT
 		if(!e) return;
 
-		e->items.add(*i);
+		e->items.add(queryhashpool(s));
 		if(DEBUG_CONF)
-			DEBUGF("Classified item %i as member of " DEBUG_STR " (%s)", *i, DEBUG_IND, e->name ? e->name : "unnamed");
+			DEBUGF("Classified item %s as member of " DEBUG_STR " (%s)", s, DEBUG_IND, e->name ? e->name : "unnamed");
 	)
 
 	ICOMMAND(r_ammo_num_item,  "", (),
@@ -980,7 +996,7 @@ namespace game
 		INIT
 		if(!e && !e->items.inrange(*idx)) {intret(-1); return;}
 
-		intret(e->items[*idx]);
+		result(e->items[*idx]);
 	)
 
 	STRING(name)
@@ -998,9 +1014,10 @@ namespace game
 	STRING(name)
 	MODEL(mdl)
 	STRING(portrait)
-	INT(script, 0, scripts.length() - 1)
-	INT(faction, 0, factions.length() - 1)
-	INT(merchant, -1, merchants.length() - 1)
+	HASH(script, scripts.access(s))
+	HASH(faction, factions.access(s))
+	HASH(merchant, !*s || merchants.access(s))
+
 	STATS(base)
 	FLOAT(health, 0, e->base.getmaxhp())
 	FLOAT(mana, 0, e->base.getmaxmp())
@@ -1012,22 +1029,23 @@ namespace game
 
 	#define START(n, f, a, b) ICOMMAND(r_faction_ ##n, f, a, b)
 	#define INIT faction *e = checkfaction();
-	#define DEBUG_STR "faction[%i]"
-	#define DEBUG_IND factions.find(e)
+	#define DEBUG_STR "faction[%p]"
+	#define DEBUG_IND e
 
-	ICOMMAND(r_faction_set_relation, "ii", (int *o, int *f),
+	ICOMMAND(r_faction_set_relation, "si", (const char *o, int *f),
 		INIT
 		if(!e) return;
-		e->setrelation(*o, *f);
+
+		e->setrelation(queryhashpool(o), *f);
 		if(DEBUG_CONF)
-			DEBUGF("faction %i's liking of faction %i is now %i", DEBUG_IND, *o, *f);
+			DEBUGF(DEBUG_STR "'s liking of faction %s is now %i", DEBUG_IND, o, *f);
 	)
 
-	ICOMMAND(r_faction_get_relation, "i", (int *o),
+	ICOMMAND(r_faction_get_relation, "s", (const char *o),
 		INIT
 		if (!e) return;
 
-		intret(e->getrelation(*o));
+		intret(e->getrelation(queryhashpool(o)));
 	)
 
 	STRING(name)
@@ -1045,8 +1063,8 @@ namespace game
 	#define DEBUG_IND loadingrpgobstacle
 
 	MODEL(mdl)
+	HASH(script, scripts.access(s))
 	INT(weight, 0, 0xFFFF)
-	INT(script, 0, scripts.length() - 1)
 	INT(flags, 0, rpgobstacle::F_MAX)
 
 
@@ -1062,10 +1080,10 @@ namespace game
 
 	MODEL(mdl)
 	STRING(name)
-	INT(faction, -1, factions.length() - 1)
-	INT(merchant, -1, merchants.length() - 1)
+	HASH(script, scripts.access(s))
+	HASH(faction, !*s || factions.access(s))
+	HASH(merchant, !*s || merchants.access(s))
 	INT(capacity, 0, 0xFFFF)
-	INT(script, 0, scripts.length() - 1)
 	INT(lock, 0, 100)
 	INT(magelock, 0, 100)
 
@@ -1081,9 +1099,9 @@ namespace game
 	#define DEBUG_IND loadingrpgplatform
 
 	MODEL(mdl)
+	HASH(script, scripts.access(s))
 	INT(speed, 1, 1000)
 	INT(flags, 0, rpgplatform::F_MAX)
-	INT(script, 0, scripts.length() - 1)
 
 	START(addroute, "ii", (int *from, int *to),
 		INIT
@@ -1113,8 +1131,8 @@ namespace game
 
 	MODEL(mdl)
 	STRING(name)
+	HASH(script, scripts.access(s))
 	INT(flags, 0, rpgtrigger::F_MAX)
-	INT(script, 0, scripts.length() - 1)
 
 	#undef START
 	#undef INIT
@@ -1123,8 +1141,8 @@ namespace game
 
 	#define START(n, f, a, b) ICOMMAND(r_merchant_ ##n, f, a, b)
 	#define INIT merchant *e = checkmerchant();
-	#define DEBUG_STR "merchants[%i]"
-	#define DEBUG_IND merchants.find(e)
+	#define DEBUG_STR "merchants[%p]"
+	#define DEBUG_IND e
 
 	INT(currency, 0, 0xFFFF)
 	INT(credit, 0, 0xFFFFFF)
