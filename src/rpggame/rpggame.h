@@ -3,6 +3,8 @@
 
 #include "cube.h"
 
+#define MAPGAMEVERSION 2
+
 #define STATUS_INVALID_GENERIC(type) (((type) <= STATUS_SCRIPT && (type) >= STATUS_LIGHT) || (type) >= STATUS_MAX || (type) <= -1)
 #define HASINVENTORY(type) ((type) == ENT_CHAR || (type) == ENT_CONTAINER)
 
@@ -106,6 +108,7 @@ namespace ai
 
 namespace game
 {
+	extern int mapgameversion;
 	extern string data;
 	extern const char *datapath(const char *subdir = "");
 	//NOTE: queryhashpool will register the string

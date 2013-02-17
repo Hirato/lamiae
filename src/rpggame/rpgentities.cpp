@@ -432,13 +432,13 @@ namespace entities
 			case CONTAINER:
 			case PLATFORM:
 			case TRIGGER:
-				pos.z += 3.0f;
+				pos.z += 1.5f;
 				formatstring(tmp)("Yaw: %i",
 					e.attr[0]
 				);
 				break;
 			case ITEM:
-				pos.z += 4.5f;
+				pos.z += 3.0f;
 				formatstring(tmp)("Yaw: %i\nQuantity: %i",
 					e.attr[0],
 					max(1, e.attr[1])
@@ -481,9 +481,10 @@ namespace entities
 		return type >= 0 && size_t(type) < sizeof(num)/sizeof(num[0]) ? num[type] : 0;
 	}
 
-	const char *entnameinfo(entity &e)
+	const char *entnameinfo(entity &ent)
 	{
-		return "";
+		rpgentity &e = *((rpgentity *) &ent);
+		return e.id;
 	}
 
 	bool radiusent(extentity &e)
@@ -534,10 +535,28 @@ namespace entities
 	void rumble(const extentity &e) {}
 	void trigger(extentity &e){}
 	void editent(int i, bool local) {}
-	void writeent(entity &e, char *buf) {}
-
-	void readent(entity &e, char *buf, int ver)
+	void writeent(entity &ent, char *buf)
 	{
+		rpgentity &e = *((rpgentity *) &ent);
+		memcpy(buf, e.id, 64);
+	}
+
+	void readent(entity &ent, char *buf, int ver)
+	{
+		rpgentity &e = *((rpgentity *) &ent);
+		if(game::mapgameversion >= 2)
+		{
+			memcpy(e.id, buf, 64);
+		}
+		else if(e.type >= CRITTER && e.type <= TRIGGER)
+		{
+			static char buf[64];
+			snprintf(buf, 64, "%i", e.attr[1]);
+			e.attr.remove(1);
+
+			memcpy(e.id, buf, 64);
+		}
+
 		if(ver <= 30) switch(e.type)
 		{
 			case TELEDEST:
@@ -559,4 +578,17 @@ namespace entities
 				return 4.0f;
 		}
 	}
+
+	ICOMMAND(spawnname, "s", (const char *s),
+		if(entgroup.length()) loopv(entgroup)
+		{
+			rpgentity *e = (rpgentity *) ents[entgroup[i]];
+			copystring(e->id, s, 64);
+		}
+		if(enthover >= 0 && !entgroup.find(enthover))
+		{
+			rpgentity *e = (rpgentity *) ents[enthover];
+			copystring(e->id, s, 64);
+		}
+	)
 }

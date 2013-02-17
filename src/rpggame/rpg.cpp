@@ -2,6 +2,7 @@
 
 namespace game
 {
+	VAR(mapgameversion, 1, 0, -1);
 	VARP(debug, 0, 0, DEBUG_MAX);
 	VAR(forceverbose, 1, 0, -1);
 
@@ -950,11 +951,25 @@ namespace game
 	const char *autoexec()		{return "autoexec.cfg";}
 	const char *savedservers()	{return NULL;}
 
-	void writegamedata(vector<char> &extras) {}
-	void readgamedata (vector<char> &extras) {}
+	void writegamedata(vector<uchar> &extras)
+	{
+		extras.pad(sizeof(int));
+		ucharbuf buf(extras.getbuf(), extras.length());
 
-	void writemapdata(stream *f) {} //do we save rpg declarations per map or not?
+		putint(buf, MAPGAMEVERSION);
+	}
+	void readgamedata (vector<uchar> &extras)
+	{
+		mapgameversion = 1;
+		if(!extras.length()) return;
+
+		ucharbuf buf(extras.getbuf(), extras.length());
+		mapgameversion = getint(buf);
+	}
+
+	void writemapdata(stream *f) {}
 	void loadconfigs() {}
 	bool detachcamera() { return player1->state == CS_DEAD; }
+
 	void toserver(char *text) { execute(text); } //since we don't talk, just execute if the / is forgotten
 }

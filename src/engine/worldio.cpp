@@ -882,7 +882,8 @@ bool save_world(const char *mname, bool nolms, bool octa)
     f->putchar((int)strlen(game::gameident()));
     f->write(game::gameident(), (int)strlen(game::gameident())+1);
     f->putlil<ushort>(entities::extraentinfosize());
-    vector<char> extras;
+
+	vector<uchar> extras;
     game::writegamedata(extras);
     f->putlil<ushort>(extras.length());
     f->write(extras.getbuf(), extras.length());
@@ -1115,8 +1116,9 @@ bool read_octaworld(stream *f, octaheader &hdr)
 
     eif = f->getlil<ushort>();
     int extrasize = f->getlil<ushort>();
-    vector<char> extras;
+    vector<uchar> extras;
     f->read(extras.pad(extrasize), extrasize);
+
     if(samegame) game::readgamedata(extras);
 
     texmru.shrink(0);
@@ -1361,8 +1363,9 @@ bool read_lamiaeworld(stream *f, octaheader &hdr)
 
     eif = f->getlil<ushort>();
     int extrasize = f->getlil<ushort>();
-    vector<char> extras;
+    vector<uchar> extras;
     f->read(extras.pad(extrasize), extrasize);
+
     if(samegame) game::readgamedata(extras);
 
     texmru.shrink(0);
