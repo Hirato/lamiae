@@ -962,7 +962,7 @@ struct inflict
 		return true;
 	}
 	inflict(const char *st, int el, float m) : status(st), element(el), mul(m) {}
-	~inflict() { delete[] status; }
+	~inflict() { }
 };
 
 struct use
@@ -1006,11 +1006,13 @@ struct use
 		return true;
 	}
 	use(const char *scr) : name(NULL), description(NULL), icon(NULL), script(scr), type(USE_CONSUME), cooldown(500), chargeflags(CHARGE_MAG) {}
-	virtual ~use() {
+	virtual ~use()
+	{
 		delete[] name;
 		delete[] description;
 		delete[] icon;
-		effects.deletecontents();}
+		effects.deletecontents();
+	}
 };
 
 struct use_armour : use
