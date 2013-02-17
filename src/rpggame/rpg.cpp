@@ -278,6 +278,48 @@ namespace game
 		var = NULL;
 	}
 
+	template<class T>
+	static inline void loadassets_2pass(const char *dir, T *&var, hashtable<const char*, T> &objects)
+	{
+		objects.clear();
+		vector<char *> files;
+		string file;
+
+		listfiles(dir, "cfg", files);
+		loopv(files)
+		{
+			const char *hash = queryhashpool(files[i]);
+
+			if(objects.access(hash))
+			{
+				ERRORF("\"%s/%s.cfg\" appears to have already been loaded. This should not be possible, aborting", dir, files[i]);
+				abort = true;
+				goto cleanup;
+			}
+
+			if(DEBUG_WORLD)
+				DEBUGF("registering hash: %s", hash);
+
+			objects[hash];
+		}
+
+		loopv(files)
+		{
+			const char *hash = queryhashpool(files[i]);
+			var = &objects[hash];
+			formatstring(file)("%s/%s.cfg", dir, files[i]);
+
+			if(DEBUG_WORLD)
+				DEBUGF("initialising hash %s from \"%s\"", hash, file);
+
+			execfile(file);
+		}
+
+	cleanup:
+		files.deletearrays();
+		var = NULL;
+	}
+
 	void loadassets(const char *dir, bool definitions = false)
 	{
 		forceverbose++;
@@ -333,7 +375,7 @@ namespace game
 
 		if(DEBUG_WORLD) DEBUGF("loading factions");
 		formatstring(pth)("%s/factions", dir);
-		loadassets(pth, loadingfaction, factions);
+		loadassets_2pass(pth, loadingfaction, factions);
 		RANGECHECK(factions);
 
 		if(DEBUG_WORLD) DEBUGF("loading mapscripts");
