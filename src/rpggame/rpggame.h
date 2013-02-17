@@ -14,7 +14,8 @@
 #define DEFAULTCONTSCR game::queryhashpool("default container")
 #define DEFAULTPLATSCR game::queryhashpool("default platform")
 #define DEFAULTTRIGSCR game::queryhashpool("default trigger")
-#define DEFAULTMAPSCR  game::queryhashpool("default map")
+#define DEFAULTSCR     game::queryhashpool("null")
+#define DEFAULTMAPSCR  game::queryhashpool("null")
 
 #ifdef NO_DEBUG
 

@@ -4,7 +4,6 @@ namespace game
 {
 	VARP(debug, 0, 0, DEBUG_MAX);
 	VAR(forceverbose, 1, 0, -1);
-	rpgchar *player1 = new rpgchar();
 
 	hashset<const char *> hashpool;
 
@@ -28,6 +27,8 @@ namespace game
 	bool connected = false;
 	bool transfer = false;
 	bool abort = false;
+	
+	rpgchar *player1 = new rpgchar();
 
 	const char *queryhashpool(const char *str)
 	{
