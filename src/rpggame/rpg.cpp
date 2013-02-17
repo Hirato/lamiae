@@ -27,14 +27,15 @@ namespace game
 	bool connected = false;
 	bool transfer = false;
 	bool abort = false;
-	
+
 	rpgchar *player1 = new rpgchar();
 
 	const char *queryhashpool(const char *str)
 	{
 		const char **ret = hashpool.access(str);
 		if(ret) return *ret;
-		return hashpool.access(str, newstring(str));
+		str = newstring(str);
+		return hashpool.access(str, str);
 	}
 
 	//important variables/configuration
