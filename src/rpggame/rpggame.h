@@ -1078,7 +1078,6 @@ struct use_weapon : use_armour
 		if(!ua)
 		{
 			ua = new use_weapon(script);
-			delete[] o->script;
 			*ua = *this;
 		}
 		return use_armour::dup(ua);
