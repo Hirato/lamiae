@@ -33,7 +33,7 @@ i486|i586|i686)
 	MACHINE_BIT=32
 	;;
 x86_64|amd64)
-	MACHINE_BIT=64 #assume 64bit otherwise
+	MACHINE_BIT=64
 	;;
 *)
 	MACHINE_BIT=64
