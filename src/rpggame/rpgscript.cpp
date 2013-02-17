@@ -696,7 +696,7 @@ namespace rpgscript
 				tmp->script = queryhashpool(scr);
 			}
 			else
-				ERRORF("Cannot assign script %s to map %s; flags %i still applied", m, scr, *f);
+				ERRORF("Cannot assign script %s to map %s; flags %i still applied", scr, m, *f);
 			tmp->flags = *f;
 		}
 	)
