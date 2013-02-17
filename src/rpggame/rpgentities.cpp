@@ -28,7 +28,7 @@ namespace entities
 	extentity *newentity()
 	{
 		rpgentity *ent = new rpgentity();
-		memset(ent->id, '0', 64);
+		memset(ent->id, 0, 64);
 		return ent;
 	}
 	void deleteentity(extentity *e) { intents.setsize(0); delete (rpgentity *)e; }

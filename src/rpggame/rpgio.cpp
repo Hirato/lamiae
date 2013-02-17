@@ -1939,7 +1939,7 @@ namespace rpgio
 
 		string final;
 		copystring(final, file, strlen(file) - 3);
-		backup(final, file);
+		backup(file, final);
 
 		conoutf("Game saved successfully to %s", final);
 
