@@ -313,11 +313,8 @@ namespace rpgio
 
 					if(ar->vwepmdl) preloadmodel(ar->vwepmdl);
 					if(ar->hudmdl) preloadmodel(ar->hudmdl);
-
-					const char *ifx = readstring(f);
-					if(ifx && game::effects.access(ifx))
-						ar->idlefx = game::queryhashpool(ifx);
-					DELETEA(ifx);
+					READHASH(ar->idlefx);
+					if(ar->idlefx) VALIDHASH(ar->idlefx, game::effects, it)
 
 					ar->slots = f->getlil<int>();
 					ar->skill = f->getlil<int>();
@@ -539,6 +536,7 @@ namespace rpgio
 				{
 					CHECKEOF(*f, ent)
 					item *it = items.add(readitem(f));
+					if(abort) {delete it; return ent;}
 					loading->inventory.access(it->base, vector<item *>()).add(it);
 				}
 
@@ -562,7 +560,7 @@ namespace rpgio
 				rpgitem *loading = (rpgitem *) ent;
 
 				readitem(f, loading);
-
+				if(abort) return ent;
 				break;
 			}
 			case ENT_OBSTACLE:
@@ -614,6 +612,7 @@ namespace rpgio
 				{
 					CHECKEOF(*f, ent)
 					item *it = readitem(f);
+					if(abort) { delete it; return ent; }
 					loading->inventory.access(it->base, vector<item *>()).add(it);
 				}
 
@@ -994,6 +993,7 @@ namespace rpgio
 		loading->name = name;
 		READHASH(loading->script)
 		VALIDHASH(loading->script, game::mapscripts, loading);
+
 		loading->flags = f->getlil<int>();
 		loading->loaded = f->getchar();
 
