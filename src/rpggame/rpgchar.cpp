@@ -637,7 +637,7 @@ bool rpgchar::dequip(const char *base, int slots)
 		return false;
 	}
 
-	base = game::hashpool.find(base, NULL);
+	if(base) base = game::hashpool.find(base, NULL);
 	if(!base) return false;
 
 	int rem = 0;
