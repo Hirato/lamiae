@@ -78,7 +78,7 @@ namespace rpgio
 		if(!val || !(ht).access(val)) \
 		{ \
 			abort = true; \
-			ERRORF(#val " (%s) infers an invalid entry from " #ht, val); \
+			ERRORF(#val " (%s) infers an invalid entry from " #ht " at " __FILE__ ":%i", val, __LINE__); \
 			return ret; \
 		} \
 	} while(0);
@@ -183,7 +183,7 @@ namespace rpgio
 			const char *fac = readstring(f);
 			int val = f->getlil<short>();
 
-			if(game::factions.access(fac))
+			if(fact && game::factions.access(fac))
 				fact->setrelation(game::queryhashpool(fac), val);
 			else
 				WARNINGF("Faction %s does not exist, ignoring relation of %i", fac, val);
@@ -208,7 +208,8 @@ namespace rpgio
 
 	void readrecipe(stream *f, recipe *rec)
 	{
-		rec->flags |= f->getlil<int>();
+		int flags = f->getlil<int>();
+		if(rec) rec->flags |= flags;
 	}
 
 	void writerecipe(stream *f, recipe *rec)
@@ -218,7 +219,8 @@ namespace rpgio
 
 	void readmerchant(stream *f, merchant *mer)
 	{
-		mer->credit = f->getlil<int>();
+		int credit = f->getlil<int>();
+		if(mer) mer->credit = credit;
 	}
 
 	void writemerchant(stream *f, merchant *mer)
@@ -271,7 +273,7 @@ namespace rpgio
 			{
 				case USE_WEAPON:
 				{
-					if(!u) u = new use_weapon(0);
+					if(!u) u = it->uses.add(new use_weapon(NULL));
 					use_weapon *wp = (use_weapon *) u;
 
 					READHASH(wp->projeffect)
@@ -302,7 +304,7 @@ namespace rpgio
 				}
 				case USE_ARMOUR:
 				{
-					if(!u) u = new use_armour(0);
+					if(!u) u = it->uses.add(new use_armour(NULL));
 					use_armour *ar = (use_armour *) u;
 
 					delete[] ar->vwepmdl;
@@ -324,7 +326,7 @@ namespace rpgio
 				}
 				case USE_CONSUME:
 				{
-					if(!u) u = new use(0);
+					if(!u) u = it->uses.add(new use(NULL));
 
 					delete[] u->name;
 					delete[] u->description;
@@ -356,7 +358,6 @@ namespace rpgio
 					break;
 				}
 			}
-			it->uses.add(u);
 		}
 
 		return it;
@@ -1736,37 +1737,22 @@ namespace rpgio
 			const char *key = NULL;
 			READHASH(key);
 			faction *fac = game::factions.access(key);
-			if(fac) readfaction(f, fac);
-			else
-			{
-				WARNINGF("reading faction %s as a dummy", key);
-				faction dummy;
-				readfaction(f, &dummy);
-			}
+			if(!fac) WARNINGF("reading faction %s as a dummy", key);
+			readfaction(f, fac);
 		);
 		READ(recipe,
 			const char *key = NULL;
 			READHASH(key);
 			recipe *r = game::recipes.access(key);
-			if(r) readrecipe(f, r);
-			else
-			{
-				WARNINGF("reading recipe %s as a dummy", key);
-				recipe dummy;
-				readrecipe(f, &dummy);
-			}
+			if(!r) WARNINGF("reading recipe %s as a dummy", key);
+			readrecipe(f, r);
 		);
 		READ(merchant,
 			const char *key = NULL;
 			READHASH(key);
 			merchant *m = game::merchants.access(key);
-			if(m) readmerchant(f, m);
-			else
-			{
-				WARNINGF("reading merchant %s as a dummy", key);
-				merchant dummy;
-				readmerchant(f, &dummy);
-			}
+			if(!m) WARNINGF("reading merchant %s as a dummy", key);
+			readmerchant(f, m);
 		);
 		READ(variable,
 			 const char *n = readstring(f);

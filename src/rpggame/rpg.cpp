@@ -195,14 +195,6 @@ namespace game
 		}
 
 		if(DEBUG_WORLD)
-			DEBUGF("Clearing hashpool of %i entries", hashpool.length());
-
-		enumerate(hashpool, const char *, str,
-			delete[] str;
-		)
-		hashpool.clear();
-
-		if(DEBUG_WORLD)
 			DEBUGF(
 				"clearing %i scripts, "
 				"%i effects, "
@@ -241,6 +233,14 @@ namespace game
 		variables.clear();
 		categories.deletearrays();
 		tips.deletearrays();
+
+		if(DEBUG_WORLD)
+			DEBUGF("Clearing hashpool of %i entries", hashpool.length());
+
+		enumerate(hashpool, const char *, str,
+			delete[] str;
+		)
+		hashpool.clear();
 
 		//We reset the player here so he has a clean slate on a new game.
 		player1->~rpgchar();
@@ -303,7 +303,7 @@ namespace game
 			if(DEBUG_WORLD)
 				DEBUGF("registering hash: %s", hash);
 
-			objects[hash];
+			var = &objects[hash];
 		}
 
 		loopv(files)

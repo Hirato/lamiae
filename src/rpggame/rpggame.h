@@ -70,6 +70,7 @@ struct delayscript;
 struct effect;
 struct faction;
 struct item;
+struct inflict;
 struct journal;
 struct localinst;
 struct mapinfo;
@@ -715,7 +716,6 @@ struct areaeffect
 	~areaeffect() { effects.deletecontents(); }
 };
 
-struct inflict;
 struct victimeffect
 {
 	rpgent *owner;
