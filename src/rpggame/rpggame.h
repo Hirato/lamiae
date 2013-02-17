@@ -16,6 +16,7 @@
 #define DEFAULTTRIGSCR game::queryhashpool("default trigger")
 #define DEFAULTSCR     game::queryhashpool("null")
 #define DEFAULTMAPSCR  game::queryhashpool("null")
+#define DEFAULTFACTION game::queryhashpool("player")
 
 #ifdef NO_DEBUG
 
@@ -1494,7 +1495,7 @@ struct rpgchar : rpgent
 
 	void cleanup();
 
-	rpgchar() : name(NULL), mdl(newstring(DEFAULTMODEL)), portrait(NULL), script(DEFAULTCHARSCR), faction(NULL), merchant(NULL), base(stats(this)), lastaction(0), lastai(0), charge(0), primary(false), secondary(false), lastprimary(false), lastsecondary(false), attack(NULL), aiflags(0), target(NULL), forceanim(0)
+	rpgchar() : name(NULL), mdl(newstring(DEFAULTMODEL)), portrait(NULL), script(DEFAULTCHARSCR), faction(DEFAULTFACTION), merchant(NULL), base(stats(this)), lastaction(0), lastai(0), charge(0), primary(false), secondary(false), lastprimary(false), lastsecondary(false), attack(NULL), aiflags(0), target(NULL), forceanim(0)
 	{
 		health = base.getmaxhp();
 		mana = base.getmaxmp();
