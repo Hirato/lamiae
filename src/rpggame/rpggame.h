@@ -157,7 +157,7 @@ namespace game
 	extern mapinfo *curmap;
 
 	extern void openworld(const char *name);
-	extern void newgame(const char *game, bool restore = false);
+	extern bool newgame(const char *game, bool restore = false);
 	extern mapinfo *accessmap(const char *name);
 	extern bool cansave();
 	extern bool intersect(rpgent *d, const vec &from, const vec &to, float &dist);

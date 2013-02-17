@@ -67,10 +67,10 @@ namespace rpgio
 
 	#define READHASH(val) \
 	do { \
-		const char *s = readstring(f); \
-		if(s) val = game::queryhashpool(s); \
+		const char *_str = readstring(f); \
+		if(_str) val = game::queryhashpool(_str); \
 		else val = NULL; \
-		delete[] s; \
+		delete[] _str; \
 	} while(0);
 
 	#define VALIDHASH(val, ht, ret) \
@@ -78,7 +78,7 @@ namespace rpgio
 		if(!val || !(ht).access(val)) \
 		{ \
 			abort = true; \
-			ERRORF(#val " (%s) infers an invalid entry from " #ht " at " __FILE__ ":%i", val, __LINE__); \
+			ERRORF(#val " (%s / %p) infers an invalid entry from " #ht " at " __FILE__ ":%i", val, val, __LINE__); \
 			return ret; \
 		} \
 	} while(0);
@@ -347,13 +347,13 @@ namespace rpgio
 					{
 						CHECKEOF(*f, it)
 
-						const char *s = NULL;
-						READHASH(s);
-						VALIDHASH(s, game::statuses, it);
+						const char *status = NULL;
+						READHASH(status);
+						VALIDHASH(status, game::statuses, it);
 
 						int e = f->getlil<int>();
 						float m = f->getlil<float>();
-						u->effects.add(new inflict(s, e, m));
+						u->effects.add(new inflict(status, e, m));
 					}
 					break;
 				}
@@ -1685,27 +1685,22 @@ namespace rpgio
 		if(DEBUG_IO)
 			DEBUGF("supported save: %i  %4.4s", hdr.sversion, hdr.magic);
 
+		vector<mapinfo *> maps;
 		const char *data = readstring(f);
-		game::newgame(data, true);
+		const char *curmap = readstring(f);
+		abort = !game::newgame(data, true);
 		delete[] data;
-		abort = false;
 
 		if(game::compatversion > hdr.gversion)
 		{
 			ERRORF("saved game is of game version %i, last compatible version is %i; aborting", hdr.gversion, game::compatversion);
-			delete f;
-			localdisconnect();
-			return;
+			abort = true;
+			goto cleanup;
 		}
-
-		const char *curmap = readstring(f);
-		if(!curmap)
+		if(!curmap || abort)
 		{
-			delete f;
-			ERRORF("no game/map in progress? aborting");
-			rpgscript::cleanlocals();
-			localdisconnect();
-			return;
+			ERRORF("No map in progress?");
+			abort = true; goto cleanup;
 		}
 
 		lastmap = game::accessmap(curmap);
@@ -1765,7 +1760,6 @@ namespace rpgio
 		)
 		readent(f, game::player1);
 
-		vector<mapinfo *> maps;
 		READ(mapinfo, maps.add(readmap(f)));
 
 		READ(reference stack,
@@ -1787,6 +1781,7 @@ namespace rpgio
 		if(!abort) loopv(characters)
 			characters[i]->compactinventory(NULL);
 
+	cleanup:
 		delete f;
 		characters.shrink(0);
 		updates.shrink(0);

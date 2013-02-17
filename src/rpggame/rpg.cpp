@@ -414,10 +414,10 @@ namespace game
 		}
 	)
 
-	void newgame(const char *game, bool restore)
+	bool newgame(const char *game, bool restore)
 	{
 		static bool nonewgame = false;
-		if(nonewgame) return;
+		if(nonewgame) return false;
 		forceverbose++;
 
 		if(!connected)
@@ -449,7 +449,7 @@ namespace game
 			ERRORF("Critical errors were encountered while initialising the game; aborting");
 			abort = false; localdisconnect();
 			forceverbose--;
-			return;
+			return false;
 		}
 		emptymap(0, true, NULL, false);
 		concatstring(dir, ".cfg");
@@ -459,13 +459,14 @@ namespace game
 			DEBUGF("Loaded game properties");
 
 		player1->resetmdl();
-		if(restore) { forceverbose--; return; }
+		if(restore) { forceverbose--; return true; }
 
 		player1->health = player1->base.getmaxhp();
 		player1->mana = player1->base.getmaxmp();
 		player1->getsignal("spawn", false);
 
 		forceverbose--;
+		return true;
 	}
 	ICOMMAND(newgame, "s", (const char *s), newgame(s));
 

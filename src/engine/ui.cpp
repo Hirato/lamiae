@@ -2031,7 +2031,7 @@ namespace UI
 
     struct Text : Object
     {
-        char *str;
+        const char *str;
         float scale;
         float wrap;
         vec color;
