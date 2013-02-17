@@ -883,7 +883,7 @@ bool save_world(const char *mname, bool nolms, bool octa)
     f->write(game::gameident(), (int)strlen(game::gameident())+1);
     f->putlil<ushort>(entities::extraentinfosize());
 
-	vector<uchar> extras;
+    vector<uchar> extras;
     game::writegamedata(extras);
     f->putlil<ushort>(extras.length());
     f->write(extras.getbuf(), extras.length());
