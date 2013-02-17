@@ -42,9 +42,15 @@ namespace test
 			0.01 + rnd(flags & FLAG_FAST ? 10000 : 1000) / 100.0f
 		);
 
-		p->projfx = rnd(effects.length() + 1) - 1;
-		p->trailfx = rnd(effects.length() + 1) - 1;
-		p->deathfx = rnd(effects.length() + 1) - 1;
+		vector<const char *> efx;
+		efx.add(NULL);
+		enumeratek(effects, const char *, key,
+			efx.add(key)
+		)
+
+		p->projfx = efx[rnd(efx.length())];
+		p->trailfx = efx[rnd(efx.length())];
+		p->deathfx = efx[rnd(efx.length())];
 		p->gravity = rnd(401) - 200;
 		p->dist = 200 + rnd(9800);
 		p->time = 200 + rnd(9800);
@@ -72,67 +78,75 @@ namespace test
 			concatstring(pflags, flagnames[i]);
 		}
 
-		conoutf("fx: %4i %4i %4i\tgravity: %4i\tspeed: %6.2f\tflags: %3i (%s)\ttime: %4i\tdist: %4i\telasticity: %1.2f", p->projfx, p->trailfx, p->deathfx, p->gravity, p->dir.magnitude(), p->pflags, pflags, p->time, p->dist, p->elasticity);
+		conoutf("fx: %s; %s; %s\tgravity: %4i\tspeed: %6.2f\tflags: %3i (%s)\ttime: %4i\tdist: %4i\telasticity: %1.2f", p->projfx, p->trailfx, p->deathfx, p->gravity, p->dir.magnitude(), p->pflags, pflags, p->time, p->dist, p->elasticity);
 
 		curmap->projs.add(p);
 	}
 	ICOMMAND(testproj, "iii", (int *i, int *a, int *p), testproj(*i, *a, *p))
 
-	void testeffect(int ind, float charge, int chargeflags)
+	void testeffect(const char *st, float charge, int chargeflags)
 	{
 		if(!curmap)
 		{
 			ERRORF("map data unavailable");
 			return;
 		}
-		if(!statuses.inrange(ind))
+		statusgroup *sg = statuses.access(st);
+		if(!sg)
 		{
-			ERRORF("statusgroup[%i] has not been defined, aborting test", ind);
+			ERRORF("statusgroup[%s] has not been defined, aborting test", st);
 			return;
 		}
+		st = queryhashpool(st);
 
-		conoutf("inflicting statusgroup[%i] on player, with charge %f and chargeflags %i", ind, charge, chargeflags);
+		conoutf("inflicting statusgroup[%s] on player, with charge %f and chargeflags %i", st, charge, chargeflags);
 
-		inflict tmp = inflict(ind, ATTACK_FIRE, charge);
+		inflict tmp = inflict(st, ATTACK_FIRE, charge);
 		player1->seffects.add(new victimeffect(NULL, &tmp, chargeflags, 1));
 	}
-	ICOMMAND(testeffect, "ifi", (int *i, float *m, int *f), testeffect(*i, *m, *f))
+	ICOMMAND(testeffect, "sfi", (const char *st, float *m, int *f), testeffect(st, *m, *f))
 
-	void testareaeffect(float x, float y, float z, int ind, float charge, int chargeflags)
+	void testareaeffect(float x, float y, float z, const char *st, float charge, int chargeflags)
 	{
 		if(!curmap)
 		{
 			ERRORF("map data unavailable");
-			return;
-		}
-		if(!statuses.inrange(ind))
-		{
-			ERRORF("statusgroup[%i] has not been defined, aborting test", ind);
 			return;
 		}
 		if(!effects.length())
+			WARNINGF("No particle effects have been declared");
+
+		statusgroup *sg = statuses.access(st);
+		if(!sg)
 		{
-			ERRORF("No particle effects have been declared");
+			ERRORF("statusgroup[%s] has not been defined, aborting test", st);
 			return;
 		}
+		st = queryhashpool(st);
+
+		vector<const char *> efx;
+		efx.add(NULL);
+		enumeratek(effects, const char *, key,
+			efx.add(key)
+		)
 
 		areaeffect *aeff = curmap->aeffects.add(new areaeffect());
 		aeff->o = vec(x, y, z);
-		aeff->group = ind;
-		aeff->fx = rnd(effects.length());
+		aeff->group = st;
+		aeff->fx = efx[rnd(efx.length())];
 		aeff->radius = rnd(161) + 32;
 		if(chargeflags & CHARGE_RADIUS) aeff->radius *= charge;
 
-		loopv(game::statuses[ind]->effects)
+		loopv(sg->effects)
 		{
-			status *st = aeff->effects.add(game::statuses[ind]->effects[i]->dup());
+			status *st = aeff->effects.add(sg->effects[i]->dup());
 			st->remain = st->duration;
 
 			if(chargeflags & CHARGE_MAG) st->strength *= charge;
 			if(chargeflags & CHARGE_DURATION) st->remain *= charge;
 		}
 	}
-	ICOMMAND(testareaeffect, "fffifi", (float *x, float *y, float *z, int *i, float *m, int *f), testareaeffect(*x, *y, *z, *i, *m, *f))
+	ICOMMAND(testareaeffect, "fffsfi", (float *x, float *y, float *z, const char *st, float *m, int *f), testareaeffect(*x, *y, *z, st, *m, *f))
 }
 
 #endif

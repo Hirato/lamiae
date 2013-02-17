@@ -218,11 +218,12 @@ void item::getsignal(const char *sig, bool prop, rpgent *sender, int use)
 	if(DEBUG_VSCRIPT)
 		DEBUGF("item %p received signal %s with sender %p and use %i; propagating: %s", this, sig, sender, use, prop ? "yes" : "no");
 
+	::script *scr = NULL;
 	signal *listen = NULL;
-	if(use >= 0 && uses.inrange(use) && game::scripts.inrange(uses[use]->script))
-		listen = game::scripts[uses[use]->script]->listeners.access(sig);
-	if(!listen && game::scripts.inrange(script))
-		listen = game::scripts[script]->listeners.access(sig);
+	if(use >= 0 && uses.inrange(use) && (scr = game::scripts.access(uses[use]->script)))
+		listen = scr->listeners.access(sig);
+	if(!listen && (scr = game::scripts.access(script)))
+		listen = scr->listeners.access(sig);
 
 	if(listen) loopv(listen->code)
 		rpgscript::doitemscript(this, sender, listen->code[i]);
@@ -233,15 +234,16 @@ void rpgent::getsignal(const char *sig, bool prop, rpgent *sender)
 	if(DEBUG_VSCRIPT)
 		DEBUGF("entity %p received signal %s with sender %p; propagating: %s", this, sig, sender, prop ? "yes" : "no");
 
-	if(game::scripts.inrange(getscript()))
+	script *scr = NULL;
+	if((scr = game::scripts.access(getscript())))
 	{
-		signal *listen = game::scripts[getscript()]->listeners.access(sig);
+		signal *listen = scr->listeners.access(sig);
 		if(listen) loopv(listen->code)
 			rpgscript::doentscript(this, sender, listen->code[i]);
 	}
 	if(prop && HASINVENTORY(type()))
 	{
-		hashtable<int, vector<item *> > *inventory = NULL;
+		hashtable<const char *, vector<item *> > *inventory = NULL;
 		if(type() == ENT_CHAR) inventory = &((rpgchar *) this)->inventory;
 		else inventory = &((rpgcontainer *) this)->inventory;
 
@@ -268,9 +270,10 @@ void mapinfo::getsignal(const char *sig, bool prop, rpgent *sender)
 	if(DEBUG_VSCRIPT)
 		DEBUGF("map %p received signal %s with sender %p; propagating: %s", this, sig, sender, prop ? "yes" : "no");
 
-	if(game::mapscripts.inrange(script))
+	mapscript *scr = NULL;
+	if((scr = game::mapscripts.access(script)))
 	{
-		signal *listen = game::mapscripts[script]->listeners.access(sig);
+		signal *listen = scr->listeners.access(sig);
 		if(listen) loopv(listen->code)
 			rpgscript::domapscript(this, sender, listen->code[i]);
 	}
@@ -525,7 +528,7 @@ namespace rpgscript
 			if(HASINVENTORY(ptr->type()))
 			{
 				//NOTE: T_EQUIP references are cleared on the temporaries clearing pass
-				hashtable<int, vector<item *> > *inventory = NULL;
+				hashtable<const char *, vector<item *> > *inventory = NULL;
 				if(ptr->type() == ENT_CHAR) inventory = &((rpgchar *) ptr)->inventory;
 				else inventory = &((rpgcontainer *) ptr)->inventory;
 
@@ -679,16 +682,21 @@ namespace rpgscript
 		intret(ent->getchar(entidx)->cansee(obj->getent(objidx)));
 	)
 
-	ICOMMAND(r_preparemap, "sii", (const char *m, int *scr, int *f),
+	ICOMMAND(r_preparemap, "ssi", (const char *m, const char *scr, int *f),
 		if(*m)
 		{
 			mapinfo *tmp = accessmap(m);
 			if(!tmp) return;
 
-			if(DEBUG_SCRIPT)
-				DEBUGF("Prepared mapinfo for %s with script %i and flags %i", m, *scr, *f);
+			if(mapscripts.access(scr))
+			{
+				if(DEBUG_SCRIPT)
+					DEBUGF("Prepared mapinfo for %s with script %s and flags %i", m, scr, *f);
 
-			tmp->script = *scr;
+				tmp->script = queryhashpool(scr);
+			}
+			else
+				ERRORF("Cannot assign script %s to map %s; flags %i still applied", m, scr, *f);
 			tmp->flags = *f;
 		}
 	)
@@ -1312,36 +1320,40 @@ namespace rpgscript
 		popstack();
 	)
 
-	ICOMMAND(r_setref_invstack, "ssi", (const char *ref, const char *srcref, int *base),
+	ICOMMAND(r_setref_invstack, "sss", (const char *ref, const char *srcref, const char *base),
 		if(!*ref) {ERRORF("r_setref_invstack; requires ent reference and a reference name"); return;}
 		getreference(srcref, src, src->getchar(srcidx) || src->getcontainer(srcidx), , r_setref_invstack)
 
 		reference *invstack = registerref(ref, NULL);
 		if(!invstack->canset()) return;
 
+		base = queryhashpool(base);
+
 		if(src->getchar(srcidx))
-			invstack->setref(&src->getchar(srcidx)->inventory.access(*base, vector<item *>()));
+			invstack->setref(&src->getchar(srcidx)->inventory.access(base, vector<item *>()));
 		else
-			invstack->setref(&src->getcontainer(srcidx)->inventory.access(*base, vector<item *>()));
+			invstack->setref(&src->getcontainer(srcidx)->inventory.access(base, vector<item *>()));
 	)
 
-	ICOMMAND(r_setref_inv, "ssi", (const char *ref, const char *srcref, int *idx),
+	ICOMMAND(r_setref_inv, "sss", (const char *ref, const char *srcref, const char *base),
 		if(!*ref) {ERRORF("r_setref_inv; requires ent reference and a reference name"); return;}
 		getreference(srcref, src, src->getchar(srcidx) || src->getcontainer(srcidx), , r_setref_inv)
 
 		reference *inv = registerref(ref, NULL);
 		if(!inv->canset()) return;
 
+		base = queryhashpool(base);
+
 		if(src->getchar(srcidx))
 		{
-			vector <item *> &stack = src->getchar(srcidx)->inventory.access(*idx, vector<item *>());
-			if(!stack.length()) { stack.add(new item())->init(*idx); stack[0]->quantity = 0; }
+			vector <item *> &stack = src->getchar(srcidx)->inventory.access(base, vector<item *>());
+			if(!stack.length()) { stack.add(new item())->init(base); stack[0]->quantity = 0; }
 			inv->setref(stack[0]);
 		}
 		else if(src->getcontainer(srcidx))
 		{
-			vector <item *> &stack = src->getcontainer(srcidx)->inventory.access(*idx, vector<item *>());
-			if(!stack.length()) { stack.add(new item())->init(*idx); stack[0]->quantity = 0; }
+			vector <item *> &stack = src->getcontainer(srcidx)->inventory.access(base, vector<item *>());
+			if(!stack.length()) { stack.add(new item())->init(base); stack[0]->quantity = 0; }
 			inv->setref(stack[0]);
 		}
 	)
@@ -1460,7 +1472,7 @@ namespace rpgscript
 
 	ICOMMAND(r_get_base, "s", (const char *ref),
 		getreference(ref, item, item->getinv(itemidx), intret(-1), r_get_base)
-		intret(item->getinv(itemidx)->base);
+		result(item->getinv(itemidx)->base);
 	) //TODO save bases for everything and return here.
 
 	ICOMMAND(r_get_use, "s", (const char *ref),
@@ -1482,11 +1494,13 @@ namespace rpgscript
 		result(s);
 	)
 
-	ICOMMAND(r_add_effect, "sifi", (const char *ref, int *st, float *mul, int *flags),
-		if(!statuses.inrange(*st)) return;
+	ICOMMAND(r_add_effect, "ssfi", (const char *ref, const char *st, float *mul, int *flags),
+		if(!statuses.access(st)) return;
 		getreference(ref, victim, victim->getent(victimidx), , r_add_effect)
 
-		inflict inf(*st, ATTACK_NONE, 1); //resistances aren't applied
+		st = queryhashpool(st);
+
+		inflict inf(st, ATTACK_NONE, 1); //resistances aren't applied
 		victim->getent(victimidx)->seffects.add(new victimeffect(NULL, &inf, *flags, *mul));
 	)
 
@@ -1520,21 +1534,21 @@ namespace rpgscript
 		}
 	)
 
-	ICOMMAND(r_additem, "siie", (const char *ref, int *i, int *q, uint *body),
+	ICOMMAND(r_additem, "ssie", (const char *ref, const char *base, int *q, uint *body),
 		getreference(ref, ent, ent->getchar(entidx) || ent->getcontainer(entidx), , r_additem)
 
-		if(DEBUG_SCRIPT) DEBUGF("added %i instances of item %i to reference \"%s\"", *q, *i, ref);
-		item *it = ent->getent(entidx)->additem(*i, max(0, *q));
+		if(DEBUG_SCRIPT) DEBUGF("added %i instances of item \"%s\" to reference \"%s\"", *q, base, ref);
+		item *it = ent->getent(entidx)->additem(base, max(0, *q));
 		doitemscript(it, ent->getchar(entidx), body);
 	)
 
-	ICOMMAND(r_get_amount, "si", (const char *ref, int *base),
+	ICOMMAND(r_get_amount, "ss", (const char *ref, const char *base),
 		getreference(ref, ent, ent->getchar(entidx) || ent->getcontainer(entidx) || ent->getinv(entidx), intret(0), r_get_amount)
 
 		if(ent->getinv(entidx))
 			intret(ent->getinv(entidx)->quantity);
 		else
-			intret(ent->getent(entidx)->getitemcount(*base));
+			intret(ent->getent(entidx)->getitemcount(base));
 	)
 
 	ICOMMAND(r_drop, "ssi", (const char *ref, const char *itref, int *q),
@@ -1580,7 +1594,9 @@ namespace rpgscript
 		getreference(ref, ent, ent->getchar(entidx), intret(0), r_dequip)
 		if(*numargs > 2)
 		{
-			intret(ent->getchar(entidx)->dequip(which->getint(), *slot));
+			const char *base = which->getstr();
+			if(which->type == VAL_NULL || !base[0]) base = NULL;
+			intret(ent->getchar(entidx)->dequip(base, *slot));
 		}
 		else //2 arg version
 		{
@@ -1797,31 +1813,34 @@ namespace rpgscript
 		intret(ent->getchar(entidx)->secondary);
 	)
 
-	ICOMMAND(r_check_recipe, "ii", (int *ind, int *num),
-		if(!game::recipes.inrange(*ind))
+	ICOMMAND(r_check_recipe, "si", (const char *id, int *num),
+		recipe *r = recipes.access(id);
+		if(!r)
 		{
-			ERRORF("r_check_recipe; recipe %i out of range", *ind);
+			ERRORF("r_check_recipe; recipe %s out of range", id);
 			intret(0); return;
 		}
-		intret(game::recipes[*ind]->checkreqs(game::player1, max(1, *num)));
+		intret(r->checkreqs(game::player1, max(1, *num)));
 	)
 
-	ICOMMAND(r_use_recipe, "ii", (int *ind, int *num),
-		if(!game::recipes.inrange(*ind))
+	ICOMMAND(r_use_recipe, "si", (const char *id, int *num),
+		recipe *r = recipes.access(id);
+		if(!r)
 		{
-			ERRORF("r_use_recipe; recipe %i out of range", *ind);
+			ERRORF("r_use_recipe; recipe %s out of range", id);
 			return;
 		}
-		game::recipes[*ind]->craft(game::player1, max(1, *num));
+		r->craft(game::player1, max(1, *num));
 	)
 
-	ICOMMAND(r_learn_recipe, "i", (int *ind),
-		if(!game::recipes.inrange(*ind))
+	ICOMMAND(r_learn_recipe, "s", (const char *id),
+		recipe *r = recipes.access(id);
+		if(!r)
 		{
-			ERRORF("r_learn_recipe; recipe %i out of range", *ind);
+			ERRORF("r_learn_recipe; recipe %s out of range", id);
 			return;
 		}
-		game::recipes[*ind]->flags |= recipe::KNOWN;
+		r->flags |= recipe::KNOWN;
 	)
 
 	//dialogue
@@ -1830,10 +1849,10 @@ namespace rpgscript
 		getreference(s, speaker, speaker->getent(speakeridx), , r_chat)
 		if(speaker != talker && talker->list.length()) talker->setnull(true);
 
-		if(scripts.inrange(speaker->getent(speakeridx)->getscript()))
+		script *scr = scripts.access(speaker->getent(speakeridx)->getscript());
+		if(scr)
 		{
 			talker->setref(speaker->getent(speakeridx), true);
-			script *scr = scripts[talker->getent(0)->getscript()];
 
 			if(scr->curnode) scr->curnode->close();
 			scr->curnode = NULL;
@@ -1862,13 +1881,13 @@ namespace rpgscript
 			if(!scr->curnode) talker->setnull(true);
 		}
 		else
-			ERRORF("invalid script %i, can't initialise dialogue", talker->getent(0)->getscript());
+			ERRORF("invalid script %s, can't initialise dialogue", talker->getent(0)->getscript());
 	)
 
 	ICOMMAND(r_response, "sss", (const char *t, const char *n, const char *s),
 		if(!talker->getent(0)) { ERRORF("r_response; no conversation in progress?"); return; }
 
-		script *scr = scripts[talker->getent(0)->getscript()];
+		script *scr = scripts.access(talker->getent(0)->getscript());
 		if(scr->curnode)
 		{
 			if(DEBUG_SCRIPT) DEBUGF("added response for scr->chat[%s]: \"%s\" \"%s\" \"%s\"", scr->curnode->node, t, n, s);
@@ -1901,34 +1920,34 @@ namespace rpgscript
 	)
 
 	#define SPAWNCOMMAND(type, con) \
-		ICOMMAND(r_spawn_ ## type, "siiii", (const char *ref, int *attra, int *attrb, int *attrc, int *attrd), \
+		ICOMMAND(r_spawn_ ## type, "sisii", (const char *ref, int *attra, const char *attrb, int *attrc, int *attrd), \
 			getreference(ref, map, map->getmap(mapidx), , r_spawn_ ## type); \
 			 \
 			action_spawn *spawn = new action_spawn con; \
 			if(map->getmap(mapidx) == curmap) \
 			{ \
-				if(DEBUG_SCRIPT) DEBUGF("conditions met, spawning (" #type ") %i %i %i %i", *attra, *attrb, *attrc, *attrd); \
+				if(DEBUG_SCRIPT) DEBUGF("conditions met, spawning (" #type ") %i %s %i %i", *attra, attrb, *attrc, *attrd); \
 				spawn->exec(); \
 				delete spawn; \
 			} \
 			else \
 			{ \
-				if(DEBUG_SCRIPT) DEBUGF("conditions met but on another map queueing (" #type ") %i %i %i %i", *attra, *attrb, *attrc, *attrd); \
+				if(DEBUG_SCRIPT) DEBUGF("conditions met but on another map queueing (" #type ") %i %s %i %i", *attra, attrb, *attrc, *attrd); \
 				map->getmap(mapidx)->loadactions.add(spawn); \
 			} \
 		)
 	//tag, index, number, quantity
-	SPAWNCOMMAND(item, (*attra, ENT_ITEM, *attrb, *attrc, max(1, *attrd)))
+	SPAWNCOMMAND(item, (*attra, ENT_ITEM, attrb, *attrc, max(1, *attrd)))
 	//tag, index, number
-	SPAWNCOMMAND(creature, (*attra, ENT_CHAR, *attrb, *attrc, 1))
+	SPAWNCOMMAND(creature, (*attra, ENT_CHAR, attrb, *attrc, 1))
 	//tag, index, number
-	SPAWNCOMMAND(obstacle, (*attra, ENT_OBSTACLE, *attrb, *attrc, 1))
+	SPAWNCOMMAND(obstacle, (*attra, ENT_OBSTACLE, attrb, *attrc, 1))
 	//tag, index, number
-	SPAWNCOMMAND(container, (*attra, ENT_CONTAINER, *attrb, *attrc, 1))
+	SPAWNCOMMAND(container, (*attra, ENT_CONTAINER, attrb, *attrc, 1))
 	//tag, index, number
-	SPAWNCOMMAND(platform, (*attra, ENT_PLATFORM, *attrb, *attrc, 1))
+	SPAWNCOMMAND(platform, (*attra, ENT_PLATFORM, attrb, *attrc, 1))
 	//tag, index, number
-	SPAWNCOMMAND(trigger, (*attra, ENT_TRIGGER, *attrb, *attrc, 1))
+	SPAWNCOMMAND(trigger, (*attra, ENT_TRIGGER, attrb, *attrc, 1))
 
 	#undef SPAWNCOMMAND
 

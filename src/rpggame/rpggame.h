@@ -1660,7 +1660,7 @@ struct action_spawn : action
 	void exec();
 	const int type() {return ACTION_SPAWN;}
 
-	action_spawn(int ta, int en, const char *i, int amt, int q) : id(newstring(i)), tag(ta), ent(en), amount(amt), qty(q) {}
+	action_spawn(int ta, int en, const char *i, int amt, int q) : id(game::queryhashpool(i)), tag(ta), ent(en), amount(amt), qty(q) {}
 	~action_spawn()	{}
 };
 

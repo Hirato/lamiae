@@ -31,8 +31,8 @@ namespace game
 
 	const char *queryhashpool(const char *str)
 	{
-		const char *ret = *hashpool.access(str);
-		if(ret) return ret;
+		const char **ret = hashpool.access(str);
+		if(ret) return *ret;
 		return hashpool.access(str, newstring(str));
 	}
 

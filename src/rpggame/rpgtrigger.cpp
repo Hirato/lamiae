@@ -20,25 +20,27 @@ void rpgtrigger::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, flo
 {
 	loopv(weapon->effects)
 	{
-		if(!game::statuses.inrange(weapon->effects[i]->status)) continue;
+		statusgroup *sg = game::statuses.access(weapon->effects[i]->status);
+		if(!sg) continue;
 		seffects.add(new victimeffect(attacker, weapon->effects[i], weapon->chargeflags, mul));
 	}
 
 	if(ammo) loopv(ammo->effects)
 	{
-		if(!game::statuses.inrange(ammo->effects[i]->status)) continue;
+		statusgroup *sg = game::statuses.access(ammo->effects[i]->status);
+		if(!sg) continue;
 		seffects.add(new victimeffect(attacker, ammo->effects[i], weapon->chargeflags, mul));
 	}
 
 	getsignal("hit", false, attacker);
 }
 
-void rpgtrigger::init(int base)
+void rpgtrigger::init(const char *base)
 {
 	game::loadingrpgtrigger = this;
 	rpgscript::config->setref(this, true);
 
-	defformatstring(file)("%s/%i.cfg", game::datapath("triggers"), base);
+	defformatstring(file)("%s/%s.cfg", game::datapath("triggers"), base);
 	execfile(file);
 
 	rpgscript::config->setnull(true);
