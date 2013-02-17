@@ -626,7 +626,7 @@ void rpgchar::equip(item *it, int u)
 		it->getsignal("equip", false, this, u);
 	}
 	else
-		game::hudline("Unable to equip: requires slot unavailable");
+		game::hudline("Unable to equip: required slot unavailable");
 }
 
 bool rpgchar::dequip(const char *base, int slots)
@@ -638,7 +638,6 @@ bool rpgchar::dequip(const char *base, int slots)
 	}
 
 	if(base) base = game::hashpool.find(base, NULL);
-	if(!base) return false;
 
 	int rem = 0;
 	loopv(equipped)
