@@ -36,8 +36,11 @@ ifeq ($(PLATFORM),FreeBSD)
 	PLATFORM_PATH=bin_bsd
 endif
 
-
 ifeq ($(shell uname -m),x86_64)
+	MACHINE?=64
+endif
+
+ifeq ($(shell uname -m),amd64)
 	MACHINE?=64
 endif
 

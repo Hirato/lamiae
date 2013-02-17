@@ -32,7 +32,7 @@ case $(uname -m) in
 i486|i586|i686)
 	MACHINE_BIT=32
 	;;
-x86_64)
+x86_64|amd64)
 	MACHINE_BIT=64 #assume 64bit otherwise
 	;;
 *)
