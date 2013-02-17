@@ -77,8 +77,9 @@ namespace entities
 		modelcache.clear();
 	}
 
-	const char *entmodel(const rpgentity &e)
+	const char *entmodel(const entity &ent)
 	{
+		rpgentity &e = *((rpgentity *) &ent);
 		if(e.type < CRITTER || e.type > TRIGGER) return NULL;
 		// 500 million should be enough for anyone
 		// we've moved way beyond 640k here!

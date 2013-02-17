@@ -85,6 +85,7 @@ struct rpgvar;
 struct script;
 struct statusgroup;
 struct use;
+struct use_weapon;
 struct waypoint;
 
 namespace ai
@@ -466,8 +467,6 @@ struct mapscript
 	mapscript() : listeners(hashtable<const char *, signal>(32)) {}
 	~mapscript() {}
 };
-
-struct use_weapon;
 
 enum
 {
