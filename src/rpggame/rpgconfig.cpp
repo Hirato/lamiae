@@ -481,7 +481,7 @@ namespace game
 		INTNRO(var ## _delta_maxmana, var.deltamana) \
 		INTNRO(var ## _delta_crit, var.deltacrit) \
 		FLOATNRO(var ## _delta_healthregen, var.deltahregen) \
-		FLOATNRO(var ## _delta_manaregen, var.deltamregen) \
+		FLOATNRO(var ## _delta_manaregen, var.deltamregen)
 
 	ICOMMAND(r_script_node, "see", (const char *n, uint *txt, uint *scr),
 		script *s = checkscript();
@@ -646,6 +646,9 @@ namespace game
 		sig->variance = clamp(*v, 0.f, 1.0f);
 		sig->signal = newstring(s);
 		sig->duration = *d;
+
+		if(DEBUG_CONF)
+			DEBUGF("adding signal effect %s (%i %i %f) to" DEBUG_STR, s, *str, *d, *v, DEBUG_IND)
 	)
 
 	ICOMMAND(r_status_addscript, "siif", (char *s, int *str, int *d, float *v),
@@ -659,6 +662,12 @@ namespace game
 		scr->strength = *str;
 		scr->duration = *d;
 		scr->variance = clamp(*v, 0.f, 1.0f);
+
+		if(DEBUG_CONF)
+		{
+			DEBUGF("adding script effect (%i %i %f) to" DEBUG_STR, *str, *d, *v, DEBUG_IND);
+			DEBUGF("script: [%s]", s);
+		}
 	)
 
 	ICOMMAND(r_status_get_effect, "i", (int *idx),
@@ -817,7 +826,11 @@ namespace game
 	START(new_status, "sif", (const char *st, int *el, float *m),
 		INIT if(!e) return;
 		if(statuses.access(st))
+		{
+			if(DEBUG_CONF)
+				DEBUGF(DEBUG_STR " received status effect %s of element %i; multiplier %f", DEBUG_IND, st, *el, *m);
 			e->effects.add(new inflict(queryhashpool(st), *el, *m));
+		}
 		else
 			ERRORF("r_item_use_new_status: statuseffect \"%s\" does not exist", st);
 	)
