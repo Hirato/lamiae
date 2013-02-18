@@ -492,7 +492,7 @@ namespace game
 		{
 			if(DEBUG_CONF)
 				DEBUGF("scripts[%s]->node[%s] registered", s->key, n);
-			const char *name = newstring(n);
+			const char *name = queryhashpool(n);
 
 			node = &s->chat[name];
 			node->node = name;
@@ -515,8 +515,8 @@ namespace game
 		signal *listen = table.access(sig);
 		if(listen) return listen;
 
-		const char *name = newstring(sig);
-		listen = &table.access(name, signal());
+		const char *name = queryhashpool(sig);
+		listen = &table[name];
 		listen->name = name;
 		return listen;
 	}

@@ -423,7 +423,6 @@ struct dialogue
 	dialogue() : node(NULL), text(NULL), script(NULL), str(NULL) {}
 	~dialogue()
 	{
-		delete[] node;
 		delete[] str;
 		freecode(text);
 		freecode(script);
@@ -450,7 +449,6 @@ struct signal
 	signal() : name(NULL) {}
 	~signal()
 	{
-		delete[] name;
 		loopv(code) freecode(code[i]);
 	}
 };
