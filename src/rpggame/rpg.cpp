@@ -594,14 +594,20 @@ namespace game
 		{
 			enumerate(*mapdata, mapinfo, info,
 				DEBUGF("map %s", info.name);
-				DEBUGF("map objects %i", info.objs.length());
+				DEBUGF("script %s", info.script);
+				DEBUGF("flags %i", info.flags);
 				DEBUGF("loaded %i", info.loaded);
+				DEBUGF("map objects %i", info.objs.length());
 				DEBUGF("deferred actions %i", info.loadactions.length());
 			);
 		}
 
 		if(tips.inrange(lasttip))
 			conoutf("\f2%s", tips[lasttip]);
+
+		if(!mapscripts.access(curmap->script))
+			WARNINGF("Map %s uses a non-existent mapscript (%s) - \fs\f3this will inhibit save games until fixed!!\fr", curmap->name, curmap->script);
+
 		forceverbose--;
 	}
 

@@ -1722,17 +1722,17 @@ struct mapinfo
 	// we track the map's key here; we risk leaking memory otherwise
 	const char *name;
 	const char *script; //id
-	vector<rpgent *> objs;
 	int flags;
+	int locals;
 	bool loaded;
+	vector<rpgent *> objs;
 	vector<action *> loadactions;
 	vector<projectile *> projs;
 	vector<areaeffect *> aeffects;
 	vector<blip> blips;
-	int locals;
 
 	void getsignal(const char *sig, bool prop = true, rpgent *sender = NULL);
-	mapinfo() : name(NULL), script(DEFAULTMAPSCR), flags(0), loaded(false), locals(-1) {}
+	mapinfo() : name(NULL), script(DEFAULTMAPSCR), flags(0), locals(-1), loaded(false) {}
 	~mapinfo()
 	{
 		delete[] name;

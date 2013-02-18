@@ -181,6 +181,9 @@ namespace entities
 
 	void spawn(const extentity &e, const char *id, int type, int qty)
 	{
+		//don't spawn empty objects
+		if(!id || !*id) return;
+
 		rpgent *ent = NULL;
 		switch(type)
 		{
@@ -247,6 +250,9 @@ namespace entities
 		ent->resetmdl();
 		setbbfrommodel(ent, ent->temp.mdl);
 		ent->o = e.o;
+
+		if(!game::scripts.access(ent->getscript()))
+			WARNINGF("Entity %p (id: %s), was spawned with non-existent script, (%s) - \fs\f3this will inhibit save games until fixed!!\fr", ent, id, ent->getscript());
 
 		if(e.type == SPAWN && e.attr[1])
 		{
