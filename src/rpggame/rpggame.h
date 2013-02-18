@@ -1397,7 +1397,7 @@ struct faction
 
 	int getrelation(const char *f)
 	{
-		return relations.access(f, base);
+		return relations.find(f, base);
 	}
 
 	faction() : key(NULL), name(NULL), logo(NULL), base(50) {}

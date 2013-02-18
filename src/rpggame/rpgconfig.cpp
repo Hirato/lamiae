@@ -1062,16 +1062,22 @@ namespace game
 		INIT
 		if(!e) return;
 
+		if(!factions.access(o))
+		{
+			ERRORF(DEBUG_STR "->relations[%s]; cannot set as faction %s does not exist", DEBUG_IND, o, o);
+			return;
+		}
+
 		e->setrelation(queryhashpool(o), *f);
 		if(DEBUG_CONF)
-			DEBUGF(DEBUG_STR "'s liking of faction %s is now %i", DEBUG_IND, o, *f);
+			DEBUGF(DEBUG_STR "->relations[%s] = %i", DEBUG_IND, o, *f);
 	)
 
 	ICOMMAND(r_faction_get_relation, "s", (const char *o),
 		INIT
 		if (!e) return;
 
-		intret(e->getrelation(queryhashpool(o)));
+		intret(e->getrelation(o));
 	)
 
 	STRING(name)
