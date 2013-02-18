@@ -400,6 +400,15 @@ namespace game
 			formatstring(pth)("%s/player.cfg", dir);
 			execfile(pth);
 			loadingrpgchar = NULL;
+
+
+			script *scr = scripts.access(player1->script);
+			faction *fac = factions.access(player1->faction);
+			if(!scr || !fac)
+			{
+				abort = true;
+				ERRORF("Player has non-existent script (%s : %p) or faction (%s : %p) - aborting", player1->script, scr, player1->faction, fac);
+			}
 		}
 		forceverbose--;
 	}

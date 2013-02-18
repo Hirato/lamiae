@@ -252,7 +252,11 @@ namespace entities
 		ent->o = e.o;
 
 		if(!game::scripts.access(ent->getscript()))
-			WARNINGF("Entity %p (id: %s), was spawned with non-existent script, (%s) - \fs\f3this will inhibit save games until fixed!!\fr", ent, id, ent->getscript());
+		{
+			ERRORF("Entity %p (id: %s), was spawned with non-existent script, (%s) - \fs\f3the entity has been purged to avoid issues\fr", ent, id, ent->getscript());
+			delete ent;
+			return;
+		}
 
 		if(e.type == SPAWN && e.attr[1])
 		{

@@ -218,12 +218,11 @@ void item::getsignal(const char *sig, bool prop, rpgent *sender, int use)
 	if(DEBUG_VSCRIPT)
 		DEBUGF("item %p received signal %s with sender %p and use %i; propagating: %s", this, sig, sender, use, prop ? "yes" : "no");
 
-	::script *scr = NULL;
 	signal *listen = NULL;
-	if(use >= 0 && uses.inrange(use) && (scr = game::scripts.access(uses[use]->script)))
-		listen = scr->listeners.access(sig);
-	if(!listen && (scr = game::scripts.access(script)))
-		listen = scr->listeners.access(sig);
+	if(use >= 0 && uses.inrange(use))
+		listen = game::scripts.access(uses[use]->script)->listeners.access(sig);
+	if(!listen)
+		listen = game::scripts.access(script)->listeners.access(sig);
 
 	if(listen) loopv(listen->code)
 		rpgscript::doitemscript(this, sender, listen->code[i]);
@@ -234,13 +233,10 @@ void rpgent::getsignal(const char *sig, bool prop, rpgent *sender)
 	if(DEBUG_VSCRIPT)
 		DEBUGF("entity %p received signal %s with sender %p; propagating: %s", this, sig, sender, prop ? "yes" : "no");
 
-	script *scr = NULL;
-	if((scr = game::scripts.access(getscript())))
-	{
-		signal *listen = scr->listeners.access(sig);
-		if(listen) loopv(listen->code)
-			rpgscript::doentscript(this, sender, listen->code[i]);
-	}
+	signal *listen = game::scripts.access(getscript())->listeners.access(sig);
+	if(listen) loopv(listen->code)
+		rpgscript::doentscript(this, sender, listen->code[i]);
+
 	if(prop && HASINVENTORY(type()))
 	{
 		hashtable<const char *, vector<item *> > *inventory = NULL;
@@ -1850,38 +1846,34 @@ namespace rpgscript
 		if(speaker != talker && talker->list.length()) talker->setnull(true);
 
 		script *scr = scripts.access(speaker->getent(speakeridx)->getscript());
-		if(scr)
+
+		talker->setref(speaker->getent(speakeridx), true);
+
+		if(scr->curnode) scr->curnode->close();
+		scr->curnode = NULL;
+
+		if(node[0])
 		{
-			talker->setref(speaker->getent(speakeridx), true);
-
-			if(scr->curnode) scr->curnode->close();
-			scr->curnode = NULL;
-
-			if(node[0])
-			{
-				scr->curnode = scr->chat.access(node);
-				if(!scr->curnode)
-					ERRORF("no such dialogue node: %s", node);
-			}
-			if(scr->curnode)
-			{
-				scr->curnode->close();
-				scr->curnode->open();
-
-				if(!scr->curnode->choices.length())
-				{
-					//if(DEBUGF print something
-					//there are no destinations so just print the text and close...
-					game::hudline("%s: %s", talker->getent(0)->getname(), scr->curnode->str);
-					scr->curnode->close();
-					scr->curnode = NULL;
-				}
-			}
-
-			if(!scr->curnode) talker->setnull(true);
+			scr->curnode = scr->chat.access(node);
+			if(!scr->curnode)
+				ERRORF("no such dialogue node: %s", node);
 		}
-		else
-			ERRORF("invalid script %s, can't initialise dialogue", talker->getent(0)->getscript());
+		if(scr->curnode)
+		{
+			scr->curnode->close();
+			scr->curnode->open();
+
+			if(!scr->curnode->choices.length())
+			{
+				//if(DEBUGF print something
+				//there are no destinations so just print the text and close...
+				game::hudline("%s: %s", talker->getent(0)->getname(), scr->curnode->str);
+				scr->curnode->close();
+				scr->curnode = NULL;
+			}
+		}
+
+		if(!scr->curnode) talker->setnull(true);
 	)
 
 	ICOMMAND(r_response, "sss", (const char *t, const char *n, const char *s),
