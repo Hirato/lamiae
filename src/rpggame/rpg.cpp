@@ -6,17 +6,17 @@ namespace game
 	VARP(debug, 0, 0, DEBUG_MAX);
 	VAR(forceverbose, 1, 0, -1);
 
-	hashset<const char *> hashpool;
+	hashset<const char *> hashpool(1 << 12);
 
 	// GAME DEFINITIONS
-	hashtable<const char *, script> scripts;       ///scripts, includes dialogue
-	hashtable<const char *, effect> effects;       ///pretty particle effects for spells and stuff
-	hashtable<const char *, statusgroup> statuses; ///status effect definitions to transfer onto victims
-	hashtable<const char *, faction> factions;
-	hashtable<const char *, ammotype> ammotypes;
-	hashtable<const char *, mapscript> mapscripts;
-	hashtable<const char *, recipe> recipes;
-	hashtable<const char *, merchant> merchants;
+	hashset<script> scripts;       ///scripts, includes dialogue
+	hashset<effect> effects;       ///pretty particle effects for spells and stuff
+	hashset<statusgroup> statuses; ///status effect definitions to transfer onto victims
+	hashset<faction> factions;
+	hashset<ammotype> ammotypes;
+	hashset<mapscript> mapscripts;
+	hashset<recipe> recipes;
+	hashset<merchant> merchants;
 
 	vector<const char *> categories, tips;
 	hashset<rpgvar> variables;
@@ -250,7 +250,7 @@ namespace game
 	}
 
 	template<class T>
-	static inline void loadassets(const char *dir, T *&var, hashtable<const char*, T> &objects)
+	static inline void loadassets(const char *dir, T *&var, hashset<T> &objects)
 	{
 		objects.clear();
 		vector<char *> files;
@@ -272,6 +272,7 @@ namespace game
 				DEBUGF("registering hash %s from \"%s/%s.cfg\"", hash, dir, files[i]);
 
 			var = &objects[hash];
+			var->key = hash;
 			formatstring(file)("%s/%s.cfg", dir, files[i]);
 			execfile(file);
 		}
@@ -282,7 +283,7 @@ namespace game
 	}
 
 	template<class T>
-	static inline void loadassets_2pass(const char *dir, T *&var, hashtable<const char*, T> &objects)
+	static inline void loadassets_2pass(const char *dir, T *&var, hashset<T> &objects)
 	{
 		objects.clear();
 		vector<char *> files;
@@ -303,12 +304,13 @@ namespace game
 			if(DEBUG_WORLD)
 				DEBUGF("registering hash: %s", hash);
 
-			var = &objects[hash];
+			objects[hash].key = hash;
 		}
 
 		loopv(files)
 		{
-			const char *hash = queryhashpool(files[i]);
+			//the item is already registered...
+			const char *hash = files[i];
 			var = &objects[hash];
 			formatstring(file)("%s/%s.cfg", dir, files[i]);
 

@@ -1858,10 +1858,10 @@ namespace rpgio
 		#define WRITEHT(m, ht, t, b) \
 			if(DEBUG_IO) DEBUGF("Writing %i " #m "(s)", (ht).length()); \
 			f->putlil((ht).length()); \
-			enumeratekt(ht, const char *, key, t, entry, \
-				writestring(f, key); \
+			enumerate(ht, t, entry, \
+				writestring(f, entry.key); \
 				if(DEBUG_IO) \
-					DEBUGF("Writing " #m " %s to file...", key); \
+					DEBUGF("Writing " #m " %s to file...", entry.key); \
 				b; \
 			)
 

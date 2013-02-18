@@ -44,8 +44,8 @@ namespace test
 
 		vector<const char *> efx;
 		efx.add(NULL);
-		enumeratek(effects, const char *, key,
-			efx.add(key)
+		enumerate(effects, effect, entry,
+			efx.add(entry.key)
 		)
 
 		p->projfx = efx[rnd(efx.length())];
@@ -126,8 +126,8 @@ namespace test
 
 		vector<const char *> efx;
 		efx.add(NULL);
-		enumeratek(effects, const char *, key,
-			efx.add(key)
+		enumerate(effects, effect, entry,
+			efx.add(entry.key)
 		)
 
 		areaeffect *aeff = curmap->aeffects.add(new areaeffect());

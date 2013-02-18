@@ -117,14 +117,14 @@ namespace game
 
 	extern hashset<const char *> hashpool;
 
-	extern hashtable<const char *, script> scripts;       ///scripts, includes dialogue
-	extern hashtable<const char *, effect> effects;       ///pretty particle effects for spells and stuff
-	extern hashtable<const char *, statusgroup> statuses; ///status effect definitions to transfer onto victims
-	extern hashtable<const char *, faction> factions;
-	extern hashtable<const char *, ammotype> ammotypes;
-	extern hashtable<const char *, mapscript> mapscripts;
-	extern hashtable<const char *, recipe> recipes;
-	extern hashtable<const char *, merchant> merchants;
+	extern hashset<script> scripts;       ///scripts, includes dialogue
+	extern hashset<effect> effects;       ///pretty particle effects for spells and stuff
+	extern hashset<statusgroup> statuses; ///status effect definitions to transfer onto victims
+	extern hashset<faction> factions;
+	extern hashset<ammotype> ammotypes;
+	extern hashset<mapscript> mapscripts;
+	extern hashset<recipe> recipes;
+	extern hashset<merchant> merchants;
 
 	extern vector<const char *> categories, tips;
 	extern hashset<rpgvar> variables;
@@ -457,22 +457,26 @@ struct signal
 
 struct script
 {
+	const char *key;
 	hashtable<const char *, signal> listeners;
 	hashtable<const char *, dialogue> chat;
 	dialogue *curnode;
 
-	script() : listeners(hashtable<const char *, signal>(32)),
+	script() : key(NULL), listeners(hashtable<const char *, signal>(32)),
 		chat(hashtable<const char *, dialogue>(32)), curnode(NULL) {}
 	~script() {}
 };
+static inline bool htcmp(const char *key, const script &ref) { return !strcmp(key, ref.key); }
 
 struct mapscript
 {
+	const char *key;
 	hashtable<const char *, signal> listeners;
 
-	mapscript() : listeners(hashtable<const char *, signal>(32)) {}
+	mapscript() : key(NULL), listeners(hashtable<const char *, signal>(32)) {}
 	~mapscript() {}
 };
+static inline bool htcmp(const char *key, const mapscript &ref) { return !strcmp(key, ref.key); }
 
 enum
 {
@@ -485,6 +489,7 @@ enum
 
 struct effect
 {
+	const char *key;
 	int flags, decal;
 	const char *mdl;
 	vec spin;
@@ -495,7 +500,7 @@ struct effect
 	int lightflags, lightfade, lightradius, lightinitradius;
 	vec lightcol, lightinitcol;
 
-	effect() : flags(FX_DYNLIGHT|FX_FIXEDFLARE), decal(DECAL_BURN), mdl(NULL), spin(vec(0, 0, 0)), particle(PART_FIREBALL1), colour(0xFFBF00), fade(500), gravity(50), size(4), lightflags(DL_EXPAND), lightfade(500), lightradius(64), lightinitradius(lightradius), lightcol(vec(1, .9, 0)), lightinitcol(lightcol) {}
+	effect() : key(NULL), flags(FX_DYNLIGHT|FX_FIXEDFLARE), decal(DECAL_BURN), mdl(NULL), spin(vec(0, 0, 0)), particle(PART_FIREBALL1), colour(0xFFBF00), fade(500), gravity(50), size(4), lightflags(DL_EXPAND), lightfade(500), lightradius(64), lightinitradius(lightradius), lightcol(vec(1, .9, 0)), lightinitcol(lightcol) {}
 	~effect() { delete[] mdl; }
 
 	enum
@@ -517,6 +522,7 @@ struct effect
 	void drawcone(const vec &o, vec dir, const vec &axis, int angle, float radius, float size, int type = PROJ, int elapse = 17);
 	void drawcone(rpgent *d, use_weapon *wep, float size, int type = PROJ, int elapse = 17);
 };
+static inline bool htcmp(const char *key, const effect &ref) { return !strcmp(key, ref.key); }
 
 enum
 {
@@ -676,12 +682,13 @@ struct status_script : status
 
 struct statusgroup
 {
+	const char *key;
 	vector<status *> effects;
 	bool friendly;
 
 	const char *icon, *name, *description;
 
-	statusgroup() : friendly(false), icon(NULL), name(NULL), description(NULL) {}
+	statusgroup() : key(NULL), friendly(false), icon(NULL), name(NULL), description(NULL) {}
 	~statusgroup()
 	{
 		delete[] icon;
@@ -698,6 +705,7 @@ struct statusgroup
 		return res;
 	}
 };
+static inline bool htcmp(const char *key, const statusgroup &ref) { return !strcmp(key, ref.key); }
 
 struct areaeffect
 {
@@ -1368,15 +1376,18 @@ struct rpgtrigger : rpgent
 
 struct ammotype
 {
+	const char *key;
 	const char *name;
 	vector<const char *> items;
 
-	ammotype() : name(NULL) {}
+	ammotype() : key(NULL), name(NULL) {}
 	~ammotype() { delete[] name; }
 };
+static inline bool htcmp(const char *key, const ammotype &ref) { return !strcmp(key, ref.key); }
 
 struct faction
 {
+	const char *key;
 	const char *name, *logo;
 	hashtable<const char *, short> relations;
 	int base;
@@ -1391,13 +1402,14 @@ struct faction
 		return relations.access(f, base);
 	}
 
-	faction() : name(NULL), logo(NULL), base(50) {}
+	faction() : key(NULL), name(NULL), logo(NULL), base(50) {}
 	~faction()
 	{
 		delete[] name;
 		delete[] logo;
 	}
 };
+static inline bool htcmp(const char *key, const faction &ref) { return !strcmp(key, ref.key); }
 
 //directives are sorted by priority, the most important ones are done first.
 //for example, self defense is high priority while fleeing is an even higher priority,
@@ -1517,6 +1529,7 @@ struct rpgchar : rpgent
 
 struct merchant
 {
+	const char *key;
 	struct rate
 	{
 		float buy, sell;
@@ -1540,11 +1553,14 @@ struct merchant
 		return r;
 	}
 
-	merchant() : currency(NULL), credit(0) {}
+	merchant() : key(NULL), currency(NULL), credit(0) {}
 };
+static inline bool htcmp(const char *key, const merchant &ref) { return !strcmp(key, ref.key); }
 
 struct recipe
 {
+	const char *key;
+
 	enum
 	{
 		KNOWN = 1 << 0,
@@ -1569,7 +1585,7 @@ struct recipe
 	statreq reqs;
 	int flags;
 
-	recipe() : name(NULL), flags(0) {}
+	recipe() : key(NULL), name(NULL), flags(0) {}
 	~recipe() { delete[] name; }
 
 	static void optimise(vector<ingredient> &list)
@@ -1626,6 +1642,7 @@ struct recipe
 			d->additem(products[i].base, products[i].quantity * mul);
 	}
 };
+static inline bool htcmp(const char *key, const recipe &ref) { return !strcmp(key, ref.key); }
 
 enum
 {
