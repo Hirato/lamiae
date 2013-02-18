@@ -490,11 +490,16 @@ namespace game
 		dialogue *node = s->chat.access(n);
 		if(!node)
 		{
+			if(DEBUG_CONF)
+				DEBUGF("scripts[%s]->node[%s] registered", s->key, n);
 			const char *name = newstring(n);
 
 			node = &s->chat[name];
 			node->node = name;
 		}
+
+		if(DEBUG_CONF)
+			DEBUGF("scripts[%s]->node[%s] set", s->key, n);
 
 		freecode(node->text);
 		node->text = txt;
@@ -520,6 +525,8 @@ namespace game
 		script *scr = checkscript();
 		if(!scr) return;
 
+		if(DEBUG_CONF)
+			DEBUGF("scripts[%s]->listeners[%s]->code set", scr->key, sig);
 		signal *listen = getsignal(sig, scr->listeners);
 		listen->setcode(code);
 	)
@@ -528,6 +535,8 @@ namespace game
 		script *scr = checkscript();
 		if(!scr) return;
 
+		if(DEBUG_CONF)
+			DEBUGF("scripts[%s]->listeners[%s]->code appended onto", scr->key, sig);
 		signal *listen = getsignal(sig, scr->listeners);
 		listen->appendcode(code);
 	)
@@ -536,6 +545,8 @@ namespace game
 		mapscript *scr = checkmapscript();
 		if(!scr) return;
 
+		if(DEBUG_CONF)
+			DEBUGF("scripts[%s]->listeners[%s]->code set", scr->key, sig);
 		signal *listen = getsignal(sig, scr->listeners);
 		listen->setcode(code);
 	)
@@ -544,14 +555,16 @@ namespace game
 		mapscript *scr = checkmapscript();
 		if(!scr) return;
 
+		if(DEBUG_CONF)
+			DEBUGF("scripts[%s]->listeners[%s]->code appended onto", scr->key, sig);
 		signal *listen = getsignal(sig, scr->listeners);
 		listen->appendcode(code);
 	)
 
 	#define START(n, f, a, b) ICOMMAND(r_effect_ ##n, f, a, b)
 	#define INIT effect *e = checkeffect();
-	#define DEBUG_STR "effect[%p]"
-	#define DEBUG_IND e
+	#define DEBUG_STR "effect[%s]"
+	#define DEBUG_IND e->key
 
 	INT(flags, 0, FX_MAX)
 	INT(decal, -1, DECAL_MAX - 1)
@@ -578,8 +591,8 @@ namespace game
 
 	#define START(n, f, a, b) ICOMMAND(r_status_ ##n, f, a, b)
 	#define INIT statusgroup *e = checkstatusgroup();
-	#define DEBUG_STR "statusgroup[%p]"
-	#define DEBUG_IND e
+	#define DEBUG_STR "statusgroup[%s]"
+	#define DEBUG_IND e->key
 
 	ICOMMAND(r_status_addgeneric, "iiif", (int *t, int *s, int *d, float *v),
 		if(STATUS_INVALID_GENERIC(*t))
@@ -808,7 +821,7 @@ namespace game
 
 	#define START(n, f, a, b) ICOMMAND(r_item_use_ ##n, f, a, b)
 	#define INIT CAST *e = (CAST *) checkuse(TYPE);
-	#define DEBUG_STR "item_base[%p]->uses[%i]"
+	#define DEBUG_STR "item[%p]->uses[%i]"
 	#define DEBUG_IND loadingitem, loadingitem->uses.find(loadinguse)
 
 	#define CAST use
@@ -885,8 +898,8 @@ namespace game
 
 	#define START(n, f, a, b) ICOMMAND(r_recipe_ ##n, f, a, b)
 	#define INIT recipe *e = checkrecipe();
-	#define DEBUG_STR "recipe[%p]"
-	#define DEBUG_IND e
+	#define DEBUG_STR "recipe[%s]"
+	#define DEBUG_IND e->key
 
 	ICOMMAND(r_recipe_add_ingredient, "si", (const char *base, int *qty),
 		recipe *e = checkrecipe();
@@ -986,8 +999,8 @@ namespace game
 
 	#define START(n, f, a, b) ICOMMAND(r_ammo_ ##n, f, a, b)
 	#define INIT ammotype *e = checkammotype();
-	#define DEBUG_STR "ammotype[%p]"
-	#define DEBUG_IND e
+	#define DEBUG_STR "ammotype[%s]"
+	#define DEBUG_IND e->key
 
 	ICOMMAND(r_ammo_add_item, "s", (const char *s),
 		INIT
@@ -1042,8 +1055,8 @@ namespace game
 
 	#define START(n, f, a, b) ICOMMAND(r_faction_ ##n, f, a, b)
 	#define INIT faction *e = checkfaction();
-	#define DEBUG_STR "faction[%p]"
-	#define DEBUG_IND e
+	#define DEBUG_STR "faction[%s]"
+	#define DEBUG_IND e->key
 
 	ICOMMAND(r_faction_set_relation, "si", (const char *o, int *f),
 		INIT
@@ -1154,8 +1167,8 @@ namespace game
 
 	#define START(n, f, a, b) ICOMMAND(r_merchant_ ##n, f, a, b)
 	#define INIT merchant *e = checkmerchant();
-	#define DEBUG_STR "merchants[%p]"
-	#define DEBUG_IND e
+	#define DEBUG_STR "merchants[%s]"
+	#define DEBUG_IND e->key
 
 	HASH(currency, true)
 	INT(credit, 0, 0xFFFFFF)
