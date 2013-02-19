@@ -111,8 +111,6 @@ namespace rpggui
 		else
 			mer = merchants.access(((rpgcontainer *) buystack->owner)->merchant);
 
-		if(!mer) return;
-
 		intret(buystack->value(*mer, true));
 	)
 
@@ -169,8 +167,6 @@ namespace rpggui
 		else
 			mer = merchants.access(((rpgcontainer *) buystack->owner)->merchant);
 
-		if(!mer) return;
-
 		intret(sellstack->value(*mer, false));
 	)
 
@@ -219,8 +215,6 @@ namespace rpggui
 			merch = merchants.access(((rpgchar *) buystack->owner)->merchant);
 		else
 			merch = merchants.access(((rpgcontainer *) buystack->owner)->merchant);
-
-		if(!merch) return;
 
 		int buy = buystack->value(*merch, true);
 		int sell = sellstack->value(*merch, false);

@@ -16,7 +16,7 @@ void use_armour::apply(rpgchar *user)
 	loopv(effects)
 	{
 		statusgroup *sg = game::statuses.access(effects[i]->status);
-		if(!sg) continue;
+
 		int resist = 0;
 		int thresh = 0;
 		if(!sg->friendly)
@@ -703,7 +703,6 @@ void rpgchar::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float 
 	loopv(weapon->effects)
 	{
 		statusgroup *sg = game::statuses.access(weapon->effects[i]->status);
-		if(!sg) continue;
 		if(!sg->friendly) hit_friendly = 0;
 		victimeffect &v = *seffects.add(new victimeffect(attacker, weapon->effects[i], weapon->chargeflags, mul));
 		loopvj(v.effects) hit_total += v.effects[j]->value();
@@ -712,7 +711,6 @@ void rpgchar::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float 
 	if(ammo) loopv(ammo->effects)
 	{
 		statusgroup *sg = game::statuses.access(ammo->effects[i]->status);
-		if(!sg) continue;
 		if(!sg->friendly) hit_friendly = 0;
 		victimeffect &v = *seffects.add(new victimeffect(attacker, ammo->effects[i], weapon->chargeflags, mul));
 		loopvj(v.effects) hit_total += v.effects[j]->value();

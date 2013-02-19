@@ -21,14 +21,12 @@ void rpgtrigger::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, flo
 	loopv(weapon->effects)
 	{
 		statusgroup *sg = game::statuses.access(weapon->effects[i]->status);
-		if(!sg) continue;
 		seffects.add(new victimeffect(attacker, weapon->effects[i], weapon->chargeflags, mul));
 	}
 
 	if(ammo) loopv(ammo->effects)
 	{
 		statusgroup *sg = game::statuses.access(ammo->effects[i]->status);
-		if(!sg) continue;
 		seffects.add(new victimeffect(attacker, ammo->effects[i], weapon->chargeflags, mul));
 	}
 

@@ -83,7 +83,9 @@ extern int projallowflare;
 
 void areaeffect::render()
 {
-	effect *e = game::effects.access(fx);
+	effect *e = NULL;
+	if(fx) e = game::effects.access(fx);
+
 	if(!e) return;
 
 	switch(e->particle)
@@ -111,11 +113,10 @@ void areaeffect::render()
 
 void areaeffect::dynlight()
 {
-	effect *e = game::effects.access(fx);
-	if(!e) return;
+	effect *e = NULL;
+	if(fx) e = game::effects.access(fx);
 
-	if(!(e->flags & FX_DYNLIGHT)) return;
-
+	if(!e || !(e->flags & FX_DYNLIGHT)) return;
 	adddynlight(o, e->lightradius, e->lightcol);
 }
 

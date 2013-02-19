@@ -200,7 +200,7 @@ namespace rpgio
 
 		enumeratekt(fact->relations, const char *, fac, short, relation,
 			if(DEBUG_IO)
-				DEBUGF("writing... %s --> %i", fac, relation);
+				DEBUGF("writing: factions[%s]->relations[%s] (%i)", fact->key, fac, relation);
 			writestring(f, fac);
 			f->putlil(relation);
 		)
@@ -273,7 +273,7 @@ namespace rpgio
 			{
 				case USE_WEAPON:
 				{
-					if(!u) u = it->uses.add(new use_weapon(NULL));
+					if(!u) u = new use_weapon(NULL);
 					use_weapon *wp = (use_weapon *) u;
 
 					READHASH(wp->projeffect)
@@ -281,8 +281,10 @@ namespace rpgio
 					READHASH(wp->deatheffect)
 					READHASH(wp->ammo)
 
-					if(wp->ammo)
-						VALIDHASH(wp->ammo, game::ammotypes, it);
+					if(wp->projeffect)  VALIDHASH(wp->projeffect,  game::effects, it)
+					if(wp->traileffect) VALIDHASH(wp->traileffect, game::effects, it)
+					if(wp->deatheffect) VALIDHASH(wp->deatheffect, game::effects, it)
+					if(wp->ammo)        VALIDHASH(wp->ammo, game::ammotypes, it);
 
 					wp->range = f->getlil<int>();
 					wp->angle = f->getlil<int>();
@@ -304,7 +306,7 @@ namespace rpgio
 				}
 				case USE_ARMOUR:
 				{
-					if(!u) u = it->uses.add(new use_armour(NULL));
+					if(!u) u = new use_armour(NULL);
 					use_armour *ar = (use_armour *) u;
 
 					delete[] ar->vwepmdl;
@@ -326,7 +328,7 @@ namespace rpgio
 				}
 				case USE_CONSUME:
 				{
-					if(!u) u = it->uses.add(new use(NULL));
+					if(!u) u = new use(NULL);
 
 					delete[] u->name;
 					delete[] u->description;
@@ -358,6 +360,7 @@ namespace rpgio
 					break;
 				}
 			}
+			it->uses.add(u);
 		}
 
 		return it;
