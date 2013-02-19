@@ -119,13 +119,11 @@ void rpgcontainer::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, f
 {
 	loopv(weapon->effects)
 	{
-		statusgroup *sg = game::statuses.access(weapon->effects[i]->status);
 		seffects.add(new victimeffect(attacker, weapon->effects[i], weapon->chargeflags, mul));
 	}
 
 	if(ammo) loopv(ammo->effects)
 	{
-		statusgroup *sg = game::statuses.access(ammo->effects[i]->status);
 		seffects.add(new victimeffect(attacker, ammo->effects[i], weapon->chargeflags, mul));
 	}
 
