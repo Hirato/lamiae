@@ -35,6 +35,8 @@ namespace game
 	{
 		const char **ret = hashpool.access(str);
 		if(ret) return *ret;
+		if(DEBUG_WORLD)
+			DEBUGF("Registered [ %s ] in hashpool; %i entries", str, hashpool.length() + 1);
 		str = newstring(str);
 		return hashpool.access(str, str);
 	}
