@@ -1637,11 +1637,11 @@ namespace rpgio
 		loopj(n)
 		{
 			CHECKEOF(*f, )
-			const char *name = readstring(f);
+			const char *name = NULL;
+			READHASH(name);
 			const char *value = readstring(f);
 
-			rpgvar &var = loading->variables.access(name, rpgvar());
-			if(var.name) delete[] var.name;
+			rpgvar &var = loading->variables[name];
 			if(var.value) delete[] var.value;
 
 			var.name = name;
@@ -1750,10 +1750,11 @@ namespace rpgio
 			readmerchant(f, m);
 		);
 		READ(variable,
-			 const char *n = readstring(f);
+			 const char *name = NULL;
+			 READHASH(name);
 			 const char *v = readstring(f);
-			 if(!rpgscript::setglobal(n, v))
-				 WARNINGF("reloading the game added variable \"%s\"", n);
+			 if(!rpgscript::setglobal(name, v, false))
+				 WARNINGF("reloading the game added variable \"%s\"", name);
 		)
 		READ(locals stack,
 			 readlocal(f, i);

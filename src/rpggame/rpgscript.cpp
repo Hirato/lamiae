@@ -978,16 +978,14 @@ namespace rpgscript
 			if(DEBUG_VSCRIPT)
 				DEBUGF("global variable \"%s\" does not exist, creating and setting to \"%s\"", n, v);
 
-			var = &variables.access(n, rpgvar());
-			var->name = !dup ? n : newstring(n);
+			var = &variables[n];
+			var->name = queryhashpool(n);
 			var->value = !dup ? v : newstring(v);
 			return false;
 		}
 
 		if(DEBUG_VSCRIPT)
 			DEBUGF("global variable \"%s\" exists, setting to \"%s\" from \"%s\"", n, v, var->value);
-
-		if(!dup) delete[] n;
 
 		delete[] var->value;
 		var->value = !dup ? v : newstring(v);
@@ -1153,8 +1151,8 @@ namespace rpgscript
 
 		if(*li == -1) *li = alloclocal();
 
-		rpgvar &var = locals[*li]->variables.access(name, rpgvar());
-		if(!var.name) var.name = newstring(name);
+		rpgvar &var = locals[*li]->variables[name];
+		if(!var.name) var.name = queryhashpool(name);
 		delete[] var.value;
 		var.value = newstring(val);
 	)

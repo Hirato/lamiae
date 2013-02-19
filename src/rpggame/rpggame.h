@@ -371,7 +371,7 @@ struct rpgvar
 	const char *value;
 
 	rpgvar() : name(NULL), value(NULL) {}
-	~rpgvar() { delete[] name; delete[] value; }
+	~rpgvar() { delete[] value; }
 };
 
 static inline bool htcmp(const char *key, const rpgvar &ref) { return !strcmp(key, ref.name); }

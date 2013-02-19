@@ -186,7 +186,7 @@ void rpgchar::doattack(equipment *eleft, equipment *eright, equipment *quiver)
 			ammotype *at = game::ammotypes.access(attack->ammo);
 			if(quiver && (!at || at->items.find(quiver->it->base) == -1)) quiver = NULL;
 		}
-		ammo = (use_weapon *) ((quiver && attack->ammo != NULL) ? quiver->it->uses[quiver->use] : NULL);
+		ammo = (use_weapon *) ((quiver && attack->ammo) ? quiver->it->uses[quiver->use] : NULL);
 
 		float mult = attack->maxcharge;
 		if(attack->charge)
@@ -232,7 +232,7 @@ void rpgchar::doattack(equipment *eleft, equipment *eright, equipment *quiver)
 			case T_AREA:
 			{
 				projectile *p = game::curmap->projs.add(new projectile());
-				p->init(this, attack == left ? eleft : eright, attack->ammo != NULL ? quiver : NULL, 0, mult);
+				p->init(this, attack == left ? eleft : eright, attack->ammo ? quiver : NULL, 0, mult);
 				break;
 			}
 
@@ -245,7 +245,7 @@ void rpgchar::doattack(equipment *eleft, equipment *eright, equipment *quiver)
 			case T_SAREA:
 			{
 				projectile *p = game::curmap->projs.add(new projectile());
-				p->init(this, attack == left ? eleft : eright, attack->ammo != NULL ? quiver : NULL, 0, mult);
+				p->init(this, attack == left ? eleft : eright, attack->ammo ? quiver : NULL, 0, mult);
 				p->pflags = P_VOLATILE|P_STATIONARY;
 
 				break;
@@ -573,13 +573,13 @@ void rpgchar::render()
 
 	if(aiflags & AI_ANIM) hold = (forceanim & ANIM_INDEX) | ANIM_LOOP;
 
-	renderclient(this, temp.mdl ? temp.mdl : mdl, attachments.buf, hold, anim, delay, lastaction, state!=CS_DEAD ? 0 : 0 /* lastpain */, temp.alpha, true);
+	renderclient(this, temp.mdl ? temp.mdl : mdl, attachments.buf, hold, anim, delay, lastaction, state != CS_DEAD ? 0 : 0 /* lastpain */, temp.alpha, true);
 
 	emitter = emitters;
 	loopv(equipped)
 	{
 		use_armour *use = (use_armour *) equipped[i]->it->uses[equipped[i]->use];
-		if(use->type < USE_ARMOUR || !use->vwepmdl || ! use->idlefx || !use->slots)
+		if(use->type < USE_ARMOUR || !use->vwepmdl || !use->idlefx || !use->slots)
 			continue;
 
 		game::effects.access(use->idlefx)->drawwield(emitter[0], emitter[1], 1, effect::TRAIL);
