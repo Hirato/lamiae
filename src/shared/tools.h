@@ -741,19 +741,7 @@ template<class T> struct hashset
         deletechunks();
     }
 
-    int length() const
-    {
-        int ret = 0;
-        loopi(size)
-        {
-            for(chain *enumc = chains[i]; enumc;)
-            {
-                enumc = enumc->next;
-                ret++;
-            }
-        }
-        return ret;
-    }
+    int length() const { return numelems; }
 
     chain *insert(uint h)
     {

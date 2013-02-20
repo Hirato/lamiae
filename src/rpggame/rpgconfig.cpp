@@ -480,10 +480,9 @@ namespace game
 		dialogue *node = s->chat.access(n);
 		if(!node)
 		{
-			static dialogue dummy;
 			const char *name = newstring(n);
 
-			node = &s->chat.access(name, dummy);
+			node = &s->chat[name];
 			node->node = name;
 		}
 

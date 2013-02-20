@@ -403,21 +403,21 @@ namespace game
 			return NULL;
 		}
 
-		mapinfo *dummy = mapdata->access(name);
+		mapinfo *ret = mapdata->access(name);
 		if(DEBUG_WORLD)
-			DEBUGF("finding map data (%p)", dummy);
+			DEBUGF("finding map data (%p)", ret);
 
-		if(!dummy)
+		if(!ret)
 		{
 			const char *newname = newstring(name);
-			dummy = &mapdata->access(newname, mapinfo());
-			dummy->name = newname;
+			ret = &(*mapdata)[newname];
+			ret->name = newname;
 
 			if(DEBUG_WORLD)
-				DEBUGF("map data not found - creating (%p)", dummy);
+				DEBUGF("map data not found - creating (%p)", ret);
 		}
 
-		return dummy;
+		return ret;
 	}
 
 	int lasttip = -1;
@@ -865,7 +865,6 @@ namespace game
 	void writegamedata(vector<char> &extras) {}
 	void readgamedata (vector<char> &extras) {}
 
-	void writemapdata(stream *f) {} //do we save rpg declarations per map or not?
 	void loadconfigs() {}
 	bool detachcamera() { return player1->state == CS_DEAD; }
 	void toserver(char *text) { execute(text); } //since we don't talk, just execute if the / is forgotten

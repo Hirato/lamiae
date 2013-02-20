@@ -2,7 +2,7 @@
 
 #include "engine.h"
 
-bool hasVBO = false, hasDRE = false, hasOQ = false, hasTR = false, hasT3D = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasBE = false, hasBC = false, hasCM = false, hasNP2 = false, hasTC = false, hasS3TC = false, hasFXT1 = false, hasMT = false, hasAF = false, hasMDA = false, hasGLSL = false, hasGM = false, hasNVFB = false, hasSGIDT = false, hasSGISH = false, hasDT = false, hasSH = false, hasNVPCF = false, hasPBO = false, hasFBB = false, hasUBO = false, hasBUE = false, hasMBR = false, hasDB = false, hasTG = false, hasT4 = false, hasTQ = false, hasPF = false, hasTRG = false, hasDBT = false, hasDC = false, hasDBGO = false, hasGPU4 = false, hasGPU5 = false;
+bool hasVBO = false, hasDRE = false, hasOQ = false, hasTR = false, hasT3D = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasBE = false, hasBC = false, hasCM = false, hasNP2 = false, hasTC = false, hasS3TC = false, hasFXT1 = false, hasMT = false, hasAF = false, hasMDA = false, hasGLSL = false, hasGM = false, hasNVFB = false, hasSGIDT = false, hasSGISH = false, hasDT = false, hasSH = false, hasNVPCF = false, hasPBO = false, hasFBB = false, hasFBMS = false, hasTMS = false, hasMSS = false, hasFBMSBS = false, hasNVFBMSC = false, hasNVTMS = false, hasUBO = false, hasBUE = false, hasMBR = false, hasDB = false, hasTG = false, hasT4 = false, hasTQ = false, hasPF = false, hasTRG = false, hasDBT = false, hasDC = false, hasDBGO = false, hasGPU4 = false, hasGPU5 = false;
 bool mesa = false, intel = false, ati = false, nvidia = false;
 
 int hasstencil = 0;
@@ -61,6 +61,29 @@ PFNGLDRAWBUFFERSARBPROC glDrawBuffers_ = NULL;
 
 // GL_EXT_framebuffer_blit
 PFNGLBLITFRAMEBUFFEREXTPROC         glBlitFramebuffer_         = NULL;
+
+// GL_EXT_framebuffer_multisample
+PFNGLRENDERBUFFERSTORAGEMULTISAMPLEEXTPROC glRenderbufferStorageMultisample_ = NULL;
+
+// GL_ARB_texture_multisample
+PFNGLTEXIMAGE2DMULTISAMPLEPROC glTexImage2DMultisample_ = NULL;
+PFNGLTEXIMAGE3DMULTISAMPLEPROC glTexImage3DMultisample_ = NULL;
+PFNGLGETMULTISAMPLEFVPROC      glGetMultisamplefv_      = NULL;
+PFNGLSAMPLEMASKIPROC           glSampleMaski_           = NULL;
+
+// GL_ARB_sample_shading
+PFNGLMINSAMPLESHADINGARBPROC glMinSampleShading_ = NULL;
+
+// GL_NV_framebuffer_multisample_coverage
+PFNGLRENDERBUFFERSTORAGEMULTISAMPLECOVERAGENVPROC glRenderbufferStorageMultisampleCoverageNV_ = NULL;
+
+// GL_NV_texture_multisample
+PFNGLTEXIMAGE2DMULTISAMPLECOVERAGENVPROC     glTexImage2DMultisampleCoverageNV_     = NULL;
+PFNGLTEXIMAGE3DMULTISAMPLECOVERAGENVPROC     glTexImage3DMultisampleCoverageNV_     = NULL;
+PFNGLTEXTUREIMAGE2DMULTISAMPLENVPROC         glTextureImage2DMultisampleNV_         = NULL;
+PFNGLTEXTUREIMAGE3DMULTISAMPLENVPROC         glTextureImage3DMultisampleNV_         = NULL;
+PFNGLTEXTUREIMAGE2DMULTISAMPLECOVERAGENVPROC glTextureImage2DMultisampleCoverageNV_ = NULL;
+PFNGLTEXTUREIMAGE3DMULTISAMPLECOVERAGENVPROC glTextureImage3DMultisampleCoverageNV_ = NULL;
 
 // OpenGL 2.0: GL_ARB_shading_language_100, GL_ARB_shader_objects, GL_ARB_fragment_shader, GL_ARB_vertex_shader
 #ifndef __APPLE__
@@ -189,7 +212,6 @@ VAR(ati_ubo_bug, 0, 0, 1);
 VAR(ati_pf_bug, 0, 0, 1);
 VAR(intel_immediate_bug, 0, 0, 1);
 VAR(intel_vertexarray_bug, 0, 0, 1);
-VAR(sdl_backingstore_bug, -1, 0, 1);
 VAR(usetexrect, 1, 0, 0);
 VAR(useubo, 1, 0, 0);
 VAR(usebue, 1, 0, 0);
@@ -231,7 +253,6 @@ void gl_checkextensions()
 #ifdef __APPLE__
     extern int mac_osversion();
     int osversion = mac_osversion();  /* 0x0A0500 = 10.5 (Leopard) */
-    sdl_backingstore_bug = -1;
 #endif
 
     if(strstr(renderer, "Mesa") || strstr(version, "Mesa"))
@@ -366,6 +387,47 @@ void gl_checkextensions()
             hasFBB = true;
             if(dbgexts) conoutf(CON_INIT, "Using GL_EXT_framebuffer_blit extension.");
         }
+        if(hasext(exts, "GL_EXT_framebuffer_multisample"))
+        {
+            glRenderbufferStorageMultisample_ = (PFNGLRENDERBUFFERSTORAGEMULTISAMPLEEXTPROC)getprocaddress("glRenderbufferStorageMultisampleEXT");
+            hasFBMS = true;
+            if(dbgexts) conoutf(CON_INIT, "Using GL_EXT_framebuffer_multisample extension.");
+        }
+        if(hasext(exts, "GL_ARB_texture_multisample"))
+        {
+            glTexImage2DMultisample_ = (PFNGLTEXIMAGE2DMULTISAMPLEPROC)getprocaddress("glTexImage2DMultisample");
+            glTexImage3DMultisample_ = (PFNGLTEXIMAGE3DMULTISAMPLEPROC)getprocaddress("glTexImage3DMultisample");
+            glGetMultisamplefv_      = (PFNGLGETMULTISAMPLEFVPROC)     getprocaddress("glGetMultisamplefv");
+            glSampleMaski_           = (PFNGLSAMPLEMASKIPROC)          getprocaddress("glSampleMaski");
+            hasTMS = true;
+            if(dbgexts) conoutf(CON_INIT, "Using GL_ARB_texture_multisample extension.");
+        }
+        if(hasext(exts, "GL_ARB_sample_shading"))
+        {
+            glMinSampleShading_ = (PFNGLMINSAMPLESHADINGARBPROC)getprocaddress("glMinSampleShadingARB");
+            hasMSS = true;
+            if(dbgexts) conoutf(CON_INIT, "Using GL_ARB_sample_shading extension.");
+        }
+        if(hasext(exts, "GL_EXT_framebuffer_multisample_blit_scaled"))
+        {
+            hasFBMSBS = true;
+            if(dbgexts) conoutf(CON_INIT, "Using GL_EXT_framebuffer_multisample_blit_scaled extension.");
+        }
+        if(hasext(exts, "GL_NV_framebuffer_multisample_coverage"))
+        {
+            glRenderbufferStorageMultisampleCoverageNV_ = (PFNGLRENDERBUFFERSTORAGEMULTISAMPLECOVERAGENVPROC)getprocaddress("glRenderbufferStorageMultisampleCoverageNV");
+            hasNVFBMSC = true;
+        }
+        if(hasext(exts, "GL_NV_texture_multisample"))
+        {
+            glTexImage2DMultisampleCoverageNV_     = (PFNGLTEXIMAGE2DMULTISAMPLECOVERAGENVPROC)    getprocaddress("glTexImage2DMultisampleCoverageNV");
+            glTexImage3DMultisampleCoverageNV_     = (PFNGLTEXIMAGE3DMULTISAMPLECOVERAGENVPROC)    getprocaddress("glTexImage3DMultisampleCoverageNV");
+            glTextureImage2DMultisampleNV_         = (PFNGLTEXTUREIMAGE2DMULTISAMPLENVPROC)        getprocaddress("glTextureImage2DMultisampleNV");
+            glTextureImage3DMultisampleNV_         = (PFNGLTEXTUREIMAGE3DMULTISAMPLENVPROC)        getprocaddress("glTextureImage3DMultisampleNV");
+            glTextureImage2DMultisampleCoverageNV_ = (PFNGLTEXTUREIMAGE2DMULTISAMPLECOVERAGENVPROC)getprocaddress("glTextureImage2DMultisampleCoverageNV");
+            glTextureImage3DMultisampleCoverageNV_ = (PFNGLTEXTUREIMAGE3DMULTISAMPLECOVERAGENVPROC)getprocaddress("glTextureImage3DMultisampleCoverageNV");
+            hasNVTMS = true;
+        }
     }
     //else conoutf(CON_WARN, "WARNING: No framebuffer object support. (reflective water may be slow)");
     else fatal("Framebuffer object support is required!");
@@ -440,10 +502,11 @@ void gl_checkextensions()
         hasTQ = true;
     }
 
-    extern int gdepthstencil, glineardepth, lighttilebatch, batchsunlight, lighttilestrip, smgather;
+    extern int gdepthstencil, glineardepth, msaalineardepth, lighttilebatch, batchsunlight, lighttilestrip, smgather;
     if(ati)
     {
         //conoutf(CON_WARN, "WARNING: ATI cards may show garbage in skybox. (use \"/ati_skybox_bug 1\" to fix)");
+        msaalineardepth = 1; // reading back from depth-stencil still buggy on newer cards, and requires stencil for MSAA
         gdepthstencil = 0; // some older ATI GPUs do not support reading from depth-stencil textures, so only use depth-stencil renderbuffer for now
         if(checkseries(renderer, "Radeon HD", 4000, 5199)) ati_pf_bug = 1;
     }
@@ -892,7 +955,7 @@ void printtimers(int conw, int conh)
     if(totalmillis - lastprint >= 200) lastprint = totalmillis;
 }
 
-void gl_init(int w, int h, int bpp, int depth, int fsaa)
+void gl_init(int w, int h, int bpp)
 {
     glViewport(0, 0, w, h);
     glClearColor(0, 0, 0, 0);
@@ -911,19 +974,6 @@ void gl_init(int w, int h, int bpp, int depth, int fsaa)
     glFrontFace(GL_CW);
     glCullFace(GL_BACK);
     glDisable(GL_CULL_FACE);
-
-#ifdef __APPLE__
-    if(sdl_backingstore_bug)
-    {
-        if(fsaa)
-        {
-            sdl_backingstore_bug = 1;
-            // since SDL doesn't add kCGLPFABackingStore to the pixelformat and so it isn't guaranteed to be preserved - only manifests when using fsaa?
-            //conoutf(CON_WARN, "WARNING: Using SDL backingstore workaround. (use \"/sdl_backingstore_bug 0\" to disable if unnecessary)");
-        }
-        else sdl_backingstore_bug = -1;
-    }
-#endif
 
     renderpath = R_GLSLANG;
 
@@ -1551,6 +1601,26 @@ void screenquad(float sw, float sh, float sw2, float sh2)
     glEnd();
 }
 
+void screenquadoffset(float x, float y, float w, float h)
+{
+    glBegin(GL_TRIANGLE_STRIP);
+    glTexCoord2f(x + w, y); glVertex2f(1, -1);
+    glTexCoord2f(x, y); glVertex2f(-1, -1);
+    glTexCoord2f(x + w, y + h); glVertex2f(1, 1);
+    glTexCoord2f(x, y + h); glVertex2f(-1, 1);
+    glEnd();
+}
+
+void screenquadoffset(float x, float y, float w, float h, float x2, float y2, float w2, float h2)
+{
+    glBegin(GL_TRIANGLE_STRIP);
+    glMultiTexCoord2f_(GL_TEXTURE0_ARB, x+w, y); glMultiTexCoord2f_(GL_TEXTURE1_ARB, x2+w2, y2); glVertex2f(1, -1);
+    glMultiTexCoord2f_(GL_TEXTURE0_ARB, x, y); glMultiTexCoord2f_(GL_TEXTURE1_ARB, x2, y2); glVertex2f(-1, -1);
+    glMultiTexCoord2f_(GL_TEXTURE0_ARB, x+w, y+h); glMultiTexCoord2f_(GL_TEXTURE1_ARB, x2+w2, y2+h2); glVertex2f(1, 1);
+    glMultiTexCoord2f_(GL_TEXTURE0_ARB, x, y+h); glMultiTexCoord2f_(GL_TEXTURE1_ARB, x2, y2+h2); glVertex2f(-1, 1);
+    glEnd();
+}
+
 VARR(fog, 16, 4000, 1000024);
 bvec fogcolor(0x80, 0x99, 0xB3);
 HVARFR(fogcolour, 0, 0x8099B3, 0xFFFFFF,
@@ -2150,12 +2220,8 @@ void gl_drawframe(int w, int h)
     rendergrass();
     GLERROR;
 
-    extern int rhinoq;
-    if(!rhinoq)
-    {
-        renderradiancehints();
-        GLERROR;
-    }
+    renderradiancehints();
+    GLERROR;
 
     rendershadowatlas();
     GLERROR;
@@ -2635,7 +2701,7 @@ void cleanupgl()
     cleanuptimers();
 }
 
-extern void setupscreen(int &usedcolorbits, int &useddepthbits, int &usedfsaa);
+extern void setupscreen(int &usedcolorbits);
 extern int scr_w, scr_h;
 
 bool resettextures()
@@ -2679,9 +2745,9 @@ void resetgl()
 
     SDL_SetVideoMode(0, 0, 0, 0);
 
-    int usedcolorbits = 0, useddepthbits = 0, usedfsaa = 0;
-    setupscreen(usedcolorbits, useddepthbits, usedfsaa);
-    gl_init(scr_w, scr_h, usedcolorbits, useddepthbits, usedfsaa);
+    int usedcolorbits = 0;
+    setupscreen(usedcolorbits);
+    gl_init(scr_w, scr_h, usedcolorbits);
 
     extern void reloadfonts();
     extern void reloadtextures();

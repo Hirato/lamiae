@@ -596,13 +596,6 @@ static inline int shadowmaskmodel(const vec &center, float radius)
     {
         case SM_REFLECT:
             return calcspherersmsplits(center, radius);
-        case SM_TETRA:
-        {
-            vec scenter = vec(center).sub(shadoworigin);
-            float sradius = radius + shadowradius;
-            if(scenter.squaredlen() >= sradius*sradius) return 0;
-            return calcspheretetramask(scenter, radius, shadowbias*shadowradius);
-        }
         case SM_CUBEMAP:
         {
             vec scenter = vec(center).sub(shadoworigin);
@@ -690,7 +683,6 @@ int batcheddynamicmodelbounds(int mask, vec &bbmin, vec &bbmax)
 
 void rendermodelbatches(bool dynmodel)
 {
-    float aamask = -1;
     loopv(batches)
     {
         modelbatch &b = batches[i];
@@ -706,7 +698,7 @@ void rendermodelbatches(bool dynmodel)
             {
                 b.m->startrender();
                 rendered = true;
-                if(aamask!=1) GLOBALPARAM(aamask, (aamask = 1));
+                setaamask(true);
             }
             renderbatchedmodel(b.m, bm);
         }
@@ -724,11 +716,7 @@ void rendermodelbatches(bool dynmodel)
             {
                 b.m->startrender();
                 rendered = true;
-                if(b.m->animated())
-                {
-                    if(aamask!=1) GLOBALPARAM(aamask, (aamask = 1));
-                }
-                else if(aamask!=0) GLOBALPARAM(aamask, (aamask = 0));
+                setaamask(b.m->animated());
             }
             renderbatchedmodel(b.m, bm);
         }
@@ -754,6 +742,7 @@ void rendermodelbatches(bool dynmodel)
         if(query) endquery(query);
         if(rendered) b.m->endrender();
     }
+    setaamask(false);
 }
 
 void startmodelquery(occludequery *query)
@@ -778,18 +767,13 @@ void endmodelquery()
     }
     int minattached = modelattached.length();
     startquery(modelquery);
-    float aamask = -1;
     loopv(batches)
     {
         modelbatch &b = batches[i];
         int j = b.batched;
         if(j < 0 || batchedmodels[j].query != modelquery) continue;
         b.m->startrender();
-        if(b.m->animated())
-        {
-            if(aamask!=1) GLOBALPARAM(aamask, (aamask = 1));
-        }
-        else if(aamask!=0) GLOBALPARAM(aamask, (aamask = 0));
+        setaamask(b.m->animated());
         do
         {
             batchedmodel &bm = batchedmodels[j];
@@ -803,6 +787,7 @@ void endmodelquery()
         b.m->endrender();
     }
     endquery(modelquery);
+    setaamask(false);
     modelquery = NULL;
     modelattached.setsize(minattached);
 }
@@ -913,9 +898,10 @@ void rendermodel(const char *mdl, int anim, const vec &o, float yaw, float pitch
             if(d->query) startquery(d->query);
         }
         m->startrender();
-        GLOBALPARAM(aamask, (1.0f));
+        setaamask(true);
         if(flags&MDL_FULLBRIGHT) anim |= ANIM_FULLBRIGHT;
         m->render(anim, basetime, basetime2, o, yaw, pitch, roll, d, a, size);
+        setaamask(false);
         m->endrender();
         if(flags&MDL_CULL_QUERY && d->query) endquery(d->query);
         return;
