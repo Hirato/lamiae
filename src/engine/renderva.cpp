@@ -1034,8 +1034,6 @@ void batchshadowmapmodels()
 
 VAR(oqdist, 0, 256, 1024);
 VAR(zpass, 0, 1, 1);
-VAR(glowpass, 0, 1, 1);
-VAR(envpass, 0, 1, 1);
 
 struct renderstate
 {
@@ -1260,6 +1258,8 @@ static void changeslottmus(renderstate &cur, int pass, Slot &slot, VSlot &vslot)
         GLuint diffusetex = slot.sts.empty() ? notexture->id : slot.sts[0].t->id;
         if(cur.textures[cur.diffusetmu]!=diffusetex)
             glBindTexture(GL_TEXTURE_2D, cur.textures[cur.diffusetmu] = diffusetex);
+
+        if(msaasamples && pass == RENDERPASS_GBUFFER) GLOBALPARAM(hashid, (vslot.index));
     }
 
     if(cur.alphaing)
