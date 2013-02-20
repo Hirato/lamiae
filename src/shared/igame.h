@@ -81,7 +81,6 @@ namespace game
     extern bool detachcamera();
     extern bool collidecamera();
     extern void adddynlights();
-    extern void writemapdata(stream *f);
     extern void particletrack(physent *owner, vec &o, vec &d);
     extern void dynlighttrack(physent *owner, vec &o, vec &hud);
     extern bool needminimap();

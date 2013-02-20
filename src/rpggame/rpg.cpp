@@ -865,7 +865,6 @@ namespace game
 	void writegamedata(vector<char> &extras) {}
 	void readgamedata (vector<char> &extras) {}
 
-	void writemapdata(stream *f) {} //do we save rpg declarations per map or not?
 	void loadconfigs() {}
 	bool detachcamera() { return player1->state == CS_DEAD; }
 	void toserver(char *text) { execute(text); } //since we don't talk, just execute if the / is forgotten
