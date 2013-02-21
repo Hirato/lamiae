@@ -80,7 +80,7 @@ namespace entities
 	const char *entmodel(const entity &ent)
 	{
 		rpgentity &e = *((rpgentity *) &ent);
-		if(e.type < CRITTER || e.type > TRIGGER) return NULL;
+		if(e.type < CRITTER || e.type > TRIGGER || !e.id[0]) return NULL;
 		// 500 million should be enough for anyone
 		// we've moved way beyond 640k here!
 		uint hash = (e.type - CRITTER) << 29;
