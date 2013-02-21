@@ -624,7 +624,7 @@ const vector<physent *> &checkdynentcache(int x, int y)
     loopi(numdyns)
     {
         dynent *d = game::iterdynents(i);
-        if(d->state != CS_ALIVE ||
+        if(d->state != CS_ALIVE || d->nocollide & NOCOLLIDE_DYNENT ||
            d->o.x+d->radius <= dx || d->o.x-d->radius >= dx+dsize ||
            d->o.y+d->radius <= dy || d->o.y-d->radius >= dy+dsize)
             continue;
@@ -679,7 +679,7 @@ static inline bool plcollide(physent *d, const vec &dir, physent *o)
 
 bool plcollide(physent *d, const vec &dir)    // collide with player or monster
 {
-    if(d->type==ENT_CAMERA || d->state!=CS_ALIVE) return true;
+    if(d->type==ENT_CAMERA || d->state!=CS_ALIVE || d->nocollide & NOCOLLIDE_DYNENT) return true;
     loopdynentcache(x, y, d->o, d->radius)
     {
         const vector<physent *> &dynents = checkdynentcache(x, y);
@@ -746,6 +746,8 @@ static inline bool mmcollide(physent *d, const vec &dir, const extentity &e, con
 
 bool mmcollide(physent *d, const vec &dir, octaentities &oc)               // collide with a mapmodel
 {
+    if(d->nocollide & NOCOLLIDE_ENTS) return true;
+
     const vector<extentity *> &ents = entities::getents();
     loopv(oc.mapmodels)
     {

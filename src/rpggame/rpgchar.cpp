@@ -545,6 +545,12 @@ void rpgchar::update()
 		move = strafe = jumping = 0;
 	}
 
+	if(riding)
+	{
+		nocollide |= 3;
+		return;
+	}
+
 	moveplayer(this, this == game::player1 ? 8 : 2, true);
 	entities::touchents(this);
 

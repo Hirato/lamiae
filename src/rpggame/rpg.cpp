@@ -814,6 +814,7 @@ namespace game
 					DEBUGF("resetting game state for current map");
 
 				curmap->objs.removeobj(player1);
+				player1->riding = NULL;
 				clearmap(curmap);
 				curmap->objs.add(player1);
 				entities::startmap();
@@ -866,6 +867,6 @@ namespace game
 	void readgamedata (vector<char> &extras) {}
 
 	void loadconfigs() {}
-	bool detachcamera() { return player1->state == CS_DEAD; }
+	bool detachcamera() { return player1->state == CS_DEAD || player1->riding; }
 	void toserver(char *text) { execute(text); } //since we don't talk, just execute if the / is forgotten
 }

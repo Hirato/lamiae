@@ -1445,6 +1445,8 @@ struct rpgchar : rpgent
 	bool primary, secondary;
 	bool lastprimary, lastsecondary;
 
+	rpgvehicle *riding;
+
 	//temporary stuff
 
 	use_weapon *attack;
@@ -1496,7 +1498,7 @@ struct rpgchar : rpgent
 	bool useitem(item *it, equipment *slot = NULL, int u = -1);
 	void compactinventory(int base = -1);
 
-	rpgchar() : name(NULL), mdl(newstring(DEFAULTMODEL)), portrait(NULL), base(stats(this)), script(1), faction(0), merchant(-1), lastaction(0), lastai(0), charge(0), primary(false), secondary(false), lastprimary(false), lastsecondary(false), attack(NULL), aiflags(0), target(NULL), forceanim(0)
+	rpgchar() : name(NULL), mdl(newstring(DEFAULTMODEL)), portrait(NULL), base(stats(this)), script(1), faction(0), merchant(-1), lastaction(0), lastai(0), charge(0), primary(false), secondary(false), lastprimary(false), lastsecondary(false), riding(NULL), attack(NULL), aiflags(0), target(NULL), forceanim(0)
 	{
 		health = base.getmaxhp();
 		mana = base.getmaxmp();

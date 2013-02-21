@@ -11,7 +11,16 @@ using namespace game;
 rpgent *reference::getent(int i) const
 {
 	if(!list.inrange(i)) return NULL;
-	if(list[i].type >= T_CHAR && list[i].type <= T_TRIGGER) return (rpgent *) list[i].ptr;
+	switch(list[i].type)
+	{
+		case T_CHAR:      return (rpgchar *) list[i].ptr;
+		case T_ITEM:      return (rpgitem *) list[i].ptr;
+		case T_OBSTACLE:  return (rpgobstacle *) list[i].ptr;
+		case T_CONTAINER: return (rpgcontainer *) list[i].ptr;
+		case T_PLATFORM:  return (rpgplatform *) list[i].ptr;
+		case T_TRIGGER:   return (rpgtrigger *) list[i].ptr;
+		case T_VEHICLE:   return (rpgvehicle *) list[i].ptr;
+	}
 	return NULL;
 }
 rpgchar *reference::getchar(int i) const
@@ -569,6 +578,25 @@ namespace rpgscript
 		{
 			rpgent *ent = obits.pop();
 			removereferences(ent);
+			if(ent->type() == ENT_CHAR)
+			{
+				//eject from vehicle
+				rpgchar *chr = (rpgchar *) ent;
+				if(chr->riding)
+					chr->riding->passengers.removeobj(chr);
+			}
+			else if(ent->type() == ENT_VEHICLE)
+			{
+				//we need to eject the passengers properly
+				rpgvehicle *chr = (rpgvehicle *) ent;
+				loopv(chr->passengers)
+				{
+					chr->passengers[i]->riding = NULL;
+					chr->passengers[i]->nocollide = 0;
+					entinmap(chr->passengers[i]);
+				}
+
+			}
 			delete ent;
 		}
 		//clear volatile references
@@ -1521,6 +1549,21 @@ namespace rpgscript
 		target->getchar(targetidx)->revive(false);
 	)
 
+	ICOMMAND(r_mount, "ss", (const char *rider, const char *mount),
+		getreference(rider, ent, ent->getchar(entidx), , r_mount)
+		getreference(mount, vech, vech->getvehicle(vechidx), , r_mount)
+
+		rpgvehicle *v = vech->getvehicle(vechidx);
+		rpgchar *c = ent->getchar(entidx);
+
+		if(v->passengers.length() >= v->maxpassengers || c->riding)
+			return;
+
+		if(DEBUG_SCRIPT) DEBUGF("r_mount; adding entity %p into vehicle entity %p", c, v);
+		v->passengers.add(c);
+		c->riding = v;
+	)
+
 	ICOMMAND(r_pickup, "ss", (const char *finder, const char *keepsake), //finders keepers :P
 		getreference(finder, actor, actor->getchar(actoridx), , r_pickup)
 		getreference(keepsake, item, item->getitem(itemidx), , r_pickup)
@@ -1953,23 +1996,43 @@ namespace rpgscript
 
 		mapinfo *destmap = *m ? accessmap(m) : curmap;
 
+		if(ent->getchar(entidx))
+		{
+			if(DEBUG_SCRIPT) DEBUGF("r_teleort; critter is being teleported, ejecting from vehicles if needed (%p)", ent->getchar(entidx)->riding);
+			if(ent->getchar(entidx)->riding)
+				ent->getchar(entidx)->riding->passengers.removeobj(ent->getchar(entidx));
+			ent->getchar(entidx)->riding = NULL;
+		}
+
 		if(ent->getent(entidx) == player1 && curmap != destmap)
 		{
-			if(DEBUG_SCRIPT) DEBUGF("teleporting player to map %s", m);
+			if(DEBUG_SCRIPT) DEBUGF("r_teleport; teleporting player to map %s", m);
 			destmap->loadactions.add(new action_teleport(ent->getent(0), *d));
 			load_world(m);
 			return;
 		}
 		if(ent->getent(entidx) != player1)
 		{
-			if(DEBUG_SCRIPT) DEBUGF("moving creature to destination map");
-			removereferences(ent->getent(entidx), false);
-			destmap->objs.add(ent->getent(entidx));
-
 			if(destmap != curmap)
 			{
-				if(DEBUG_SCRIPT) DEBUGF("different map, queueing teleport on map %s", m);
+				if(DEBUG_SCRIPT) DEBUGF("r_teleport; curmap (%s) != destmap (%s) - moving entity to target map and queueing teleport", curmap->name, destmap->name);
+				removereferences(ent->getent(entidx), false);
+				destmap->objs.add(ent->getent(entidx));
 				destmap->loadactions.add(new action_teleport(ent->getent(entidx), *d));
+
+				rpgvehicle *vech = ent->getvehicle(entidx);
+				if(vech)
+				{
+					if(DEBUG_SCRIPT) DEBUGF("r_teleport; vehicle entity detected, moving passengers to target map, ");
+					loopv(vech->passengers)
+					{
+						removereferences(vech->passengers[i], false);
+						destmap->objs.add(vech->passengers[i]);
+					}
+					if(vech->passengers.find(player1) >= 0)
+						load_world(m);
+				}
+
 				return;
 			}
 		}
