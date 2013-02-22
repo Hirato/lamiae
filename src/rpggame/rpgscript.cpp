@@ -1870,6 +1870,8 @@ namespace rpgscript
 
 	ICOMMAND(r_trade, "s", (const char *str),
 		getreference(str, cont, cont->getchar(contidx) || cont->getcontainer(contidx), , r_trade)
+		if(cont->getchar(contidx) && !cont->getchar(contidx)->merchant) return;
+		if(cont->getcontainer(contidx) && !cont->getcontainer(contidx)->merchant) return;
 		trader->setref(cont->getent(contidx), true);
 	)
 
