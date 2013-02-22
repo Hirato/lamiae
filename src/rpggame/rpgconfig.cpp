@@ -46,7 +46,7 @@ namespace game
 			if(obj) \
 			{ \
 				const char *idx = select; \
-				if((loading ## x = (vec).access(idx)) && DEBUG_VCONF) \
+				if(idx && (loading ## x = (vec).access(idx)) && DEBUG_VCONF) \
 					DEBUGF("successfully selected \"" #c "\" from reference %s", ref); \
 			} \
 			\
