@@ -1857,9 +1857,6 @@ struct reference
 
 	//specialised inside rpgscript.cpp
 	void setnull(bool force = false);
-	template<typename T>
-	reference(const char *n, T d);
-	explicit reference(const char *n);
 	reference() : name(NULL), immutable(false) {}
 
 	~reference();

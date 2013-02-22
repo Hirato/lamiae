@@ -192,21 +192,9 @@ void reference::pushref(reference *d, bool force)
 }
 void reference::setnull(bool force) { if(!canset(force)) return; list.setsize(0); if(DEBUG_VSCRIPT) DEBUGF("reference %s set to null", name);}
 
-template<typename T>
-reference::reference(const char *n, T d) : name (newstring(n)), immutable(false)
-{
-	setref(d);
-	if(DEBUG_VSCRIPT) DEBUGF("adding reference %s", name);
-}
-reference::reference(const char *n) : name (newstring(n)), immutable(false)
-{
-	if(DEBUG_VSCRIPT) DEBUGF("adding null reference %s", name);
-}
-
 reference::~reference()
 {
 	if(name && DEBUG_VSCRIPT) DEBUGF("freeing reference %s", name);
-	delete[] name;
 }
 
 /*
@@ -367,7 +355,7 @@ namespace rpgscript
 		if(create)
 		{
 			if(DEBUG_VSCRIPT) DEBUGF("reference \"%s\" not found, creating", lookup);
-			const char *refname = newstring(lookup);
+			const char *refname = queryhashpool(lookup);
 			reference *ref = &(*stack[0])[refname];
 			ref->name = refname;
 			return ref;
@@ -401,7 +389,7 @@ namespace rpgscript
 			r = stack.last()->access(name);
 			if(!r)
 			{
-				const char *n = newstring(name);
+				const char *n = queryhashpool(name);
 				r = &(*stack.last())[n];
 				r->name = n;
 			}

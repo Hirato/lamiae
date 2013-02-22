@@ -1483,19 +1483,18 @@ namespace rpgio
 		loopi(num)
 		{
 			CHECKEOF(*f, )
-			const char *name = readstring(f);
+			const char *name = NULL;
+			READHASH(name);
 			::reference *loading = stack.access(name);
 			if(loading)
 			{
 				WARNINGF("reference \"%s\" appears to have already been loaded", name);
-				DELETEA(name);
 			}
 			else
 			{
 				if(DEBUG_IO) DEBUGF("Creating reference \"%s\"", name);
 				loading = &stack[name];
 				loading->name = name;
-				name = NULL;
 			}
 			loading->immutable = f->getchar();
 
