@@ -219,7 +219,7 @@ void item::getsignal(const char *sig, bool prop, rpgent *sender, int use)
 		DEBUGF("item %p received signal %s with sender %p and use %i; propagating: %s", this, sig, sender, use, prop ? "yes" : "no");
 
 	signal *listen = NULL;
-	if(use >= 0 && uses.inrange(use))
+	if(uses.inrange(use))
 		listen = game::scripts.access(uses[use]->script)->listeners.access(sig);
 	if(!listen)
 		listen = game::scripts.access(script)->listeners.access(sig);
@@ -266,13 +266,10 @@ void mapinfo::getsignal(const char *sig, bool prop, rpgent *sender)
 	if(DEBUG_VSCRIPT)
 		DEBUGF("map %p received signal %s with sender %p; propagating: %s", this, sig, sender, prop ? "yes" : "no");
 
-	mapscript *scr = NULL;
-	if((scr = game::mapscripts.access(script)))
-	{
-		signal *listen = scr->listeners.access(sig);
-		if(listen) loopv(listen->code)
-			rpgscript::domapscript(this, sender, listen->code[i]);
-	}
+	signal *listen = game::mapscripts.access(script)->listeners.access(sig);
+	if(listen) loopv(listen->code)
+		rpgscript::domapscript(this, sender, listen->code[i]);
+
 	if(prop) loopv(objs)
 	{
 		objs[i]->getsignal(sig, prop, sender);

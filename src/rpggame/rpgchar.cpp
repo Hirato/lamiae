@@ -625,6 +625,7 @@ void rpgchar::equip(item *it, int u)
 		return;
 
 	use_armour *usecase = (use_armour *) it->uses[u];
+	if(usecase->type < USE_ARMOUR) return;
 	if(!usecase->reqs.meet(base))
 	{
 		game::hudline("You cannot wield this item! You do not meet the requirements!");
@@ -777,6 +778,27 @@ void rpgchar::init(const char *base)
 	mana = this->base.getmaxmp();
 }
 
+bool rpgchar::validate()
+{
+	if(!game::scripts.access(script))
+	{
+		ERRORF("Entity %p uses invalid script: %s - trying fallback", this, script);
+		script = DEFAULTSCR;
+
+		if(!game::scripts.access(script)) return false;
+	}
+
+	if(!game::factions.access(faction))
+	{
+		ERRORF("Entity %p uses invalid faction: %s - trying fallback", this, script);
+		script = DEFAULTFACTION;
+
+		if(!game::factions.access(faction)) return false;
+	}
+
+	return true;
+}
+
 item *rpgchar::additem(item *it)
 {
 	vector<item *> &inv = inventory.access(it->base, vector<item *>());
@@ -801,6 +823,7 @@ item *rpgchar::additem(const char *base, int q)
 	it.init(base);
 	it.quantity = q;
 
+	if(!it.validate()) return NULL;
 	return additem(&it);
 }
 

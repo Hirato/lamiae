@@ -437,6 +437,7 @@ struct dialogue
 		choices.deletecontents();
 	}
 };
+static inline bool htcmp(const char *key, const dialogue &ref) { return !strcmp(key, ref.node); }
 
 struct signal
 {
@@ -460,16 +461,17 @@ struct signal
 		loopv(code) freecode(code[i]);
 	}
 };
+static inline bool htcmp(const char *key, const signal &ref) { return !strcmp(key, ref.name); }
 
 struct script
 {
 	const char *key;
-	hashtable<const char *, signal> listeners;
-	hashtable<const char *, dialogue> chat;
+	hashset<signal> listeners;
+	hashset<dialogue> chat;
 	dialogue *curnode;
 
-	script() : key(NULL), listeners(hashtable<const char *, signal>(32)),
-		chat(hashtable<const char *, dialogue>(32)), curnode(NULL) {}
+	script() : key(NULL), listeners(hashset<signal>(64)),
+		chat(hashset<dialogue>(64)), curnode(NULL) {}
 	~script() {}
 };
 static inline bool htcmp(const char *key, const script &ref) { return !strcmp(key, ref.key); }
@@ -477,9 +479,9 @@ static inline bool htcmp(const char *key, const script &ref) { return !strcmp(ke
 struct mapscript
 {
 	const char *key;
-	hashtable<const char *, signal> listeners;
+	hashset<signal> listeners;
 
-	mapscript() : key(NULL), listeners(hashtable<const char *, signal>(32)) {}
+	mapscript() : key(NULL), listeners(hashset<signal>(64)) {}
 	~mapscript() {}
 };
 static inline bool htcmp(const char *key, const mapscript &ref) { return !strcmp(key, ref.key); }
@@ -778,6 +780,7 @@ struct rpgent : dynent
 	virtual const char *getname() const =0;
 	virtual const int type()=0;
 	virtual void init(const char *base)=0;
+	virtual bool validate()=0;
 	virtual void getsignal(const char *sig, bool prop = true, rpgent *sender = NULL);
 
 	///character/AI
@@ -1155,6 +1158,7 @@ struct item
 	void getsignal(const char *sig, bool prop = true, rpgent *sender = NULL, int use = -1);
 
 	void init(const char *base, bool world = false);
+	bool validate();
 
 	void transfer(item &o)
 	{
@@ -1219,6 +1223,7 @@ struct rpgitem : rpgent, item
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
 	const int type() {return ENT_ITEM;}
 	void init(const char *base);
+	bool validate();
 	item *additem(const char *base, int q);
 	item *additem(item *it);
 	const char *getscript() const;
@@ -1252,6 +1257,7 @@ struct rpgobstacle : rpgent
 	const char *getname() const { return NULL; }
 	const int type() { return ENT_OBSTACLE; }
 	void init(const char *base);
+	bool validate();
 
 	///character/AI
 	void givexp(int xp) {}
@@ -1280,6 +1286,7 @@ struct rpgcontainer : rpgent
 	const char *getname() const { return name; }
 	const int type() { return ENT_CONTAINER; }
 	void init(const char *base);
+	bool validate();
 	//void getsignal(const char *sig, bool prop = true, rpgent *sender = NULL) {}
 
 	///character/AI
@@ -1332,6 +1339,7 @@ struct rpgplatform : rpgent
 	const char *getname() const { return NULL; }
 	const int type() { return ENT_PLATFORM; }
 	void init(const char *base);
+	bool validate();
 
 	///character/AI
 	void givexp(int xp) {}
@@ -1365,6 +1373,7 @@ struct rpgtrigger : rpgent
 	const char *getname() const { return name; }
 	const int type() { return ENT_TRIGGER; }
 	void init(const char *base);
+	bool validate();
 
 	///character/AI
 	void givexp(int xp) {}
@@ -1489,6 +1498,7 @@ struct rpgchar : rpgent
 	const int type() {return ENT_CHAR;}
 	const char *getscript() const { return script;}
 	void init(const char *base);
+	bool validate();
 
 	///character/AI
 	void givexp(int xp);

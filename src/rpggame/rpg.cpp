@@ -401,13 +401,10 @@ namespace game
 			execfile(pth);
 			loadingrpgchar = NULL;
 
-
-			script *scr = scripts.access(player1->script);
-			faction *fac = factions.access(player1->faction);
-			if(!scr || !fac)
+			if(!player1->validate())
 			{
+				ERRORF("Player definition bad, aborting!");
 				abort = true;
-				ERRORF("Player has non-existent script (%s : %p) or faction (%s : %p) - aborting", player1->script, scr, player1->faction, fac);
 			}
 		}
 		forceverbose--;

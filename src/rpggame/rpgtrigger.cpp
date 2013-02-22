@@ -42,3 +42,16 @@ void rpgtrigger::init(const char *base)
 	rpgscript::config->setnull(true);
 	game::loadingrpgtrigger = NULL;
 }
+
+bool rpgtrigger::validate()
+{
+	if(!game::scripts.access(script))
+	{
+		ERRORF("Trigger %p uses invalid script: %s - trying fallback", this, script);
+		script = DEFAULTSCR;
+
+		if(!game::scripts.access(script)) return false;
+	}
+
+	return true;
+}

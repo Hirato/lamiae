@@ -46,3 +46,16 @@ void rpgobstacle::init(const char *base)
 	game::loadingrpgobstacle = NULL;
 	rpgscript::config->setnull(true);
 }
+
+bool rpgobstacle::validate()
+{
+	if(!game::scripts.access(script))
+	{
+		ERRORF("Obstacle %p uses invalid script: %s - trying fallback", this, script);
+		script = DEFAULTSCR;
+
+		if(!game::scripts.access(script)) return false;
+	}
+
+	return true;
+}

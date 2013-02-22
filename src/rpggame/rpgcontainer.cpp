@@ -41,6 +41,8 @@ item *rpgcontainer::additem(const char *base, int q)
 	item it;
 	it.init(base);
 	it.quantity = q;
+
+	if(!it.validate()) return NULL;
 	return additem(&it);
 }
 
@@ -140,4 +142,17 @@ void rpgcontainer::init(const char *base)
 
 	game::loadingrpgcontainer = NULL;
 	rpgscript::config->setnull(true);
+}
+
+bool rpgcontainer::validate()
+{
+	if(!game::scripts.access(script))
+	{
+		ERRORF("Container %p uses invalid script: %s - trying fallback", this, script);
+		script = DEFAULTSCR;
+
+		if(!game::scripts.access(script)) return false;
+	}
+
+	return true;
 }

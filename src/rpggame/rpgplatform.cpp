@@ -88,3 +88,16 @@ void rpgplatform::init(const char *base)
 	game::loadingrpgplatform = NULL;
 	rpgscript::config->setnull(true);
 }
+
+bool rpgplatform::validate()
+{
+	if(!game::scripts.access(script))
+	{
+		ERRORF("Platform %p uses invalid script: %s - trying fallback", this, script);
+		script = DEFAULTSCR;
+
+		if(!game::scripts.access(script)) return false;
+	}
+
+	return true;
+}

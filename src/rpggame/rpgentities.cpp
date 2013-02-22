@@ -251,11 +251,10 @@ namespace entities
 		setbbfrommodel(ent, ent->temp.mdl);
 		ent->o = e.o;
 
-		if(!game::scripts.access(ent->getscript()))
+		if(!ent->validate())
 		{
-			ERRORF("Entity %p (id: %s), was spawned with non-existent script, (%s) - \fs\f3the entity has been purged to avoid issues\fr", ent, id, ent->getscript());
-			delete ent;
-			return;
+			ERRORF("Entity %p (id: %s) failed validation. It has been deleted to avoid issues", ent, id);
+			delete ent; return;
 		}
 
 		if(e.type == SPAWN && e.attr[1])

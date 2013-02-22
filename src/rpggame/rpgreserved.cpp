@@ -41,9 +41,38 @@ namespace reserved
 		}
 	}
 
+	void loadscripts()
+	{
+		script *scr = &scripts["null"];
+		if(!scr->key)
+		{
+			WARNINGF("null script declared implicitly");
+			scr->key = queryhashpool("null");
+		}
+
+		mapscript *mscr = &mapscripts["null"];
+		if(!mscr->key)
+		{
+			WARNINGF("null mapscript declared implicitly");
+			mscr->key = queryhashpool("null");
+		}
+	}
+
+	void loadfactions()
+	{
+		faction *fac = &factions["player"];
+		if(!fac->key)
+		{
+			WARNINGF("player faction declared implicitly");
+			fac->key = queryhashpool("player");
+		}
+	}
+
 	void load()
 	{
 		loadammo();
+		loadscripts();
+		loadfactions();
 	}
 
 }

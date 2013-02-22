@@ -60,6 +60,35 @@ void rpgitem::init(const char *base)
 	item::init(base, true);
 }
 
+bool item::validate()
+{
+	if(!game::scripts.access(script))
+	{
+		ERRORF("Item %p uses invalid script: %s - trying fallback", this, script);
+		script = DEFAULTSCR;
+
+		if(!game::scripts.access(script)) return false;
+	}
+
+	loopv(uses)
+	{
+		if(!game::scripts.access(uses[i]->script))
+		{
+			ERRORF("Item[%p]->uses[%i] uses invalid script: %s - trying fallback", this, i, uses[i]->script);
+			uses[i]->script = DEFAULTSCR;
+
+			if(!game::scripts.access(uses[i]->script)) return false;
+		}
+	}
+
+	return true;
+}
+
+bool rpgitem::validate()
+{
+	return item::validate();
+}
+
 item *rpgitem::additem(const char *base, int q)
 {
 	base = game::hashpool.find(base, NULL);
