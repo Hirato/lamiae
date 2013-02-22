@@ -869,7 +869,7 @@ namespace game
 	HASH(projeffect, !*s || effects.access(s))
 	HASH(traileffect, !*s || effects.access(s))
 	HASH(deatheffect, !*s || effects.access(s))
-	HASH(ammo, !*s || ammotypes.access(s))
+	HASH(ammo, ammotypes.access(s))
 
 	INT(range, 0, 1024)
 	INT(angle, 0, 360)

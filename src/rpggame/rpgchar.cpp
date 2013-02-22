@@ -96,22 +96,10 @@ bool rpgchar::useitem(item *it, equipment *slot, int u)
 	return true;
 }
 
-bool rpgchar::checkammo(equipment &eq, equipment *quiver, bool remove)
+bool rpgchar::checkammo(equipment &eq, equipment *&quiver, bool remove)
 {
 	//it is assumed it's valid
 	use_weapon *wep = (use_weapon *) eq.it->uses[eq.use];
-	if(!wep->ammo)
-	{
-		if(mana < wep->cost)
-		{
-			if(this == game::player1) game::hudline("\f3You lack the mana to cast the full spell");
-			else if (DEBUG_AI) DEBUGF("AI attack interrupted for %p, too little mana", this);
-			return false;
-		}
-		if(remove) mana -= wep->cost;
-		return true;
-	}
-
 	ammotype *at = game::ammotypes.access(wep->ammo);
 	item *it = NULL;
 
@@ -121,18 +109,47 @@ bool rpgchar::checkammo(equipment &eq, equipment *quiver, bool remove)
 		return false;
 	}
 
+	//check reserved types first...
+	float *fres = NULL;
+	int *ires = NULL;
+
+	if(wep->ammo == reserved::amm_mana)
+		fres = &mana;
+	else if(wep->ammo == reserved::amm_health)
+		fres = &health;
+	else if(wep->ammo == reserved::amm_experience)
+		ires = &base.experience;
+
+	if(fres || ires)
+	{
+		quiver = NULL;
+		if((fres ? *fres : *ires) < wep->cost)
+		{
+			if(this == game::player1) game::hudline("\f3 insufficient %s to use", at->name);
+			else if (DEBUG_AI) DEBUGF("AI attach interrupted for %p; too little %s", this, at->name);
+			return false;
+
+		}
+		if(remove)
+		{
+			if(fres) *fres -= wep->cost;
+			else *ires -= wep->cost;
+		}
+		return true;
+	}
+
 	if(quiver && at->items.find(quiver->it->base) >= 0) it = quiver->it;
-	else if (at->items.find(eq.it->base) >= 0) it = eq.it;
+	else if (at->items.find(eq.it->base) >= 0) { quiver = NULL; it = eq.it; }
 	else
 	{
-		if(this == game::player1) game::hudline("You have the wrong ammo equipped for the current weapon");
+		if(this == game::player1) game::hudline("The current weapon cannot use %s!", at->name);
 		else if (DEBUG_AI) DEBUGF("AI attack interrupted for %p, wrong ammo equipped", this);
 		return false;
 	}
 
 	if(wep->cost > 0 && getcount(it) < wep->cost)
 	{
-		if(this == game::player1) game::hudline("You have too little ammo remaining to attack again");
+		if(this == game::player1) game::hudline("You need more %s to attack again!", at->name);
 		else if (DEBUG_AI) DEBUGF("AI attack interrupted for %p, too little ammo", this);
 		return false;
 	}
@@ -174,19 +191,14 @@ void rpgchar::doattack(equipment *eleft, equipment *eright, equipment *quiver)
 	{
 		lefthand = attack == left;
 
-		if(attack->cost)
+		//function will invalidate the quiver if needed
+		if(!checkammo(attack == left ? *eleft : *eright, quiver))
 		{
-			if(!checkammo(attack == left ? *eleft : *eright, quiver))
-			{
-				lastaction = lastmillis + 100;
-				primary = secondary = 0;
-				return; //we lack the catalysts, don't attack
-			}
-
-			ammotype *at = game::ammotypes.access(attack->ammo);
-			if(quiver && (!at || at->items.find(quiver->it->base) == -1)) quiver = NULL;
+			lastaction = lastmillis + 100;
+			primary = secondary = 0;
+			return; //we lack the catalysts, don't attack
 		}
-		ammo = (use_weapon *) ((quiver && attack->ammo) ? quiver->it->uses[quiver->use] : NULL);
+		if(quiver) ammo = (use_weapon *) quiver->it->uses[quiver->use];
 
 		float mult = attack->maxcharge;
 		if(attack->charge)
@@ -232,7 +244,7 @@ void rpgchar::doattack(equipment *eleft, equipment *eright, equipment *quiver)
 			case T_AREA:
 			{
 				projectile *p = game::curmap->projs.add(new projectile());
-				p->init(this, attack == left ? eleft : eright, attack->ammo ? quiver : NULL, 0, mult);
+				p->init(this, attack == left ? eleft : eright, quiver, 0, mult);
 				break;
 			}
 
@@ -245,7 +257,7 @@ void rpgchar::doattack(equipment *eleft, equipment *eright, equipment *quiver)
 			case T_SAREA:
 			{
 				projectile *p = game::curmap->projs.add(new projectile());
-				p->init(this, attack == left ? eleft : eright, attack->ammo ? quiver : NULL, 0, mult);
+				p->init(this, attack == left ? eleft : eright, quiver, 0, mult);
 				p->pflags = P_VOLATILE|P_STATIONARY;
 
 				break;

@@ -265,9 +265,8 @@ namespace game
 
 			if(objects.access(hash))
 			{
-				ERRORF("\"%s/%s.cfg\" appears to have already been loaded. This should not be possible, aborting", dir, files[i]);
-				abort = true;
-				goto cleanup;
+				WARNINGF("Duplicate instance: \"%s/%s.cfg\" - ignoring", dir, files[i]);
+				continue;
 			}
 
 			if(DEBUG_WORLD)
@@ -279,7 +278,6 @@ namespace game
 			execfile(file);
 		}
 
-	cleanup:
 		files.deletearrays();
 		var = NULL;
 	}
@@ -298,9 +296,9 @@ namespace game
 
 			if(objects.access(hash))
 			{
-				ERRORF("\"%s/%s.cfg\" appears to have already been loaded. This should not be possible, aborting", dir, files[i]);
-				abort = true;
-				goto cleanup;
+				WARNINGF("Duplicate instance: \"%s/%s.cfg\" - ignoring", dir, files[i]);
+				delete[] files.remove(i--);
+				continue;
 			}
 
 			if(DEBUG_WORLD)
@@ -322,7 +320,6 @@ namespace game
 			execfile(file);
 		}
 
-	cleanup:
 		files.deletearrays();
 		var = NULL;
 	}
@@ -394,6 +391,7 @@ namespace game
 		formatstring(pth)("%s/recipes", dir);
 		loadassets(pth, loadingrecipe, recipes);
 
+		reserved::load();
 
 		if(!definitions)
 		{

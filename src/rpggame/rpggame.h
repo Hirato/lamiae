@@ -19,6 +19,7 @@
 #define DEFAULTSCR     game::queryhashpool("null")
 #define DEFAULTMAPSCR  game::queryhashpool("null")
 #define DEFAULTFACTION game::queryhashpool("player")
+#define DEFAULTAMMO    game::queryhashpool("mana")
 
 #ifdef NO_DEBUG
 
@@ -105,6 +106,13 @@ namespace ai
 	extern void renderwaypoints();
 	extern void trydrop();
 	extern void clearwaypoints();
+}
+
+namespace reserved
+{
+	extern const char *amm_mana, *amm_health, *amm_experience;
+
+	extern void load();
 }
 
 namespace game
@@ -1110,7 +1118,7 @@ struct use_weapon : use_armour
 
 		return use_armour::compare(o);
 	}
-	use_weapon(const char *scr) : use_armour(scr), projeffect(NULL), traileffect(NULL), deatheffect(NULL), ammo(NULL), range(256), angle(60), lifetime(10000), gravity(0), cost(10), pflags(P_DIST|P_TIME), target(T_SINGLE), radius(32), kickback(10), recoil(0), charge(0), basecharge(.5f), mincharge(.5f), maxcharge(1.0f), elasticity(0.8), speed(1.0f) {type = USE_WEAPON;}
+	use_weapon(const char *scr) : use_armour(scr), projeffect(NULL), traileffect(NULL), deatheffect(NULL), ammo(DEFAULTAMMO), range(256), angle(60), lifetime(10000), gravity(0), cost(10), pflags(P_DIST|P_TIME), target(T_SINGLE), radius(32), kickback(10), recoil(0), charge(0), basecharge(.5f), mincharge(.5f), maxcharge(1.0f), elasticity(0.8), speed(1.0f) {type = USE_WEAPON;}
 	~use_weapon() {}
 };
 
@@ -1501,7 +1509,7 @@ struct rpgchar : rpgent
 	float getweight();
 
 	//character specific stuff
-	bool checkammo(equipment &eq, equipment *quiver, bool remove = false);
+	bool checkammo(equipment &eq, equipment *&quiver, bool remove = false);
 	void doattack(equipment *eleft, equipment *eright, equipment *quiver);
 	bool useitem(item *it, equipment *slot = NULL, int u = -1);
 	void compactinventory(const char *base = NULL);

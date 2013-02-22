@@ -281,10 +281,10 @@ namespace rpgio
 					READHASH(wp->deatheffect)
 					READHASH(wp->ammo)
 
+					VALIDHASH(wp->ammo, game::ammotypes, it);
 					if(wp->projeffect)  VALIDHASH(wp->projeffect,  game::effects, it)
 					if(wp->traileffect) VALIDHASH(wp->traileffect, game::effects, it)
 					if(wp->deatheffect) VALIDHASH(wp->deatheffect, game::effects, it)
-					if(wp->ammo)        VALIDHASH(wp->ammo, game::ammotypes, it);
 
 					wp->range = f->getlil<int>();
 					wp->angle = f->getlil<int>();
