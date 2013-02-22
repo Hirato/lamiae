@@ -386,13 +386,9 @@ namespace rpgscript
 		reference *r = NULL;
 		if(stack.length())
 		{
-			r = stack.last()->access(name);
-			if(!r)
-			{
-				const char *n = queryhashpool(name);
-				r = &(*stack.last())[n];
-				r->name = n;
-			}
+			r = &(*stack.last())[name];
+			if(!r->name) r->name = queryhashpool(name);
+
 			r->setref(ref);
 		}
 		return r;
