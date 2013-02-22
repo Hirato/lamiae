@@ -320,7 +320,7 @@ namespace game
 
 	#define HASHNF(name, var, verify, body) \
 		START(name, "sN$", (const char *s, int *numargs, ident *self), \
-			PREAMBLE(name, , result(e->var), printsvar(self, e->var)) \
+			PREAMBLE(name, , result(e->var ? e->var : ""), printsvar(self, e->var ? e->var : "")) \
 			if(!(verify)) \
 			{ \
 				ERRORF("\"%s\" is not a valid hash value for " DEBUG_STR "->" #var " - The command was ignored", s, DEBUG_IND); \
