@@ -373,8 +373,8 @@ namespace rpgio
 		writestring(f, it->description);
 		writestring(f, it->mdl);
 
-		writestring(f, it->base);
 		writestring(f, it->script);
+		writestring(f, it->base);
 
 		f->putlil(it->quantity);
 		f->putlil(it->category);
