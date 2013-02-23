@@ -236,19 +236,16 @@ namespace game
 		categories.deletearrays();
 		tips.deletearrays();
 
+		rpgscript::clean();
+
 		if(DEBUG_WORLD)
 			DEBUGF("Clearing hashpool of %i entries", hashpool.length());
-
-		enumerate(hashpool, const char *, str,
-			delete[] str;
-		)
+		enumerate(hashpool, const char *, str, delete[] str;)
 		hashpool.clear();
 
 		//We reset the player here so he has a clean slate on a new game.
 		player1->~rpgchar();
 		new (player1) rpgchar();
-
-		rpgscript::clean();
 	}
 
 	template<class T>
