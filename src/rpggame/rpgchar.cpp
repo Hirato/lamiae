@@ -234,8 +234,11 @@ void rpgchar::doattack(equipment *eleft, equipment *eright, equipment *quiver)
 		}
 
 		int flags = attack->chargeflags | (ammo ? ammo->chargeflags : 0);
-		effect *death = game::effects.access(attack->deatheffect);
-		effect *trail = game::effects.access(attack->traileffect);
+		effect *death = NULL;
+		effect *trail = NULL;
+
+		if(attack->deatheffect) game::effects.access(attack->deatheffect);
+		if(attack->traileffect) game::effects.access(attack->traileffect);
 
 		switch(attack->target)
 		{
