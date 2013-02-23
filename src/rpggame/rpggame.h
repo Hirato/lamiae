@@ -765,6 +765,7 @@ struct rpgent : dynent
 		vec4 light; //w == radius x y z == R G B
 		float alpha;
 		const char *mdl;
+		script *scr;
 	} temp;
 
 	///everything can suffer some status effects, whether this is just invisibility or something more sinister is up for debate
@@ -775,7 +776,7 @@ struct rpgent : dynent
 	virtual void update()=0;
 	virtual void resetmdl()=0;
 	virtual void render()=0;
-	virtual const char *getscript() const =0;
+	virtual script *getscript() =0;
 	virtual vec blipcol() { return vec(1, 1, 1);}
 	virtual const char *getname() const =0;
 	virtual const int type()=0;
@@ -807,6 +808,7 @@ struct rpgent : dynent
 		temp.mdl = NULL;
 		temp.light = vec4(0, 0, 0, 0);
 		temp.alpha = 1;
+		temp.scr = NULL;
 	}
 	virtual ~rpgent()
 	{
@@ -996,6 +998,8 @@ struct use
 
 	vector<inflict *> effects;
 
+	::script *scr;
+
 	virtual use *dup(use *o = NULL)
 	{
 		if(!o)
@@ -1026,7 +1030,7 @@ struct use
 
 		return true;
 	}
-	use(const char *scr) : name(NULL), description(NULL), icon(NULL), script(scr), type(USE_CONSUME), cooldown(500), chargeflags(CHARGE_MAG) {}
+	use(const char *scr) : name(NULL), description(NULL), icon(NULL), script(scr), type(USE_CONSUME), cooldown(500), chargeflags(CHARGE_MAG), scr(NULL) {}
 	virtual ~use()
 	{
 		delete[] name;
@@ -1155,6 +1159,19 @@ struct item
 	vector<use *> uses;
 	int locals;
 
+	::script *scr;
+	inline ::script *getscript(int use = -1)
+	{
+		if(uses.inrange(use))
+		{
+			::use &u = *uses[use];
+			if(u.scr && u.scr->key == u.script) return u.scr;
+			return (u.scr = game::scripts.access(u.script));
+		}
+		if(scr && scr->key == script) return scr;
+		return (scr = game::scripts.access(script));
+	}
+
 	void getsignal(const char *sig, bool prop = true, rpgent *sender = NULL, int use = -1);
 
 	void init(const char *base, bool world = false);
@@ -1199,7 +1216,7 @@ struct item
 		return true;
 	}
 
-	item() : name(NULL), icon(NULL), description(NULL), mdl(newstring(DEFAULTMODEL)), script(DEFAULTITEMSCR), base(NULL), quantity(1), category(0), flags(0), value(0), maxdurability(0), charges(-2), weight(0), durability(0), recovery(1), locals(-1) {}
+	item() : name(NULL), icon(NULL), description(NULL), mdl(newstring(DEFAULTMODEL)), script(DEFAULTITEMSCR), base(NULL), quantity(1), category(0), flags(0), value(0), maxdurability(0), charges(-2), weight(0), durability(0), recovery(1), locals(-1), scr(NULL) {}
 	~item()
 	{
 		delete[] name;
@@ -1226,7 +1243,7 @@ struct rpgitem : rpgent, item
 	bool validate();
 	item *additem(const char *base, int q);
 	item *additem(item *it);
-	const char *getscript() const;
+	inline ::script *getscript() { return item::getscript(-1); }
 	int getcount(item *it);
 	int getitemcount(const char *base);
 	float getweight();
@@ -1252,7 +1269,11 @@ struct rpgobstacle : rpgent
 	void update();
 	void resetmdl() { temp.mdl = mdl;}
 	void render();
-	const char *getscript() const { return script;}
+	inline ::script *getscript()
+	{
+		if(temp.scr && temp.scr->key == script) return temp.scr;
+		return (temp.scr = game::scripts.access(script));
+	}
 	vec blipcol() { return vec(1, 1, 1);}
 	const char *getname() const { return NULL; }
 	const int type() { return ENT_OBSTACLE; }
@@ -1281,7 +1302,11 @@ struct rpgcontainer : rpgent
 	void update();
 	void resetmdl();
 	void render();
-	const char *getscript() const { return script;}
+	inline ::script *getscript()
+	{
+		if(temp.scr && temp.scr->key == script) return temp.scr;
+		return (temp.scr = game::scripts.access(script));
+	}
 	vec blipcol() { return vec(1, 1, 1);}
 	const char *getname() const { return name; }
 	const int type() { return ENT_CONTAINER; }
@@ -1334,7 +1359,11 @@ struct rpgplatform : rpgent
 	void update();
 	void resetmdl() { temp.mdl = (mdl && mdl[0]) ? mdl : DEFAULTMODEL; }
 	void render();
-	const char *getscript() const { return script;}
+	inline ::script *getscript()
+	{
+		if(temp.scr && temp.scr->key == script) return temp.scr;
+		return (temp.scr = game::scripts.access(script));
+	}
 	vec blipcol() { return vec(1, 1, 1);}
 	const char *getname() const { return NULL; }
 	const int type() { return ENT_PLATFORM; }
@@ -1368,7 +1397,11 @@ struct rpgtrigger : rpgent
 	void update();
 	void resetmdl() { temp.mdl = (mdl && mdl[0]) ? mdl : DEFAULTMODEL; }
 	void render();
-	const char *getscript() const { return script;}
+	inline ::script *getscript()
+	{
+		if(temp.scr && temp.scr->key == script) return temp.scr;
+		return (temp.scr = game::scripts.access(script));
+	}
 	vec blipcol() { return vec(1, 1, 1);}
 	const char *getname() const { return name; }
 	const int type() { return ENT_TRIGGER; }
@@ -1496,7 +1529,11 @@ struct rpgchar : rpgent
 	void render();
 	const char *getname() const;
 	const int type() {return ENT_CHAR;}
-	const char *getscript() const { return script;}
+	inline ::script *getscript()
+	{
+		if(temp.scr && temp.scr->key == script) return temp.scr;
+		return (temp.scr = game::scripts.access(script));
+	}
 	void init(const char *base);
 	bool validate();
 

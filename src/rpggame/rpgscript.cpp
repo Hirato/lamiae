@@ -206,11 +206,8 @@ void item::getsignal(const char *sig, bool prop, rpgent *sender, int use)
 	if(DEBUG_VSCRIPT)
 		DEBUGF("item %p received signal %s with sender %p and use %i; propagating: %s", this, sig, sender, use, prop ? "yes" : "no");
 
-	signal *listen = NULL;
-	if(uses.inrange(use))
-		listen = game::scripts.access(uses[use]->script)->listeners.access(sig);
-	if(!listen)
-		listen = game::scripts.access(script)->listeners.access(sig);
+	signal *listen = getscript(use)->listeners.access(sig);
+	if(!listen) listen = getscript()->listeners.access(sig);
 
 	if(listen) loopv(listen->code)
 		rpgscript::doitemscript(this, sender, listen->code[i]);
@@ -221,7 +218,7 @@ void rpgent::getsignal(const char *sig, bool prop, rpgent *sender)
 	if(DEBUG_VSCRIPT)
 		DEBUGF("entity %p received signal %s with sender %p; propagating: %s", this, sig, sender, prop ? "yes" : "no");
 
-	signal *listen = game::scripts.access(getscript())->listeners.access(sig);
+	signal *listen = getscript()->listeners.access(sig);
 	if(listen) loopv(listen->code)
 		rpgscript::doentscript(this, sender, listen->code[i]);
 
@@ -1824,7 +1821,7 @@ namespace rpgscript
 		getreference(s, speaker, speaker->getent(speakeridx), , r_chat)
 		if(speaker != talker && talker->list.length()) talker->setnull(true);
 
-		script *scr = scripts.access(speaker->getent(speakeridx)->getscript());
+		script *scr = speaker->getent(speakeridx)->getscript();
 
 		talker->setref(speaker->getent(speakeridx), true);
 
@@ -1858,7 +1855,7 @@ namespace rpgscript
 	ICOMMAND(r_response, "sss", (const char *t, const char *n, const char *s),
 		if(!talker->getent(0)) { ERRORF("r_response; no conversation in progress?"); return; }
 
-		script *scr = scripts.access(talker->getent(0)->getscript());
+		script *scr = talker->getent(0)->getscript();
 		if(scr->curnode)
 		{
 			if(DEBUG_SCRIPT) DEBUGF("added response for scr->chat[%s]: \"%s\" \"%s\" \"%s\"", scr->curnode->node, t, n, s);

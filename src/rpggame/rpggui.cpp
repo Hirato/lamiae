@@ -276,20 +276,20 @@ namespace rpggui
 
 	ICOMMAND(r_get_dialogue, "", (),
 		if(!talker || !talker->getent(0)) return;
-		script *scr = scripts.access(talker->getent(0)->getscript());
+		script *scr = talker->getent(0)->getscript();
 		if(scr->curnode) result(scr->curnode->str);
 	)
 
 	ICOMMAND(r_num_response, "", (),
 		if(!talker || !talker->getent(0)) {intret(0); return;}
-		script *scr = scripts.access(talker->getent(0)->getscript());
+		script *scr = talker->getent(0)->getscript();
 		if(scr->curnode) intret(scr->curnode->choices.length());
 		else intret(0);
 	)
 
 	ICOMMAND(r_get_response, "i", (int *n),
 		if(!talker || !talker->getent(0)) {result(""); return;}
-		script *scr = scripts.access(talker->getent(0)->getscript());
+		script *scr = talker->getent(0)->getscript();
 		if(scr->curnode && scr->curnode->choices.inrange(*n))
 			result(scr->curnode->choices[*n]->talk);
 		else
@@ -299,8 +299,7 @@ namespace rpggui
 	void chattrigger(int n)
 	{
 		if(!talker || !talker->getent(0)) return;
-		const char *id = talker->getent(0)->getscript();
-		script *scr = scripts.access(id);
+		script *scr = talker->getent(0)->getscript();
 
 		if(scr->curnode && scr->curnode->choices.inrange(n))
 		{
@@ -323,11 +322,8 @@ namespace rpggui
 
 			if(!talker || !talker->getent(0))
 				scr->curnode = NULL;
-			else if(id != talker->getent(0)->getscript())
-			{
-				id = talker->getent(0)->getscript();
-				scr = scripts.access(id);
-			}
+			else
+				scr = talker->getent(0)->getscript();
 
 			if(scr->curnode)
 			{

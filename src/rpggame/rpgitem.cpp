@@ -33,11 +33,6 @@ const char *rpgitem::getname() const
 	return "";
 }
 
-const char *rpgitem::getscript() const
-{
-	return script;
-}
-
 void item::init(const char *base, bool world)
 {
 	if(world) rpgscript::config->setref( (rpgitem *) this, true);
