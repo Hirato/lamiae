@@ -3,7 +3,23 @@
 
 #include "cube.h"
 
+#define MAPGAMEVERSION 2
+
+#define STATUS_INVALID_GENERIC(type) (((type) <= STATUS_SCRIPT && (type) >= STATUS_LIGHT) || (type) >= STATUS_MAX || (type) <= -1)
+#define HASINVENTORY(type) ((type) == ENT_CHAR || (type) == ENT_CONTAINER)
+
 #define DEFAULTMODEL "xonotic/gak"
+
+#define DEFAULTITEMSCR game::queryhashpool("default item")
+#define DEFAULTCHARSCR game::queryhashpool("default critter")
+#define DEFAULTOBSTSCR game::queryhashpool("default obstacle")
+#define DEFAULTCONTSCR game::queryhashpool("default container")
+#define DEFAULTPLATSCR game::queryhashpool("default platform")
+#define DEFAULTTRIGSCR game::queryhashpool("default trigger")
+#define DEFAULTSCR     game::queryhashpool("null")
+#define DEFAULTMAPSCR  game::queryhashpool("null")
+#define DEFAULTFACTION game::queryhashpool("player")
+#define DEFAULTAMMO    game::queryhashpool("mana")
 
 #ifdef NO_DEBUG
 
@@ -55,6 +71,7 @@ struct delayscript;
 struct effect;
 struct faction;
 struct item;
+struct inflict;
 struct journal;
 struct localinst;
 struct mapinfo;
@@ -65,6 +82,7 @@ struct reference;
 struct rpgent;
 struct rpgchar;
 struct rpgcontainer;
+struct rpgentity;
 struct rpgitem;
 struct rpgobstacle;
 struct rpgplatform;
@@ -73,6 +91,7 @@ struct rpgvar;
 struct script;
 struct statusgroup;
 struct use;
+struct use_weapon;
 struct waypoint;
 
 namespace ai
@@ -89,19 +108,31 @@ namespace ai
 	extern void clearwaypoints();
 }
 
+namespace reserved
+{
+	extern const char *amm_mana, *amm_health, *amm_experience;
+
+	extern void load();
+}
+
 namespace game
 {
+	extern int mapgameversion;
 	extern string data;
 	extern const char *datapath(const char *subdir = "");
+	//NOTE: queryhashpool will register the string
+	extern const char *queryhashpool(const char *str);
 
-	extern vector<script *> scripts; ///scripts, includes dialogue
-	extern vector<effect *> effects; ///pretty particle effects for spells and stuff
-	extern vector<statusgroup *> statuses; ///status effect definitions to transfer onto victims
-	extern vector<ammotype *> ammotypes;
-	extern vector<faction *> factions;
-	extern vector<mapscript *> mapscripts;
-	extern vector<recipe *> recipes;
-	extern vector<merchant *> merchants;
+	extern hashset<const char *> hashpool;
+
+	extern hashset<script> scripts;       ///scripts, includes dialogue
+	extern hashset<effect> effects;       ///pretty particle effects for spells and stuff
+	extern hashset<statusgroup> statuses; ///status effect definitions to transfer onto victims
+	extern hashset<faction> factions;
+	extern hashset<ammotype> ammotypes;
+	extern hashset<mapscript> mapscripts;
+	extern hashset<recipe> recipes;
+	extern hashset<merchant> merchants;
 
 	extern vector<const char *> categories, tips;
 	extern hashset<rpgvar> variables;
@@ -134,7 +165,7 @@ namespace game
 	extern mapinfo *curmap;
 
 	extern void openworld(const char *name);
-	extern void newgame(const char *game, bool restore = false);
+	extern bool newgame(const char *game, bool restore = false);
 	extern mapinfo *accessmap(const char *name);
 	extern bool cansave();
 	extern bool intersect(rpgent *d, const vec &from, const vec &to, float &dist);
@@ -185,7 +216,7 @@ namespace entities
 	extern vector<extentity *> ents;
 	extern vector<int> intents;
 	extern void startmap();
-	extern void spawn(const extentity &e, int ind, int type, int qty);
+	extern void spawn(const extentity &e, const char *ind, int type, int qty);
 	extern void teleport(rpgent *d, int dest);
 	extern void genentlist();
 	extern void touchents(rpgent *d);
@@ -241,11 +272,8 @@ enum                            // static entity types
 
 struct rpgentity : extentity
 {
-	//extend if needed
+	char id[64]; //literal name for an entity spawn
 };
-
-#define STATUS_INVALID_GENERIC(type) (((type) <= STATUS_SCRIPT && (type) >= STATUS_LIGHT) || (type) >= STATUS_MAX || (type) <= -1)
-#define HASINVENTORY(type) ((type) == ENT_CHAR || (type) == ENT_CONTAINER)
 
 enum
 {
@@ -351,7 +379,7 @@ struct rpgvar
 	const char *value;
 
 	rpgvar() : name(NULL), value(NULL) {}
-	~rpgvar() { delete[] name; delete[] value; }
+	~rpgvar() { delete[] value; }
 };
 
 static inline bool htcmp(const char *key, const rpgvar &ref) { return !strcmp(key, ref.name); }
@@ -403,13 +431,13 @@ struct dialogue
 	dialogue() : node(NULL), text(NULL), script(NULL), str(NULL) {}
 	~dialogue()
 	{
-		delete[] node;
 		delete[] str;
 		freecode(text);
 		freecode(script);
 		choices.deletecontents();
 	}
 };
+static inline bool htcmp(const char *key, const dialogue &ref) { return !strcmp(key, ref.node); }
 
 struct signal
 {
@@ -430,31 +458,33 @@ struct signal
 	signal() : name(NULL) {}
 	~signal()
 	{
-		delete[] name;
 		loopv(code) freecode(code[i]);
 	}
 };
+static inline bool htcmp(const char *key, const signal &ref) { return !strcmp(key, ref.name); }
 
 struct script
 {
-	hashtable<const char *, signal> listeners;
-	hashtable<const char *, dialogue> chat;
+	const char *key;
+	hashset<signal> listeners;
+	hashset<dialogue> chat;
 	dialogue *curnode;
 
-	script() : listeners(hashtable<const char *, signal>(32)),
-		chat(hashtable<const char *, dialogue>(32)), curnode(NULL) {}
+	script() : key(NULL), listeners(hashset<signal>(64)),
+		chat(hashset<dialogue>(64)), curnode(NULL) {}
 	~script() {}
 };
+static inline bool htcmp(const char *key, const script &ref) { return !strcmp(key, ref.key); }
 
 struct mapscript
 {
-	hashtable<const char *, signal> listeners;
+	const char *key;
+	hashset<signal> listeners;
 
-	mapscript() : listeners(hashtable<const char *, signal>(32)) {}
+	mapscript() : key(NULL), listeners(hashset<signal>(64)) {}
 	~mapscript() {}
 };
-
-struct use_weapon;
+static inline bool htcmp(const char *key, const mapscript &ref) { return !strcmp(key, ref.key); }
 
 enum
 {
@@ -467,6 +497,7 @@ enum
 
 struct effect
 {
+	const char *key;
 	int flags, decal;
 	const char *mdl;
 	vec spin;
@@ -477,7 +508,7 @@ struct effect
 	int lightflags, lightfade, lightradius, lightinitradius;
 	vec lightcol, lightinitcol;
 
-	effect() : flags(FX_DYNLIGHT|FX_FIXEDFLARE), decal(DECAL_BURN), mdl(NULL), spin(vec(0, 0, 0)), particle(PART_FIREBALL1), colour(0xFFBF00), fade(500), gravity(50), size(4), lightflags(DL_EXPAND), lightfade(500), lightradius(64), lightinitradius(lightradius), lightcol(vec(1, .9, 0)), lightinitcol(lightcol) {}
+	effect() : key(NULL), flags(FX_DYNLIGHT|FX_FIXEDFLARE), decal(DECAL_BURN), mdl(NULL), spin(vec(0, 0, 0)), particle(PART_FIREBALL1), colour(0xFFBF00), fade(500), gravity(50), size(4), lightflags(DL_EXPAND), lightfade(500), lightradius(64), lightinitradius(lightradius), lightcol(vec(1, .9, 0)), lightinitcol(lightcol) {}
 	~effect() { delete[] mdl; }
 
 	enum
@@ -499,6 +530,7 @@ struct effect
 	void drawcone(const vec &o, vec dir, const vec &axis, int angle, float radius, float size, int type = PROJ, int elapse = 17);
 	void drawcone(rpgent *d, use_weapon *wep, float size, int type = PROJ, int elapse = 17);
 };
+static inline bool htcmp(const char *key, const effect &ref) { return !strcmp(key, ref.key); }
 
 enum
 {
@@ -548,7 +580,7 @@ struct projectile
 	vector<rpgent *> hits; //used for P_PERSIST - only hits an ent once
 
 	int pflags, time, dist;
-	int projfx, trailfx, deathfx;
+	const char *projfx, *trailfx, *deathfx;
 	int radius;
 	float elasticity;
 
@@ -562,8 +594,8 @@ struct projectile
 	void drawdeath();
 	void dynlight();
 
-	projectile() : owner(NULL), item(NULL), ammo(NULL), o(vec(0, 0, 0)), dir(vec(0, 0, 0)), emitpos(vec(0, 0, 0)), lastemit(lastmillis), gravity(0), deleted(false), pflags(0), time(10000), dist(25000), projfx(0), trailfx(0), deathfx(0), radius(32), elasticity(.8), charge (1.0f), chargeflags(0) {}
-	~projectile() {};
+	projectile() : owner(NULL), item(NULL), ammo(NULL), o(vec(0, 0, 0)), dir(vec(0, 0, 0)), emitpos(vec(0, 0, 0)), lastemit(lastmillis), gravity(0), deleted(false), pflags(0), time(10000), dist(25000), projfx(NULL), trailfx(NULL), deathfx(NULL), radius(32), elasticity(.8), charge (1.0f), chargeflags(0) {}
+	~projectile() { }
 };
 
 struct status
@@ -639,7 +671,7 @@ struct status_signal : status
 
 struct status_script : status
 {
-	const char *script;
+	const char *script; //uncompiled version
 	uint *code;
 
 	int value() {return strength;}
@@ -658,12 +690,13 @@ struct status_script : status
 
 struct statusgroup
 {
+	const char *key;
 	vector<status *> effects;
 	bool friendly;
 
 	const char *icon, *name, *description;
 
-	statusgroup() : friendly(false), icon(NULL), name(NULL), description(NULL) {}
+	statusgroup() : key(NULL), friendly(false), icon(NULL), name(NULL), description(NULL) {}
 	~statusgroup()
 	{
 		delete[] icon;
@@ -680,12 +713,14 @@ struct statusgroup
 		return res;
 	}
 };
+static inline bool htcmp(const char *key, const statusgroup &ref) { return !strcmp(key, ref.key); }
 
 struct areaeffect
 {
 	rpgent *owner;
 	vec o;
-	int lastemit, group, elem, radius, fx;
+	const char *group, *fx;
+	int lastemit, elem, radius;
 
 	vector<status *> effects;
 
@@ -693,21 +728,20 @@ struct areaeffect
 	void render();
 	void dynlight();
 
-	areaeffect() : owner(NULL), o(vec(0, 0, 0)), lastemit(lastmillis), group(0), elem(ATTACK_NONE), radius(0), fx(0) {}
+	areaeffect() : owner(NULL), o(vec(0, 0, 0)), group(NULL), fx(NULL), lastemit(lastmillis), elem(ATTACK_NONE), radius(0) {}
 	~areaeffect() { effects.deletecontents(); }
 };
 
-struct inflict;
 struct victimeffect
 {
 	rpgent *owner;
-	int group;
+	const char *group;
 	int elem;
 	vector<status *> effects;
 
 	bool update(rpgent *victim);
 	victimeffect(rpgent *o, inflict *inf, int chargeflags, float mul);
-	victimeffect() : owner(NULL), group(0), elem(ATTACK_NONE) {}
+	victimeffect() : owner(NULL), group(NULL), elem(ATTACK_NONE) {}
 	~victimeffect() { effects.deletecontents(); }
 };
 
@@ -741,28 +775,29 @@ struct rpgent : dynent
 	virtual void update()=0;
 	virtual void resetmdl()=0;
 	virtual void render()=0;
-	virtual int getscript()=0;
+	virtual const char *getscript() const =0;
 	virtual vec blipcol() { return vec(1, 1, 1);}
 	virtual const char *getname() const =0;
 	virtual const int type()=0;
-	virtual void init(int base)=0;
+	virtual void init(const char *base)=0;
+	virtual bool validate()=0;
 	virtual void getsignal(const char *sig, bool prop = true, rpgent *sender = NULL);
 
 	///character/AI
 	virtual void givexp(int xp) {}
 	virtual void equip(item *it, int u = 0) {}
-	virtual bool dequip(int base, int slots = 0) {return false;}
+	virtual bool dequip(const char *base, int slots = 0) {return false;}
 	virtual void die(rpgent *killer = NULL) {}
 	virtual void revive(bool spawn = true) {}
 	virtual void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir) = 0;
 
 	///inventory
-	virtual item *additem(int base, int q) {return NULL;}
+	virtual item *additem(const char *base, int q) {return NULL;}
 	virtual item *additem(item *it) {return NULL;}
 	virtual int drop(item *it, int q, bool spawn) {return 0;}
-	virtual int drop(int base, int q, bool spawn = false) {return 0;}
+	virtual int drop(const char *base, int q, bool spawn = false) {return 0;}
 	virtual int pickup(rpgitem *it) {return 0;}
-	virtual int getitemcount(int base) {return 0;}
+	virtual int getitemcount(const char *base) {return 0;}
 	virtual int getcount(item *it) {return 0;}
 	virtual float getweight() {return 0;}
 
@@ -937,7 +972,7 @@ enum
 
 struct inflict
 {
-	int status;
+	const char *status;
 	int element;
 	float mul;
 
@@ -947,17 +982,15 @@ struct inflict
 			return false;
 		return true;
 	}
-	inflict(int st, int el, float m) : status(st), element(el), mul(m) {}
-	~inflict() {}
+	inflict(const char *st, int el, float m) : status(st), element(el), mul(m) {}
+	~inflict() { }
 };
 
 struct use
 {
-	const char *name;
-	const char *description;
-	const char *icon;
+	const char *name, *description, *icon;
+	const char *script; //id
 	int type; //refers to above
-	int script;
 	int cooldown;
 	int chargeflags;
 
@@ -993,15 +1026,21 @@ struct use
 
 		return true;
 	}
-	use(int s) : name(NULL), description(NULL), icon(NULL), type(USE_CONSUME), script(s), cooldown(500), chargeflags(CHARGE_MAG) {}
-	virtual ~use() {delete[] name; delete[] description; delete[] icon; effects.deletecontents();}
+	use(const char *scr) : name(NULL), description(NULL), icon(NULL), script(scr), type(USE_CONSUME), cooldown(500), chargeflags(CHARGE_MAG) {}
+	virtual ~use()
+	{
+		delete[] name;
+		delete[] description;
+		delete[] icon;
+		effects.deletecontents();
+	}
 };
 
 struct use_armour : use
 {
 	const char *vwepmdl;
 	const char *hudmdl;
-	int idlefx;
+	const char *idlefx;
 	statreq reqs;
 	int slots;
 	int skill;
@@ -1017,7 +1056,6 @@ struct use_armour : use
 
 		if(vwepmdl) uw->vwepmdl = newstring(vwepmdl);
 		if(hudmdl) uw->hudmdl = newstring(hudmdl);
-// 		conoutf("duplicated %p %p as %p %p", vwepmdl, hudmdl, uw->vwepmdl, uw->hudmdl);
 
 		return use::dup(uw);
 	}
@@ -1035,20 +1073,20 @@ struct use_armour : use
 
 		return use::compare(o);
 	}
-	use_armour(int s) : use(s), vwepmdl(NULL), hudmdl(NULL), idlefx(-1), reqs(statreq()), slots(0), skill(SKILL_ARMOUR) {type = USE_ARMOUR;}
-	~use_armour() { /*conoutf("use_arm: freeing, %p %p", vwepmdl, hudmdl);*/   delete[] vwepmdl; delete[] hudmdl;}
+	use_armour(const char *scr) : use(scr), vwepmdl(NULL), hudmdl(NULL), idlefx(NULL), reqs(statreq()), slots(0), skill(SKILL_ARMOUR) {type = USE_ARMOUR;}
+	~use_armour() { delete[] vwepmdl; delete[] hudmdl;}
 };
 
 struct use_weapon : use_armour
 {
+	const char *projeffect, *traileffect, *deatheffect;
+	const char *ammo; //refers to item in ammotype vector<>, -ves use mana
 	int range;
 	int angle;
 	int lifetime;
 	int gravity;
-	int projeffect, traileffect, deatheffect;
 	int cost; //mana/items consumed in use
 	int pflags;
-	int ammo; //refers to item in ammotype vector<>, -ves use mana
 	int target; //self, others, etc
 	int radius;
 	int kickback, recoil;
@@ -1083,7 +1121,7 @@ struct use_weapon : use_armour
 
 		return use_armour::compare(o);
 	}
-	use_weapon(int s) : use_armour(s), range(256), angle(60), lifetime(10000), gravity(0), projeffect(0), traileffect(0), deatheffect(0), cost(10), pflags(P_DIST|P_TIME), ammo(-1), target(T_SINGLE), radius(32), kickback(10), recoil(0), charge(0), basecharge(.5f), mincharge(.5f), maxcharge(1.0f), elasticity(0.8), speed(1.0f) {type = USE_WEAPON;}
+	use_weapon(const char *scr) : use_armour(scr), projeffect(NULL), traileffect(NULL), deatheffect(NULL), ammo(DEFAULTAMMO), range(256), angle(60), lifetime(10000), gravity(0), cost(10), pflags(P_DIST|P_TIME), target(T_SINGLE), radius(32), kickback(10), recoil(0), charge(0), basecharge(.5f), mincharge(.5f), maxcharge(1.0f), elasticity(0.8), speed(1.0f) {type = USE_WEAPON;}
 	~use_weapon() {}
 };
 
@@ -1097,15 +1135,14 @@ struct item
 		F_STOLEN = 1<<3,
 		F_MAX = (1 << 4) -1
 	};
-	const char *name;
-	const char *icon;
-	const char *description;
-	const char *mdl;
+	const char *name, *icon, *description, *mdl;
+	// NOTE: this points to a pointer in the hashpool - DO NOT FREE!
+	// it also allows cheap equivalency testing
+	const char *script; //id
+	const char *base;
 
 	int quantity;
-	int base;
 
-	int script;
 	int category;
 	int flags;
 	int value;
@@ -1120,7 +1157,8 @@ struct item
 
 	void getsignal(const char *sig, bool prop = true, rpgent *sender = NULL, int use = -1);
 
-	void init(int base, bool world = false);
+	void init(const char *base, bool world = false);
+	bool validate();
 
 	void transfer(item &o)
 	{
@@ -1144,7 +1182,7 @@ struct item
 
 	bool compare(item *o)
 	{
-		if(base != o->base || durability != o->durability || recovery != o->recovery || script != o->script || category != o->category ||
+		if(base != o->base || script != o->script || durability != o->durability || recovery != o->recovery || category != o->category ||
 			flags != o->flags || value != o->value || maxdurability != o->maxdurability || charges != o->charges || weight != o->weight || uses.length() != o->uses.length())
 			return false;
 
@@ -1153,7 +1191,7 @@ struct item
 		loopv(uses) if(!uses[i]->compare(o->uses[i]))
 			return false;
 
-		if(!name ^ !o->name || (name && strcmp(name, o->name)) || !icon ^ !o->icon || (icon && strcmp(icon, o->icon)) ||
+		if( !name ^ !o->name || (name && strcmp(name, o->name)) || !icon ^ !o->icon || (icon && strcmp(icon, o->icon)) ||
 			!description ^ !o->description || (description && strcmp(description, o->description)) ||
 			!mdl ^ !o->mdl || (mdl && strcmp(mdl, o->mdl)))
 			return false;
@@ -1161,7 +1199,7 @@ struct item
 		return true;
 	}
 
-	item() : name(NULL), icon(NULL), description(NULL), mdl(newstring(DEFAULTMODEL)), quantity(1), base(-1), script(2), category(0), flags(0), value(0), maxdurability(0), charges(-2), weight(0), durability(0), recovery(1), locals(-1) {}
+	item() : name(NULL), icon(NULL), description(NULL), mdl(newstring(DEFAULTMODEL)), script(DEFAULTITEMSCR), base(NULL), quantity(1), category(0), flags(0), value(0), maxdurability(0), charges(-2), weight(0), durability(0), recovery(1), locals(-1) {}
 	~item()
 	{
 		delete[] name;
@@ -1184,12 +1222,13 @@ struct rpgitem : rpgent, item
 	vec blipcol() { return vec(0, .75, 1);}
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
 	const int type() {return ENT_ITEM;}
-	void init(int base);
-	item *additem(int base, int q);
+	void init(const char *base);
+	bool validate();
+	item *additem(const char *base, int q);
 	item *additem(item *it);
-	int getscript();
+	const char *getscript() const;
 	int getcount(item *it);
-	int getitemcount(int i);
+	int getitemcount(const char *base);
 	float getweight();
 
 	rpgitem() : lastupdate(0) {physent::type = ENT_INANIMATE;}
@@ -1205,19 +1244,20 @@ struct rpgobstacle : rpgent
 	};
 
 	const char *mdl;
+	const char *script; //id
 	int weight;
-	int script;
 	int flags;
 	int lastupdate;
 
 	void update();
 	void resetmdl() { temp.mdl = mdl;}
 	void render();
-	int getscript() { return script;}
+	const char *getscript() const { return script;}
 	vec blipcol() { return vec(1, 1, 1);}
 	const char *getname() const { return NULL; }
 	const int type() { return ENT_OBSTACLE; }
-	void init(int base);
+	void init(const char *base);
+	bool validate();
 
 	///character/AI
 	void givexp(int xp) {}
@@ -1226,28 +1266,27 @@ struct rpgobstacle : rpgent
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
 
 
-	rpgobstacle() : mdl(newstring(DEFAULTMODEL)), weight(100), script(3), flags(0), lastupdate(0) { physent::type = ENT_INANIMATE;}
+	rpgobstacle() : mdl(newstring(DEFAULTMODEL)), script(DEFAULTOBSTSCR), weight(100), flags(0), lastupdate(0) { physent::type = ENT_INANIMATE;}
 	~rpgobstacle() { delete[] mdl; }
 };
 
 struct rpgcontainer : rpgent
 {
 	const char *mdl, *name;
-	hashtable<int, vector<item *> > inventory;
+	hashtable<const char *, vector<item *> > inventory;
 	int capacity;
-	int faction; //defines owner
-	int merchant;
-	int script, lock;
-	int magelock; //lock via spells
+	const char *faction, *merchant, *script;
+	int lock, magelock;
 
 	void update();
 	void resetmdl();
 	void render();
-	int getscript() { return script;}
+	const char *getscript() const { return script;}
 	vec blipcol() { return vec(1, 1, 1);}
 	const char *getname() const { return name; }
 	const int type() { return ENT_CONTAINER; }
-	void init(int base);
+	void init(const char *base);
+	bool validate();
 	//void getsignal(const char *sig, bool prop = true, rpgent *sender = NULL) {}
 
 	///character/AI
@@ -1258,14 +1297,14 @@ struct rpgcontainer : rpgent
 
 	///inventory
 	item *additem(item *it);
-	item *additem(int base, int q);
+	item *additem(const char *base, int q);
 	int drop(item *it, int q, bool spawn);
-	int drop(int base, int q, bool spawn);
-	int getitemcount(int base);
+	int drop(const char *base, int q, bool spawn);
+	int getitemcount(const char *base);
 	int getcount(item *it);
 	float getweight();
 
-	rpgcontainer() : mdl(newstring(DEFAULTMODEL)), name(NULL), capacity(200), faction(-1), merchant(-1), script(4), lock(0), magelock(0) {physent::type = ENT_INANIMATE;}
+	rpgcontainer() : mdl(newstring(DEFAULTMODEL)), name(NULL), capacity(200), faction(NULL), merchant(NULL), script(DEFAULTCONTSCR), lock(0), magelock(0) {physent::type = ENT_INANIMATE;}
 	~rpgcontainer()
 	{
 		delete[] name;
@@ -1283,8 +1322,9 @@ struct rpgplatform : rpgent
 	};
 
 	const char *mdl;
+	const char *script; //id
 	int speed;
-	int script, flags;
+	int flags;
 
 	hashtable<int, vector<int> > routes;
 
@@ -1294,11 +1334,12 @@ struct rpgplatform : rpgent
 	void update();
 	void resetmdl() { temp.mdl = (mdl && mdl[0]) ? mdl : DEFAULTMODEL; }
 	void render();
-	int getscript() { return script;}
+	const char *getscript() const { return script;}
 	vec blipcol() { return vec(1, 1, 1);}
 	const char *getname() const { return NULL; }
 	const int type() { return ENT_PLATFORM; }
-	void init(int base);
+	void init(const char *base);
+	bool validate();
 
 	///character/AI
 	void givexp(int xp) {}
@@ -1306,7 +1347,7 @@ struct rpgplatform : rpgent
 	void die(rpgent *killer = NULL) {}
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
 
-	rpgplatform() : mdl(newstring(DEFAULTMODEL)), speed(100), script(5), flags(0), routes(hashtable<int, vector<int> >(16)), target(-1) {physent::type = ENT_INANIMATE;}
+	rpgplatform() : mdl(newstring(DEFAULTMODEL)), script(DEFAULTPLATSCR), speed(100), flags(0), routes(hashtable<int, vector<int> >(16)), target(-1) {physent::type = ENT_INANIMATE;}
 	~rpgplatform() { delete[] mdl; }
 };
 
@@ -1320,17 +1361,19 @@ struct rpgtrigger : rpgent
 	};
 
 	const char *mdl, *name;
-	int script, flags;
+	const char *script; //id
+	int flags;
 	int lasttrigger;
 
 	void update();
 	void resetmdl() { temp.mdl = (mdl && mdl[0]) ? mdl : DEFAULTMODEL; }
 	void render();
-	int getscript() { return script;}
+	const char *getscript() const { return script;}
 	vec blipcol() { return vec(1, 1, 1);}
 	const char *getname() const { return name; }
 	const int type() { return ENT_TRIGGER; }
-	void init(int base);
+	void init(const char *base);
+	bool validate();
 
 	///character/AI
 	void givexp(int xp) {}
@@ -1338,7 +1381,7 @@ struct rpgtrigger : rpgent
 	void die(rpgent *killer = NULL) {}
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
 
-	rpgtrigger() : mdl(newstring(DEFAULTMODEL)), name(NULL), script(6), flags(0), lasttrigger(lastmillis) {physent::type = ENT_INANIMATE;}
+	rpgtrigger() : mdl(newstring(DEFAULTMODEL)), name(NULL), script(DEFAULTTRIGSCR), flags(0), lasttrigger(lastmillis) {physent::type = ENT_INANIMATE;}
 	~rpgtrigger()
 	{
 		delete[] mdl;
@@ -1348,51 +1391,40 @@ struct rpgtrigger : rpgent
 
 struct ammotype
 {
+	const char *key;
 	const char *name;
-	vector<int> items;
+	vector<const char *> items;
 
-	ammotype() : name(NULL) {}
+	ammotype() : key(NULL), name(NULL) {}
 	~ammotype() { delete[] name; }
 };
+static inline bool htcmp(const char *key, const ammotype &ref) { return !strcmp(key, ref.key); }
 
 struct faction
 {
+	const char *key;
 	const char *name, *logo;
-	vector<short> relations;
+	hashtable<const char *, short> relations;
 	int base;
 
-	void setrelation(int i, int f)
+	void setrelation(const char *fac, int f)
 	{
-		if(i < 0)
-			return;
-		if(i >= relations.length())
-		{
-			int olen = relations.length();
-			relations.growbuf(i + 1);
-			relations.advance(relations.capacity() - olen); // this would max it out to capacity
-
-			loopi(relations.length()-olen)
-			relations[i + olen] = base; //default to neutral
-		}
-
-		relations[i] = min(100, max(0, f));
+		relations[fac] = f;
 	}
 
-	int getrelation(int i)
+	int getrelation(const char *f)
 	{
-		if(relations.inrange(i))
-			return relations[i];
-
-		return base; //neutral
+		return relations.find(f, base);
 	}
 
-	faction() : name(NULL), logo(NULL), base(50) {}
+	faction() : key(NULL), name(NULL), logo(NULL), base(50) {}
 	~faction()
 	{
 		delete[] name;
 		delete[] logo;
 	}
 };
+static inline bool htcmp(const char *key, const faction &ref) { return !strcmp(key, ref.key); }
 
 //directives are sorted by priority, the most important ones are done first.
 //for example, self defense is high priority while fleeing is an even higher priority,
@@ -1427,12 +1459,11 @@ struct rpgchar : rpgent
 	vector<equipment*> equipped;
 	vec emitters[SLOT_NUM * 2]; //two emitters a slot; start and end
 
-	const char *name;
-	const char *mdl;
-	const char *portrait;
+	const char *name, *mdl, *portrait;
+	const char *script, *faction, *merchant; //id
+
 	stats base;
-	hashtable<int, vector<item *> > inventory;
-	int script, faction, merchant;
+	hashtable<const char *, vector<item *> > inventory;
 
 	float health, mana;
 
@@ -1465,36 +1496,37 @@ struct rpgchar : rpgent
 	void render();
 	const char *getname() const;
 	const int type() {return ENT_CHAR;}
-	int getscript() {return script;}
-	void init(int base);
+	const char *getscript() const { return script;}
+	void init(const char *base);
+	bool validate();
 
 	///character/AI
 	void givexp(int xp);
 	void equip(item *it, int u = 0);
-	bool dequip(int base, int slots = 0);
+	bool dequip(const char *base, int slots = 0);
 	void die(rpgent *killer);
 	void revive(bool spawn = true);
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
 
 	///inventory
 	item *additem(item *it);
-	item *additem(int base, int q);
+	item *additem(const char *base, int q);
 	int drop(item *it, int q, bool spawn);
-	int drop(int base, int q, bool spawn);
+	int drop(const char *base, int q, bool spawn);
 	int pickup(rpgitem *it);
-	int getitemcount(int base);
+	int getitemcount(const char *base);
 	int getcount(item *it);
 	float getweight();
 
 	//character specific stuff
-	bool checkammo(equipment &eq, equipment *quiver, bool remove = false);
+	bool checkammo(equipment &eq, equipment *&quiver, bool remove = false);
 	void doattack(equipment *eleft, equipment *eright, equipment *quiver);
 	bool useitem(item *it, equipment *slot = NULL, int u = -1);
-	void compactinventory(int base = -1);
+	void compactinventory(const char *base = NULL);
 
 	void cleanup();
 
-	rpgchar() : name(NULL), mdl(newstring(DEFAULTMODEL)), portrait(NULL), base(stats(this)), script(1), faction(0), merchant(-1), lastaction(0), lastai(0), charge(0), primary(false), secondary(false), lastprimary(false), lastsecondary(false), attack(NULL), aiflags(0), target(NULL), forceanim(0)
+	rpgchar() : name(NULL), mdl(newstring(DEFAULTMODEL)), portrait(NULL), script(DEFAULTCHARSCR), faction(DEFAULTFACTION), merchant(NULL), base(stats(this)), lastaction(0), lastai(0), charge(0), primary(false), secondary(false), lastprimary(false), lastsecondary(false), attack(NULL), aiflags(0), target(NULL), forceanim(0)
 	{
 		health = base.getmaxhp();
 		mana = base.getmaxmp();
@@ -1513,6 +1545,7 @@ struct rpgchar : rpgent
 
 struct merchant
 {
+	const char *key;
 	struct rate
 	{
 		float buy, sell;
@@ -1520,7 +1553,7 @@ struct merchant
 	};
 
 	vector<rate> rates;
-	int currency;
+	const char *currency;
 	int credit; //store credit, a measure of how much money the merchant owes you.
 
 	rate getrate(const rpgchar &buyer, int cat) const
@@ -1536,11 +1569,14 @@ struct merchant
 		return r;
 	}
 
-	merchant() : currency(0), credit(0) {}
+	merchant() : key(NULL), currency(NULL), credit(0) {}
 };
+static inline bool htcmp(const char *key, const merchant &ref) { return !strcmp(key, ref.key); }
 
 struct recipe
 {
+	const char *key;
+
 	enum
 	{
 		KNOWN = 1 << 0,
@@ -1552,8 +1588,9 @@ struct recipe
 
 	struct ingredient
 	{
-		int base, quantity;
-		ingredient(int b, int q) : base(b), quantity(q) {}
+		const char *base;
+		int quantity;
+		ingredient(const char *b, int q) : base(b), quantity(q) {}
 	};
 
 	vector<ingredient> ingredients, // meat.. veggies.. seasoning... butane...
@@ -1564,7 +1601,7 @@ struct recipe
 	statreq reqs;
 	int flags;
 
-	recipe() : name(NULL), flags(0) {}
+	recipe() : key(NULL), name(NULL), flags(0) {}
 	~recipe() { delete[] name; }
 
 	static void optimise(vector<ingredient> &list)
@@ -1621,6 +1658,7 @@ struct recipe
 			d->additem(products[i].base, products[i].quantity * mul);
 	}
 };
+static inline bool htcmp(const char *key, const recipe &ref) { return !strcmp(key, ref.key); }
 
 enum
 {
@@ -1653,13 +1691,14 @@ struct action_teleport : action
 
 struct action_spawn : action
 {
-	// entity tag, entity type, base id
-	int tag, ent, id, amount, qty;
+	const char *id;
+	// entity tag, entity type
+	int tag, ent, amount, qty;
 
 	void exec();
 	const int type() {return ACTION_SPAWN;}
 
-	action_spawn(int ta, int en, int i, int amt, int q) : tag(ta), ent(en), id(i), amount(amt), qty(q) {}
+	action_spawn(int ta, int en, const char *i, int amt, int q) : id(game::queryhashpool(i)), tag(ta), ent(en), amount(amt), qty(q) {}
 	~action_spawn()	{}
 };
 
@@ -1700,17 +1739,18 @@ struct mapinfo
 
 	// we track the map's key here; we risk leaking memory otherwise
 	const char *name;
-	vector<rpgent *> objs;
-	int script, flags;
+	const char *script; //id
+	int flags;
+	int locals;
 	bool loaded;
+	vector<rpgent *> objs;
 	vector<action *> loadactions;
 	vector<projectile *> projs;
 	vector<areaeffect *> aeffects;
 	vector<blip> blips;
-	int locals;
 
 	void getsignal(const char *sig, bool prop = true, rpgent *sender = NULL);
-	mapinfo() : name(NULL), script(0), flags(0), loaded(false), locals(-1) {}
+	mapinfo() : name(NULL), script(DEFAULTMAPSCR), flags(0), locals(-1), loaded(false) {}
 	~mapinfo()
 	{
 		delete[] name;
@@ -1817,9 +1857,6 @@ struct reference
 
 	//specialised inside rpgscript.cpp
 	void setnull(bool force = false);
-	template<typename T>
-	reference(const char *n, T d);
-	explicit reference(const char *n);
 	reference() : name(NULL), immutable(false) {}
 
 	~reference();

@@ -4,19 +4,21 @@ extern bool reloadtexture(const char *name); //texture.cpp
 
 namespace rpgio
 {
-	#define GAME_VERSION 42
-	#define COMPAT_VERSION 42
+	#define GAME_VERSION 43
+	#define COMPAT_VERSION 43
 	#define GAME_MAGIC "RPGS"
 
 	/**
 		SAVING STUFF
 			STRINGS - use writestring(stream *, char *)
+			HASHES  - see strings
 			VECTORS - write an int corresponding to the number of elements, then write the elements
 			POINTERS - convert to reference, if this is not possible don't save it
 			VEC - use writevec macro, you need to write all 3 coordinates independantly
 
 		LOADING STUFF
 			STRINGS - use readstring(stream *)
+			HASHES  - use READHASH macros and if needed, NOTNULL and VERIFYHASH macros
 			VECTORS - read the next int, and use that as the basis of knowing how many elements to load
 			POINTERS - read the reference and convert it back to a pointer of the intended object. If this can't be done reliably don't save it
 			VEC - use readvec macro, you need to read all 3 coordinates independantly
@@ -62,6 +64,24 @@ namespace rpgio
 		ERRORF("Encountered unexpected NULL value for " #f " at " __FILE__ ":%i; aborting.", __LINE__); \
 		return val; \
 	}
+
+	#define READHASH(val) \
+	do { \
+		const char *_str = readstring(f); \
+		if(_str) val = game::queryhashpool(_str); \
+		else val = NULL; \
+		delete[] _str; \
+	} while(0);
+
+	#define VALIDHASH(val, ht, ret) \
+	do { \
+		if(!val || !(ht).access(val)) \
+		{ \
+			abort = true; \
+			ERRORF(#val " (%s / %p) infers an invalid entry from " #ht " at " __FILE__ ":%i", val, val, __LINE__); \
+			return ret; \
+		} \
+	} while(0);
 
 	struct saveheader
 	{
@@ -160,12 +180,15 @@ namespace rpgio
 		loopi(num)
 		{
 			CHECKEOF(*f, )
-
+			const char *fac = readstring(f);
 			int val = f->getlil<short>();
-			if(!fact->relations.inrange(i))
-				fact->relations.add(val);
+
+			if(fact && game::factions.access(fac))
+				fact->setrelation(game::queryhashpool(fac), val);
 			else
-				fact->relations[i] = val;
+				WARNINGF("Faction %s does not exist, ignoring relation of %i", fac, val);
+
+			delete[] fac;
 		}
 	}
 
@@ -175,13 +198,18 @@ namespace rpgio
 		if(DEBUG_IO)
 			DEBUGF("saving %i relations", fact->relations.length());
 
-		loopv(fact->relations)
-			f->putlil(fact->relations[i]);
+		enumeratekt(fact->relations, const char *, fac, short, relation,
+			if(DEBUG_IO)
+				DEBUGF("writing: factions[%s]->relations[%s] (%i)", fact->key, fac, relation);
+			writestring(f, fac);
+			f->putlil(relation);
+		)
 	}
 
 	void readrecipe(stream *f, recipe *rec)
 	{
-		rec->flags |= f->getlil<int>();
+		int flags = f->getlil<int>();
+		if(rec) rec->flags |= flags;
 	}
 
 	void writerecipe(stream *f, recipe *rec)
@@ -191,7 +219,8 @@ namespace rpgio
 
 	void readmerchant(stream *f, merchant *mer)
 	{
-		mer->credit = f->getlil<int>();
+		int credit = f->getlil<int>();
+		if(mer) mer->credit = credit;
 	}
 
 	void writemerchant(stream *f, merchant *mer)
@@ -216,10 +245,13 @@ namespace rpgio
 		NOTNULL(it->mdl, it);
 		preloadmodel(it->mdl);
 
-		it->quantity = f->getlil<int>();
-		it->base = f->getlil<int>();
+		READHASH(it->script);
+		READHASH(it->base);
 
-		it->script = f->getlil<int>();
+		VALIDHASH(it->script, game::scripts, it)
+		NOTNULL(it->base, it);
+
+		it->quantity = f->getlil<int>();
 		it->category = f->getlil<int>();
 		it->flags = f->getlil<int>();
 		it->value = f->getlil<int>();
@@ -241,19 +273,25 @@ namespace rpgio
 			{
 				case USE_WEAPON:
 				{
-					if(!u) u = new use_weapon(0);
+					if(!u) u = new use_weapon(NULL);
 					use_weapon *wp = (use_weapon *) u;
+
+					READHASH(wp->projeffect)
+					READHASH(wp->traileffect)
+					READHASH(wp->deatheffect)
+					READHASH(wp->ammo)
+
+					VALIDHASH(wp->ammo, game::ammotypes, it);
+					if(wp->projeffect)  VALIDHASH(wp->projeffect,  game::effects, it)
+					if(wp->traileffect) VALIDHASH(wp->traileffect, game::effects, it)
+					if(wp->deatheffect) VALIDHASH(wp->deatheffect, game::effects, it)
 
 					wp->range = f->getlil<int>();
 					wp->angle = f->getlil<int>();
 					wp->lifetime = f->getlil<int>();
 					wp->gravity = f->getlil<int>();
-					wp->projeffect = f->getlil<int>();
-					wp->traileffect = f->getlil<int>();
-					wp->deatheffect = f->getlil<int>();
 					wp->cost = f->getlil<int>();
 					wp->pflags = f->getlil<int>();
-					wp->ammo = f->getlil<int>();
 					wp->target = f->getlil<int>();
 					wp->radius = f->getlil<int>();
 					wp->kickback = f->getlil<int>();
@@ -268,7 +306,7 @@ namespace rpgio
 				}
 				case USE_ARMOUR:
 				{
-					if(!u) u = new use_armour(0);
+					if(!u) u = new use_armour(NULL);
 					use_armour *ar = (use_armour *) u;
 
 					delete[] ar->vwepmdl;
@@ -279,8 +317,9 @@ namespace rpgio
 
 					if(ar->vwepmdl) preloadmodel(ar->vwepmdl);
 					if(ar->hudmdl) preloadmodel(ar->hudmdl);
+					READHASH(ar->idlefx);
+					if(ar->idlefx) VALIDHASH(ar->idlefx, game::effects, it)
 
-					ar->idlefx = f->getlil<int>();
 					ar->slots = f->getlil<int>();
 					ar->skill = f->getlil<int>();
 
@@ -289,7 +328,7 @@ namespace rpgio
 				}
 				case USE_CONSUME:
 				{
-					if(!u) u = new use(0);
+					if(!u) u = new use(NULL);
 
 					delete[] u->name;
 					delete[] u->description;
@@ -299,7 +338,9 @@ namespace rpgio
 					u->description = readstring(f);
 					u->icon = readstring(f);
 
-					u->script = f->getlil<int>();
+					READHASH(u->script);
+					VALIDHASH(u->script, game::scripts, it);
+
 					u->cooldown = f->getlil<int>();
 					u->chargeflags = f->getlil<int>();
 
@@ -307,10 +348,14 @@ namespace rpgio
 					loopj(efx)
 					{
 						CHECKEOF(*f, it)
-						int s = f->getlil<int>();
+
+						const char *status = NULL;
+						READHASH(status);
+						VALIDHASH(status, game::statuses, it);
+
 						int e = f->getlil<int>();
 						float m = f->getlil<float>();
-						u->effects.add(new inflict(s, e, m));
+						u->effects.add(new inflict(status, e, m));
 					}
 					break;
 				}
@@ -328,10 +373,10 @@ namespace rpgio
 		writestring(f, it->description);
 		writestring(f, it->mdl);
 
-		f->putlil(it->quantity);
-		f->putlil(it->base);
+		writestring(f, it->base);
+		writestring(f, it->script);
 
-		f->putlil(it->script);
+		f->putlil(it->quantity);
 		f->putlil(it->category);
 		f->putlil(it->flags);
 		f->putlil(it->value);
@@ -353,16 +398,17 @@ namespace rpgio
 				{
 					use_weapon *wp = (use_weapon *) it->uses[i];
 
+					writestring(f, wp->projeffect);
+					writestring(f, wp->traileffect);
+					writestring(f, wp->deatheffect);
+					writestring(f, wp->ammo);
+
 					f->putlil(wp->range);
 					f->putlil(wp->angle);
 					f->putlil(wp->lifetime);
 					f->putlil(wp->gravity);
-					f->putlil(wp->projeffect);
-					f->putlil(wp->traileffect);
-					f->putlil(wp->deatheffect);
 					f->putlil(wp->cost);
 					f->putlil(wp->pflags);
-					f->putlil(wp->ammo);
 					f->putlil(wp->target);
 					f->putlil(wp->radius);
 					f->putlil(wp->kickback);
@@ -382,8 +428,8 @@ namespace rpgio
 
 					writestring(f, ar->vwepmdl);
 					writestring(f, ar->hudmdl);
+					writestring(f, ar->idlefx);
 
-					f->putlil(ar->idlefx);
 					f->putlil(ar->slots);
 					f->putlil(ar->skill);
 
@@ -398,15 +444,15 @@ namespace rpgio
 					writestring(f, u->name);
 					writestring(f, u->description);
 					writestring(f, u->icon);
+					writestring(f, u->script);
 
-					f->putlil(u->script);
 					f->putlil(u->cooldown);
 					f->putlil(u->chargeflags);
 
 					f->putlil(u->effects.length());
 					loopvj(u->effects)
 					{
-						f->putlil(u->effects[j]->status);
+						writestring(f, u->effects[j]->status);
 						f->putlil(u->effects[j]->element);
 						f->putlil(u->effects[j]->mul);
 					}
@@ -477,9 +523,13 @@ namespace rpgio
 
 				#undef x
 
-				loading->script = f->getlil<int>();
-				loading->faction = f->getlil<int>();
-				loading->merchant = f->getlil<int>();
+				READHASH(loading->script);
+				READHASH(loading->faction);
+				READHASH(loading->merchant);
+				VALIDHASH(loading->script, game::scripts, ent)
+				VALIDHASH(loading->faction, game::factions, ent)
+				if(loading->merchant) VALIDHASH(loading->merchant, game::merchants, ent)
+
 				loading->health = f->getlil<float>();
 				loading->mana = f->getlil<float>();
 				loading->lastaction = f->getlil<int>() + lastmillis;
@@ -490,6 +540,7 @@ namespace rpgio
 				{
 					CHECKEOF(*f, ent)
 					item *it = items.add(readitem(f));
+					if(abort) {delete it; return ent;}
 					loading->inventory.access(it->base, vector<item *>()).add(it);
 				}
 
@@ -513,7 +564,7 @@ namespace rpgio
 				rpgitem *loading = (rpgitem *) ent;
 
 				readitem(f, loading);
-
+				if(abort) return ent;
 				break;
 			}
 			case ENT_OBSTACLE:
@@ -527,8 +578,10 @@ namespace rpgio
 				NOTNULL(loading->mdl, ent);
 				preloadmodel(loading->mdl);
 
+				READHASH(loading->script);
+				VALIDHASH(loading->script, game::scripts, ent);
+
 				loading->weight = f->getlil<int>();
-				loading->script = f->getlil<int>();
 				loading->flags = f->getlil<int>();
 
 				break;
@@ -547,10 +600,14 @@ namespace rpgio
 				NOTNULL(loading->mdl, ent);
 				preloadmodel(loading->mdl);
 
+				READHASH(loading->faction)
+				READHASH(loading->merchant)
+				READHASH(loading->script)
+				if(loading->faction) VALIDHASH(loading->faction, game::factions, ent);
+				if(loading->merchant) VALIDHASH(loading->merchant, game::merchants, ent);
+				VALIDHASH(loading->script, game::scripts, ent)
+
 				loading->capacity = f->getlil<int>();
-				loading->faction = f->getlil<int>();
-				loading->merchant = f->getlil<int>();
-				loading->script = f->getlil<int>();
 				loading->lock = f->getlil<int>();
 				loading->magelock = f->getlil<int>();
 
@@ -559,6 +616,7 @@ namespace rpgio
 				{
 					CHECKEOF(*f, ent)
 					item *it = readitem(f);
+					if(abort) { delete it; return ent; }
 					loading->inventory.access(it->base, vector<item *>()).add(it);
 				}
 
@@ -574,8 +632,10 @@ namespace rpgio
 				NOTNULL(loading->mdl, ent);
 				preloadmodel(loading->mdl);
 
+				READHASH(loading->script)
+				VALIDHASH(loading->script, game::scripts, ent);
+
 				loading->speed = f->getlil<int>();
-				loading->script = f->getlil<int>();
 				loading->flags = f->getlil<int>();
 
 				int steps = f->getlil<int>();
@@ -605,7 +665,8 @@ namespace rpgio
 				preloadmodel(loading->mdl);
 
 				loading->name = readstring(f);
-				loading->script = f->getlil<int>();
+				READHASH(loading->script);
+				VALIDHASH(loading->script, game::scripts, ent);
 				loading->flags = f->getlil<int>();
 				loading->lasttrigger = f->getlil<int>() + lastmillis;
 
@@ -627,7 +688,8 @@ namespace rpgio
 			ent->seffects.add(eff);
 
 			updates.add(reference(f->getlil<int>(), lastmap, eff->owner));
-			eff->group = f->getlil<int>();
+			READHASH(eff->group);
+			VALIDHASH(eff->group, game::statuses, ent)
 			eff->elem = f->getlil<int>();
 			int numstat = f->getlil<int>();
 			loopj(numstat)
@@ -750,9 +812,11 @@ namespace rpgio
 
 				#undef x
 
-				f->putlil(saving->script);
-				f->putlil(saving->faction);
-				f->putlil(saving->merchant);
+
+				writestring(f, saving->script);
+				writestring(f, saving->faction);
+				writestring(f, saving->merchant);
+
 				f->putlil(saving->health);
 				f->putlil(saving->mana);
 				f->putlil(saving->lastaction - lastmillis);
@@ -787,8 +851,9 @@ namespace rpgio
 				rpgobstacle *saving = (rpgobstacle *) d;
 
 				writestring(f, saving->mdl);
+				writestring(f, saving->script);
+
 				f->putlil(saving->weight);
-				f->putlil(saving->script);
 				f->putlil(saving->flags);
 
 				break;
@@ -799,11 +864,11 @@ namespace rpgio
 
 				writestring(f, saving->mdl);
 				writestring(f, saving->name);
+				writestring(f, saving->faction);
+				writestring(f, saving->merchant);
+				writestring(f, saving->script);
 
 				f->putlil(saving->capacity);
-				f->putlil(saving->faction);
-				f->putlil(saving->merchant);
-				f->putlil(saving->script);
 				f->putlil(saving->lock);
 				f->putlil(saving->magelock);
 
@@ -822,8 +887,9 @@ namespace rpgio
 				rpgplatform *saving = (rpgplatform *) d;
 
 				writestring(f, saving->mdl);
+				writestring(f, saving->script);
+
 				f->putlil(saving->speed);
-				f->putlil(saving->script);
 				f->putlil(saving->flags);
 
 				f->putlil(saving->routes.length());
@@ -845,7 +911,7 @@ namespace rpgio
 
 				writestring(f, saving->mdl);
 				writestring(f, saving->name);
-				f->putlil(saving->script);
+				writestring(f, saving->script);
 				f->putlil(saving->flags);
 				f->putlil(saving->lasttrigger - lastmillis);
 
@@ -861,7 +927,7 @@ namespace rpgio
 		loopv(d->seffects)
 		{
 			f->putlil(enttonum(d->seffects[i]->owner));
-			f->putlil(d->seffects[i]->group);
+			writestring(f, d->seffects[i]->group);
 			f->putlil(d->seffects[i]->elem);
 			f->putlil(d->seffects[i]->effects.length());
 
@@ -929,7 +995,9 @@ namespace rpgio
 		lastmap = loading;
 
 		loading->name = name;
-		loading->script = f->getlil<int>();
+		READHASH(loading->script)
+		VALIDHASH(loading->script, game::mapscripts, loading);
+
 		loading->flags = f->getlil<int>();
 		loading->loaded = f->getchar();
 
@@ -975,9 +1043,12 @@ namespace rpgio
 				}
 				case ACTION_SPAWN:
 				{
+					const char *id = NULL;
+					READHASH(id)
+					NOTNULL(id, loading)
+
 					int tag = f->getlil<int>(),
 						ent = f->getlil<int>(),
-						id = f->getlil<int>(),
 						amount = f->getlil<int>(),
 						qty = f->getlil<int>();
 						act = new action_spawn(tag, ent, id, amount, qty);
@@ -1029,9 +1100,13 @@ namespace rpgio
 			p->time = f->getlil<int>();
 			p->dist = f->getlil<int>();
 
-			p->projfx = f->getlil<int>();
-			p->trailfx = f->getlil<int>();
-			p->deathfx = f->getlil<int>();
+			READHASH(p->projfx)
+			READHASH(p->trailfx)
+			READHASH(p->deathfx)
+			if(p->projfx) VALIDHASH(p->projfx, game::effects, loading);
+			if(p->trailfx) VALIDHASH(p->trailfx, game::effects, loading);
+			if(p->deathfx) VALIDHASH(p->deathfx, game::effects, loading);
+
 			p->radius = f->getlil<int>();
 			p->elasticity = f->getlil<float>();
 			p->charge = f->getlil<float>();
@@ -1049,10 +1124,13 @@ namespace rpgio
 			aeff->owner = entfromnum(f->getlil<int>());
 			readvec(aeff->o);
 			aeff->lastemit = 0; //should emit immediately
-			aeff->group = f->getlil<int>();
+			READHASH(aeff->group)
+			VALIDHASH(aeff->group, game::statuses, loading)
+			READHASH(aeff->fx)
+			if(aeff->fx) VALIDHASH(aeff->fx, game::effects, loading)
+
 			aeff->elem = f->getlil<int>();
 			aeff->radius = f->getlil<int>();
-			aeff->fx = f->getlil<int>();
 
 			int numstat = f->getlil<int>();
 			loopj(numstat)
@@ -1124,7 +1202,7 @@ namespace rpgio
 		lastmap = saving;
 
 		writestring(f, saving->name);
-		f->putlil(saving->script);
+		writestring(f, saving->script);
 		f->putlil(saving->flags);
 		f->putchar(saving->loaded);
 
@@ -1157,9 +1235,9 @@ namespace rpgio
 				case ACTION_SPAWN:
 				{
 					action_spawn *spw = (action_spawn *) saving->loadactions[i];
+					writestring(f, spw->id);
 					f->putlil(spw->tag);
 					f->putlil(spw->ent);
-					f->putlil(spw->id);
 					f->putlil(spw->amount);
 					f->putlil(spw->qty);
 
@@ -1206,9 +1284,10 @@ namespace rpgio
 			f->putlil(p->time);
 			f->putlil(p->dist);
 
-			f->putlil(p->projfx);
-			f->putlil(p->trailfx);
-			f->putlil(p->deathfx);
+			writestring(f, p->projfx);
+			writestring(f, p->trailfx);
+			writestring(f, p->deathfx);
+
 			f->putlil(p->radius);
 
 			f->putlil(p->elasticity);
@@ -1222,10 +1301,10 @@ namespace rpgio
 
 			f->putlil(enttonum(aeff->owner));
 			writevec(aeff->o);
-			f->putlil(aeff->group);
+			writestring(f, aeff->group);
+			writestring(f, aeff->fx);
 			f->putlil(aeff->elem);
 			f->putlil(aeff->radius);
-			f->putlil(aeff->fx);
 
 			f->putlil(aeff->effects.length());
 			loopvj(aeff->effects)
@@ -1341,7 +1420,7 @@ namespace rpgio
 					{
 						int map = -1;
 						int ent = -1;
-						int base = saving.getinv(j)->base;
+						const char *base = saving.getinv(j)->base;
 						int offset = -1;
 
 						{
@@ -1370,12 +1449,12 @@ namespace rpgio
 							continue;
 						}
 
-						if(DEBUG_IO) DEBUGF("writing reference \"%s:%i\" as type T_INV with indices: %i %i %i %i", saving.name, j, map, ent, base, offset);
+						if(DEBUG_IO) DEBUGF("writing reference \"%s:%i\" as type T_INV with indices: %i %i %s %i", saving.name, j, map, ent, base, offset);
 
 						f->putchar(type);
 						f->putlil(map);
 						f->putlil(ent);
-						f->putlil(base);
+						writestring(f, base);
 						f->putlil(offset);
 
 						break;
@@ -1404,19 +1483,18 @@ namespace rpgio
 		loopi(num)
 		{
 			CHECKEOF(*f, )
-			const char *name = readstring(f);
+			const char *name = NULL;
+			READHASH(name);
 			::reference *loading = stack.access(name);
 			if(loading)
 			{
 				WARNINGF("reference \"%s\" appears to have already been loaded", name);
-				DELETEA(name);
 			}
 			else
 			{
 				if(DEBUG_IO) DEBUGF("Creating reference \"%s\"", name);
 				loading = &stack[name];
 				loading->name = name;
-				name = NULL;
 			}
 			loading->immutable = f->getchar();
 
@@ -1461,10 +1539,11 @@ namespace rpgio
 					{
 						int map = f->getlil<int>();
 						int ent = f->getlil<int>();
-						int base = f->getlil<int>();
+						const char *base = NULL;
+						READHASH(base);
 						int offset = f->getlil<int>();
 
-						if(DEBUG_IO) DEBUGF("reading T_INV reference with values %i %i %i %i...", map, ent, base, offset);
+						if(DEBUG_IO) DEBUGF("reading T_INV reference with values %i %i %s %i...", map, ent, base, offset);
 						vector <item *> *stack = NULL;
 
 						if(map == -1 && ent == -1)
@@ -1483,7 +1562,7 @@ namespace rpgio
 							loading->pushref((*stack)[offset], true);
 						}
 						else
-							WARNINGF("T_INV has out of range values: %i %i %i %i, loading failed", map, ent, base, offset);
+							WARNINGF("T_INV has out of range values: %i %i %s %i, loading failed", map, ent, base, offset);
 
 						break;
 					}
@@ -1560,11 +1639,11 @@ namespace rpgio
 		loopj(n)
 		{
 			CHECKEOF(*f, )
-			const char *name = readstring(f);
+			const char *name = NULL;
+			READHASH(name);
 			const char *value = readstring(f);
 
-			rpgvar &var = loading->variables.access(name, rpgvar());
-			if(var.name) delete[] var.name;
+			rpgvar &var = loading->variables[name];
 			if(var.value) delete[] var.value;
 
 			var.name = name;
@@ -1608,27 +1687,22 @@ namespace rpgio
 		if(DEBUG_IO)
 			DEBUGF("supported save: %i  %4.4s", hdr.sversion, hdr.magic);
 
+		vector<mapinfo *> maps;
 		const char *data = readstring(f);
-		game::newgame(data, true);
+		const char *curmap = readstring(f);
+		abort = !game::newgame(data, true);
 		delete[] data;
-		abort = false;
 
 		if(game::compatversion > hdr.gversion)
 		{
 			ERRORF("saved game is of game version %i, last compatible version is %i; aborting", hdr.gversion, game::compatversion);
-			delete f;
-			localdisconnect();
-			return;
+			abort = true;
+			goto cleanup;
 		}
-
-		const char *curmap = readstring(f);
-		if(!curmap)
+		if(!curmap || abort)
 		{
-			delete f;
-			ERRORF("no game/map in progress? aborting");
-			rpgscript::cleanlocals();
-			localdisconnect();
-			return;
+			ERRORF("No map in progress?");
+			abort = true; goto cleanup;
 		}
 
 		lastmap = game::accessmap(curmap);
@@ -1657,29 +1731,38 @@ namespace rpgio
 // 		)
 
 		READ(faction,
-			if(!game::factions.inrange(i)) game::factions.add(new faction());
-			readfaction(f, game::factions[i]);
+			const char *key = NULL;
+			READHASH(key);
+			faction *fac = game::factions.access(key);
+			if(!fac) WARNINGF("reading faction %s as a dummy", key);
+			readfaction(f, fac);
 		);
 		READ(recipe,
-			if(!game::recipes.inrange(i)) game::recipes.add(new recipe());
-			readrecipe(f, game::recipes[i]);
+			const char *key = NULL;
+			READHASH(key);
+			recipe *r = game::recipes.access(key);
+			if(!r) WARNINGF("reading recipe %s as a dummy", key);
+			readrecipe(f, r);
 		);
 		READ(merchant,
-			if(!game::merchants.inrange(i)) game::merchants.add(new merchant());
-			readmerchant(f, game::merchants[i]);
+			const char *key = NULL;
+			READHASH(key);
+			merchant *m = game::merchants.access(key);
+			if(!m) WARNINGF("reading merchant %s as a dummy", key);
+			readmerchant(f, m);
 		);
 		READ(variable,
-			 const char *n = readstring(f);
+			 const char *name = NULL;
+			 READHASH(name);
 			 const char *v = readstring(f);
-			 if(!rpgscript::setglobal(n, v))
-				 WARNINGF("reloading the game added variable \"%s\"", n);
+			 if(!rpgscript::setglobal(name, v, false))
+				 WARNINGF("reloading the game added variable \"%s\"", name);
 		)
 		READ(locals stack,
 			 readlocal(f, i);
 		)
 		readent(f, game::player1);
 
-		vector<mapinfo *> maps;
 		READ(mapinfo, maps.add(readmap(f)));
 
 		READ(reference stack,
@@ -1699,8 +1782,9 @@ namespace rpgio
 		#undef READ
 
 		if(!abort) loopv(characters)
-			characters[i]->compactinventory(-1);
+			characters[i]->compactinventory(NULL);
 
+	cleanup:
 		delete f;
 		characters.shrink(0);
 		updates.shrink(0);
@@ -1774,20 +1858,31 @@ namespace rpgio
 				b; \
 			}
 
+		#define WRITEHT(m, ht, t, b) \
+			if(DEBUG_IO) DEBUGF("Writing %i " #m "(s)", (ht).length()); \
+			f->putlil((ht).length()); \
+			enumerate(ht, t, entry, \
+				writestring(f, entry.key); \
+				if(DEBUG_IO) \
+					DEBUGF("Writing " #m " %s to file...", entry.key); \
+				b; \
+			)
+
+
 		///TODO redo hotkeys
 // 		WRITE(hotkey, game::hotkeys,
 // 			f->putlil(game::hotkeys[i].base);
 // 			f->putlil(game::hotkeys[i].use);
 // 		)
 
-		WRITE(faction, game::factions,
-			writefaction(f, game::factions[i]);
+		WRITEHT(faction, game::factions, faction,
+			writefaction(f, &entry);
 		)
-		WRITE(recipe, game::recipes,
-			writerecipe(f, game::recipes[i]);
+		WRITEHT(recipe, game::recipes, recipe,
+			writerecipe(f, &entry);
 		)
-		WRITE(merchant, game::merchants,
-			writemerchant(f, game::merchants[i]);
+		WRITEHT(merchant, game::merchants, merchant,
+			writemerchant(f, &entry);
 		)
 
 		vector<rpgvar *> vars;
@@ -1828,7 +1923,7 @@ namespace rpgio
 
 		string final;
 		copystring(final, file, strlen(file) - 3);
-		backup(final, file);
+		backup(file, final);
 
 		conoutf("Game saved successfully to %s", final);
 

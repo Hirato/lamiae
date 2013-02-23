@@ -104,16 +104,16 @@ CLIENT_OBJS= \
 
 RPGCLIENT_OBJS = \
 	rpggame/rpg.o \
-	rpggame/rpgai.o \
 	rpggame/rpgaction.o \
+	rpggame/rpgai.o \
 	rpggame/rpgcamera.o \
 	rpggame/rpgchar.o \
 	rpggame/rpgconfig.o \
 	rpggame/rpgcontainer.o \
 	rpggame/rpgeffect.o \
 	rpggame/rpgentities.o \
-	rpggame/rpghud.o \
 	rpggame/rpggui.o \
+	rpggame/rpghud.o \
 	rpggame/rpgio.o \
 	rpggame/rpgitem.o \
 	rpggame/rpgobstacle.o \
@@ -124,6 +124,7 @@ RPGCLIENT_OBJS = \
 	rpggame/rpgstatus.o \
 	rpggame/rpgstubs.o \
 	rpggame/rpgrender.o \
+	rpggame/rpgreserved.o \
 	rpggame/rpgtest.o \
 	rpggame/rpgtrigger.o \
 	rpggame/waypoint.o
@@ -189,7 +190,7 @@ depend:
 	makedepend -fincludes.mk -a -o.h.gch -Y -Ishared -Iengine -Irpggame $(subst .h.gch,.h,$(CLIENT_PCH))
 
 engine/engine.h.gch: shared/cube.h.gch
-rpggame/game.h.gch: shared/cube.h.gch
+rpggame/rpggame.h.gch: shared/cube.h.gch
 
 # DO NOT DELETE
 
@@ -388,12 +389,12 @@ engine/worldio.o: engine/model.h engine/varray.h
 
 rpggame/rpg.o: rpggame/rpggame.h shared/cube.h shared/tools.h shared/geom.h
 rpggame/rpg.o: shared/ents.h shared/command.h shared/iengine.h shared/igame.h
-rpggame/rpgai.o: rpggame/rpggame.h shared/cube.h shared/tools.h shared/geom.h
-rpggame/rpgai.o: shared/ents.h shared/command.h shared/iengine.h
-rpggame/rpgai.o: shared/igame.h
 rpggame/rpgaction.o: rpggame/rpggame.h shared/cube.h shared/tools.h
 rpggame/rpgaction.o: shared/geom.h shared/ents.h shared/command.h
 rpggame/rpgaction.o: shared/iengine.h shared/igame.h
+rpggame/rpgai.o: rpggame/rpggame.h shared/cube.h shared/tools.h shared/geom.h
+rpggame/rpgai.o: shared/ents.h shared/command.h shared/iengine.h
+rpggame/rpgai.o: shared/igame.h
 rpggame/rpgcamera.o: rpggame/rpggame.h shared/cube.h shared/tools.h
 rpggame/rpgcamera.o: shared/geom.h shared/ents.h shared/command.h
 rpggame/rpgcamera.o: shared/iengine.h shared/igame.h
@@ -412,12 +413,12 @@ rpggame/rpgeffect.o: shared/iengine.h shared/igame.h
 rpggame/rpgentities.o: rpggame/rpggame.h shared/cube.h shared/tools.h
 rpggame/rpgentities.o: shared/geom.h shared/ents.h shared/command.h
 rpggame/rpgentities.o: shared/iengine.h shared/igame.h
-rpggame/rpghud.o: rpggame/rpggame.h shared/cube.h shared/tools.h
-rpggame/rpghud.o: shared/geom.h shared/ents.h shared/command.h
-rpggame/rpghud.o: shared/iengine.h shared/igame.h
 rpggame/rpggui.o: rpggame/rpggame.h shared/cube.h shared/tools.h
 rpggame/rpggui.o: shared/geom.h shared/ents.h shared/command.h
 rpggame/rpggui.o: shared/iengine.h shared/igame.h
+rpggame/rpghud.o: rpggame/rpggame.h shared/cube.h shared/tools.h
+rpggame/rpghud.o: shared/geom.h shared/ents.h shared/command.h
+rpggame/rpghud.o: shared/iengine.h shared/igame.h
 rpggame/rpgio.o: rpggame/rpggame.h shared/cube.h shared/tools.h shared/geom.h
 rpggame/rpgio.o: shared/ents.h shared/command.h shared/iengine.h
 rpggame/rpgio.o: shared/igame.h
@@ -448,6 +449,9 @@ rpggame/rpgstubs.o: shared/iengine.h shared/igame.h
 rpggame/rpgrender.o: rpggame/rpggame.h shared/cube.h shared/tools.h
 rpggame/rpgrender.o: shared/geom.h shared/ents.h shared/command.h
 rpggame/rpgrender.o: shared/iengine.h shared/igame.h
+rpggame/rpgreserved.o: rpggame/rpggame.h shared/cube.h shared/tools.h
+rpggame/rpgreserved.o: shared/geom.h shared/ents.h shared/command.h
+rpggame/rpgreserved.o: shared/iengine.h shared/igame.h
 rpggame/rpgtest.o: rpggame/rpggame.h shared/cube.h shared/tools.h
 rpggame/rpgtest.o: shared/geom.h shared/ents.h shared/command.h
 rpggame/rpgtest.o: shared/iengine.h shared/igame.h

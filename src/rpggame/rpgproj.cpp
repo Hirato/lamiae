@@ -55,7 +55,7 @@ void projectile::init(rpgchar *d, equipment *w, equipment *a, int fuzzy, float m
 		chargeflags = wep->chargeflags;
 
 		if(DEBUG_PROJ)
-			DEBUGF("weapon was provided... fx: %i %i %i dist: %i time: %i pflags: %i elasticity %f radius: %i speed %f gravity: %i", projfx, trailfx, deathfx, dist, time, pflags, elasticity, radius, dir.magnitude(), gravity);
+			DEBUGF("weapon was provided... fx: %s; %s; %s dist: %i time: %i pflags: %i elasticity %f radius: %i speed %f gravity: %i", projfx, trailfx, deathfx, dist, time, pflags, elasticity, radius, dir.magnitude(), gravity);
 	}
 	if(a)
 	{
@@ -63,11 +63,11 @@ void projectile::init(rpgchar *d, equipment *w, equipment *a, int fuzzy, float m
 		use_weapon *wep = (use_weapon *) a->it->uses[a->use];
 
 		 //visuals take precedence - if they have them
-		if(wep->projeffect >= 0)
+		if(wep->projeffect)
 			projfx = wep->projeffect;
-		if(wep->traileffect >= 0)
+		if(wep->traileffect)
 			trailfx = wep->traileffect;
-		if(wep->deatheffect >= 0)
+		if(wep->deatheffect)
 			deathfx = wep->deatheffect;
 		dist += wep->range;
 		time += wep->lifetime;
@@ -79,7 +79,7 @@ void projectile::init(rpgchar *d, equipment *w, equipment *a, int fuzzy, float m
 		chargeflags |= wep->chargeflags;
 
 		if(DEBUG_PROJ)
-			DEBUGF("ammo was provided... fx: %i %i %i dist: %i time: %i pflags: %i elasticity %f radius: %i speed: %f gravity: %i", projfx, trailfx, deathfx, dist, time, pflags, elasticity, radius, dir.magnitude(), gravity);
+			DEBUGF("ammo was provided... fx: %s; %s; %s dist: %i time: %i pflags: %i elasticity %f radius: %i speed: %f gravity: %i", projfx, trailfx, deathfx, dist, time, pflags, elasticity, radius, dir.magnitude(), gravity);
 	}
 	radius = max(1, radius);
 	dir.mul(speed);
@@ -297,7 +297,7 @@ bool projectile::update()
 				loopv(wep->effects)
 				{
 					areaeffect *aeff = game::curmap->aeffects.add(new areaeffect());
-					statusgroup *sg = game::statuses[wep->effects[i]->status];
+					statusgroup *sg = game::statuses.access(wep->effects[i]->status);
 
 					aeff->owner = owner;
 					aeff->o = o;
@@ -322,7 +322,7 @@ bool projectile::update()
 				if(amm) loopv(amm->effects)
 				{
 					areaeffect *aeff = game::curmap->aeffects.add(new areaeffect());
-					statusgroup *sg = game::statuses[amm->effects[i]->status];
+					statusgroup *sg = game::statuses.access(amm->effects[i]->status);
 
 					aeff->owner = owner;
 					aeff->o = o;
@@ -402,62 +402,70 @@ VARP(projallowflare, 0, 1, 1);
 
 void projectile::render()
 {
-	if(game::effects.inrange(projfx))
-	{
-		effect *e = game::effects[projfx];
+	effect *pfx = NULL,
+	       *tfx = NULL;
 
-		if(e->mdl)
+	if(projfx) pfx = game::effects.access(projfx);
+	if(trailfx) tfx = game::effects.access(trailfx);
+
+	if(pfx)
+	{
+		if(pfx->mdl)
 		{
 			float yaw, pitch, roll;
 			vectoyawpitch(dir, yaw, pitch);
 			roll = 0;
 
-			if(!e->spin.iszero())
+			if(!pfx->spin.iszero())
 			{
-				if(e->spin.x) yaw += e->spin.x * lastmillis / 50;
-				if(e->spin.y) pitch += e->spin.y * lastmillis / 50;
-				if(e->spin.z) roll += e->spin.z * lastmillis / 50;
+				if(pfx->spin.x) yaw += pfx->spin.x * lastmillis / 50;
+				if(pfx->spin.y) pitch += pfx->spin.y * lastmillis / 50;
+				if(pfx->spin.z) roll += pfx->spin.z * lastmillis / 50;
 			}
 
-			rendermodel(e->mdl, ANIM_MAPMODEL|ANIM_LOOP, o, yaw + 90, pitch, roll, 0);
+			rendermodel(pfx->mdl, ANIM_MAPMODEL|ANIM_LOOP, o, yaw + 90, pitch, roll, 0);
 		}
 		else
 		{
-			e->drawsplash(o, dir, 0, charge, effect::PROJ, 0);
-			if(projallowflare && e->flags & (FX_FIXEDFLARE|FX_FLARE))
+			pfx->drawsplash(o, dir, 0, charge, effect::PROJ, 0);
+			if(projallowflare && pfx->flags & (FX_FIXEDFLARE|FX_FLARE))
 			{
-				vec col = vec(e->lightcol).mul(256);
-				bool fixed = e->flags & FX_FIXEDFLARE;
-				regularlensflare(o, col.x, col.y, col.z, fixed, false, e->lightradius * (fixed ? .5f : 5.0f));
+				vec col = vec(pfx->lightcol).mul(256);
+				bool fixed = pfx->flags & FX_FIXEDFLARE;
+				regularlensflare(o, col.x, col.y, col.z, fixed, false, pfx->lightradius * (fixed ? .5f : 5.0f));
 			}
 		}
 	}
-	if(!(pflags&P_STATIONARY) && game::effects.inrange(trailfx) &&
-		game::effects[trailfx]->drawline(emitpos, o, 1, effect::TRAIL, lastmillis - lastemit))
+	if(!(pflags&P_STATIONARY) && tfx &&
+		tfx->drawline(emitpos, o, 1, effect::TRAIL, lastmillis - lastemit))
 		lastemit = lastmillis;
 }
 
 void projectile::drawdeath()
 {
-	if(game::effects.inrange(deathfx))
-		game::effects[deathfx]->drawsphere(o, radius, 1, effect::DEATH, 0);
+	effect *dfx = NULL;
+	if(deathfx) dfx = game::effects.access(deathfx);
+
+	if(dfx)
+		dfx->drawsphere(o, radius, 1, effect::DEATH, 0);
 }
 
 void projectile::dynlight()
 {
 	if(deleted)
 	{
-		if(!game::effects.inrange(deathfx)) return;
-		effect *e = game::effects[deathfx];
-		if(!(e->flags & FX_DYNLIGHT)) return;
+		effect *dfx = NULL;
+		if(deathfx) dfx = game::effects.access(deathfx);
+		if(!dfx || !(dfx->flags & FX_DYNLIGHT)) return;
 
-		adddynlight(o, e->lightradius, e->lightcol, e->lightfade, e->lightfade / 2, e->lightflags, e->lightinitradius, e->lightinitcol);
+		adddynlight(o, dfx->lightradius, dfx->lightcol, dfx->lightfade, dfx->lightfade / 2, dfx->lightflags, dfx->lightinitradius, dfx->lightinitcol);
 	}
 	else
 	{
-		if(!game::effects.inrange(projfx)) return;
-		effect *e = game::effects[projfx];
-		if(!(e->flags & FX_DYNLIGHT)) return;
-		adddynlight(o, e->lightradius, e->lightcol);
+		effect *pfx = NULL;
+		if(projfx) pfx = game::effects.access(projfx);
+		if(!pfx || !(pfx->flags & FX_DYNLIGHT)) return;
+
+		adddynlight(o, pfx->lightradius, pfx->lightcol);
 	}
 }

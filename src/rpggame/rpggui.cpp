@@ -105,15 +105,13 @@ namespace rpggui
 
 	ICOMMAND(r_buystack_value, "", (),
 		if(!sellstack || !buystack) { intret(0); return; }
-		int mer = -1;
+		merchant *mer = NULL;
 		if(buystack->owner->type() == ENT_CHAR)
-			mer = ((rpgchar *) buystack->owner)->merchant;
+			mer = merchants.access(((rpgchar *) buystack->owner)->merchant);
 		else
-			mer = ((rpgcontainer *) buystack->owner)->merchant;
+			mer = merchants.access(((rpgcontainer *) buystack->owner)->merchant);
 
-		if(!merchants.inrange(mer)) { intret(0); return; }
-
-		intret(buystack->value(*merchants[mer], true));
+		intret(buystack->value(*mer, true));
 	)
 
 	ICOMMAND(r_buystack_add, "si", (const char *ref, int *q),
@@ -163,15 +161,13 @@ namespace rpggui
 
 	ICOMMAND(r_sellstack_value, "", (),
 		if(!sellstack || !buystack) { intret(0); return; }
-		int mer = -1;
+		merchant *mer = NULL;
 		if(buystack->owner->type() == ENT_CHAR)
-			mer = ((rpgchar *) buystack->owner)->merchant;
+			mer = merchants.access(((rpgchar *) buystack->owner)->merchant);
 		else
-			mer = ((rpgcontainer *) buystack->owner)->merchant;
+			mer = merchants.access(((rpgcontainer *) buystack->owner)->merchant);
 
-		if(!merchants.inrange(mer)) { intret(0); return; }
-
-		intret(sellstack->value(*merchants[mer], false));
+		intret(sellstack->value(*mer, false));
 	)
 
 	ICOMMAND(r_sellstack_add, "si", (const char *ref, int *q),
@@ -214,23 +210,19 @@ namespace rpggui
 
 	ICOMMAND(r_dotrade, "", (),
 		if(!sellstack || !buystack) { intret(0); return; }
-		int mer = -1;
+		merchant *merch = NULL;
 		if(buystack->owner->type() == ENT_CHAR)
-			mer = ((rpgchar *) buystack->owner)->merchant;
+			merch = merchants.access(((rpgchar *) buystack->owner)->merchant);
 		else
-			mer = ((rpgcontainer *) buystack->owner)->merchant;
+			merch = merchants.access(((rpgcontainer *) buystack->owner)->merchant);
 
-		if(!merchants.inrange(mer)) { intret(0); return; }
-
-		merchant &merch = *merchants[mer];
-
-		int buy = buystack->value(merch, true);
-		int sell = sellstack->value(merch, false);
+		int buy = buystack->value(*merch, true);
+		int sell = sellstack->value(*merch, false);
 
 		//make me a better offer
-		if(buy > sell + merch.credit) { intret(0); return; }
+		if(buy > sell + merch->credit) { intret(0); return; }
 
-		merch.credit += sell - buy;
+		merch->credit += sell - buy;
 		buystack->give(sellstack->owner);
 		sellstack->give(buystack->owner);
 
@@ -284,20 +276,20 @@ namespace rpggui
 
 	ICOMMAND(r_get_dialogue, "", (),
 		if(!talker || !talker->getent(0)) return;
-		script *scr = scripts[talker->getent(0)->getscript()];
+		script *scr = scripts.access(talker->getent(0)->getscript());
 		if(scr->curnode) result(scr->curnode->str);
 	)
 
 	ICOMMAND(r_num_response, "", (),
 		if(!talker || !talker->getent(0)) {intret(0); return;}
-		script *scr = scripts[talker->getent(0)->getscript()];
+		script *scr = scripts.access(talker->getent(0)->getscript());
 		if(scr->curnode) intret(scr->curnode->choices.length());
 		else intret(0);
 	)
 
 	ICOMMAND(r_get_response, "i", (int *n),
 		if(!talker || !talker->getent(0)) {result(""); return;}
-		script *scr = scripts[talker->getent(0)->getscript()];
+		script *scr = scripts.access(talker->getent(0)->getscript());
 		if(scr->curnode && scr->curnode->choices.inrange(*n))
 			result(scr->curnode->choices[*n]->talk);
 		else
@@ -307,7 +299,8 @@ namespace rpggui
 	void chattrigger(int n)
 	{
 		if(!talker || !talker->getent(0)) return;
-		script *scr = scripts[talker->getent(0)->getscript()];
+		const char *id = talker->getent(0)->getscript();
+		script *scr = scripts.access(id);
 
 		if(scr->curnode && scr->curnode->choices.inrange(n))
 		{
@@ -330,8 +323,11 @@ namespace rpggui
 
 			if(!talker || !talker->getent(0))
 				scr->curnode = NULL;
-			else if(scr != scripts[talker->getent(0)->getscript()])
-				scr = scripts[talker->getent(0)->getscript()];
+			else if(id != talker->getent(0)->getscript())
+			{
+				id = talker->getent(0)->getscript();
+				scr = scripts.access(id);
+			}
 
 			if(scr->curnode)
 			{

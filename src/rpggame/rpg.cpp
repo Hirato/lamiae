@@ -2,19 +2,21 @@
 
 namespace game
 {
+	VAR(mapgameversion, 1, 0, -1);
 	VARP(debug, 0, 0, DEBUG_MAX);
 	VAR(forceverbose, 1, 0, -1);
-	rpgchar *player1 = new rpgchar();
+
+	hashset<const char *> hashpool(1 << 12);
 
 	// GAME DEFINITIONS
-	vector<script *> scripts; ///scripts, includes dialogue
-	vector<effect *> effects; ///pretty particle effects for spells and stuff
-	vector<statusgroup *> statuses; ///status effect definitions to transfer onto victims
-	vector<faction *> factions;
-	vector<ammotype *> ammotypes;
-	vector<mapscript *> mapscripts;
-	vector<recipe *> recipes;
-	vector<merchant *> merchants;
+	hashset<script> scripts;       ///scripts, includes dialogue
+	hashset<effect> effects;       ///pretty particle effects for spells and stuff
+	hashset<statusgroup> statuses; ///status effect definitions to transfer onto victims
+	hashset<faction> factions;
+	hashset<ammotype> ammotypes;
+	hashset<mapscript> mapscripts;
+	hashset<recipe> recipes;
+	hashset<merchant> merchants;
 
 	vector<const char *> categories, tips;
 	hashset<rpgvar> variables;
@@ -26,6 +28,18 @@ namespace game
 	bool connected = false;
 	bool transfer = false;
 	bool abort = false;
+
+	rpgchar *player1 = new rpgchar();
+
+	const char *queryhashpool(const char *str)
+	{
+		const char **ret = hashpool.access(str);
+		if(ret) return *ret;
+		if(DEBUG_WORLD)
+			DEBUGF("Registered [ %s ] in hashpool; %i entries", str, hashpool.length() + 1);
+		str = newstring(str);
+		return hashpool.access(str, str);
+	}
 
 	//important variables/configuration
 	SVAR(firstmap, "");
@@ -183,23 +197,52 @@ namespace game
 		}
 
 		if(DEBUG_WORLD)
-			DEBUGF("clearing %i scripts, %i effects, %i status effects, %i ammotypes, %i factions, %i mapscripts, %i recipes, %i merchants, %i item categories, and %i tips",
-				scripts.length(), effects.length(), statuses.length(),
-				ammotypes.length(), factions.length(), mapscripts.length(),
-				recipes.length(), merchants.length(), categories.length(), tips.length());
+			DEBUGF(
+				"clearing %i scripts, "
+				"%i effects, "
+				"%i status effects, "
+				"%i ammotypes, "
+				"%i factions, "
+				"%i mapscripts, "
+				"%i recipes, "
+				"%i merchants, "
+				"%i journal buckets, "
+				"%i variables, "
+				"%i item categories, "
+				"and %i tips",
+				scripts.length(),
+				effects.length(),
+				statuses.length(),
+				ammotypes.length(),
+				factions.length(),
+				mapscripts.length(),
+				recipes.length(),
+				merchants.length(),
+				journals.length(),
+				variables.length(),
+				categories.length(),
+				tips.length());
 
-		scripts.deletecontents();
-		effects.deletecontents();
-		statuses.deletecontents();
-		ammotypes.deletecontents();
-		factions.deletecontents();
-		mapscripts.deletecontents();
-		recipes.deletecontents();
-		merchants.deletecontents();
+		scripts.clear();
+		effects.clear();
+		statuses.clear();
+		ammotypes.clear();
+		factions.clear();
+		mapscripts.clear();
+		recipes.clear();
+		merchants.clear();
+		journals.clear();
+		variables.clear();
 		categories.deletearrays();
 		tips.deletearrays();
-		variables.clear();
-		journals.clear();
+
+		if(DEBUG_WORLD)
+			DEBUGF("Clearing hashpool of %i entries", hashpool.length());
+
+		enumerate(hashpool, const char *, str,
+			delete[] str;
+		)
+		hashpool.clear();
 
 		//We reset the player here so he has a clean slate on a new game.
 		player1->~rpgchar();
@@ -209,49 +252,76 @@ namespace game
 	}
 
 	template<class T>
-	static inline void loadassets(const char *dir, T *&var, vector<T*> &objects)
+	static inline void loadassets(const char *dir, T *&var, hashset<T> &objects)
 	{
-		objects.deletecontents();
+		objects.clear();
 		vector<char *> files;
 		string file;
 
 		listfiles(dir, "cfg", files);
 		loopv(files)
 		{
-			char *end;
-			int idx = strtol(files[i], &end, 10);
-			if(end == files[i] || *end != '\0' || idx < 0)
+			const char *hash = queryhashpool(files[i]);
+
+			if(objects.access(hash))
 			{
-				ERRORF("can't load \"%s/%s.cfg\" - invalid index or file name; skipping", dir, files[i]);
+				WARNINGF("Duplicate instance: \"%s/%s.cfg\" - ignoring", dir, files[i]);
 				continue;
 			}
+
 			if(DEBUG_WORLD)
-				DEBUGF("idx = %i, vector has %i; expanding if necessary", idx, objects.length());
-			while(!objects.inrange(idx)) objects.add(NULL);
+				DEBUGF("registering hash %s from \"%s/%s.cfg\"", hash, dir, files[i]);
 
-			if(objects[idx])
-			{
-				ERRORF("object with index %i already defined in %s; skipping", idx, dir);
-				continue;
-			}
-
-			objects[idx] = var = new T();
-
+			var = &objects[hash];
+			var->key = hash;
 			formatstring(file)("%s/%s.cfg", dir, files[i]);
-			if(DEBUG_WORLD) DEBUGF("executing %s for index %i", file, idx);
 			execfile(file);
 		}
+
 		files.deletearrays();
 		var = NULL;
+	}
 
-		loopv(objects)
+	template<class T>
+	static inline void loadassets_2pass(const char *dir, T *&var, hashset<T> &objects)
+	{
+		objects.clear();
+		vector<char *> files;
+		string file;
+
+		listfiles(dir, "cfg", files);
+		loopv(files)
 		{
-			if(!objects[i])
+			const char *hash = queryhashpool(files[i]);
+
+			if(objects.access(hash))
 			{
-				ERRORF("index %i not defined in %s; problems WILL occur if referenced.", i, dir);
-				abort = true;
+				WARNINGF("Duplicate instance: \"%s/%s.cfg\" - ignoring", dir, files[i]);
+				delete[] files.remove(i--);
+				continue;
 			}
+
+			if(DEBUG_WORLD)
+				DEBUGF("registering hash: %s", hash);
+
+			objects[hash].key = hash;
 		}
+
+		loopv(files)
+		{
+			//the item is already registered...
+			const char *hash = files[i];
+			var = &objects[hash];
+			formatstring(file)("%s/%s.cfg", dir, files[i]);
+
+			if(DEBUG_WORLD)
+				DEBUGF("initialising hash %s from \"%s\"", hash, file);
+
+			execfile(file);
+		}
+
+		files.deletearrays();
+		var = NULL;
 	}
 
 	void loadassets(const char *dir, bool definitions = false)
@@ -261,8 +331,10 @@ namespace game
 
 		if(!definitions)
 		{
+			if(DEBUG_WORLD) DEBUGF("loading variables");
 			formatstring(pth)("%s/variables.cfg", dir);
 			execfile(pth);
+			if(DEBUG_WORLD) DEBUGF("loading tips");
 			formatstring(pth)("%s/tips.cfg", dir);
 			execfile(pth);
 		}
@@ -278,37 +350,62 @@ namespace game
 			abort = true; \
 		}
 
+		if(DEBUG_WORLD) DEBUGF("loading categories");
 		categories.deletearrays();
 		formatstring(pth)("%s/categories.cfg", dir);
 		execfile(pth);
 		RANGECHECK(categories);
+
+		if(DEBUG_WORLD) DEBUGF("loading merchants");
 		formatstring(pth)("%s/merchants", dir);
 		loadassets(pth, loadingmerchant, merchants);
+
+		if(DEBUG_WORLD) DEBUGF("loading scripts");
 		formatstring(pth)("%s/scripts", dir);
 		loadassets(pth, loadingscript, scripts);
 		RANGECHECK(scripts);
+
+		if(DEBUG_WORLD) DEBUGF("loading particle effects");
 		formatstring(pth)("%s/effects", dir);
 		loadassets(pth, loadingeffect, effects);
+
+		if(DEBUG_WORLD) DEBUGF("loading statuses");
 		formatstring(pth)("%s/statuses", dir);
 		loadassets(pth, loadingstatusgroup, statuses);
+
+		if(DEBUG_WORLD) DEBUGF("loading ammotypes");
 		formatstring(pth)("%s/ammo", dir);
 		loadassets(pth, loadingammotype, ammotypes);
+
+		if(DEBUG_WORLD) DEBUGF("loading factions");
 		formatstring(pth)("%s/factions", dir);
-		loadassets(pth, loadingfaction, factions);
+		loadassets_2pass(pth, loadingfaction, factions);
 		RANGECHECK(factions);
+
+		if(DEBUG_WORLD) DEBUGF("loading mapscripts");
 		formatstring(pth)("%s/mapscripts", dir);
 		loadassets(pth, loadingmapscript, mapscripts);
 		RANGECHECK(mapscripts);
+
+		if(DEBUG_WORLD) DEBUGF("loading recipes");
 		formatstring(pth)("%s/recipes", dir);
 		loadassets(pth, loadingrecipe, recipes);
 
+		reserved::load();
 
 		if(!definitions)
 		{
+			if(DEBUG_WORLD) DEBUGF("loading player");
 			loadingrpgchar = player1;
 			formatstring(pth)("%s/player.cfg", dir);
 			execfile(pth);
 			loadingrpgchar = NULL;
+
+			if(!player1->validate())
+			{
+				ERRORF("Player definition bad, aborting!");
+				abort = true;
+			}
 		}
 		forceverbose--;
 	}
@@ -325,10 +422,10 @@ namespace game
 		}
 	)
 
-	void newgame(const char *game, bool restore)
+	bool newgame(const char *game, bool restore)
 	{
 		static bool nonewgame = false;
-		if(nonewgame) return;
+		if(nonewgame) return false;
 		forceverbose++;
 
 		if(!connected)
@@ -360,7 +457,7 @@ namespace game
 			ERRORF("Critical errors were encountered while initialising the game; aborting");
 			abort = false; localdisconnect();
 			forceverbose--;
-			return;
+			return false;
 		}
 		emptymap(0, true, NULL, false);
 		concatstring(dir, ".cfg");
@@ -370,13 +467,14 @@ namespace game
 			DEBUGF("Loaded game properties");
 
 		player1->resetmdl();
-		if(restore) { forceverbose--; return; }
+		if(restore) { forceverbose--; return true; }
 
 		player1->health = player1->base.getmaxhp();
 		player1->mana = player1->base.getmaxmp();
 		player1->getsignal("spawn", false);
 
 		forceverbose--;
+		return true;
 	}
 	ICOMMAND(newgame, "s", (const char *s), newgame(s));
 
@@ -502,14 +600,20 @@ namespace game
 		{
 			enumerate(*mapdata, mapinfo, info,
 				DEBUGF("map %s", info.name);
-				DEBUGF("map objects %i", info.objs.length());
+				DEBUGF("script %s", info.script);
+				DEBUGF("flags %i", info.flags);
 				DEBUGF("loaded %i", info.loaded);
+				DEBUGF("map objects %i", info.objs.length());
 				DEBUGF("deferred actions %i", info.loadactions.length());
 			);
 		}
 
 		if(tips.inrange(lasttip))
 			conoutf("\f2%s", tips[lasttip]);
+
+		if(!mapscripts.access(curmap->script))
+			WARNINGF("Map %s uses a non-existent mapscript (%s) - \fs\f3this will inhibit save games until fixed!!\fr", curmap->name, curmap->script);
+
 		forceverbose--;
 	}
 
@@ -862,10 +966,24 @@ namespace game
 	const char *autoexec()		{return "autoexec.cfg";}
 	const char *savedservers()	{return NULL;}
 
-	void writegamedata(vector<char> &extras) {}
-	void readgamedata (vector<char> &extras) {}
+	void writegamedata(vector<uchar> &extras)
+	{
+		extras.pad(sizeof(int));
+		ucharbuf buf(extras.getbuf(), extras.length());
+
+		putint(buf, MAPGAMEVERSION);
+	}
+	void readgamedata (vector<uchar> &extras)
+	{
+		mapgameversion = 1;
+		if(!extras.length()) return;
+
+		ucharbuf buf(extras.getbuf(), extras.length());
+		mapgameversion = getint(buf);
+	}
 
 	void loadconfigs() {}
 	bool detachcamera() { return player1->state == CS_DEAD; }
+
 	void toserver(char *text) { execute(text); } //since we don't talk, just execute if the / is forgotten
 }

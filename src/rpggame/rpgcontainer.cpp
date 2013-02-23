@@ -36,11 +36,13 @@ item *rpgcontainer::additem(item *it)
 	return newit;
 }
 
-item *rpgcontainer::additem(int base, int q)
+item *rpgcontainer::additem(const char *base, int q)
 {
 	item it;
 	it.init(base);
 	it.quantity = q;
+
+	if(!it.validate()) return NULL;
 	return additem(&it);
 }
 
@@ -67,8 +69,11 @@ int rpgcontainer::drop(item *it, int q, bool spawn)
 	return rem;
 }
 
-int rpgcontainer::drop(int base, int q, bool spawn)
+int rpgcontainer::drop(const char *base, int q, bool spawn)
 {
+	base = game::hashpool.find(base, NULL);
+	if(!base) return 0;
+
 	vector<item *> &inv = inventory.access(base, vector<item *>());
 	int rem = 0;
 
@@ -78,8 +83,11 @@ int rpgcontainer::drop(int base, int q, bool spawn)
 	return rem;
 }
 
-int rpgcontainer::getitemcount(int base)
+int rpgcontainer::getitemcount(const char *base)
 {
+	base = game::hashpool.find(base, NULL);
+	if(!base) return 0;
+
 	vector<item *> &inv = inventory.access(base, vector<item *>());
 
 	int count = 0;
@@ -113,27 +121,38 @@ void rpgcontainer::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, f
 {
 	loopv(weapon->effects)
 	{
-		if(!game::statuses.inrange(weapon->effects[i]->status)) continue;
 		seffects.add(new victimeffect(attacker, weapon->effects[i], weapon->chargeflags, mul));
 	}
 
 	if(ammo) loopv(ammo->effects)
 	{
-		if(!game::statuses.inrange(ammo->effects[i]->status)) continue;
 		seffects.add(new victimeffect(attacker, ammo->effects[i], weapon->chargeflags, mul));
 	}
 
 	getsignal("hit", false, attacker);
 }
 
-void rpgcontainer::init(int base)
+void rpgcontainer::init(const char *base)
 {
 	game::loadingrpgcontainer = this;
 	rpgscript::config->setref(this, true);
 
-	defformatstring(file)("%s/%i.cfg", game::datapath("containers"), base);
+	defformatstring(file)("%s/%s.cfg", game::datapath("containers"), base);
 	execfile(file);
 
 	game::loadingrpgcontainer = NULL;
 	rpgscript::config->setnull(true);
+}
+
+bool rpgcontainer::validate()
+{
+	if(!game::scripts.access(script))
+	{
+		ERRORF("Container %p uses invalid script: %s - trying fallback", this, script);
+		script = DEFAULTSCR;
+
+		if(!game::scripts.access(script)) return false;
+	}
+
+	return true;
 }

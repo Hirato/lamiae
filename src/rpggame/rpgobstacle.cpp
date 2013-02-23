@@ -22,13 +22,11 @@ void rpgobstacle::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, fl
 {
 	loopv(weapon->effects)
 	{
-		if(!game::statuses.inrange(weapon->effects[i]->status)) continue;
 		seffects.add(new victimeffect(attacker, weapon->effects[i], weapon->chargeflags, mul));
 	}
 
 	if(ammo) loopv(ammo->effects)
 	{
-		if(!game::statuses.inrange(ammo->effects[i]->status)) continue;
 		seffects.add(new victimeffect(attacker, ammo->effects[i], weapon->chargeflags, mul));
 	}
 
@@ -37,14 +35,27 @@ void rpgobstacle::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, fl
 	getsignal("hit", false, attacker);
 }
 
-void rpgobstacle::init(int base)
+void rpgobstacle::init(const char *base)
 {
 	game::loadingrpgobstacle = this;
 	rpgscript::config->setref(this, true);
 
-	defformatstring(file)("%s/%i.cfg", game::datapath("obstacles"), base);
+	defformatstring(file)("%s/%s.cfg", game::datapath("obstacles"), base);
 	execfile(file);
 
 	game::loadingrpgobstacle = NULL;
 	rpgscript::config->setnull(true);
+}
+
+bool rpgobstacle::validate()
+{
+	if(!game::scripts.access(script))
+	{
+		ERRORF("Obstacle %p uses invalid script: %s - trying fallback", this, script);
+		script = DEFAULTSCR;
+
+		if(!game::scripts.access(script)) return false;
+	}
+
+	return true;
 }

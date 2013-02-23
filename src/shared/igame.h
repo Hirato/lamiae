@@ -71,8 +71,8 @@ namespace game
     extern int numdynents();
     extern void rendergame();
     extern void renderavatar();
-    extern void writegamedata(vector<char> &extras);
-    extern void readgamedata(vector<char> &extras);
+    extern void writegamedata(vector<uchar> &extras);
+    extern void readgamedata(vector<uchar> &extras);
     extern int clipconsole(int w, int h);
     extern const char *defaultcrosshair(int index);
     extern int selectcrosshair(float &r, float &g, float &b);

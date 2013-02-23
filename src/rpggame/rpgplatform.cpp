@@ -66,27 +66,38 @@ void rpgplatform::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, fl
 {
 	loopv(weapon->effects)
 	{
-		if(!game::statuses.inrange(weapon->effects[i]->status)) continue;
 		seffects.add(new victimeffect(attacker, weapon->effects[i], weapon->chargeflags, mul));
 	}
 
 	if(ammo) loopv(ammo->effects)
 	{
-		if(!game::statuses.inrange(ammo->effects[i]->status)) continue;
 		seffects.add(new victimeffect(attacker, ammo->effects[i], weapon->chargeflags, mul));
 	}
 
 	getsignal("hit", false, attacker);
 }
 
-void rpgplatform::init(int base)
+void rpgplatform::init(const char *base)
 {
 	game::loadingrpgplatform = this;
 	rpgscript::config->setref(this, true);
 
-	defformatstring(file)("%s/%i.cfg", game::datapath("platforms"), base);
+	defformatstring(file)("%s/%s.cfg", game::datapath("platforms"), base);
 	execfile(file);
 
 	game::loadingrpgplatform = NULL;
 	rpgscript::config->setnull(true);
+}
+
+bool rpgplatform::validate()
+{
+	if(!game::scripts.access(script))
+	{
+		ERRORF("Platform %p uses invalid script: %s - trying fallback", this, script);
+		script = DEFAULTSCR;
+
+		if(!game::scripts.access(script)) return false;
+	}
+
+	return true;
 }

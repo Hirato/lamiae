@@ -33,20 +33,20 @@ const char *rpgitem::getname() const
 	return "";
 }
 
-int rpgitem::getscript()
+const char *rpgitem::getscript() const
 {
 	return script;
 }
 
-void item::init(int base, bool world)
+void item::init(const char *base, bool world)
 {
 	if(world) rpgscript::config->setref( (rpgitem *) this, true);
 	else rpgscript::config->setref(this, true);
 
-	this->base = base;
+	this->base = game::queryhashpool(base);
 	game::loadingitem = this;
 
-	defformatstring(file)("%s/%i.cfg", game::datapath("items"), base);
+	defformatstring(file)("%s/%s.cfg", game::datapath("items"), base);
 	execfile(file);
 
 	game::loadingitem = NULL;
@@ -55,14 +55,44 @@ void item::init(int base, bool world)
 	rpgscript::config->setnull(true);
 }
 
-void rpgitem::init(int base)
+void rpgitem::init(const char *base)
 {
 	item::init(base, true);
 }
 
-item *rpgitem::additem(int base, int q)
+bool item::validate()
 {
-	if(base != base) return NULL;
+	if(!game::scripts.access(script))
+	{
+		ERRORF("Item %p uses invalid script: %s - trying fallback", this, script);
+		script = DEFAULTSCR;
+
+		if(!game::scripts.access(script)) return false;
+	}
+
+	loopv(uses)
+	{
+		if(!game::scripts.access(uses[i]->script))
+		{
+			ERRORF("Item[%p]->uses[%i] uses invalid script: %s - trying fallback", this, i, uses[i]->script);
+			uses[i]->script = DEFAULTSCR;
+
+			if(!game::scripts.access(uses[i]->script)) return false;
+		}
+	}
+
+	return true;
+}
+
+bool rpgitem::validate()
+{
+	return item::validate();
+}
+
+item *rpgitem::additem(const char *base, int q)
+{
+	base = game::hashpool.find(base, NULL);
+	if(this->base != base) return NULL;
 
 	quantity += q;
 	return this;
@@ -77,11 +107,11 @@ item *rpgitem::additem(item *it) {
 	return NULL;
 }
 
-int rpgitem::getitemcount(int i)
+int rpgitem::getitemcount(const char *base)
 {
-	if(i == base)
-		return quantity;
-	return 0;
+	base = game::hashpool.find(base, NULL);
+
+	return this->base == base ? quantity : 0;
 }
 
 int rpgitem::getcount(item *it)
@@ -100,13 +130,11 @@ void rpgitem::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float 
 {
 	loopv(weapon->effects)
 	{
-		if(!game::statuses.inrange(weapon->effects[i]->status)) continue;
 		seffects.add(new victimeffect(attacker, weapon->effects[i], weapon->chargeflags, mul));
 	}
 
 	if(ammo) loopv(ammo->effects)
 	{
-		if(!game::statuses.inrange(ammo->effects[i]->status)) continue;
 		seffects.add(new victimeffect(attacker, ammo->effects[i], weapon->chargeflags, mul));
 	}
 
