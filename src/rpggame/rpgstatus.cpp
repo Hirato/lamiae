@@ -83,41 +83,35 @@ extern int projallowflare;
 
 void areaeffect::render()
 {
-	effect *e = NULL;
-	if(fx) e = game::effects.access(fx);
+	if(!fx) return;
 
-	if(!e) return;
-
-	switch(e->particle)
+	switch(fx->particle)
 	{
 		default:
 			if((lastmillis - lastemit) >= emitmillis)
 			{
-				e->drawsphere(o, radius, 2, effect::DEATH_PROLONG, lastmillis - lastemit);
+				fx->drawsphere(o, radius, 2, effect::DEATH_PROLONG, lastmillis - lastemit);
 				lastemit = lastmillis;
 			}
 			break;
 
 		case PART_EXPLOSION:
 		case PART_EXPLOSION_BLUE:
-			e->drawsphere(o, radius, 1, effect::DEATH_PROLONG, 0);
+			fx->drawsphere(o, radius, 1, effect::DEATH_PROLONG, 0);
 			break;
 	}
-	if(projallowflare && e->flags & (FX_FLARE | FX_FIXEDFLARE))
+	if(projallowflare && fx->flags & (FX_FLARE | FX_FIXEDFLARE))
 	{
-		vec col = vec(e->lightcol).mul(256);
-		bool fixed = e->flags & FX_FIXEDFLARE;
-		regularlensflare(o, col.x, col.y, col.z, fixed, false, e->lightradius * (fixed ? 1.f : 7.5f));
+		vec col = vec(fx->lightcol).mul(256);
+		bool fixed = fx->flags & FX_FIXEDFLARE;
+		regularlensflare(o, col.x, col.y, col.z, fixed, false, fx->lightradius * (fixed ? 1.f : 7.5f));
 	}
 }
 
 void areaeffect::dynlight()
 {
-	effect *e = NULL;
-	if(fx) e = game::effects.access(fx);
-
-	if(!e || !(e->flags & FX_DYNLIGHT)) return;
-	adddynlight(o, e->lightradius, e->lightcol);
+	if(!fx || !(fx->flags & FX_DYNLIGHT)) return;
+	adddynlight(o, fx->lightradius, fx->lightcol);
 }
 
 void status_generic::update(rpgent *victim, rpgent *owner, int resist, int thresh, float mul, float extra)

@@ -1067,7 +1067,7 @@ namespace rpgio
 		loopk(numprojs)
 		{
 			CHECKEOF(*f, loading)
-			projectile *p = new projectile();
+			projectile *p = loading->projs.add(new projectile());
 
 			p->owner = (rpgchar *) entfromnum(f->getlil<int>());
 			if(p->owner && p->owner->type() != ENT_CHAR)
@@ -1100,34 +1100,37 @@ namespace rpgio
 			p->time = f->getlil<int>();
 			p->dist = f->getlil<int>();
 
-			READHASH(p->projfx)
-			READHASH(p->trailfx)
-			READHASH(p->deathfx)
-			if(p->projfx) VALIDHASH(p->projfx, game::effects, loading);
-			if(p->trailfx) VALIDHASH(p->trailfx, game::effects, loading);
-			if(p->deathfx) VALIDHASH(p->deathfx, game::effects, loading);
+			const char *pfx = NULL, *tfx = NULL, *dfx = NULL;
+
+			READHASH(pfx)
+			READHASH(tfx)
+			READHASH(dfx)
+
+			if(pfx) { p->projfx = game::effects.access(pfx); NOTNULL(p->projfx, loading); }
+			if(tfx) { p->trailfx = game::effects.access(tfx); NOTNULL(p->trailfx, loading); }
+			if(dfx) { p->deathfx = game::effects.access(dfx); NOTNULL(p->deathfx, loading); }
 
 			p->radius = f->getlil<int>();
 			p->elasticity = f->getlil<float>();
 			p->charge = f->getlil<float>();
 			p->chargeflags = f->getlil<int>();
-
-			loading->projs.add(p);
 		}
 
 		loopi(numaeffects)
 		{
 			CHECKEOF(*f, loading)
-			areaeffect *aeff = new areaeffect();
-			loading->aeffects.add(aeff);
+
+			areaeffect *aeff = loading->aeffects.add(new areaeffect());
 
 			aeff->owner = entfromnum(f->getlil<int>());
 			readvec(aeff->o);
 			aeff->lastemit = 0; //should emit immediately
 			READHASH(aeff->group)
 			VALIDHASH(aeff->group, game::statuses, loading)
-			READHASH(aeff->fx)
-			if(aeff->fx) VALIDHASH(aeff->fx, game::effects, loading)
+
+			const char *fx;
+			READHASH(fx)
+			if(fx) { aeff->fx = game::effects.access(fx); NOTNULL(aeff->fx, loading); }
 
 			aeff->elem = f->getlil<int>();
 			aeff->radius = f->getlil<int>();
@@ -1284,9 +1287,9 @@ namespace rpgio
 			f->putlil(p->time);
 			f->putlil(p->dist);
 
-			writestring(f, p->projfx);
-			writestring(f, p->trailfx);
-			writestring(f, p->deathfx);
+			writestring(f, p->projfx ? p->projfx->key : NULL);
+			writestring(f, p->trailfx ? p->trailfx->key : NULL);
+			writestring(f, p->deathfx ? p->deathfx->key : NULL);
 
 			f->putlil(p->radius);
 
@@ -1302,7 +1305,7 @@ namespace rpgio
 			f->putlil(enttonum(aeff->owner));
 			writevec(aeff->o);
 			writestring(f, aeff->group);
-			writestring(f, aeff->fx);
+			writestring(f, aeff->fx ? aeff->fx->key : NULL);
 			f->putlil(aeff->elem);
 			f->putlil(aeff->radius);
 

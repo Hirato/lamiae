@@ -42,9 +42,13 @@ void projectile::init(rpgchar *d, equipment *w, equipment *a, int fuzzy, float m
 		item = *w;
 		use_weapon *wep = (use_weapon *) w->it->uses[w->use];
 
-		projfx = wep->projeffect;
-		trailfx = wep->traileffect;
-		deathfx = wep->deatheffect;
+		if(wep->projeffect)
+			projfx = game::effects.access(wep->projeffect);
+		if(wep->traileffect)
+			trailfx = game::effects.access(wep->traileffect);
+		if(wep->deatheffect)
+			deathfx = game::effects.access(wep->deatheffect);
+
 		dist = wep->range;
 		time = wep->lifetime;
 		pflags = wep->pflags;
@@ -55,7 +59,7 @@ void projectile::init(rpgchar *d, equipment *w, equipment *a, int fuzzy, float m
 		chargeflags = wep->chargeflags;
 
 		if(DEBUG_PROJ)
-			DEBUGF("weapon was provided... fx: %s; %s; %s dist: %i time: %i pflags: %i elasticity %f radius: %i speed %f gravity: %i", projfx, trailfx, deathfx, dist, time, pflags, elasticity, radius, dir.magnitude(), gravity);
+			DEBUGF("weapon was provided... fx: %s; %s; %s dist: %i time: %i pflags: %i elasticity %f radius: %i speed %f gravity: %i", wep->projeffect, wep->traileffect, wep->deatheffect, dist, time, pflags, elasticity, radius, dir.magnitude(), gravity);
 	}
 	if(a)
 	{
@@ -64,11 +68,12 @@ void projectile::init(rpgchar *d, equipment *w, equipment *a, int fuzzy, float m
 
 		 //visuals take precedence - if they have them
 		if(wep->projeffect)
-			projfx = wep->projeffect;
+			projfx = game::effects.access(wep->projeffect);
 		if(wep->traileffect)
-			trailfx = wep->traileffect;
+			trailfx = game::effects.access(wep->traileffect);
 		if(wep->deatheffect)
-			deathfx = wep->deatheffect;
+			deathfx = game::effects.access(wep->deatheffect);
+
 		dist += wep->range;
 		time += wep->lifetime;
 		pflags |= wep->pflags;
@@ -79,7 +84,7 @@ void projectile::init(rpgchar *d, equipment *w, equipment *a, int fuzzy, float m
 		chargeflags |= wep->chargeflags;
 
 		if(DEBUG_PROJ)
-			DEBUGF("ammo was provided... fx: %s; %s; %s dist: %i time: %i pflags: %i elasticity %f radius: %i speed: %f gravity: %i", projfx, trailfx, deathfx, dist, time, pflags, elasticity, radius, dir.magnitude(), gravity);
+			DEBUGF("ammo was provided... fx: %s; %s; %s dist: %i time: %i pflags: %i elasticity %f radius: %i speed: %f gravity: %i", wep->projeffect, wep->traileffect, wep->deatheffect, dist, time, pflags, elasticity, radius, dir.magnitude(), gravity);
 	}
 	radius = max(1, radius);
 	dir.mul(speed);
@@ -303,7 +308,8 @@ bool projectile::update()
 					aeff->o = o;
 					aeff->radius = radius;
 
-					aeff->fx = wep->deatheffect;
+					if(wep->deatheffect)
+						aeff->fx = game::effects.access(wep->deatheffect);
 					aeff->group = wep->effects[i]->status;
 					aeff->elem = sg->friendly ? ATTACK_NONE : wep->effects[i]->element;
 
@@ -328,7 +334,8 @@ bool projectile::update()
 					aeff->o = o;
 					aeff->radius = radius;
 
-					aeff->fx = amm->deatheffect;
+					if(amm->deatheffect)
+						aeff->fx = game::effects.access(amm->deatheffect);
 					aeff->group = amm->effects[i]->status;
 					aeff->elem = sg->friendly ? ATTACK_NONE : amm->effects[i]->element;
 
@@ -402,70 +409,57 @@ VARP(projallowflare, 0, 1, 1);
 
 void projectile::render()
 {
-	effect *pfx = NULL,
-	       *tfx = NULL;
-
-	if(projfx) pfx = game::effects.access(projfx);
-	if(trailfx) tfx = game::effects.access(trailfx);
-
-	if(pfx)
+	if(projfx)
 	{
-		if(pfx->mdl)
+		if(projfx->mdl)
 		{
 			float yaw, pitch, roll;
 			vectoyawpitch(dir, yaw, pitch);
 			roll = 0;
 
-			if(!pfx->spin.iszero())
+			if(!projfx->spin.iszero())
 			{
-				if(pfx->spin.x) yaw += pfx->spin.x * lastmillis / 50;
-				if(pfx->spin.y) pitch += pfx->spin.y * lastmillis / 50;
-				if(pfx->spin.z) roll += pfx->spin.z * lastmillis / 50;
+				if(projfx->spin.x) yaw += projfx->spin.x * lastmillis / 50;
+				if(projfx->spin.y) pitch += projfx->spin.y * lastmillis / 50;
+				if(projfx->spin.z) roll += projfx->spin.z * lastmillis / 50;
 			}
 
-			rendermodel(pfx->mdl, ANIM_MAPMODEL|ANIM_LOOP, o, yaw + 90, pitch, roll, 0);
+			rendermodel(projfx->mdl, ANIM_MAPMODEL|ANIM_LOOP, o, yaw + 90, pitch, roll, 0);
 		}
 		else
 		{
-			pfx->drawsplash(o, dir, 0, charge, effect::PROJ, 0);
-			if(projallowflare && pfx->flags & (FX_FIXEDFLARE|FX_FLARE))
+			projfx->drawsplash(o, dir, 0, charge, effect::PROJ, 0);
+			if(projallowflare && projfx->flags & (FX_FIXEDFLARE|FX_FLARE))
 			{
-				vec col = vec(pfx->lightcol).mul(256);
-				bool fixed = pfx->flags & FX_FIXEDFLARE;
-				regularlensflare(o, col.x, col.y, col.z, fixed, false, pfx->lightradius * (fixed ? .5f : 5.0f));
+				vec col = vec(projfx->lightcol).mul(256);
+				bool fixed = projfx->flags & FX_FIXEDFLARE;
+				regularlensflare(o, col.x, col.y, col.z, fixed, false, projfx->lightradius * (fixed ? .5f : 5.0f));
 			}
 		}
 	}
-	if(!(pflags&P_STATIONARY) && tfx &&
-		tfx->drawline(emitpos, o, 1, effect::TRAIL, lastmillis - lastemit))
+	if(!(pflags&P_STATIONARY) && trailfx &&
+		trailfx->drawline(emitpos, o, 1, effect::TRAIL, lastmillis - lastemit))
 		lastemit = lastmillis;
 }
 
 void projectile::drawdeath()
 {
-	effect *dfx = NULL;
-	if(deathfx) dfx = game::effects.access(deathfx);
-
-	if(dfx)
-		dfx->drawsphere(o, radius, 1, effect::DEATH, 0);
+	if(deathfx)
+		deathfx->drawsphere(o, radius, 1, effect::DEATH, 0);
 }
 
 void projectile::dynlight()
 {
 	if(deleted)
 	{
-		effect *dfx = NULL;
-		if(deathfx) dfx = game::effects.access(deathfx);
-		if(!dfx || !(dfx->flags & FX_DYNLIGHT)) return;
+		if(!deathfx || !(deathfx->flags & FX_DYNLIGHT)) return;
 
-		adddynlight(o, dfx->lightradius, dfx->lightcol, dfx->lightfade, dfx->lightfade / 2, dfx->lightflags, dfx->lightinitradius, dfx->lightinitcol);
+		adddynlight(o, deathfx->lightradius, deathfx->lightcol, deathfx->lightfade, deathfx->lightfade / 2, deathfx->lightflags, deathfx->lightinitradius, deathfx->lightinitcol);
 	}
 	else
 	{
-		effect *pfx = NULL;
-		if(projfx) pfx = game::effects.access(projfx);
-		if(!pfx || !(pfx->flags & FX_DYNLIGHT)) return;
+		if(!projfx || !(projfx->flags & FX_DYNLIGHT)) return;
 
-		adddynlight(o, pfx->lightradius, pfx->lightcol);
+		adddynlight(o, projfx->lightradius, projfx->lightcol);
 	}
 }

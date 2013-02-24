@@ -42,10 +42,10 @@ namespace test
 			0.01 + rnd(flags & FLAG_FAST ? 10000 : 1000) / 100.0f
 		);
 
-		vector<const char *> efx;
+		vector<effect *> efx;
 		efx.add(NULL);
 		enumerate(effects, effect, entry,
-			efx.add(entry.key)
+			efx.add(&entry)
 		)
 
 		p->projfx = efx[rnd(efx.length())];
@@ -56,6 +56,7 @@ namespace test
 		p->time = 200 + rnd(9800);
 		p->elasticity = rnd(101) / 100.0f;
 		p->radius = 32;
+
 
 		if(flags & FLAG_FLAGS)
 			p->pflags = rnd(128);
@@ -78,7 +79,11 @@ namespace test
 			concatstring(pflags, flagnames[i]);
 		}
 
-		conoutf("fx: %s; %s; %s\tgravity: %4i\tspeed: %6.2f\tflags: %3i (%s)\ttime: %4i\tdist: %4i\telasticity: %1.2f", p->projfx, p->trailfx, p->deathfx, p->gravity, p->dir.magnitude(), p->pflags, pflags, p->time, p->dist, p->elasticity);
+		const char *pfx = p->projfx ? p->projfx->key : NULL,
+			*tfx = p->trailfx ? p->trailfx->key : NULL,
+			*dfx = p->deathfx ? p->deathfx->key : NULL;
+
+		conoutf("fx: %s; %s; %s\tgravity: %4i\tspeed: %6.2f\tflags: %3i (%s)\ttime: %4i\tdist: %4i\telasticity: %1.2f", pfx, tfx, dfx, p->gravity, p->dir.magnitude(), p->pflags, pflags, p->time, p->dist, p->elasticity);
 
 		curmap->projs.add(p);
 	}
@@ -124,10 +129,10 @@ namespace test
 		}
 		st = queryhashpool(st);
 
-		vector<const char *> efx;
+		vector<effect *> efx;
 		efx.add(NULL);
 		enumerate(effects, effect, entry,
-			efx.add(entry.key)
+			efx.add(&entry)
 		)
 
 		areaeffect *aeff = curmap->aeffects.add(new areaeffect());

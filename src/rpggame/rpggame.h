@@ -580,7 +580,7 @@ struct projectile
 	vector<rpgent *> hits; //used for P_PERSIST - only hits an ent once
 
 	int pflags, time, dist;
-	const char *projfx, *trailfx, *deathfx;
+	effect *projfx, *trailfx, *deathfx;
 	int radius;
 	float elasticity;
 
@@ -719,7 +719,8 @@ struct areaeffect
 {
 	rpgent *owner;
 	vec o;
-	const char *group, *fx;
+	const char *group;
+	effect *fx;
 	int lastemit, elem, radius;
 
 	vector<status *> effects;
