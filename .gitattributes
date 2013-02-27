@@ -3,3 +3,4 @@
 *.rc		eol=crlf
 *.manifest	eol=crlf
 *.dsp		eol=crlf
+

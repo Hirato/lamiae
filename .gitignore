@@ -9,6 +9,9 @@
 *.bak
 *~
 
+# and generated files
+src/windows/lamiae.depend
+
 # some misc text formats
 *.diff
 *.patch

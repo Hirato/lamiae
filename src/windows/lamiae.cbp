@@ -194,6 +194,7 @@
 		<Unit filename="../rpggame/rpgplatform.cpp" />
 		<Unit filename="../rpggame/rpgproj.cpp" />
 		<Unit filename="../rpggame/rpgrender.cpp" />
+		<Unit filename="../rpggame/rpgreserved.cpp" />
 		<Unit filename="../rpggame/rpgscript.cpp" />
 		<Unit filename="../rpggame/rpgstats.cpp" />
 		<Unit filename="../rpggame/rpgstatus.cpp" />
