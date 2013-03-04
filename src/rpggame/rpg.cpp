@@ -6,7 +6,8 @@ namespace game
 	VARP(debug, 0, 0, DEBUG_MAX);
 	VAR(forceverbose, 1, 0, -1);
 
-	hashset<const char *> hashpool(1 << 12);
+	bool initedhashpool = false;
+	hashset<const char *> *hashpool = NULL;
 
 	// GAME DEFINITIONS
 	hashset<script> scripts;       ///scripts, includes dialogue
@@ -33,12 +34,18 @@ namespace game
 
 	const char *queryhashpool(const char *str)
 	{
-		const char **ret = hashpool.access(str);
+		if(!initedhashpool)
+		{
+			initedhashpool = true;
+			hashpool = new hashset<const char *>(1 << 12);
+		}
+
+		const char **ret = hashpool->access(str);
 		if(ret) return *ret;
 		if(DEBUG_WORLD)
-			DEBUGF("Registered [ %s ] in hashpool; %i entries", str, hashpool.length() + 1);
+			DEBUGF("Registered [ %s ] in hashpool; %i entries", str, hashpool->length() + 1);
 		str = newstring(str);
-		return hashpool.access(str, str);
+		return hashpool->access(str, str);
 	}
 
 	//important variables/configuration
@@ -239,9 +246,9 @@ namespace game
 		rpgscript::clean();
 
 		if(DEBUG_WORLD)
-			DEBUGF("Clearing hashpool of %i entries", hashpool.length());
-		enumerate(hashpool, const char *, str, delete[] str;)
-		hashpool.clear();
+			DEBUGF("Clearing hashpool of %i entries", hashpool->length());
+		enumerate(*hashpool, const char *, str, delete[] str;)
+		hashpool->clear();
 
 		//We reset the player here so he has a clean slate on a new game.
 		player1->~rpgchar();
