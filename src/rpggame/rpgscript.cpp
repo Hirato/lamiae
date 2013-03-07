@@ -401,18 +401,11 @@ namespace rpgscript
 		loopvj(stack)
 		{
 			enumerate(*stack[j], reference, ref,
-				reference *newref = dst.access(ref.name);
-				if(!newref)
+				reference *newref = &dst[ref.name];
+				*newref = ref;
+				loopvk(newref->list)
 				{
-					const char *n = newstring(ref.name);
-					newref = &(*stack.last())[n];
-					newref->name = n;
-				}
-				newref->setnull();
-				loopvk(ref.list)
-				{
-					if(!temporary(ref, k))
-						newref->list.add(ref.list[k]);
+					if(temporary(*newref, k)) newref->list.remove(k--);
 				}
 			)
 		}
