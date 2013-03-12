@@ -2017,6 +2017,8 @@ namespace UI
 
             }
 
+            //note that modelpreview::start changes the clip area via preparegbuffer, we restore it here.
+            if(clipstack.length()) clipstack.last().scissor();
             modelpreview::end();
             glEnable(GL_BLEND);
             if(clipstack.length()) glEnable(GL_SCISSOR_TEST);
