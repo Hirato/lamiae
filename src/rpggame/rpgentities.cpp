@@ -137,13 +137,15 @@ namespace entities
 		{
 			rpgentity &e = *((rpgentity *) ents[i]);
 			const char *mdl = entmodel(e);
+			int anim = e.type == CRITTER ? ANIM_IDLE : ANIM_MAPMODEL,
+				yaw = e.attr[0] + (e.type == CRITTER ? 90 : 0);
 
 			if(mdl && entpreviewalpha)
 				rendermodel(
 					mdl,
-					(e.type == CRITTER ? ANIM_IDLE : ANIM_MAPMODEL)|ANIM_LOOP,
+					anim|ANIM_LOOP,
 					e.o,
-					e.attr[0] + 90, 0, 0,
+					yaw, 0, 0,
 					MDL_CULL_VFC | MDL_CULL_DIST | MDL_CULL_OCCLUDED,
 					NULL, NULL, 0, 0, 1
 				);

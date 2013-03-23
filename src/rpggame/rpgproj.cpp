@@ -415,6 +415,7 @@ void projectile::render()
 		{
 			float yaw, pitch, roll;
 			vectoyawpitch(dir, yaw, pitch);
+			yaw += 90;
 			roll = 0;
 
 			if(!projfx->spin.iszero())
@@ -424,7 +425,7 @@ void projectile::render()
 				if(projfx->spin.z) roll += projfx->spin.z * lastmillis / 50;
 			}
 
-			rendermodel(projfx->mdl, ANIM_MAPMODEL|ANIM_LOOP, o, yaw + 90, pitch, roll, 0);
+			rendermodel(projfx->mdl, ANIM_MAPMODEL|ANIM_LOOP, o, yaw, pitch, roll, 0);
 		}
 		else
 		{

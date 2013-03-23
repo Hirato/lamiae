@@ -2034,22 +2034,29 @@ namespace rpgscript
 			playsoundname(p);
 	)
 
-	ICOMMAND(r_journal_record, "ss", (const char *bucket, const char *entry),
-		journal *journ = game::journals.access(bucket);
-		if(!journ)
-		{
-			const char *name = newstring(bucket);
-			journ = &game::journals.access(name, journal());
-			journ->name = name;
-		}
+	ICOMMAND(r_journal_record, "ssb", (const char *bucket, const char *entry, int *status),
+		journal *journ = &game::journals[bucket];
+		if(!journ->name)
+			journ->name = game::queryhashpool(bucket);
+
 
 		game::hudline("Journal updated: %s", bucket);
 		journ->entries.add(newstring(entry));
+		if(*status >= 0)
+			journ->status = clamp<>(*status, int(JRN_ACCEPTED), int(JRN_MAX - 1));
 	)
 
-	static bool sortstring(const char *a, const char *b)
+	ICOMMAND(r_journal_getstatus, "s", (const char *bucket),
+		journal *journ = game::journals.access(bucket);
+		intret(journ ? journ->status : JRN_RUMOUR);
+	)
+
+	static inline bool sortjournal(journal *a, journal *b)
 	{
-		return strcmp(a, b) > 0;
+		//we want the status of the lowest value at the top.
+		if(a->status < b->status) return true;
+		if(a->status == b->status) return strcmp(a->name, b->name) > 0;
+		return false;
 	}
 
 	ICOMMAND(r_journal_loop_buckets, "re", (ident *id, const uint *body),
@@ -2057,17 +2064,17 @@ namespace rpgscript
 		identstack stack;
 		int n = 0;
 
-		vector<const char *> buckets;
+		vector<journal *> buckets;
 
 		enumerate(game::journals, journal, bucket,
-			buckets.add(bucket.name);
+			buckets.add(&bucket);
 		)
 
-		buckets.sort(sortstring);
+		buckets.sort(sortjournal);
 
 		loopv(buckets)
 		{
-			char *val = newstring(buckets[i]);
+			char *val = newstring(buckets[i]->name);
 			if(n++)
 			{
 				if(id->valtype == VAL_STR) delete[] id->val.s;

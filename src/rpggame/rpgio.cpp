@@ -1603,19 +1603,14 @@ namespace rpgio
 
 	void readjournal(stream *f)
 	{
-		const char *name = readstring(f);
-		journal *journ = game::journals.access(name);
-
-		if(journ)
-		{
+		const char *name = NULL;
+		READHASH(name);
+		journal *journ = &game::journals[name];
+		if(journ->name)
 			WARNINGF("additional instance of journal %s exists, merging", name);
-			delete[] name;
-		}
-		else
-		{
-			journ = &game::journals.access(name, journal());
-			journ->name = name;
-		}
+
+		journ->name = name;
+		journ->status = f->getlil<int>();
 
 		int entries = f->getlil<int>();
 		loopi(entries)
@@ -1625,6 +1620,7 @@ namespace rpgio
 	void writejournal(stream *f, journal *saving)
 	{
 		writestring(f, saving->name);
+		f->putlil(saving->status);
 		f->putlil(saving->entries.length());
 		loopv(saving->entries)
 			writestring(f, saving->entries[i]);

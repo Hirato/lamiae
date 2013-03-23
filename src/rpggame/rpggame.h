@@ -362,13 +362,24 @@ enum
 	ATTACK_MAX
 };
 
+enum
+{
+	JRN_ACCEPTED = 0,
+	JRN_RUMOUR,
+	JRN_MENTIONED,
+	JRN_COMPLETED,
+	JRN_BOTCHED,
+	JRN_MAX
+};
+
 struct journal
 {
 	const char *name;
+	int status;
 	vector<const char *> entries;
 
-	journal() : name(NULL) {}
-	~journal() { delete[] name; entries.deletearrays(); }
+	journal() : name(NULL), status(JRN_RUMOUR) {}
+	~journal() { entries.deletearrays(); }
 };
 
 static inline bool htcmp(const char *key, const journal &ref) { return !strcmp(key, ref.name); }
