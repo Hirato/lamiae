@@ -23,6 +23,7 @@ namespace entities
     extern bool radiusent(extentity &e);
     extern void renderhelpertext(extentity &e, int &colour, vec &pos, string &tmp);
     extern const char *entmodel(const entity &e);
+    extern float getentyaw(const entity &e);
     extern void animatemapmodel(const extentity &e, int &anim, int &basetime);
 }
 

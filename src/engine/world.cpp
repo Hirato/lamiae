@@ -462,29 +462,32 @@ void entrotate(int *cw)
     );
 }
 
+float getentyaw(const entity &e)
+{
+    switch(e.type)
+    {
+        case ET_MAPMODEL:
+        case ET_PLAYERSTART:
+            return e.attr[0];
+        default:
+            return entities::getentyaw(e);
+    }
+}
+
 void entselectionbox(const entity &e, vec &eo, vec &es)
 {
     model *m = NULL;
     const char *mname = entities::entmodel(e);
-    if(mname && (m = loadmodel(mname)))
+    if(mname) m = loadmodel(mname);
+    else if(e.type == ET_MAPMODEL) m = loadmodel(NULL, e.attr[1]);
+
+    if(m)
     {
         m->collisionbox(eo, es);
-        if(es.x > es.y) es.y = es.x; else es.x = es.y; // square
-        es.z = (es.z + eo.z + 1 + entselradius)/2; // enclose ent radius box and model box
-        eo.x += e.o.x;
-        eo.y += e.o.y;
-        eo.z = e.o.z - entselradius + es.z;
-    }
-    else if(e.type == ET_MAPMODEL && (m = loadmodel(NULL, e.attr[1])))
-    {
-        m->collisionbox(eo, es);
-        rotatebb(eo, es, e.attr[0]);
-#if 0
-        if(m->collide)
-            eo.z -= player->aboveeye; // wacky but true. see physics collide
-        else
-            es.div(2);  // cause the usual bb is too big...
-#endif
+        loopi(3) if(es.v[i] < entselradius)
+            es.v[i] = entselradius;
+
+        rotatebb(eo, es, getentyaw(e));
         eo.add(e.o);
     }
     else
@@ -492,6 +495,7 @@ void entselectionbox(const entity &e, vec &eo, vec &es)
         es = vec(entselradius);
         eo = e.o;
     }
+
     eo.sub(es);
     es.mul(2);
 }

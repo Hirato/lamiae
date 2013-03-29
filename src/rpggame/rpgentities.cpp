@@ -498,6 +498,29 @@ namespace entities
 		return e.id;
 	}
 
+	float getentyaw(const entity &e)
+	{
+		switch(e.type)
+		{
+			case TELEDEST:
+			case CHECKPOINT:
+			case SPAWN:
+			case CRITTER:
+			case OBSTACLE:
+			case CONTAINER:
+			case PLATFORM:
+			case TRIGGER:
+			case ITEM:
+				return e.attr[0];
+
+			case CAMERA:
+				return e.attr[1];
+
+			default:
+				return 0;
+		}
+	}
+
 	bool radiusent(extentity &e)
 	{
 		switch(e.type)
