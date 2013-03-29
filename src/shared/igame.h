@@ -7,6 +7,8 @@ namespace entities
     extern const char *entname(int i);
     extern const int numattrs(int type);
     extern int extraentinfosize();
+    extern void saveextrainfo(entity &e, char *buf);
+    extern void loadextrainfo(entity &e, char *buf);
     extern void writeent(entity &e, char *buf);
     extern void readent(entity &e, char *buf, int ver);
     extern float dropheight(entity &e);

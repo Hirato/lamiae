@@ -1007,7 +1007,15 @@ void newent(tagval *args, int num)
 }
 
 int entcopygrid;
-vector<entity> entcopybuf;
+struct entitycopy
+{
+    entity e;
+    vector<char> extra;
+
+    entitycopy(entity &e) : e(e) {}
+};
+
+vector<entitycopy> entcopybuf;
 
 void entcopy()
 {
@@ -1015,29 +1023,41 @@ void entcopy()
     entcopygrid = sel.grid;
     entcopybuf.shrink(0);
     loopv(entgroup)
-        entfocus(entgroup[i], entcopybuf.add(e).o.sub(sel.o.tovec()));
+        entfocus(entgroup[i],
+            entitycopy &ec = entcopybuf.add(entitycopy(e));
+            ec.e.o.sub(sel.o.tovec());
+            int sz = entities::extraentinfosize();
+            if(sz)
+            {
+                ec.extra.reserve(sz);
+                entities::saveextrainfo(e, ec.extra.getbuf());
+            }
+        );
 }
 
 void entpaste()
 {
-    if(noentedit()) return;
-    if(entcopybuf.length()==0) return;
+    if(noentedit() || !entcopybuf.length()) return;
+
     entcancel();
     float m = float(sel.grid)/float(entcopygrid);
     loopv(entcopybuf)
     {
-        entity &c = entcopybuf[i];
+        entitycopy &ec = entcopybuf[i];
+        entity &c = ec.e;
         vec o(c.o);
         o.mul(m).add(sel.o.tovec());
         int idx;
         extentity *e = newentity(true, o, ET_EMPTY, c.attr.getbuf(), idx);
         if(!e) continue;
+        if(ec.extra.capacity())
+            entities::loadextrainfo(*e, ec.extra.getbuf());
         entadd(idx);
         keepents = max(keepents, idx + 1);
     }
     keepents = 0;
     int j = 0;
-    groupeditundo(e.attr = entcopybuf[j].attr; e.type = entcopybuf[j++].type;);
+    groupeditundo(e.attr = entcopybuf[j].e.attr; e.type = entcopybuf[j++].e.type;);
 }
 
 COMMAND(newent, "V");

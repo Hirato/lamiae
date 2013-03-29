@@ -20,6 +20,18 @@ namespace entities
 	bool attachent(extentity &e, extentity &a) { return false; }
 	int extraentinfosize() { return 64; }
 
+	void saveextrainfo(entity &e, char *buf)
+	{
+		rpgentity *ent = (rpgentity *) &e;
+		memcpy(buf, ent->id, 64);
+	}
+
+	void loadextrainfo(entity &e, char *buf)
+	{
+		rpgentity *ent = (rpgentity *) &e;
+		memcpy(ent->id, buf, 64);
+	}
+
 	void animatemapmodel(const extentity &e, int &anim, int &basetime)
 	{
 		anim = ANIM_MAPMODEL|ANIM_LOOP;
