@@ -122,9 +122,8 @@ namespace ai
 		}
 		else if (prev != closest)
 		{
-			//ASSERT(prev && closest)
 			//single direction link as fallback
-			linkwaypoint(*prev, *closest);
+			if(prev) linkwaypoint(*prev, *closest);
 			prev = closest;
 		}
 	}
