@@ -175,7 +175,7 @@ namespace entities
 					spawn(e, e.id, ENT_CHAR, 1);
 					break;
 				case ITEM:
-					spawn(e, e.id, ENT_ITEM, e.attr[2]);
+					spawn(e, e.id, ENT_ITEM, e.attr[1]);
 					break;
 				case OBSTACLE:
 					spawn(e, e.id, ENT_OBSTACLE, 1);

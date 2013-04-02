@@ -553,10 +553,11 @@ void rpgchar::update()
 
 void rpgchar::render()
 {
-	int lastaction = 0,
-	anim = ANIM_MSTRIKE,
-	delay = 300,
-	hold = ANIM_MHOLD|ANIM_LOOP;
+	int lastaction = this->lastaction,
+		anim = ANIM_MSTRIKE,
+		delay = 300,
+		hold = ANIM_MHOLD|ANIM_LOOP;
+	lastaction -= delay;
 
 	vector<modelattach> attachments;
 	vec *emitter = emitters;
@@ -705,6 +706,8 @@ void rpgchar::revive(bool spawn)
 	cleanragdoll(this);
 	if(spawn) findplayerspawn(this, -1);
 	else entinmap(this);
+
+	getsignal("resurrect", true, NULL);
 }
 
 extern int friendlyfire;
