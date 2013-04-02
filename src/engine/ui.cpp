@@ -1989,7 +1989,7 @@ namespace UI
                 y = ceil(( 1 - (h + sy) ) * world->size),
                 dy = ceil(h * world->size);
 
-            modelpreview::start(x, y, dx, dy, true, true);
+            modelpreview::start(x, y, dx, dy, true, clipstack.length() >= 1);
 
             model *m = loadmodel(mdl);
             if(m)
