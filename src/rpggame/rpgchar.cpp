@@ -240,8 +240,8 @@ void rpgchar::doattack(equipment *eleft, equipment *eright, equipment *quiver)
 		if(ammo && ammo->deatheffect) death = game::effects.access(ammo->deatheffect);
 		if(!death && attack->deatheffect) death = game::effects.access(attack->deatheffect);
 
-		if(ammo && ammo->traileffect) death = game::effects.access(ammo->traileffect);
-		if(trail && attack->traileffect) trail = game::effects.access(attack->traileffect);
+		if(ammo && ammo->traileffect) trail = game::effects.access(ammo->traileffect);
+		if(!trail && attack->traileffect) trail = game::effects.access(attack->traileffect);
 
 		switch(attack->target)
 		{
