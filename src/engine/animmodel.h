@@ -1552,7 +1552,7 @@ template<class MDL, class MESH> struct modelcommands
 
     static void setbumpmap(char *meshname, char *normalmapfile)
     {
-        Texture *normalmaptex = textureload(makerelpath(MDL::dir, normalmapfile), 0, true, false);
+        Texture *normalmaptex = textureload(makerelpath(MDL::dir, normalmapfile), 0, true, true);
         loopskins(meshname, s, { s.normalmap = normalmaptex; m.calctangents(); });
     }
 
