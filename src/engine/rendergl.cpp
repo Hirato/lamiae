@@ -2431,7 +2431,7 @@ void loadcrosshair(const char *name, int i)
 
     crosshairs[i] = name ? textureload(name, 3, true) : notexture;
     if(crosshairs[i] == notexture)
-        crosshairs[i] = textureload(game::defaultcrosshair(i) ? game::defaultcrosshair(i) : "packages/crosshair/default", 3, true);
+        crosshairs[i] = textureload(game::defaultcrosshair(i) ? game::defaultcrosshair(i) : "packages/crosshairs/default", 3, true);
 }
 
 void loadcrosshair_(const char *name, int *i)
@@ -2444,11 +2444,11 @@ SVARP(guicursortex, "interface/cursor");
 COMMANDN(loadcrosshair, loadcrosshair_, "si");
 
 ICOMMAND(getcrosshair, "i", (int *i),
-    const char *name = "packages/crosshair/default.png";
+    const char *name = "packages/crosshairs/default.png";
     if(crosshairs.inrange(*i))
     {
         name = crosshairs[*i] ? crosshairs[*i]->name : game::defaultcrosshair(*i);
-        if(!name) name = "packages/crosshair/default.png";
+        if(!name) name = "packages/crosshairs/default.png";
     }
     result(name);
 )
