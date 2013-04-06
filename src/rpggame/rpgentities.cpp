@@ -141,6 +141,20 @@ namespace entities
 		return modelcache.access(hash, m);
 	}
 
+	ICOMMAND(getentmodel, "ss", (const char *type, const char *id),
+		static rpgentity ent;
+
+		int t = 0;
+		loopi(MAXENTTYPES) if(!strcmp(type, entname(i)))
+		{
+			ent.type = t = i; break;
+		}
+		if(!t) return;
+
+		copystring(ent.id, id, 64);
+		result(entmodel(ent));
+	)
+
 	FVARP(entpreviewalpha, 0, .4, 1);
 
 	void renderentities()

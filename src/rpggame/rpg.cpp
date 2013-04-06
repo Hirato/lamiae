@@ -126,7 +126,7 @@ namespace game
 
 		return pth;
 	}
-	COMMAND(datapath, "s");
+	ICOMMAND(datapath, "s", (const char *s), result(datapath(s)));
 
 	ICOMMAND(include, "s", (const char *pth),
 		static string file;

@@ -2708,23 +2708,15 @@ ICOMMAND(loopdir, "rse", (ident *id, char *dir, uint *body),
     listfiles(dir, NULL, files);
     loopvrev(files)
     {
-        char *t = strstr(files[i], ".");
-        if(t)
+        bool redundant = false;
+        if(strstr(files[i], ".")) redundant = true;
+        if(!redundant) loopj(i) if(strcmp(files[i], files[j]))
         {
-            delete files[i]; files.remove(i);
+            redundant = true; break;
         }
-        else
-        {
-            loopj(i)
-            {
-                if(!strcmp(files[i], files[j]))
-                {
-                    delete[] files[j]; files.remove(j);
-                    break;
-                }
-            }
-        }
+        if(redundant) { delete[] files.remove(i); continue; }
     }
+
     loopv(files)
     {
         if(i)
