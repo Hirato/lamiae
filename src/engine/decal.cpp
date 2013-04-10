@@ -22,7 +22,9 @@ enum
     DF_INVMOD     = 1<<2,
     DF_OVERBRIGHT = 1<<3,
     DF_ADD        = 1<<4,
-    DF_SATURATE   = 1<<5
+    DF_SATURATE   = 1<<5,
+    DF_GREY       = 1<<6,
+    DF_GREYALPHA  = 1<<7
 };
 
 VARFP(maxdecaltris, 1, 1024, 16384, initdecals());
@@ -38,6 +40,7 @@ struct decalrenderer
     int maxdecals, startdecal, enddecal;
     decalvert *verts;
     int maxverts, startvert, endvert, availverts;
+    GLuint vbo;
 
     decalrenderer(const char *texname, int flags = 0, int fadeintime = 0, int fadeouttime = 1000, int timetolive = -1)
         : texname(texname), flags(flags),
@@ -45,6 +48,7 @@ struct decalrenderer
           tex(NULL),
           decals(NULL), maxdecals(0), startdecal(0), enddecal(0),
           verts(NULL), maxverts(0), startvert(0), endvert(0), availverts(0),
+          vbo(0), 
           decalu(0), decalv(0)
     {
     }
@@ -209,22 +213,27 @@ struct decalrenderer
         glDepthMask(GL_FALSE);
         glEnable(GL_BLEND);
 
-        glEnableClientState(GL_VERTEX_ARRAY);
-        glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-        glEnableClientState(GL_COLOR_ARRAY);
+        varray::enablevertex();
+        varray::enabletexcoord0();
+        varray::enablecolor();
     }
 
     static void cleanuprenderstate()
     {
-        glDisableClientState(GL_VERTEX_ARRAY);
-        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-        glDisableClientState(GL_COLOR_ARRAY);
+        varray::disablevertex();
+        varray::disabletexcoord0();
+        varray::disablecolor();
 
         glDepthMask(GL_TRUE);
         glDisable(GL_BLEND);
         glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
         disablepolygonoffset(GL_POLYGON_OFFSET_FILL);
+    }
+
+    void cleanup()
+    {
+        if(vbo) { glDeleteBuffers_(1, &vbo); vbo = 0; }
     }
 
     void render()
@@ -235,7 +244,7 @@ struct decalrenderer
         if(flags&DF_OVERBRIGHT)
         {
             glBlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
-            SETSHADER(overbrightdecal);
+            SETVARIANT(overbrightdecal, hasTRG ? (flags&DF_GREY ? 0 : (flags&DF_GREYALPHA ? 1 : -1)) : -1, 0);
         }
         else
         {
@@ -243,20 +252,27 @@ struct decalrenderer
             else if(flags&DF_ADD) glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_COLOR);
             else glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-            if(flags&DF_SATURATE)
-            {
-                SETSHADER(saturatedecal);
-            }
-            else SETSHADER(decal);
+            SETVARIANT(decal, hasTRG ? (flags&DF_GREY ? 0 : (flags&DF_GREYALPHA ? 1 : -1)) : -1, 0);
+            float colorscale = flags&DF_SATURATE ? 2 : 1; 
+            LOCALPARAMF(colorscale, (colorscale, colorscale, colorscale, 1));
         }
 
         glBindTexture(GL_TEXTURE_2D, tex->id);
 
-        glVertexPointer(3, GL_FLOAT, sizeof(decalvert), &verts->pos);
-        glTexCoordPointer(2, GL_FLOAT, sizeof(decalvert), &verts->u);
-        glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(decalvert), &verts->color);
-
         int count = endvert < startvert ? maxverts - startvert : endvert - startvert;
+
+        if(!vbo) glGenBuffers_(1, &vbo);
+        glBindBuffer_(GL_ARRAY_BUFFER, vbo);
+        glBufferData_(GL_ARRAY_BUFFER, maxverts*sizeof(decalvert), NULL, GL_STREAM_DRAW);
+        glBufferSubData_(GL_ARRAY_BUFFER, startvert*sizeof(decalvert), count*sizeof(decalvert), &verts[startvert]);
+        if(endvert < startvert)
+            glBufferSubData_(GL_ARRAY_BUFFER, 0, endvert*sizeof(decalvert), verts);
+
+        const decalvert *ptr = 0;
+        varray::vertexpointer(sizeof(decalvert), &ptr->pos);
+        varray::texcoord0pointer(sizeof(decalvert), &ptr->u);
+        varray::colorpointer(sizeof(decalvert), &ptr->color);
+
         glDrawArrays(GL_TRIANGLES, startvert, count);
         if(endvert < startvert)
         {
@@ -265,8 +281,7 @@ struct decalrenderer
         }
         xtravertsva += count;
 
-        extern int intel_vertexarray_bug;
-        if(intel_vertexarray_bug) glFlush();
+        glBindBuffer_(GL_ARRAY_BUFFER, 0);
     }
 
     decalinfo &newdecal()
@@ -598,6 +613,11 @@ void renderdecals()
     }
     if(!rendered) return;
     decalrenderer::cleanuprenderstate();
+}
+
+void cleanupdecals()
+{
+    loopi(sizeof(decals)/sizeof(decals[0])) decals[i].cleanup();
 }
 
 VARP(maxdecaldistance, 1, 512, 10000);

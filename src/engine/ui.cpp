@@ -2699,7 +2699,7 @@ namespace UI
         else x = y = .5f;
     }
 
-    bool keypress(int code, bool isdown, int cooked)
+    bool keypress(int code, bool isdown)
     {
         if(!hascursor()) return false;
         switch(code)

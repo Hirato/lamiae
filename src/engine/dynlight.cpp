@@ -46,8 +46,6 @@ struct dynlight
             if(fading < fade) intensity = float(fading)/fade;
         }
         curcolor.mul(intensity);
-        // KLUGE: this prevents nvidia drivers from trying to recompile dynlight fragment programs
-        loopk(3) if(fmod(curcolor[k], 1.0f/256) < 0.001f) curcolor[k] += 0.001f;
     }
 };
 
@@ -125,7 +123,6 @@ int finddynlights()
         int insert = 0;
         loopvrev(closedynlights) if(d.dist >= closedynlights[i]->dist) { insert = i+1; break; }
         closedynlights.insert(insert, &d);
-        //if(closedynlights.length() >= DYNLIGHTMASK) break;
     }
     return closedynlights.length();
 }

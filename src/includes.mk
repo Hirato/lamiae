@@ -14,8 +14,8 @@ endif
 MV=mv
 
 INCLUDES= -Ishared -Iengine -Ienet/include
-CLIENT_INCLUDES= $(INCLUDES) -I/usr/X11R6/include `sdl-config --cflags`
-CLIENT_LIBS= -Lenet/.libs -lenet -L/usr/X11R6/lib `sdl-config --libs` -lSDL_image -lSDL_mixer -lz -lGL -lX11
+CLIENT_INCLUDES= $(INCLUDES) -I/usr/X11R6/include `sdl2-config --cflags`
+CLIENT_LIBS= -Lenet/.libs -lenet -L/usr/X11R6/lib `sdl2-config --libs` -lSDL2_image -lSDL2_mixer -lz -lGL -lX11
 
 
 PLATFORM= $(shell uname -s)
