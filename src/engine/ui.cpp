@@ -190,12 +190,12 @@ namespace UI
 
         void scissor()
         {
-            float margin = max((float(screen->w)/screen->h - 1)/2, 0.0f);
-            int sx1 = clamp(int(floor((x1+margin)/(1 + 2*margin)*screen->w)), 0, screen->w),
-                sy1 = clamp(int(floor(y1*screen->h)), 0, screen->h),
-                sx2 = clamp(int(ceil((x2+margin)/(1 + 2*margin)*screen->w)), 0, screen->w),
-                sy2 = clamp(int(ceil(y2*screen->h)), 0, screen->h);
-            glScissor(sx1, screen->h - sy2, sx2-sx1, sy2-sy1);
+            float margin = max((float(screenw)/screenh - 1)/2, 0.0f);
+            int sx1 = clamp(int(floor((x1+margin)/(1 + 2*margin)*screenw)), 0, screenw),
+                sy1 = clamp(int(floor(y1*screenh)), 0, screenh),
+                sx2 = clamp(int(ceil((x2+margin)/(1 + 2*margin)*screenw)), 0, screenw),
+                sy2 = clamp(int(ceil(y2*screenh)), 0, screenh);
+            glScissor(sx1, screenh - sy2, sx2-sx1, sy2-sy1);
         }
     };
 
@@ -519,8 +519,8 @@ namespace UI
         {
             Object::layout();
 
-            int sw = screen->w;
-            size = screen->h;
+            int sw = screenw;
+            size = screenh;
             if(forceaspect) sw = int(ceil(size*forceaspect));
 
             margin = max((float(sw)/size - 1)/2, 0.0f);
@@ -1532,7 +1532,7 @@ namespace UI
             hudnotextureshader->set();
             varray::defvertex(2);
 
-            varray::colorf(color);
+            varray::color(color);
             varray::begin(GL_TRIANGLE_STRIP);
 
             varray::attribf(sx,     sy);
@@ -1669,8 +1669,8 @@ namespace UI
 
             SETSHADER(hudrgb);
 
-            float tc[4][2] = { { 0, 0 }, { 1, 0 }, { 1, 1 }, { 0, 1 } };
-            int xoff = vslot.xoffset, yoff = vslot.yoffset;
+            vec2 tc[4] = { vec2(0, 0), vec2(1, 0), vec2(1, 1), vec2(0, 1) };
+            int xoff = vslot.offset.x, yoff = vslot.offset.y;
             if(vslot.rotation)
             {
                 if((vslot.rotation&5) == 1) { swap(xoff, yoff); loopk(4) swap(tc[k][0], tc[k][1]); }
@@ -1678,26 +1678,26 @@ namespace UI
                 if(vslot.rotation <= 2 || vslot.rotation == 5) { yoff *= -1; loopk(4) tc[k][1] *= -1; }
             }
             loopk(4) { tc[k][0] = tc[k][0]/xt - float(xoff)/tex->xs; tc[k][1] = tc[k][1]/yt - float(yoff)/tex->ys; }
-            if(slot.loaded) varray::colorf(vslot.colorscale.v);
+            if(slot.loaded) varray::color(vslot.colorscale);
             glBindTexture(GL_TEXTURE_2D, tex->id);
 
             varray::begin(GL_TRIANGLE_STRIP);
-            varray::attribf(sx  , sy  ); varray::attribf(tc[0]);
-            varray::attribf(sx+w, sy  ); varray::attribf(tc[1]);
-            varray::attribf(sx  , sy+h); varray::attribf(tc[2]);
-            varray::attribf(sx+w, sy+h); varray::attribf(tc[3]);
+            varray::attribf(sx  , sy  ); varray::attrib(tc[0]);
+            varray::attribf(sx+w, sy  ); varray::attrib(tc[1]);
+            varray::attribf(sx  , sy+h); varray::attrib(tc[2]);
+            varray::attribf(sx+w, sy+h); varray::attrib(tc[3]);
             varray::end();
 
             if(glowtex)
             {
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE);
                 glBindTexture(GL_TEXTURE_2D, glowtex->id);
-                varray:colorf(vslot.glowcolor.v);
+                varray::color(vslot.glowcolor);
                 varray::begin(GL_TRIANGLE_STRIP);
-                varray::attribf(sx  , sy  ); varray::attribf(tc[0]);
-                varray::attribf(sx+w, sy  ); varray::attribf(tc[1]);
-                varray::attribf(sx  , sy+h); varray::attribf(tc[2]);
-                varray::attribf(sx+w, sy+h); varray::attribf(tc[3]);
+                varray::attribf(sx  , sy  ); varray::attrib(tc[0]);
+                varray::attribf(sx+w, sy  ); varray::attrib(tc[1]);
+                varray::attribf(sx  , sy+h); varray::attrib(tc[2]);
+                varray::attribf(sx+w, sy+h); varray::attrib(tc[3]);
                 varray::end();
 
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -1705,12 +1705,12 @@ namespace UI
             if(layertex)
             {
                 glBindTexture(GL_TEXTURE_2D, layertex->id);
-                varray:colorf(layer->colorscale.v);
+                varray::color(layer->colorscale);
                 varray::begin(GL_TRIANGLE_STRIP);
-                varray::attribf(sx  , sy  ); varray::attribf(tc[0]);
-                varray::attribf(sx+w, sy  ); varray::attribf(tc[1]);
-                varray::attribf(sx  , sy+h); varray::attribf(tc[2]);
-                varray::attribf(sx+w, sy+h); varray::attribf(tc[3]);
+                varray::attribf(sx  , sy  ); varray::attrib(tc[0]);
+                varray::attribf(sx+w, sy  ); varray::attrib(tc[1]);
+                varray::attribf(sx  , sy+h); varray::attrib(tc[2]);
+                varray::attribf(sx+w, sy+h); varray::attrib(tc[3]);
                 varray::end();
             }
             varray::colorf(1, 1, 1);
@@ -1987,8 +1987,8 @@ namespace UI
             if(clipstack.length()) glDisable(GL_SCISSOR_TEST);
 
 
-            int x = floor( (sx + world->margin) * screen->w / world->w),
-                dx = ceil(w * screen->w / world->w),
+            int x = floor( (sx + world->margin) * screenw / world->w),
+                dx = ceil(w * screenw / world->w),
                 y = ceil(( 1 - (h + sy) ) * world->size),
                 dy = ceil(h * world->size);
 
@@ -2234,8 +2234,6 @@ namespace UI
                 case SDLK_RSHIFT:
                 case SDLK_LCTRL:
                 case SDLK_RCTRL:
-                case SDLK_LMETA:
-                case SDLK_RMETA:
                     break;
                 case SDLK_a:
                 case SDLK_x:
@@ -2362,9 +2360,9 @@ namespace UI
 
     bool input(const char *str, int len)
     {
-        if(!focused || focused->type != TYPE_TEXTEDITOR) return false;
+        if(!focused || focused->gettype() != TYPE_TEXTEDITOR) return false;
 
-        ((Texteditor *) focused)->edit->input(str, len);
+        ((TextEditor *) focused)->edit->input(str, len);
         return true;
     }
 
@@ -2680,7 +2678,7 @@ namespace UI
         if(cursormode() == 2 || (world->takesinput() && cursormode() >= 1))
         {
             float scale = 500.0f / cursorsensitivity;
-            cursorx = clamp(cursorx+dx*(screen->h/(screen->w*scale)), 0.0f, 1.0f);
+            cursorx = clamp(cursorx+dx*(screenh/(screenw*scale)), 0.0f, 1.0f);
             cursory = clamp(cursory+dy/scale, 0.0f, 1.0f);
             if(cursormode() == 2)
             {
@@ -2808,7 +2806,6 @@ namespace UI
 
         if(refreshrepeat || (textediting!=NULL) != wastextediting)
         {
-            SDL_EnableUNICODE(textediting!=NULL);
             keyrepeat(textediting!=NULL || editmode);
             refreshrepeat = 0;
         }
@@ -2922,7 +2919,7 @@ void consolebox(int x1, int y1, int x2, int y2)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     pushhudmatrix();
-    hudmatrix.translate(x1, y1);
+    hudmatrix.translate(x1, y1, 0);
     flushhudmatrix();
 
     hudnotextureshader->set();

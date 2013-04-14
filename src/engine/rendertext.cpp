@@ -265,7 +265,7 @@ static void text_color(char c, char *stack, int size, int &sp, bvec colour, int 
             case 'Y': colour = bvec(255, 255,  96); break; //yellow
             case 'Z': colour = bvec(224, 192, 160); break; //zinnwaldite
         }
-        varray::color(color, a);
+        varray::color(colour, a);
     }
 }
 

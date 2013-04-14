@@ -371,7 +371,7 @@ listparticle *listrenderer::parempty = NULL;
 struct meterrenderer : listrenderer
 {
     meterrenderer(int type)
-        : listrenderer(type|PT_NOTEX|PL_LERP)
+        : listrenderer(type|PT_NOTEX|PT_LERP)
     {}
 
     void startrender()

@@ -63,7 +63,7 @@ namespace game
 		flushhudmatrix();
 
 		glDisable(GL_BLEND);
-		if(minimapup) hudmatrix.rotate(d->yaw + 180, 0, 0, -1);
+		if(minimapup) hudmatrix.rotate(d->yaw + 180, vec(0, 0, -1));
 
 		if(curmap->flags & mapinfo::F_NOMINIMAP)
 		{
@@ -91,7 +91,7 @@ namespace game
 				vec dir((d->yaw) * RAD + M_PI * i / 2.0f, 0);
 
 				varray::attribf(dx / 16 * dir.x, dy / 16 * dir.y);
-				varray::attribf(coords[i]);
+				varray::attrib(coords[i]);
 			}
 			varray::end();
 		}
@@ -181,7 +181,7 @@ namespace game
 		settexture(*img ? img : "data/rpg/hud/hbar", 3);
 		varray::begin(GL_TRIANGLE_FAN);
 
-		varray::colorfv(col.v);
+		varray::color(col);
 		varray::attribf(x , y);                     varray::attribf(0, 0);
 		varray::attribf(x + dx * progress, y);      varray::attribf(progress, 0);
 		varray::attribf(x + dx * progress, y + dy); varray::attribf(progress, 1);
@@ -201,7 +201,7 @@ namespace game
 		settexture(*img ? img : "data/rpg/hud/vbar", 3);
 		varray::begin(GL_TRIANGLE_FAN);
 
-		varray::colorfv(col.v);
+		varray::color(col);
 		varray::attribf(x , y);                     varray::attribf(0, 0);
 		varray::attribf(x + dx, y);                 varray::attribf(1, 0);
 		varray::attribf(x + dx, y + dy * progress); varray::attribf(1, progress);
@@ -234,7 +234,7 @@ namespace game
 		settexture(img, 3);
 		vec col = vec((colour >> 16) & 255, (colour >> 8) & 255, colour & 255).div(255.f);
 
-		varray::colorfv(col.v);
+		varray::color(col);
 		quad(x, y, dx, dy);
 	}
 	ICOMMAND(r_hud_image, "sffffi", (const char *i, float *x, float *y, float *dx, float *dy, int *c),
@@ -245,7 +245,7 @@ namespace game
 	{
 		vec col = vec((colour >> 16) & 255, (colour >> 8) & 255, colour & 255).div(255.f);
 
-		varray::colorfv(col.v);
+		varray::color(col);
 		varray::defvertex(2);
 
 		varray::begin(GL_TRIANGLE_STRIP);
@@ -256,7 +256,7 @@ namespace game
 		varray::end();
 
 		varray::defvertex(2);
-		varay::deftexcoord0()
+		varray::deftexcoord0();
 	}
 
 	ICOMMAND(r_hud_solid, "ffffi", (float *x, float *y, float *dx, float *dy, int *c),
@@ -306,7 +306,7 @@ namespace game
 		if(!mapdata || !curmap || editmode)
 			return;
 
-		varray::color(1, 1, 1);
+		varray::colorf(1, 1, 1);
 		varray::defvertex(2);
 		varray::deftexcoord0();
 

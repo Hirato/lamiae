@@ -588,12 +588,12 @@ void saveslotconfig(stream *h, Slot &s, int index)
     {
         if(vs.rotation)
             h->printf("texrotate %d\n", vs.rotation);
-        if(vs.xoffset || vs.yoffset)
-            h->printf("texoffset %d %d\n", vs.xoffset, vs.yoffset);
+        if(vs.offset.x || vs.offset.y)
+            h->printf("texoffset %d %d\n", vs.offset.x, vs.offset.y);
         if(vs.scale != 1)
             h->printf("texscale %g\n", vs.scale);
-        if(vs.scrollS != 0.f || vs.scrollT != 0.f)
-            h->printf("texscroll %g %g\n", vs.scrollS * 1000.0f, vs.scrollT * 1000.0f);
+        if(vs.scroll.x != 0.f || vs.scroll.y != 0.f)
+            h->printf("texscroll %g %g\n", vs.scroll.x * 1000.0f, vs.scroll.y * 1000.0f);
         if(vs.layer != 0)
             h->printf("texlayer %d\n", vs.layer);
         if(vs.alphafront != 0.5f || vs.alphaback != 0)

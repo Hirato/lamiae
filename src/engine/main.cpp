@@ -135,16 +135,6 @@ void bgquad(float x, float y, float w, float h, float tx = 0, float ty = 0, floa
     varray::end();
 }
 
-static void getbackgroundres(int &w, int &h)
-{
-    float wk = 1, hk = 1;
-    if(w < 1024) wk = 1024.0f/w;
-    if(h < 768) hk = 768.0f/h;
-    wk = hk = max(wk, hk);
-    w = int(ceil(w*wk));
-    h = int(ceil(h*hk));
-}
-
 string backgroundcaption = "";
 Texture *backgroundmapshot = NULL;
 string backgroundmapname = "";
@@ -234,7 +224,7 @@ void renderbackground(const char *caption, Texture *mapshot, const char *mapname
               by = h - 1.1f * bh;
 
         settexture("<premul>data/cube2badge", 3);
-        bdquad(bx, by, bx+bw, by+bh);
+        bgquad(bx, by, bx+bw, by+bh);
 
 
         hudnotextureshader->set();
@@ -242,22 +232,22 @@ void renderbackground(const char *caption, Texture *mapshot, const char *mapname
         varray::defcolor(4);
 
         float roffset = -max(w, h) * 0.02;
-        varray::begin(GL_TRIANGLES)
+        varray::begin(GL_TRIANGLES);
         loopi(sizeof(rays)/sizeof(rays[0]))
         {
             varray::attribf(roffset, roffset);
             varray::attribf(1, 1, 1, .4);
 
-            varray::attribf(rays[i].coords[0]);
+            varray::attrib(rays[i].coords[0]);
             varray::attribf(1, 1, 1, 0);
 
-            varray::attribf(rays[i].coords[1]);
+            varray::attrib(rays[i].coords[1]);
             varray::attribf(1, 1, 1, 0);
         }
         varray::end();
 
         hudshader->set();
-        varray::defvertex(2)
+        varray::defvertex(2);
         varray::deftexcoord0();
 
         if(caption)
@@ -450,7 +440,7 @@ void renderprogress(float bar, const char *text, GLuint tex, bool background)   
         varray::end();
     }
 
-    defaultshader->set();
+    hudshader->set();
     varray::defvertex(2);
     varray::deftexcoord0();
 
@@ -1246,7 +1236,7 @@ int main(int argc, char **argv)
 
     logoutf("init: gl");
     gl_checkextensions();
-    gl_init(scr_w, scr_h;
+    gl_init(scr_w, scr_h);
     notexture = textureload("data/notexture");
     if(!notexture) fatal("could not find core textures");
     UI::setup();

@@ -1009,7 +1009,7 @@ void setcammatrix()
 
         dir1.sub(dir2).normalize();
         if(raycubepos(camera1->o, dir1, worldpos, 0, RAY_CLIPMAT|RAY_SKIPFIRST) == -1)
-            worldpos = vec(dir1).mul(2 * worldsize).add(camera.o);
+            worldpos = vec(dir1).mul(2 * worldsize).add(camera1->o);
     }
 }
 
