@@ -2224,7 +2224,7 @@ void writecfg(const char *name)
     loopv(ids)
     {
         ident &id = *ids[i];
-        if(id.flags&IDF_PERSIST) switch(id.type)
+        if(id.flags&IDF_PERSIST && !(id.flags&IDF_OVERRIDDEN)) switch(id.type)
         {
             case ID_VAR:  f->printf("%s %d\n", escapeid(id.name), *id.storage.i); break;
             case ID_FVAR: f->printf("%s %s\n", escapeid(id.name), floatstr(*id.storage.f)); break;
