@@ -1004,12 +1004,12 @@ void setcammatrix()
         float x, y;
         vec dir1, dir2;
         UI::getcursorpos(x, y);
-        invcamprojmatrix.transform(vec(x*2-1, 1-2*y, 2-1), dir1);
-        invcamprojmatrix.transform(vec(x*2-1, 1-2*y, -1), dir2);
+        dir1 = invcamprojmatrix.perspectivetransform(vec(x*2-1, 1-2*y, 2-1));
+        dir2 = invcamprojmatrix.perspectivetransform(vec(x*2-1, 1-2*y, -1));
 
         dir1.sub(dir2).normalize();
         if(raycubepos(camera1->o, dir1, worldpos, 0, RAY_CLIPMAT|RAY_SKIPFIRST) == -1)
-            worldpos = vec(dir1).mul(2 * worldsize).add(camera1->o);
+            worldpos = vec(camdir).mul(2 * worldsize).add(camera1->o);
     }
 }
 
