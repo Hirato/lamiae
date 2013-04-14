@@ -1,4 +1,4 @@
-static struct flaretype
+static const struct flaretype
 {
     int type;             /* flaretex index, 0..5, -1 for 6+random shine */
     float loc;            /* postion on axis */
@@ -38,8 +38,8 @@ struct flarerenderer : partrenderer
     unsigned int shinetime;
     flare *flares;
 
-    flarerenderer(const char *texname, int maxflares)
-        : partrenderer(texname, 3, PT_FLARE|PT_SHADER), maxflares(maxflares), shinetime(0)
+    flarerenderer(const char *texname, int maxflares, int flags = 0)
+        : partrenderer(texname, 3, PT_FLARE|flags), maxflares(maxflares), shinetime(0)
     {
         flares = new flare[maxflares];
     }
@@ -51,8 +51,11 @@ struct flarerenderer : partrenderer
     void newflare(vec &o,  const vec &center, uchar r, uchar g, uchar b, float mod, float size, bool sun, bool sparkle)
     {
         if(numflares >= maxflares) return;
-        vec target; //occlusion check (neccessary as depth testing is turned off)
-        if(!raycubelos(o, camera1->o, target)) return;
+        //occlusion check (neccessary as depth testing is turned off)
+        vec dir = vec(camera1->o).sub(o);
+        float dist = dir.magnitude();
+        dir.mul(1/dist);
+        if(raycube(o, dir, dist, RAY_CLIPMAT|RAY_POLY) < dist) return;
         flare &f = flares[numflares++];
         f.o = o;
         f.center = center;
@@ -94,7 +97,6 @@ struct flarerenderer : partrenderer
         if(editmode || !flarelights) return;
 
         const vector<extentity *> &ents = entities::getents();
-        extern const vector<int> &checklightcache(int x, int y);
         const vector<int> &lights = checklightcache(int(camera1->o.x), int(camera1->o.y));
         loopv(lights)
         {
@@ -134,22 +136,23 @@ struct flarerenderer : partrenderer
 
     void render()
     {
-        defaultshader->set();
         glDisable(GL_DEPTH_TEST);
         if(!tex) tex = textureload(texname);
         glBindTexture(GL_TEXTURE_2D, tex->id);
-        glBegin(GL_QUADS);
+        varray::defattrib(varray::ATTRIB_VERTEX, 3, GL_FLOAT);
+        varray::defattrib(varray::ATTRIB_TEXCOORD0, 2, GL_FLOAT);
+        varray::defattrib(varray::ATTRIB_COLOR, 4, GL_UNSIGNED_BYTE);
+        varray::begin(GL_QUADS);
         loopi(numflares)
         {
-            flare *f = flares+i;
-            vec center = f->center;
-            vec axis = vec(f->o).sub(center);
-            float color[4] = {f->color[0]*ldrscaleb, f->color[1]*ldrscaleb, f->color[2]*ldrscaleb, 1};
-            loopj(f->sparkle?12:9)
+            const flare &f = flares[i];
+            vec axis = vec(f.o).sub(f.center);
+            uchar color[4] = {f.color[0], f.color[1], f.color[2], 255};
+            loopj(f.sparkle?12:9)
             {
                 const flaretype &ft = flaretypes[j];
-                vec o = vec(axis).mul(ft.loc).add(center);
-                float sz = ft.scale * f->size;
+                vec o = vec(axis).mul(ft.loc).add(f.center);
+                float sz = ft.scale * f.size;
                 int tex = ft.type;
                 if(ft.type < 0) //sparkles - always done last
                 {
@@ -158,25 +161,31 @@ struct flarerenderer : partrenderer
                     color[0] = 0;
                     color[1] = 0;
                     color[2] = 0;
-                    color[-ft.type-1] = f->color[-ft.type-1]; //only want a single channel
+                    color[-ft.type-1] = f.color[-ft.type-1]; //only want a single channel
                 }
-                color[3] = ft.alpha/255.0f;
-                glColor4fv(color);
+                color[3] = ft.alpha;
                 const float tsz = 0.25; //flares are aranged in 4x4 grid
-                float tx = tsz*(tex&0x03);
-                float ty = tsz*((tex>>2)&0x03);
-                glTexCoord2f(tx,     ty+tsz); glVertex3f(o.x+(-camright.x+camup.x)*sz, o.y+(-camright.y+camup.y)*sz, o.z+(-camright.z+camup.z)*sz);
-                glTexCoord2f(tx+tsz, ty+tsz); glVertex3f(o.x+( camright.x+camup.x)*sz, o.y+( camright.y+camup.y)*sz, o.z+( camright.z+camup.z)*sz);
-                glTexCoord2f(tx+tsz, ty);     glVertex3f(o.x+( camright.x-camup.x)*sz, o.y+( camright.y-camup.y)*sz, o.z+( camright.z-camup.z)*sz);
-                glTexCoord2f(tx,     ty);     glVertex3f(o.x+(-camright.x-camup.x)*sz, o.y+(-camright.y-camup.y)*sz, o.z+(-camright.z-camup.z)*sz);
-            }
+                float tx = tsz*(tex&0x03), ty = tsz*((tex>>2)&0x03);
+                varray::attribf(o.x+(-camright.x+camup.x)*sz, o.y+(-camright.y+camup.y)*sz, o.z+(-camright.z+camup.z)*sz);
+                    varray::attribf(tx,     ty+tsz);
+                    varray::attribv<4, uchar>(color);
+                varray::attribf(o.x+( camright.x+camup.x)*sz, o.y+( camright.y+camup.y)*sz, o.z+( camright.z+camup.z)*sz);
+                    varray::attribf(tx+tsz, ty+tsz);
+                    varray::attribv<4, uchar>(color);
+                varray::attribf(o.x+( camright.x-camup.x)*sz, o.y+( camright.y-camup.y)*sz, o.z+( camright.z-camup.z)*sz);
+                    varray::attribf(tx+tsz, ty);
+                    varray::attribv<4, uchar>(color);
+                varray::attribf(o.x+(-camright.x-camup.x)*sz, o.y+(-camright.y-camup.y)*sz, o.z+(-camright.z-camup.z)*sz);
+                    varray::attribf(tx,     ty);
+                    varray::attribv<4, uchar>(color);            }
         }
-        glEnd();
+        varray::end();
+        varray::disable();
         glEnable(GL_DEPTH_TEST);
     }
 
     //square per round hole - use addflare(..) instead
     particle *addpart(const vec &o, const vec &d, int fade, int color, float size, int gravity = 0) { return NULL; }
 };
-static flarerenderer flares("packages/particles/lensflares", 64);
+static flarerenderer flares("<grey>packages/particles/lensflares", 64, PT_GREY);
 

@@ -38,34 +38,26 @@ void setupcaustics(int tmu, float surface = -1e16f)
     float frac = float(lastmillis%causticmillis)/causticmillis;
     loopi(2)
     {
-        glActiveTexture_(GL_TEXTURE0_ARB+tmu+i);
+        glActiveTexture_(GL_TEXTURE0+tmu+i);
         glBindTexture(GL_TEXTURE_2D, caustictex[(tex+i)%NUMCAUSTICS]->id);
     }
-    glActiveTexture_(GL_TEXTURE0_ARB);
+    glActiveTexture_(GL_TEXTURE0);
     float blendscale = causticcontrast, blendoffset = 1;
     if(surface > -1e15f)
     {
         float bz = surface + camera1->o.z + (vertwater ? WATER_AMPLITUDE : 0);
-        GLfloat m[16] =
-        {
-            s.x, t.x,  0, 0,
-            s.y, t.y,  0, 0,
-            s.z, t.z, -1, 0,
-              0,   0, bz, 1
-        };
-        glMatrixMode(GL_TEXTURE);
-        glLoadMatrixf(m);
-        glMultMatrixf(worldmatrix.v);
-        glMatrixMode(GL_MODELVIEW);
+        glmatrix m(vec4(s, 0), vec4(t, 0), vec4(0, 0, -1, bz));
+        m.mul(worldmatrix);
+        GLOBALPARAM(causticsmatrix, m);
         blendscale *= 0.5f;
         blendoffset = 0;
     }
     else
     {
-        GLOBALPARAM(causticsS, (s));
-        GLOBALPARAM(causticsT, (t));
+        GLOBALPARAM(causticsS, s);
+        GLOBALPARAM(causticsT, t);
     }
-    GLOBALPARAM(causticsblend, (blendscale*(1-frac), blendscale*frac, blendoffset - causticoffset*blendscale));
+    GLOBALPARAMF(causticsblend, (blendscale*(1-frac), blendscale*frac, blendoffset - causticoffset*blendscale));
 }
 
 void rendercaustics(float surface, float syl, float syr)
@@ -74,12 +66,14 @@ void rendercaustics(float surface, float syl, float syr)
     glBlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
     setupcaustics(0, surface);
     SETSHADER(caustics);
-    glBegin(GL_TRIANGLE_STRIP);
-    glVertex2f(1, -1);
-    glVertex2f(-1, -1);
-    glVertex2f(1, syr);
-    glVertex2f(-1, syl);
-    glEnd();
+    varray::defvertex(2);
+    varray::begin(GL_TRIANGLE_STRIP);
+    varray::attribf(1, -1);
+    varray::attribf(-1, -1);
+    varray::attribf(1, syr);
+    varray::attribf(-1, syl);
+    varray::end();
+    varray::disable();
 }
 
 void renderwaterfog(int mat, float surface)
@@ -87,17 +81,17 @@ void renderwaterfog(int mat, float surface)
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
 
-    glActiveTexture_(GL_TEXTURE9_ARB);
+    glActiveTexture_(GL_TEXTURE9);
     if(msaasamples) glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, msdepthtex);
-    else glBindTexture(GL_TEXTURE_RECTANGLE_ARB, gdepthtex);
-    glActiveTexture_(GL_TEXTURE0_ARB);
+    else glBindTexture(GL_TEXTURE_RECTANGLE, gdepthtex);
+    glActiveTexture_(GL_TEXTURE0);
 
     vec p[4] =
     {
-        invmvpmatrix.perspectivetransform(vec(-1, -1, -1)),
-        invmvpmatrix.perspectivetransform(vec(-1, 1, -1)),
-        invmvpmatrix.perspectivetransform(vec(1, -1, -1)),
-        invmvpmatrix.perspectivetransform(vec(1, 1, -1))
+        invcamprojmatrix.perspectivetransform(vec(-1, -1, -1)),
+        invcamprojmatrix.perspectivetransform(vec(-1, 1, -1)),
+        invcamprojmatrix.perspectivetransform(vec(1, -1, -1)),
+        invcamprojmatrix.perspectivetransform(vec(1, 1, -1))
     };
     float bz = surface + camera1->o.z + (vertwater ? WATER_AMPLITUDE : 0),
           syl = p[1].z > p[0].z ? 2*(bz - p[0].z)/(p[1].z - p[0].z) - 1 : 1,
@@ -108,39 +102,33 @@ void renderwaterfog(int mat, float surface)
         const bvec &deepcolor = getwaterdeepcolor(mat);
         const bvec &deepfadecolor = getwaterdeepfadecolor(mat);
         int deep = getwaterdeep(mat);
-        GLOBALPARAM(waterdeepcolor, (deepcolor.x*ldrscaleb, deepcolor.y*ldrscaleb, deepcolor.z*ldrscaleb));
+        GLOBALPARAMF(waterdeepcolor, (deepcolor.x*ldrscaleb, deepcolor.y*ldrscaleb, deepcolor.z*ldrscaleb));
         ivec deepfade = ivec(deepfadecolor.x, deepfadecolor.y, deepfadecolor.z).mul(deep);
-        GLOBALPARAM(waterdeepfade, (deepfade.x ? 255.0f/deepfade.x : 1e4f, deepfade.y ? 255.0f/deepfade.y : 1e4f, deepfade.z ? 255.0f/deepfade.z : 1e4f, deep ? 1.0f/deep : 1e4f));
+        GLOBALPARAMF(waterdeepfade, (deepfade.x ? 255.0f/deepfade.x : 1e4f, deepfade.y ? 255.0f/deepfade.y : 1e4f, deepfade.z ? 255.0f/deepfade.z : 1e4f, deep ? 1.0f/deep : 1e4f));
 
         rendercaustics(surface, syl, syr);
     }
     else
     {
-        GLOBALPARAM(waterdeepcolor, (0, 0, 0));
-        GLOBALPARAM(waterdeepfade, (0, 0, 0));
+        GLOBALPARAMF(waterdeepcolor, (0, 0, 0));
+        GLOBALPARAMF(waterdeepfade, (0, 0, 0));
     }
 
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    vec4 d = mvmatrix.getrow(2);
-    GLfloat m[16] =
-    {
-        d.x, 0,  0, 0,
-        d.y, 1,  0, 0,
-        d.z, 0, -1, 0,
-        d.w, 0, bz, 1
-    };
-    glMatrixMode(GL_TEXTURE);
-    glLoadMatrixf(m);
-    glMultMatrixf(worldmatrix.v);
-    glMatrixMode(GL_MODELVIEW);
+    vec4 d = cammatrix.getrow(2);
+    glmatrix m(d, vec4(0, 1, 0, 0), vec4(0, 0, -1, bz));
+    m.mul(worldmatrix);
+    GLOBALPARAM(waterfogmatrix, m);
 
     SETSHADER(waterfog);
-    glBegin(GL_TRIANGLE_STRIP);
-    glVertex2f(1, -1);
-    glVertex2f(-1, -1);
-    glVertex2f(1, syr);
-    glVertex2f(-1, syl);
-    glEnd();
+    varray::defvertex(2);
+    varray::begin(GL_TRIANGLE_STRIP);
+    varray::attribf(1, -1);
+    varray::attribf(-1, -1);
+    varray::attribf(1, syr);
+    varray::attribf(-1, syl);
+    varray::end();
+    varray::disable();
 
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
@@ -156,7 +144,7 @@ static float whscale, whoffset;
 #define VERTW(vertw, defbody, body) \
     static inline void def##vertw() \
     { \
-        varray::defattrib(varray::ATTRIB_VERTEX, 3, GL_FLOAT); \
+        varray::defvertex(); \
         defbody; \
     } \
     static inline void vertw(float v1, float v2, float v3) \
@@ -165,19 +153,19 @@ static float whscale, whoffset;
         float s = angle - int(angle) - 0.5f; \
         s *= 8 - fabs(s)*16; \
         float h = WATER_AMPLITUDE*s-WATER_OFFSET; \
-        varray::attrib<float>(v1, v2, v3+h); \
+        varray::attribf(v1, v2, v3+h); \
         body; \
     }
 #define VERTWN(vertw, defbody, body) \
     static inline void def##vertw() \
     { \
-        varray::defattrib(varray::ATTRIB_VERTEX, 3, GL_FLOAT); \
+        varray::defvertex(); \
         defbody; \
     } \
     static inline void vertw(float v1, float v2, float v3) \
     { \
         float h = -WATER_OFFSET; \
-        varray::attrib<float>(v1, v2, v3+h); \
+        varray::attribf(v1, v2, v3+h); \
         body; \
     }
 #define VERTWT(vertwt, defbody, body) \
@@ -189,27 +177,27 @@ static float whscale, whoffset;
     })
 
 VERTW(vertwt, {
-    varray::defattrib(varray::ATTRIB_TEXCOORD0, 2, GL_FLOAT);
+    varray::deftexcoord0();
 }, {
-    varray::attrib<float>(v1/8.0f, v2/8.0f);
+    varray::attribf(v1/8.0f, v2/8.0f);
 })
 VERTWN(vertwtn, {
-    varray::defattrib(varray::ATTRIB_TEXCOORD0, 2, GL_FLOAT);
+    varray::deftexcoord0();
 }, {
-    varray::attrib<float>(v1/8.0f, v2/8.0f);
+    varray::attribf(v1/8.0f, v2/8.0f);
 })
 
 static float lavaxk = 1.0f, lavayk = 1.0f, lavascroll = 0.0f;
 
 VERTW(vertl, {
-    varray::defattrib(varray::ATTRIB_TEXCOORD0, 2, GL_FLOAT);
+    varray::deftexcoord0();
 }, {
-    varray::attrib<float>(lavaxk*(v1+lavascroll), lavayk*(v2+lavascroll));
+    varray::attribf(lavaxk*(v1+lavascroll), lavayk*(v2+lavascroll));
 })
 VERTWN(vertln, {
-    varray::defattrib(varray::ATTRIB_TEXCOORD0, 2, GL_FLOAT);
+    varray::deftexcoord0();
 }, {
-    varray::attrib<float>(lavaxk*(v1+lavascroll), lavayk*(v2+lavascroll));
+    varray::attribf(lavaxk*(v1+lavascroll), lavayk*(v2+lavascroll));
 })
 
 #define renderwaterstrips(vertw, z) { \
@@ -483,9 +471,9 @@ static void renderwaterfall(const materialsurface &m, float offset, const vec *n
 {
     if(varray::data.empty())
     {
-        varray::defattrib(varray::ATTRIB_VERTEX, 3, GL_FLOAT);
-        if(normal) varray::defattrib(varray::ATTRIB_NORMAL, 3, GL_FLOAT);
-        varray::defattrib(varray::ATTRIB_TEXCOORD0, 2, GL_FLOAT);
+        varray::defvertex();
+        if(normal) varray::defnormal();
+        varray::deftexcoord0();
         varray::begin(GL_QUADS);
     }
     float x = m.o.x, y = m.o.y, zmin = m.o.z, zmax = zmin;
@@ -498,19 +486,19 @@ static void renderwaterfall(const materialsurface &m, float offset, const vec *n
 #define GENFACEVERTX(orient, vert, mx,my,mz, sx,sy,sz) \
             { \
                 vec v(mx sx, my sy, mz sz); \
-                varray::attrib<float>(v.x, v.y, v.z); \
+                varray::attribf(v.x, v.y, v.z); \
                 GENFACENORMAL \
-                varray::attrib<float>(wfxscale*v.y, -wfyscale*(v.z+wfscroll)); \
+                varray::attribf(wfxscale*v.y, -wfyscale*(v.z+wfscroll)); \
             }
 #undef GENFACEVERTY
 #define GENFACEVERTY(orient, vert, mx,my,mz, sx,sy,sz) \
             { \
                 vec v(mx sx, my sy, mz sz); \
-                varray::attrib<float>(v.x, v.y, v.z); \
+                varray::attribf(v.x, v.y, v.z); \
                 GENFACENORMAL \
-                varray::attrib<float>(wfxscale*v.x, -wfyscale*(v.z+wfscroll)); \
+                varray::attribf(wfxscale*v.x, -wfyscale*(v.z+wfscroll)); \
             }
-#define GENFACENORMAL varray::attrib<float>(n.x, n.y, n.z);
+#define GENFACENORMAL varray::attribf(n.x, n.y, n.z);
     if(normal)
     {
         vec n = *normal;
@@ -542,16 +530,16 @@ void renderlava()
         t = 0.5f + 0.5f*t;
         float glowmin = getlavaglowmin(k), glowmax = getlavaglowmax(k);
         int spec = getlavaspec(k);
-        LOCALPARAM(lavaglow, (0.5f*(glowmin + (glowmax-glowmin)*t)));
-        LOCALPARAM(lavaspec, (0.5f*spec/100.0f));
+        LOCALPARAMF(lavaglow, (0.5f*(glowmin + (glowmax-glowmin)*t)));
+        LOCALPARAMF(lavaspec, (0.5f*spec/100.0f));
 
         if(lavasurfs[k].length())
         {
             Texture *tex = lslot.sts.inrange(0) ? lslot.sts[0].t: notexture;
             glBindTexture(GL_TEXTURE_2D, tex->id);
-            glActiveTexture_(GL_TEXTURE1_ARB);
+            glActiveTexture_(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, lslot.sts.inrange(2) ? lslot.sts[2].t->id : notexture->id);
-            glActiveTexture_(GL_TEXTURE0_ARB);
+            glActiveTexture_(GL_TEXTURE0);
 
             vector<materialsurface> &surfs = lavasurfs[k];
             loopv(surfs) renderlava(surfs[i], tex, lslot.scale);
@@ -570,9 +558,9 @@ void renderlava()
             wfyscale = TEX_SCALE/(tex->ys*lslot.scale);
 
             glBindTexture(GL_TEXTURE_2D, tex->id);
-            glActiveTexture_(GL_TEXTURE1_ARB);
+            glActiveTexture_(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, lslot.sts.inrange(3) ? lslot.sts[3].t->id : notexture->id);
-            glActiveTexture_(GL_TEXTURE0_ARB);
+            glActiveTexture_(GL_TEXTURE0);
 
             vector<materialsurface> &surfs = lavafallsurfs[k];
             loopv(surfs)
@@ -609,24 +597,24 @@ void renderwaterfalls()
         float colorscale = (0.5f/255), refractscale = colorscale/ldrscale;
         float refract = getwaterfallrefract(k);
         int spec = getwaterfallspec(k);
-        GLOBALPARAM(waterfallcolor, (color.x*colorscale, color.y*colorscale, color.z*colorscale));
-        GLOBALPARAM(waterfallrefract, (refractcolor.x*refractscale, refractcolor.y*refractscale, refractcolor.z*refractscale, refract*viewh));
-        GLOBALPARAM(waterfallspec, (0.5f*spec/100.0f));
+        GLOBALPARAMF(waterfallcolor, (color.x*colorscale, color.y*colorscale, color.z*colorscale));
+        GLOBALPARAMF(waterfallrefract, (refractcolor.x*refractscale, refractcolor.y*refractscale, refractcolor.z*refractscale, refract*viewh));
+        GLOBALPARAMF(waterfallspec, (0.5f*spec/100.0f));
 
         if(waterfallenv) SETSHADER(waterfallenv);
         else SETSHADER(waterfall);
 
         glBindTexture(GL_TEXTURE_2D, tex->id);
-        glActiveTexture_(GL_TEXTURE1_ARB);
+        glActiveTexture_(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, wslot.sts.inrange(4) ? wslot.sts[4].t->id : notexture->id);
-        glActiveTexture_(GL_TEXTURE2_ARB);
+        glActiveTexture_(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, wslot.sts.inrange(5) ? wslot.sts[5].t->id : notexture->id);
         if(waterfallenv)
         {
-            glActiveTexture_(GL_TEXTURE3_ARB);
-            glBindTexture(GL_TEXTURE_CUBE_MAP_ARB, lookupenvmap(wslot));
+            glActiveTexture_(GL_TEXTURE3);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, lookupenvmap(wslot));
         }
-        glActiveTexture_(GL_TEXTURE0_ARB);
+        glActiveTexture_(GL_TEXTURE0);
 
         loopv(surfs)
         {
@@ -647,15 +635,15 @@ void renderwater()
         MSlot &wslot = lookupmaterialslot(MAT_WATER+k);
 
         glBindTexture(GL_TEXTURE_2D, wslot.sts.inrange(2) ? wslot.sts[2].t->id : notexture->id);
-        glActiveTexture_(GL_TEXTURE1_ARB);
+        glActiveTexture_(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, wslot.sts.inrange(3) ? wslot.sts[3].t->id : notexture->id);
         if(caustics && causticscale && causticmillis) setupcaustics(2);
         if(waterenvmap && !waterreflect && drawtex != DRAWTEX_MINIMAP)
         {
-            glActiveTexture_(GL_TEXTURE4_ARB);
-            glBindTexture(GL_TEXTURE_CUBE_MAP_ARB, lookupenvmap(wslot));
+            glActiveTexture_(GL_TEXTURE4);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, lookupenvmap(wslot));
         }
-        glActiveTexture_(GL_TEXTURE0_ARB);
+        glActiveTexture_(GL_TEXTURE0);
 
         float colorscale = 0.5f/255, refractscale = colorscale/ldrscale, reflectscale = 0.5f/ldrscale;
         const bvec &color = getwatercolor(k);
@@ -664,14 +652,14 @@ void renderwater()
         const bvec &refractcolor = getwaterrefractcolor(k);
         int fog = getwaterfog(k), deep = getwaterdeep(k), spec = getwaterspec(k);
         float refract = getwaterrefract(k);
-        GLOBALPARAM(watercolor, (color.x*colorscale, color.y*colorscale, color.z*colorscale));
-        GLOBALPARAM(waterdeepcolor, (deepcolor.x*colorscale, deepcolor.y*colorscale, deepcolor.z*colorscale));
-        GLOBALPARAM(waterfog, (fog ? 1.0f/fog : 1e4f));
+        GLOBALPARAMF(watercolor, (color.x*colorscale, color.y*colorscale, color.z*colorscale));
+        GLOBALPARAMF(waterdeepcolor, (deepcolor.x*colorscale, deepcolor.y*colorscale, deepcolor.z*colorscale));
+        GLOBALPARAMF(waterfog, (fog ? 1.0f/fog : 1e4f));
         ivec deepfade = ivec(deepfadecolor.x, deepfadecolor.y, deepfadecolor.z).mul(deep);
-        GLOBALPARAM(waterdeepfade, (deepfade.x ? 255.0f/deepfade.x : 1e4f, deepfade.y ? 255.0f/deepfade.y : 1e4f, deepfade.z ? 255.0f/deepfade.z : 1e4f, deep ? 1.0f/deep : 1e4f));
-        GLOBALPARAM(waterspec, (0.5f*spec/100.0f));
-        GLOBALPARAM(waterreflect, (reflectscale, reflectscale, reflectscale, waterreflectstep));
-        GLOBALPARAM(waterrefract, (refractcolor.x*refractscale, refractcolor.y*refractscale, refractcolor.z*refractscale, refract*viewh));
+        GLOBALPARAMF(waterdeepfade, (deepfade.x ? 255.0f/deepfade.x : 1e4f, deepfade.y ? 255.0f/deepfade.y : 1e4f, deepfade.z ? 255.0f/deepfade.z : 1e4f, deep ? 1.0f/deep : 1e4f));
+        GLOBALPARAMF(waterspec, (0.5f*spec/100.0f));
+        GLOBALPARAMF(waterreflect, (reflectscale, reflectscale, reflectscale, waterreflectstep));
+        GLOBALPARAMF(waterrefract, (refractcolor.x*refractscale, refractcolor.y*refractscale, refractcolor.z*refractscale, refract*viewh));
 
         #define SETWATERSHADER(which, name) \
         do { \

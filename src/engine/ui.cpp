@@ -154,18 +154,18 @@ namespace UI
 
     static inline void quad(float x, float y, float w, float h, float tx = 0, float ty = 0, float tw = 1, float th = 1)
     {
-        glTexCoord2f(tx,      ty);      glVertex2f(x,     y);
-        glTexCoord2f(tx + tw, ty);      glVertex2f(x + w, y);
-        glTexCoord2f(tx + tw, ty + th); glVertex2f(x + w, y + h);
-        glTexCoord2f(tx,      ty + th); glVertex2f(x,     y + h);
+        varray::attribf(x    , y    ); varray::attribf(tx     , ty     );
+        varray::attribf(x + w, y    ); varray::attribf(tx + tw, ty     );
+        varray::attribf(x + w, y + h); varray::attribf(tx + tw, ty + th);
+        varray::attribf(x    , y + h); varray::attribf(tx     , ty + th);
     }
 
     static inline void quadtri(float x, float y, float w, float h, float tx = 0, float ty = 0, float tw = 1, float th = 1)
     {
-        glTexCoord2f(tx,      ty);      glVertex2f(x,     y);
-        glTexCoord2f(tx + tw, ty);      glVertex2f(x + w, y);
-        glTexCoord2f(tx,      ty + th); glVertex2f(x,     y + h);
-        glTexCoord2f(tx + tw, ty + th); glVertex2f(x + w, y + h);
+        varray::attribf(x    , y    ); varray::attribf(tx     , ty     );
+        varray::attribf(x + w, y    ); varray::attribf(tx + tw, ty     );
+        varray::attribf(x    , y + h); varray::attribf(tx     , ty + th);
+        varray::attribf(x + w, y + h); varray::attribf(tx + tw, ty + th);
     }
 
     struct ClipArea
@@ -190,12 +190,12 @@ namespace UI
 
         void scissor()
         {
-            float margin = max((float(screen->w)/screen->h - 1)/2, 0.0f);
-            int sx1 = clamp(int(floor((x1+margin)/(1 + 2*margin)*screen->w)), 0, screen->w),
-                sy1 = clamp(int(floor(y1*screen->h)), 0, screen->h),
-                sx2 = clamp(int(ceil((x2+margin)/(1 + 2*margin)*screen->w)), 0, screen->w),
-                sy2 = clamp(int(ceil(y2*screen->h)), 0, screen->h);
-            glScissor(sx1, screen->h - sy2, sx2-sx1, sy2-sy1);
+            float margin = max((float(screenw)/screenh - 1)/2, 0.0f);
+            int sx1 = clamp(int(floor((x1+margin)/(1 + 2*margin)*screenw)), 0, screenw),
+                sy1 = clamp(int(floor(y1*screenh)), 0, screenh),
+                sx2 = clamp(int(ceil((x2+margin)/(1 + 2*margin)*screenw)), 0, screenw),
+                sy2 = clamp(int(ceil(y2*screenh)), 0, screenh);
+            glScissor(sx1, screenh - sy2, sx2-sx1, sy2-sy1);
         }
     };
 
@@ -405,18 +405,18 @@ namespace UI
             return NULL;
         }
 
-        virtual bool key(int code, bool isdown, int cooked)
+        virtual bool key(int code, bool isdown)
         {
             loopchildrenrev(o,
             {
-                if(o->key(code, isdown, cooked)) return true;
+                if(o->key(code, isdown)) return true;
             });
             return false;
         }
 
-        virtual bool hoverkey(int code, bool isdown, int cooked)
+        virtual bool hoverkey(int code, bool isdown)
         {
-            if(parent) return parent->hoverkey(code, isdown, cooked);
+            if(parent) return parent->hoverkey(code, isdown);
             return false;
         }
 
@@ -519,8 +519,8 @@ namespace UI
         {
             Object::layout();
 
-            int sw = screen->w;
-            size = screen->h;
+            int sw = screenw;
+            size = screenh;
             if(forceaspect) sw = int(ceil(size*forceaspect));
 
             margin = max((float(sw)/size - 1)/2, 0.0f);
@@ -928,7 +928,7 @@ namespace UI
             return Object::select(cx + offsetx, cy + offsety);
         }
 
-        bool hoverkey(int code, bool isdown, int cooked);
+        bool hoverkey(int code, bool isdown);
 
         void draw(float sx, float sy)
         {
@@ -995,9 +995,9 @@ namespace UI
 
         virtual void scrollto(float cx, float cy) {}
 
-        bool hoverkey(int code, bool isdown, int cooked)
+        bool hoverkey(int code, bool isdown)
         {
-            if(code != -4 && code != -5) return Object::hoverkey(code, isdown, cooked);
+            if(code != -4 && code != -5) return Object::hoverkey(code, isdown);
 
             if(!isdown) return false;
 
@@ -1050,9 +1050,9 @@ namespace UI
         virtual void movebutton(Object *o, float fromx, float fromy, float tox, float toy) = 0;
     };
 
-    bool Scroller::hoverkey(int code, bool isdown, int cooked)
+    bool Scroller::hoverkey(int code, bool isdown)
     {
-        if(code != -4 && code != -5) return Object::hoverkey(code, isdown, cooked);
+        if(code != -4 && code != -5) return Object::hoverkey(code, isdown);
 
         if(!canscroll || !isdown) return false;
 
@@ -1266,7 +1266,7 @@ namespace UI
             updateval(var, min(vmax, vmin) + newstep * stepsize, onchange);
         }
 
-        bool hoverkey(int code, bool isdown, int cooked)
+        bool hoverkey(int code, bool isdown)
         {
             switch(code)
             {
@@ -1286,7 +1286,7 @@ namespace UI
                     return true;
             }
 
-             return Object::hoverkey(code, isdown, cooked);
+             return Object::hoverkey(code, isdown);
         }
 
         int forks() const { return 5; }
@@ -1529,20 +1529,24 @@ namespace UI
         void draw(float sx, float sy)
         {
             if(type==MODULATE) glBlendFunc(GL_ZERO, GL_SRC_COLOR);
-            glDisable(GL_TEXTURE_2D);
-            notextureshader->set();
-            glColor4fv(color.v);
-            glBegin(GL_TRIANGLE_STRIP);
-            glVertex2f(sx,     sy);
-            glVertex2f(sx + w, sy);
-            glVertex2f(sx,     sy + h);
-            glVertex2f(sx + w, sy + h);
-            glEnd();
-            glColor3f(1, 1, 1);
-            glEnable(GL_TEXTURE_2D);
-            defaultshader->set();
-            if(type==MODULATE) glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            hudnotextureshader->set();
+            varray::color(color);
 
+            varray::defvertex(2);
+
+            varray::begin(GL_TRIANGLE_STRIP);
+            varray::attribf(sx,     sy);
+            varray::attribf(sx + w, sy);
+            varray::attribf(sx,     sy + h);
+            varray::attribf(sx + w, sy + h);
+            varray::end();
+
+            hudshader->set();
+            varray::colorf(1, 1, 1, 1);
+            varray::defvertex(2);
+            varray::deftexcoord0();
+
+            if(type==MODULATE) glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             Object::draw(sx, sy);
         }
     };
@@ -1566,9 +1570,9 @@ namespace UI
         void draw(float sx, float sy)
         {
             glBindTexture(GL_TEXTURE_2D, tex->id);
-            glBegin(GL_TRIANGLE_STRIP);
+            varray::begin(GL_TRIANGLE_STRIP);
             quadtri(sx, sy, w, h);
-            glEnd();
+            varray::end();
 
             Object::draw(sx, sy);
         }
@@ -1663,12 +1667,10 @@ namespace UI
             xt = min(1.0f, tex->xs/(float)tex->ys),
             yt = min(1.0f, tex->ys/(float)tex->xs);
 
-            static Shader *rgbonlyshader = NULL;
-            if(!rgbonlyshader) rgbonlyshader = lookupshaderbyname("rgbonly");
-            rgbonlyshader->set();
+            SETSHADER(hudrgb);
 
-            float tc[4][2] = { { 0, 0 }, { 1, 0 }, { 1, 1 }, { 0, 1 } };
-            int xoff = vslot.xoffset, yoff = vslot.yoffset;
+            vec2 tc[4] = { vec2(0, 0), vec2(1, 0), vec2(1, 1), vec2(0, 1) };
+            int xoff = vslot.offset.x, yoff = vslot.offset.y;
             if(vslot.rotation)
             {
                 if((vslot.rotation&5) == 1) { swap(xoff, yoff); loopk(4) swap(tc[k][0], tc[k][1]); }
@@ -1676,43 +1678,44 @@ namespace UI
                 if(vslot.rotation <= 2 || vslot.rotation == 5) { yoff *= -1; loopk(4) tc[k][1] *= -1; }
             }
             loopk(4) { tc[k][0] = tc[k][0]/xt - float(xoff)/tex->xs; tc[k][1] = tc[k][1]/yt - float(yoff)/tex->ys; }
-            if(slot.loaded) glColor3fv(vslot.colorscale.v);
+            if(slot.loaded) varray::color(vslot.colorscale);
             glBindTexture(GL_TEXTURE_2D, tex->id);
-            glBegin(GL_TRIANGLE_STRIP);
-            glTexCoord2fv(tc[0]); glVertex2f(sx,   sy);
-            glTexCoord2fv(tc[1]); glVertex2f(sx+w, sy);
-            glTexCoord2fv(tc[3]); glVertex2f(sx,   sy+h);
-            glTexCoord2fv(tc[2]); glVertex2f(sx+w, sy+h);
-            glEnd();
+
+            varray::begin(GL_TRIANGLE_STRIP);
+            varray::attribf(sx  , sy  ); varray::attrib(tc[0]);
+            varray::attribf(sx+w, sy  ); varray::attrib(tc[1]);
+            varray::attribf(sx  , sy+h); varray::attrib(tc[2]);
+            varray::attribf(sx+w, sy+h); varray::attrib(tc[3]);
+            varray::end();
 
             if(glowtex)
             {
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE);
                 glBindTexture(GL_TEXTURE_2D, glowtex->id);
-                glColor3fv(vslot.glowcolor.v);
-                glBegin(GL_TRIANGLE_STRIP);
-                glTexCoord2fv(tc[0]); glVertex2f(sx,   sy);
-                glTexCoord2fv(tc[1]); glVertex2f(sx+w, sy);
-                glTexCoord2fv(tc[3]); glVertex2f(sx,   sy+h);
-                glTexCoord2fv(tc[2]); glVertex2f(sx+w, sy+h);
-                glEnd();
+                varray::color(vslot.glowcolor);
+                varray::begin(GL_TRIANGLE_STRIP);
+                varray::attribf(sx  , sy  ); varray::attrib(tc[0]);
+                varray::attribf(sx+w, sy  ); varray::attrib(tc[1]);
+                varray::attribf(sx  , sy+h); varray::attrib(tc[2]);
+                varray::attribf(sx+w, sy+h); varray::attrib(tc[3]);
+                varray::end();
 
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             }
             if(layertex)
             {
                 glBindTexture(GL_TEXTURE_2D, layertex->id);
-                glColor3fv(layer->colorscale.v);
-                glBegin(GL_TRIANGLE_STRIP);
-                glTexCoord2fv(tc[0]); glVertex2f(sx+w/2, sy+h/2);
-                glTexCoord2fv(tc[1]); glVertex2f(sx+w,   sy+h/2);
-                glTexCoord2fv(tc[3]); glVertex2f(sx+w/2, sy+h);
-                glTexCoord2fv(tc[2]); glVertex2f(sx+w,   sy+h);
-                glEnd();
+                varray::color(layer->colorscale);
+                varray::begin(GL_TRIANGLE_STRIP);
+                varray::attribf(sx  , sy  ); varray::attrib(tc[0]);
+                varray::attribf(sx+w, sy  ); varray::attrib(tc[1]);
+                varray::attribf(sx  , sy+h); varray::attrib(tc[2]);
+                varray::attribf(sx+w, sy+h); varray::attrib(tc[3]);
+                varray::end();
             }
-            glColor3f(1, 1, 1);
+            varray::colorf(1, 1, 1);
 
-            defaultshader->set();
+            hudshader->set();
         }
 
         void draw(float sx, float sy)
@@ -1754,9 +1757,9 @@ namespace UI
         void draw(float sx, float sy)
         {
             glBindTexture(GL_TEXTURE_2D, tex->id);
-            glBegin(GL_TRIANGLE_STRIP);
+            varray::begin(GL_TRIANGLE_STRIP);
             quadtri(sx, sy, w, h, cropx, cropy, cropw, croph);
-            glEnd();
+            varray::end();
 
             Object::draw(sx, sy);
         }
@@ -1788,7 +1791,7 @@ namespace UI
         void draw(float sx, float sy)
         {
             glBindTexture(GL_TEXTURE_2D, tex->id);
-            glBegin(GL_QUADS);
+            varray::begin(GL_QUADS);
             float splitw = (minw ? min(minw, w) : w) / 2,
                   splith = (minh ? min(minh, h) : h) / 2,
                   vy = sy, ty = 0;
@@ -1820,7 +1823,7 @@ namespace UI
                 ty += th;
                 if(ty >= 1) break;
             }
-            glEnd();
+            varray::end();
 
             Object::draw(sx, sy);
         }
@@ -1860,7 +1863,7 @@ namespace UI
         void draw(float sx, float sy)
         {
             glBindTexture(GL_TEXTURE_2D, tex->id);
-            glBegin(GL_QUADS);
+            varray::begin(GL_QUADS);
             float vy = sy, ty = 0;
             loopi(3)
             {
@@ -1888,7 +1891,7 @@ namespace UI
                 vy += vh;
                 ty += th;
             }
-            glEnd();
+            varray::end();
 
             Object::draw(sx, sy);
         }
@@ -1920,7 +1923,7 @@ namespace UI
             if(tex->clamp)
             {
                 float dx = 0, dy = 0;
-                glBegin(GL_QUADS);
+                varray::begin(GL_QUADS);
                 while(dx < w)
                 {
                     while(dy < h)
@@ -1936,13 +1939,13 @@ namespace UI
                     dx += tilew;
                 }
 
-                glEnd();
+                varray::end();
             }
             else
             {
-                glBegin(GL_TRIANGLE_STRIP);
+                varray::begin(GL_TRIANGLE_STRIP);
                 quadtri(sx, sy, w, h, 0, 0, w/tilew, h/tileh);
-                glEnd();
+                varray::end();
             }
 
             Object::draw(sx, sy);
@@ -1979,13 +1982,14 @@ namespace UI
         void draw(float sx, float sy)
         {
             glDisable(GL_BLEND);
+            varray::disable();
             // GL_SCISSOR_TEST causes problems with rendering
             // disable it and restore it afterwards.
             if(clipstack.length()) glDisable(GL_SCISSOR_TEST);
 
 
-            int x = floor( (sx + world->margin) * screen->w / world->w),
-                dx = ceil(w * screen->w / world->w),
+            int x = floor( (sx + world->margin) * screenw / world->w),
+                dx = ceil(w * screenw / world->w),
                 y = ceil(( 1 - (h + sy) ) * world->size),
                 dy = ceil(h * world->size);
 
@@ -2023,6 +2027,9 @@ namespace UI
             glEnable(GL_BLEND);
             if(clipstack.length()) glEnable(GL_SCISSOR_TEST);
 
+            hudshader->set();
+            varray::defvertex(2);
+            varray::deftexcoord0();
             Object::draw(sx, sy);
         }
 
@@ -2053,11 +2060,12 @@ namespace UI
         void draw(float sx, float sy)
         {
             float k = drawscale();
-            glPushMatrix();
-            glScalef(k, k, 1);
+            pushhudmatrix();
+            hudmatrix.scale(k, k, 1);
+            flushhudmatrix();
             draw_text(str, int(sx/k), int(sy/k), color.x * 255, color.y * 255, color.z * 255, 255, -1, wrap <= 0 ? -1 : wrap/k);
-            glColor3f(1, 1, 1);
-            glPopMatrix();
+
+            pophudmatrix();
 
             Object::draw(sx, sy);
         }
@@ -2102,11 +2110,13 @@ namespace UI
             executeret(cmd, result);
 
             float k = drawscale();
-            glPushMatrix();
-            glScalef(k, k, 1);
+            pushhudmatrix();
+            hudmatrix.scale(k, k, 1);
+            flushhudmatrix();
+
             draw_text(result.getstr(), int(sx/k), int(sy/k), color.x * 255, color.y * 255, color.z * 255, 255, -1, wrap <= 0 ? -1 : wrap/k);
-            glColor3f(1, 1, 1);
-            glPopMatrix();
+
+            pophudmatrix();
 
             Object::draw(sx, sy);
         }
@@ -2186,7 +2196,7 @@ namespace UI
             offsety = cy;
         }
 
-        bool hoverkey(int code, bool isdown, int cooked)
+        bool hoverkey(int code, bool isdown)
         {
             switch(code)
             {
@@ -2196,23 +2206,23 @@ namespace UI
                 case SDLK_DOWN:
                 case -4:
                 case -5:
-                    if(isdown) edit->key(code, cooked);
+                    if(isdown) edit->key(code);
                     return true;
             }
-            return Object::hoverkey(code, isdown, cooked);
+            return Object::hoverkey(code, isdown);
         }
 
-        bool key(int code, bool isdown, int cooked)
+        bool key(int code, bool isdown)
         {
-            if(Object::key(code, isdown, cooked)) return true;
+            if(Object::key(code, isdown)) return true;
             if(!isfocused(this)) return false;
             switch(code)
             {
                 case SDLK_RETURN:
                 case SDLK_KP_ENTER:
-                    if(!cooked) return true;
                 case SDLK_TAB:
                     if(edit->maxy != 1) break;
+
                 case SDLK_ESCAPE:
                     setfocus(NULL);
                     return true;
@@ -2227,8 +2237,6 @@ namespace UI
                 case SDLK_RSHIFT:
                 case SDLK_LCTRL:
                 case SDLK_RCTRL:
-                case SDLK_LMETA:
-                case SDLK_RMETA:
                     break;
                 case SDLK_a:
                 case SDLK_x:
@@ -2236,11 +2244,11 @@ namespace UI
                 case SDLK_v:
                     if(SDL_GetModState()) break;
                 default:
-                    if(!cooked || code<32) return false;
-                    if(keyfilter && !strchr(keyfilter, cooked)) return true;
+                    if(code<32) return false;
+                    if(keyfilter && !strchr(keyfilter, code)) return true;
                     break;
             }
-            if(isdown) edit->key(code, cooked);
+            if(isdown) edit->key(code);
             return true;
         }
 
@@ -2280,12 +2288,14 @@ namespace UI
 
         void draw(float sx, float sy)
         {
-            glPushMatrix();
-            glTranslatef(sx, sy, 0);
-            glScalef(scale/(FONTH*uitextrows), scale/(FONTH*uitextrows), 1);
+            pushhudmatrix();
+            hudmatrix.translate(sx, sy, 0);
+            hudmatrix.scale(scale/(FONTH*uitextrows), scale/(FONTH*uitextrows), 1);
+            flushhudmatrix();
+
             edit->draw(FONTW/2, 0, 0xFFFFFF, isfocused(this));
-            glColor3f(1, 1, 1);
-            glPopMatrix();
+
+            pophudmatrix();
 
             Object::draw(sx, sy);
         }
@@ -2306,9 +2316,9 @@ namespace UI
             updateval(var, edit->lines[0].text, onchange);
         }
 
-        bool hoverkey(int code, bool isdown, int cooked)
+        bool hoverkey(int code, bool isdown)
         {
-            return key(code, isdown, cooked);
+            return key(code, isdown);
         }
 
         void resetvalue()
@@ -2317,9 +2327,9 @@ namespace UI
             if(strcmp(edit->lines[0].text, str)) edit->clear(str);
         }
 
-        bool key(int code, bool isdown, int cooked)
+        bool key(int code, bool isdown)
         {
-            if(Object::key(code, isdown, cooked)) return true;
+            if(Object::key(code, isdown)) return true;
             if(!isfocused(this)) return false;
 
             switch(code)
@@ -2330,7 +2340,6 @@ namespace UI
                 case SDLK_KP_ENTER:
                 case SDLK_RETURN:
                 case SDLK_TAB:
-                    if(!cooked) return false;
                     commit();
                     setfocus(NULL);
                     return true;
@@ -2343,14 +2352,22 @@ namespace UI
                     break;
 
                 default:
-                    if(!cooked || code<32) return false;
-                    if(keyfilter && !strchr(keyfilter, cooked)) return true;
+                    if(code<32) return false;
+                    if(keyfilter && !strchr(keyfilter, code)) return true;
                     break;
             }
-            if(isdown) edit->key(code, cooked);
+            if(isdown) edit->key(code);
             return true;
         }
     };
+
+    bool input(const char *str, int len)
+    {
+        if(!focused || focused->gettype() != TYPE_TEXTEDITOR) return false;
+
+        ((TextEditor *) focused)->edit->input(str, len);
+        return true;
+    }
 
     struct NamedObject : Object
     {
@@ -2664,7 +2681,7 @@ namespace UI
         if(cursormode() == 2 || (world->takesinput() && cursormode() >= 1))
         {
             float scale = 500.0f / cursorsensitivity;
-            cursorx = clamp(cursorx+dx*(screen->h/(screen->w*scale)), 0.0f, 1.0f);
+            cursorx = clamp(cursorx+dx*(screenh/(screenw*scale)), 0.0f, 1.0f);
             cursory = clamp(cursory+dy/scale, 0.0f, 1.0f);
             if(cursormode() == 2)
             {
@@ -2699,7 +2716,7 @@ namespace UI
         else x = y = .5f;
     }
 
-    bool keypress(int code, bool isdown, int cooked)
+    bool keypress(int code, bool isdown)
     {
         if(!hascursor()) return false;
         switch(code)
@@ -2711,8 +2728,8 @@ namespace UI
             case SDLK_DOWN:
             case SDLK_UP:
             {
-                if((focused && focused->hoverkey(code, isdown, cooked)) ||
-                    (hovering && hovering->hoverkey(code, isdown, cooked)))
+                if((focused && focused->hoverkey(code, isdown)) ||
+                    (hovering && hovering->hoverkey(code, isdown)))
                     return true;
                 return false;
             }
@@ -2728,7 +2745,7 @@ namespace UI
             }
 
             default:
-                return world->key(code, isdown, cooked);
+                return world->key(code, isdown);
         }
     }
 
@@ -2792,8 +2809,8 @@ namespace UI
 
         if(refreshrepeat || (textediting!=NULL) != wastextediting)
         {
-            SDL_EnableUNICODE(textediting!=NULL);
-            keyrepeat(textediting!=NULL || editmode);
+            textinput(textediting != NULL, TI_GUI);
+            keyrepeat(textediting != NULL, KR_GUI);
             refreshrepeat = 0;
         }
     }
@@ -2805,16 +2822,13 @@ namespace UI
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        glMatrixMode(GL_PROJECTION);
-        glPushMatrix();
-        glLoadIdentity();
-        glOrtho(world->x, world->x + world->w, world->y + world->h, world->y, -1, 1);
+        hudmatrix.ortho(world->x, world->x + world->w, world->y + world->h, world->y, -1, 1);
+        resethudmatrix();
+        hudshader->set();
 
-        glMatrixMode(GL_MODELVIEW);
-        glPushMatrix();
-        glLoadIdentity();
-
-        glColor3f(1, 1, 1);
+        varray::colorf(1, 1, 1);
+        varray::defvertex(2);
+        varray::deftexcoord0();
 
         world->draw();
 
@@ -2838,11 +2852,7 @@ namespace UI
             tooltip->draw(x, y);
         }
 
-        glMatrixMode(GL_PROJECTION);
-        glPopMatrix();
-        glMatrixMode(GL_MODELVIEW);
-        glPopMatrix();
-        glEnable(GL_BLEND);
+        varray::disable();
     }
 }
 
@@ -2910,26 +2920,28 @@ FVARP(fullconblend, 0, .8, 1);
 
 void consolebox(int x1, int y1, int x2, int y2)
 {
-    glPushMatrix();
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDisable(GL_TEXTURE_2D);
-    notextureshader->set();
 
-    glTranslatef(x1, y1, 0);
+    pushhudmatrix();
+    hudmatrix.translate(x1, y1, 0);
+    flushhudmatrix();
+
+    hudnotextureshader->set();
+
     float r = ((fullconcolor >> 16) & 0xFF) / 255.f,
         g = ((fullconcolor >> 8) & 0xFF) / 255.f,
         b = (fullconcolor & 0xFF) / 255.f;
-    glColor4f(r, g, b, fullconblend);
-    glBegin(GL_TRIANGLE_STRIP);
+    varray::colorf(r, g, b, fullconblend);
+    varray::defvertex(2);
 
-    glVertex2i(x1, y1);
-    glVertex2i(x2, y1);
-    glVertex2i(x1, y2);
-    glVertex2i(x2, y2);
+    varray::begin(GL_TRIANGLE_STRIP);
+    varray::attribf(x1, y1);
+    varray::attribf(x2, y1);
+    varray::attribf(x1, y2);
+    varray::attribf(x2, y2);
 
-    glEnd();
-    glEnable(GL_TEXTURE_2D);
-    defaultshader->set();
+    varray::end();
 
-    glPopMatrix();
+    pophudmatrix();
+    hudshader->set();
 }

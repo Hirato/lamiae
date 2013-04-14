@@ -6,12 +6,12 @@ namespace game
 
 	void quad(int x, int y, int xs, int ys)
 	{
-		glBegin(GL_TRIANGLE_STRIP);
-		glTexCoord2f(0, 0); glVertex2i(x,    y);
-		glTexCoord2f(1, 0); glVertex2i(x+xs, y);
-		glTexCoord2f(0, 1); glVertex2i(x,    y+ys);
-		glTexCoord2f(1, 1); glVertex2i(x+xs, y+ys);
-		glEnd();
+		varray::begin(GL_TRIANGLE_STRIP);
+		varray::attribf(x,    y);    varray::attribf(0, 0);
+		varray::attribf(x+xs, y);    varray::attribf(1, 0);
+		varray::attribf(x,    y+ys); varray::attribf(0, 1);
+		varray::attribf(x+xs, y+ys); varray::attribf(1, 1);
+		varray::end();
 	}
 
 	float abovegameplayhud(int w, int h)
@@ -54,56 +54,64 @@ namespace game
 
 	void drawminimap(rpgent *d, float x, float y, float dx, float dy)
 	{
-		const int coords[4][2] = { {0,0}, {1, 0}, {1, 1}, {0,1}};
+		const float coords[4][2] = { {0,0}, {1, 0}, {1, 1}, {0,1}};
 		if(!minimap || !d) return;
 		float offset = min<float>(getworldsize() * minimapfrac / 2.0f, minimapmaxdist);
 
-		glPushMatrix();
-		glTranslatef(x + dx / 2, y + dy / 2, 0);
+		pushhudmatrix();
+		hudmatrix.translate(x + dx / 2, y + dy / 2, 0);
+		if(minimapup) hudmatrix.rotate((d->yaw + 180) * RAD, vec(0, 0, -1));
+		flushhudmatrix();
+
 		glDisable(GL_BLEND);
-		if(minimapup) glRotatef(d->yaw + 180, 0, 0, -1);
 
 		if(curmap->flags & mapinfo::F_NOMINIMAP)
 		{
-			glColor3f(0, 0, 0);
-			glDisable(GL_TEXTURE_2D);
-			glBegin(GL_TRIANGLE_FAN);
+			varray::colorf(0, 0, 0);
+			varray::defvertex(2);
+			sethudnotextureshader();
+
+			varray::begin(GL_TRIANGLE_FAN);
 			loopi(16)
 			{
 				vec dir(M_PI / 8 * i, 0);
-				glVertex2i(x + dir.x * dx / 2, y + dir.y * dy / 2);
+				varray::attribf(x + dir.x * dx / 2, y + dir.y * dy / 2);
 			}
-			glEnd();
-			glEnable(GL_TEXTURE_2D);
-			glEnable(GL_BLEND);
+			varray::end();
+
+			sethudshader();
+			varray::colorf(1, 1, 1);
+			varray::defvertex(2);
+			varray::deftexcoord0();
 
 			settexture("data/rpg/hud/player", 3);
-			glBegin(GL_TRIANGLE_FAN);
+			varray::begin(GL_TRIANGLE_FAN);
 			loopi(4)
 			{
 				vec dir((d->yaw) * RAD + M_PI * i / 2.0f, 0);
-				glTexCoord2f(coords[i][0], coords[i][1]);
-				glVertex2i(dx / 16 * dir.x, dy / 16 * dir.y);
+
+				varray::attribf(dx / 16 * dir.x, dy / 16 * dir.y);
+				varray::attrib(coords[i]);
 			}
-			glEnd();
+			varray::end();
 		}
 		else
 		{
 			vec pos = vec(d->o).sub(minimapcenter).mul(minimapscale).add(.5f);
-			glColor3f(1, 1, 1);
+			varray::colorf(1, 1, 1);
 			bindminimap();
-			glBegin(GL_TRIANGLE_FAN);
+			varray::begin(GL_TRIANGLE_FAN);
 			loopi(16)
 			{
 				vec dir(M_PI / 8 * i, 0);
-				glTexCoord2f(1.0f - (pos.x + dir.x * offset * minimapscale.x), pos.y + dir.y * offset * minimapscale.y);
-				glVertex2i(dx * dir.x / 2, dy * dir.y / 2);
+				varray::attribf(dx * dir.x / 2, dy * dir.y / 2);
+				varray::attribf(1.0f - (pos.x + dir.x * offset * minimapscale.x), pos.y + dir.y * offset * minimapscale.y);
 			}
-			glEnd();
+			varray::end();
 			glEnable(GL_BLEND);
 
 			settexture("data/rpg/hud/player", 3);
-			glBegin(GL_QUADS);
+			varray::begin(GL_QUADS);
 			loopv(curmap->objs)
 			{
 				rpgent *m = curmap->objs[i];
@@ -112,19 +120,19 @@ namespace game
 
 				if(pos.magnitude() >= 1) continue;
 
-				glColor4f(col.x, col.y, col.z, 3 - 3 * pos.magnitude());
+				varray::colorf(col.x, col.y, col.z, 3 - 3 * pos.magnitude());
 
 				loopi(4)
 				{
 					vec dir((m->yaw) * RAD + M_PI * i / 2.0f, 0);
-					glTexCoord2f(coords[i][0], coords[i][1]);
-					glVertex2i(pos.x * dx / 2 + dx / 24 * dir.x, pos.y * dy / 2 + dy / 24 * dir.y);
+					varray::attribf(pos.x * dx / 2 + dx / 24 * dir.x, pos.y * dy / 2 + dy / 24 * dir.y);
+					varray::attribf(coords[i][0], coords[i][1]);
 				}
 			}
-			glEnd();
+			varray::end();
 
 			settexture("data/rpg/hud/blip", 3);
-			glBegin(GL_QUADS);
+			varray::begin(GL_QUADS);
 			loopv(curmap->projs)
 			{
 				projectile &p = *curmap->projs[i];
@@ -132,26 +140,31 @@ namespace game
 				if(pos.magnitude() >= 1)
 					continue;
 
-				glColor4f(p.owner != d, p.owner == d, 0, min<float>(1, 3 - 3 * pos.magnitude()));
+				if(!i || p.owner != curmap->projs[i-1]->owner)
+				{
+					varray::end();
+					varray::begin(GL_QUADS);
+					varray::colorf(p.owner != d, p.owner == d, 0, min<float>(1, 3 - 3 * pos.magnitude()));
+				}
 
-				glTexCoord2i(0, 0);
-				glVertex2i(pos.x * dx / 2 - dx / 64, pos.y * dy / 2 - dy / 64);
-				glTexCoord2i(1, 0);
-				glVertex2i(pos.x * dx / 2 + dx / 64, pos.y * dy / 2 - dy / 64);
-				glTexCoord2i(1, 1);
-				glVertex2i(pos.x * dx / 2 + dx / 64, pos.y * dy / 2 + dy / 64);
-				glTexCoord2i(0, 1);
-				glVertex2i(pos.x * dx / 2 - dx / 64, pos.y * dy / 2 + dy / 64);
+				varray::attribf(pos.x * dx / 2 - dx / 64, pos.y * dy / 2 - dy / 64);
+				varray::attribf(0, 0);
+				varray::attribf(pos.x * dx / 2 + dx / 64, pos.y * dy / 2 - dy / 64);
+				varray::attribf(1, 0);
+				varray::attribf(pos.x * dx / 2 + dx / 64, pos.y * dy / 2 + dy / 64);
+				varray::attribf(1, 1);
+				varray::attribf(pos.x * dx / 2 - dx / 64, pos.y * dy / 2 + dy / 64);
+				varray::attribf(0, 1);
 			}
 
 			//TODO loopv(curmap->blips) {}
-			glEnd();
+			varray::end();
 		}
 
-		glColor3f(1, 1, 1);
+		varray::colorf(1, 1, 1);
 		settexture("data/rpg/hud/compass", 3);
 		quad(-dx / 2 - 2, -dy / 2 - 2, dx + 4, dy + 4);
-		glPopMatrix();
+		pophudmatrix();
 	}
 	ICOMMAND(r_hud_minimap, "sffff", (const char *r, float *x, float *y, float *dx, float *dy),
 		int idx;
@@ -166,15 +179,15 @@ namespace game
 		col.div(255.f);
 
 		settexture(*img ? img : "data/rpg/hud/hbar", 3);
-		glBegin(GL_TRIANGLE_FAN);
+		varray::begin(GL_TRIANGLE_FAN);
 
-		glColor3fv(col.v);
-		glTexCoord2f(0, 0);        glVertex2i(x , y);
-		glTexCoord2f(progress, 0); glVertex2i(x + dx * progress, y);
-		glTexCoord2f(progress, 1); glVertex2i(x + dx * progress, y + dy);
-		glTexCoord2f(0, 1);        glVertex2i(x, y + dy);
+		varray::color(col);
+		varray::attribf(x , y);                     varray::attribf(0, 0);
+		varray::attribf(x + dx * progress, y);      varray::attribf(progress, 0);
+		varray::attribf(x + dx * progress, y + dy); varray::attribf(progress, 1);
+		varray::attribf(x, y + dy);                 varray::attribf(0, 1);
 
-		glEnd();
+		varray::end();
 	}
 	ICOMMAND(r_hud_horizbar, "sfffffii", (const char *i, float *x, float *y, float *dx, float *dy, float *p, int *col),
 		drawhorizbar(i, *x, *y, *dx, *dy, *p, *col);
@@ -186,15 +199,15 @@ namespace game
 		col.div(255.f);
 
 		settexture(*img ? img : "data/rpg/hud/vbar", 3);
-		glBegin(GL_TRIANGLE_FAN);
+		varray::begin(GL_TRIANGLE_FAN);
 
-		glColor3fv(col.v);
-		glTexCoord2f(0, 0);        glVertex2i(x , y);
-		glTexCoord2f(1, 0);        glVertex2i(x + dx, y);
-		glTexCoord2f(1, progress); glVertex2i(x + dx, y + dy * progress);
-		glTexCoord2f(0, progress); glVertex2i(x, y + dy * progress);
+		varray::color(col);
+		varray::attribf(x , y);                     varray::attribf(0, 0);
+		varray::attribf(x + dx, y);                 varray::attribf(1, 0);
+		varray::attribf(x + dx, y + dy * progress); varray::attribf(1, progress);
+		varray::attribf(x, y + dy * progress);      varray::attribf(0, progress);
 
-		glEnd();
+		varray::end();
 	}
 	ICOMMAND(r_hud_vertbar, "sfffffi", (const char *i, float *x, float *y, float *dx, float *dy, float *p, int *col),
 		drawvertbar(i, *x, *y, *dx, *dy, *p, *col);
@@ -202,14 +215,15 @@ namespace game
 
 	void drawtext(float x, float y, float size, int colour, const char *str)
 	{
-		glPushMatrix();
-		glTranslatef(x, y, 0);
-		glScalef(size, size, size);
+		pushhudmatrix();
+		hudmatrix.translate(x, y, 0);
+		hudmatrix.scale(size, size, size);
+		flushhudmatrix();
 
 		vec col((colour >> 16) & 255, (colour >> 8) & 255, colour & 255);
 		draw_text(str, 0, 0, col.x, col.y, col.z);
 
-		glPopMatrix();
+		pophudmatrix();
 	}
 	ICOMMAND(r_hud_text, "fffis", (float *x, float *y, float *sz, int *col, const char *s),
 		drawtext(*x, *y, *sz, *col, s);
@@ -220,7 +234,7 @@ namespace game
 		settexture(img, 3);
 		vec col = vec((colour >> 16) & 255, (colour >> 8) & 255, colour & 255).div(255.f);
 
-		glColor3fv(col.v);
+		varray::color(col);
 		quad(x, y, dx, dy);
 	}
 	ICOMMAND(r_hud_image, "sffffi", (const char *i, float *x, float *y, float *dx, float *dy, int *c),
@@ -229,12 +243,20 @@ namespace game
 
 	void drawsolid(float x, float y, float dx, float dy, int colour)
 	{
-		glDisable(GL_TEXTURE_2D);
 		vec col = vec((colour >> 16) & 255, (colour >> 8) & 255, colour & 255).div(255.f);
 
-		glColor3fv(col.v);
-		quad(x, y, dx, dy);
-		glEnable(GL_TEXTURE_2D);
+		varray::color(col);
+		varray::defvertex(2);
+
+		varray::begin(GL_TRIANGLE_STRIP);
+		varray::attribf(x,    y);
+		varray::attribf(x+dx, y);
+		varray::attribf(x,    y+dy);
+		varray::attribf(x+dx, y+dy);
+		varray::end();
+
+		varray::defvertex(2);
+		varray::deftexcoord0();
 	}
 
 	ICOMMAND(r_hud_solid, "ffffi", (float *x, float *y, float *dx, float *dy, int *c),
@@ -284,9 +306,14 @@ namespace game
 		if(!mapdata || !curmap || editmode)
 			return;
 
-		glPushMatrix();
+		varray::colorf(1, 1, 1);
+		varray::defvertex(2);
+		varray::deftexcoord0();
+
 		float scale = min (w / 1600.0f, h / 1200.0f);
-		glScalef(scale, scale, 1);
+		pushhudmatrix();
+		hudmatrix.scale(scale, scale, 1);
+		flushhudmatrix();
 
 		hud_right = w / scale, hud_bottom = h / scale; // top and left are ALWAYS 0
 
@@ -296,10 +323,11 @@ namespace game
 
 		if(lines.length())
 		{
-			glPushMatrix();
-			glTranslatef(0, 160, 0);
+			pushhudmatrix();
+			hudmatrix.translate(0, 160, 0);
+			hudmatrix.scale(hudlinescale, hudlinescale, hudlinescale);
+			flushhudmatrix();
 
-			glScalef(hudlinescale, hudlinescale, hudlinescale);
 			float width = hud_right / hudlinescale;
 
 			float textoffset = 0;
@@ -325,14 +353,15 @@ namespace game
 				textoffset += h * alpha / 255;
 			}
 
-			glPopMatrix();
+			pophudmatrix();
 		}
 
 		if(DEBUG_WORLD)
 		{
-			glPushMatrix();
-			glTranslatef(hud_right - 300, 350, 0);
-			glScalef(.5, .5, .5);
+			pushhudmatrix();
+			hudmatrix.translate(hud_right - 300, 350, 0);
+			hudmatrix.scale(.5, .5, .5);
+			flushhudmatrix();
 
 			draw_textf("curmap: %s", 0, 0, curmap->name);
 			draw_textf("blips: %i", 0, 50, curmap->blips.length());
@@ -340,9 +369,9 @@ namespace game
 			draw_textf("persistent effects: %i", 0, 150, curmap->aeffects.length());
 			draw_textf("projectiles: %i", 0, 200, curmap->projs.length());
 
-			glPopMatrix();
+			pophudmatrix();
 		}
 
-		glPopMatrix();
+		pophudmatrix();
 	}
 }

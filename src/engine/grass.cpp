@@ -34,6 +34,10 @@ struct grassvert
 };
 
 static vector<grassvert> grassverts;
+static GLuint grassvbo = 0;
+static int grassvbosize = 0;
+
+VAR(maxgrass, 10, 10000, 10000);
 
 struct grassgroup
 {
@@ -154,12 +158,14 @@ static void gengrassquads(grassgroup *&group, const grasswedge &w, const grasstr
             p2.sub(vec(across).mul(rightb));
         }
 
+        if(grassverts.length() >= 4*maxgrass) break;
+
         if(!group)
         {
             group = &grassgroups.add();
             group->tri = &g;
             group->tex = tex->id;
-            group->offset = grassverts.length();
+            group->offset = grassverts.length()/4;
             group->numquads = 0;
             if(lastgrassanim!=lastmillis) animategrass();
         }
@@ -237,6 +243,16 @@ void generategrass()
         if(va->distance > grassdist) continue;
         gengrassquads(va);
     }
+
+    if(grassgroups.empty()) return;
+
+    if(!grassvbo) glGenBuffers_(1, &grassvbo);
+    glBindBuffer_(GL_ARRAY_BUFFER, grassvbo);
+    int size = grassverts.length()*sizeof(grassvert);
+    grassvbosize = max(grassvbosize, size);
+    glBufferData_(GL_ARRAY_BUFFER, grassvbosize, size == grassvbosize ? grassverts.getbuf() : NULL, GL_STREAM_DRAW);
+    if(size != grassvbosize) glBufferSubData_(GL_ARRAY_BUFFER, 0, size, grassverts.getbuf());
+    glBindBuffer_(GL_ARRAY_BUFFER, 0);
 }
 
 void rendergrass()
@@ -245,19 +261,21 @@ void rendergrass()
 
     glDisable(GL_CULL_FACE);
 
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glVertexPointer(3, GL_FLOAT, sizeof(grassvert), grassverts[0].pos.v);
+    glBindBuffer_(GL_ARRAY_BUFFER, grassvbo);
 
-    glEnableClientState(GL_COLOR_ARRAY);
-    glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(grassvert), grassverts[0].color);
-
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-    glTexCoordPointer(2, GL_FLOAT, sizeof(grassvert), &grassverts[0].u);
-
+    const grassvert *ptr = 0;
+    varray::vertexpointer(sizeof(grassvert), ptr->pos.v);
+    varray::colorpointer(sizeof(grassvert), ptr->color);
+    varray::texcoord0pointer(sizeof(grassvert), &ptr->u);
+    varray::enablevertex();
+    varray::enablecolor();
+    varray::enabletexcoord0();
+    varray::enablequads();
+ 
     static Shader *grassshader = NULL;
     if(!grassshader) grassshader = lookupshaderbyname("grass");
 
-    GLOBALPARAM(grasstest, (grasstest));
+    GLOBALPARAMF(grasstest, (grasstest));
 
     int texid = -1, blend = -1;
     loopv(grassgroups)
@@ -274,23 +292,32 @@ void rendergrass()
         {
             if(g.tri->blend)
             {
-                glActiveTexture_(GL_TEXTURE1_ARB);
+                glActiveTexture_(GL_TEXTURE1);
                 bindblendtexture(ivec(g.tri->center));
-                glActiveTexture_(GL_TEXTURE0_ARB);
+                glActiveTexture_(GL_TEXTURE0);
                 grassshader->setvariant(0, 0);
             }
             else grassshader->set();
             blend = g.tri->blend;
         }
 
-        glDrawArrays(GL_QUADS, g.offset, 4*g.numquads);
+        varray::drawquads(g.offset, g.numquads);
         xtravertsva += 4*g.numquads;
     }
 
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
-    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    varray::disablequads();
+    varray::disablevertex();
+    varray::disablecolor();
+    varray::disabletexcoord0();
+
+    glBindBuffer_(GL_ARRAY_BUFFER, 0);
 
     glEnable(GL_CULL_FACE);
+}
+
+void cleanupgrass()
+{
+    if(grassvbo) { glDeleteBuffers_(1, &grassvbo); grassvbo = 0; }
+    grassvbosize = 0;
 }
 

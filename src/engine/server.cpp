@@ -81,10 +81,7 @@ void fatal(const char *fmt, ...)
 }
 void conoutfv(int type, const char *fmt, va_list args)
 {
-    string sf, sp;
-    vformatstring(sf, fmt, args);
-    filtertext(sp, sf);
-    logoutf("%s", sp);
+    logoutfv(fmt, args);
 }
 
 void conoutf(const char *fmt, ...)
@@ -940,7 +937,6 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw)
     int status = standalonemain(args.length()-1, args.getbuf());
     #define main standalonemain
 #else
-    SDL_SetModuleHandle(hInst);
     int status = SDL_main(args.length()-1, args.getbuf());
 #endif
     delete[] buf;

@@ -76,7 +76,7 @@ static void drawmaterial(const materialsurface &m, float offset)
 {
     if(varray::data.empty())
     {
-        varray::defattrib(varray::ATTRIB_VERTEX, 3, GL_FLOAT);
+        varray::defvertex();
         varray::begin(GL_QUADS);
     }
     float x = m.o.x, y = m.o.y, z = m.o.z, csize = m.csize, rsize = m.rsize;
@@ -85,7 +85,7 @@ static void drawmaterial(const materialsurface &m, float offset)
 #define GENFACEORIENT(orient, v0, v1, v2, v3) \
         case orient: v0 v1 v2 v3 break;
 #define GENFACEVERT(orient, vert, mx,my,mz, sx,sy,sz) \
-            varray::attrib<float>(mx sx, my sy, mz sz);
+            varray::attribf(mx sx, my sy, mz sz); 
         GENFACEVERTS(x, x, y, y, z, z, /**/, + csize, /**/, + rsize, + offset, - offset)
 #undef GENFACEORIENT
 #undef GENFACEVERT
@@ -498,7 +498,7 @@ void rendermatgrid()
                 case MAT_ALPHA:    color = bvec(85,  0, 85); break; // pink
                 default: continue;
             }
-            glColor3f(color.x*ldrscaleb, color.y*ldrscaleb, color.z*ldrscaleb);
+            varray::colorf(color.x*ldrscaleb, color.y*ldrscaleb, color.z*ldrscaleb);
             lastmat = m.material;
         }
         drawmaterial(m, -0.1f);
@@ -514,9 +514,9 @@ static void drawglass(const materialsurface &m, float offset, const vec *normal 
 {
     if(varray::data.empty())
     {
-        varray::defattrib(varray::ATTRIB_VERTEX, 3, GL_FLOAT);
-        if(normal) varray::defattrib(varray::ATTRIB_NORMAL, 3, GL_FLOAT);
-        varray::defattrib(varray::ATTRIB_TEXCOORD0, 2, GL_FLOAT);
+        varray::defvertex();
+        if(normal) varray::defnormal();
+        varray::deftexcoord0();
         varray::begin(GL_QUADS);
     }
     #define GENFACEORIENT(orient, v0, v1, v2, v3) \
@@ -525,27 +525,27 @@ static void drawglass(const materialsurface &m, float offset, const vec *normal 
     #define GENFACEVERTX(orient, vert, mx,my,mz, sx,sy,sz) \
         { \
             vec v(mx sx, my sy, mz sz); \
-            varray::attrib<float>(v.x, v.y, v.z); \
+            varray::attribf(v.x, v.y, v.z); \
             GENFACENORMAL \
-            varray::attrib<float>(glassxscale*v.y, -glassyscale*v.z); \
+            varray::attribf(glassxscale*v.y, -glassyscale*v.z); \
         }
     #undef GENFACEVERTY
     #define GENFACEVERTY(orient, vert, mx,my,mz, sx,sy,sz) \
         { \
             vec v(mx sx, my sy, mz sz); \
-            varray::attrib<float>(v.x, v.y, v.z); \
+            varray::attribf(v.x, v.y, v.z); \
             GENFACENORMAL \
-            varray::attrib<float>(glassxscale*v.x, -glassyscale*v.z); \
+            varray::attribf(glassxscale*v.x, -glassyscale*v.z); \
         }
     #undef GENFACEVERTZ
     #define GENFACEVERTZ(orient, vert, mx,my,mz, sx,sy,sz) \
         { \
             vec v(mx sx, my sy, mz sz); \
-            varray::attrib<float>(v.x, v.y, v.z); \
+            varray::attribf(v.x, v.y, v.z); \
             GENFACENORMAL \
-            varray::attrib<float>(glassxscale*v.x, glassyscale*v.y); \
+            varray::attribf(glassxscale*v.x, glassyscale*v.y); \
         }
-    #define GENFACENORMAL varray::attrib<float>(n.x, n.y, n.z);
+    #define GENFACENORMAL varray::attribf(n.x, n.y, n.z);
     float x = m.o.x, y = m.o.y, z = m.o.z, csize = m.csize, rsize = m.rsize;
     if(normal)
     {
@@ -664,7 +664,6 @@ int findmaterials()
 void rendermaterialmask()
 {
     glDisable(GL_CULL_FACE);
-    varray::enable();
     loopk(4) { vector<materialsurface> &surfs = glasssurfs[k]; loopv(surfs) drawmaterial(surfs[i], 0.1f); }
     loopk(4) { vector<materialsurface> &surfs = watersurfs[k]; loopv(surfs) drawmaterial(surfs[i], WATER_OFFSET); }
     loopk(4) { vector<materialsurface> &surfs = waterfallsurfs[k]; loopv(surfs) drawmaterial(surfs[i], 0.1f); }
@@ -718,16 +717,16 @@ void renderglass()
         glassxscale = TEX_SCALE/(tex->xs*gslot.scale);
         glassyscale = TEX_SCALE/(tex->ys*gslot.scale);
 
-        glActiveTexture_(GL_TEXTURE1_ARB);
+        glActiveTexture_(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, tex->id);
-        glActiveTexture_(GL_TEXTURE0_ARB);
+        glActiveTexture_(GL_TEXTURE0);
 
         float refractscale = (0.5f/255)/ldrscale;
         const bvec &col = getglasscolor(k);
         float refract = getglassrefract(k);
         int spec = getglassspec(k);
-        GLOBALPARAM(glassrefract, (col.x*refractscale, col.y*refractscale, col.z*refractscale, refract*viewh));
-        GLOBALPARAM(glassspec, (0.5f*spec/100.0f));
+        GLOBALPARAMF(glassrefract, (col.x*refractscale, col.y*refractscale, col.z*refractscale, refract*viewh));
+        GLOBALPARAMF(glassspec, (0.5f*spec/100.0f));
 
         short envmap = EMID_NONE;
         if(!glassenv) SETSHADER(glass);
@@ -739,7 +738,7 @@ void renderglass()
                 xtraverts += varray::end();
                 if(m.envmap != EMID_NONE && glassenv) SETSHADER(glassenv);
                 else SETSHADER(glass);
-                glBindTexture(GL_TEXTURE_CUBE_MAP_ARB, lookupenvmap(m.envmap));
+                glBindTexture(GL_TEXTURE_CUBE_MAP, lookupenvmap(m.envmap));
                 envmap = m.envmap;
             }
             drawglass(m, 0.1f, &matnormals[m.orient]);
@@ -751,7 +750,6 @@ void renderglass()
 void renderliquidmaterials()
 {
     glDisable(GL_CULL_FACE);
-    varray::enable();
 
     renderlava();
     renderwater();
@@ -764,7 +762,6 @@ void renderliquidmaterials()
 void rendersolidmaterials()
 {
     glDisable(GL_CULL_FACE);
-    varray::enable();
 
     renderglass();
 
@@ -779,7 +776,6 @@ void rendereditmaterials()
     sorteditmaterials();
 
     glDisable(GL_CULL_FACE);
-    varray::enable();
 
     foggednotextureshader->set();
 
@@ -809,7 +805,7 @@ void rendereditmaterials()
                 case MAT_ALPHA:    color = bvec(  0, 255,   0); break; // pink
                 default: continue;
             }
-            glColor3ub(color.x, color.y, color.z);
+            varray::color(color);
             lastmat = m.material;
         }
         drawmaterial(m, -0.1f);
@@ -830,7 +826,6 @@ void rendereditmaterials()
 void renderminimapmaterials()
 {
     glDisable(GL_CULL_FACE);
-    varray::enable();
 
     renderlava();
     renderwater();
