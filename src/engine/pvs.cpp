@@ -860,11 +860,11 @@ static int totalviewcells = 0;
 
 static void show_genpvs_progress(int unique = pvs.length(), int processed = numviewcells)
 {
-     float bar1 = float(processed) / float(totalviewcells>0 ? totalviewcells : 1);
+    float bar1 = float(processed) / float(totalviewcells>0 ? totalviewcells : 1);
 
-     defformatstring(text1)("%.2f%% - %d of %d view cells (%d unique)", bar1 * 100, processed, totalviewcells, unique);
+    defformatstring(text1)("%.2f%% - %d of %d view cells (%d unique)", bar1 * 100, processed, totalviewcells, unique);
 
-     renderprogress(bar1, text1);
+    renderprogress(bar1, text1);
 
     if(interceptkey(SDLK_ESCAPE)) genpvs_canceled = true;
     check_genpvs_progress = false;

@@ -751,7 +751,12 @@ void rendermodelbatches()
             j = bm.next;
             bm.culled = cullmodel(b.m, bm.center, bm.radius, bm.flags, bm.d);
             if(bm.culled) continue;
-            if(!rendered) { b.m->startrender(); rendered = true; }
+            if(!rendered)
+            {
+                b.m->startrender();
+                rendered = true;
+                setaamask(b.m->animated());
+            }
             if(bm.flags&MDL_CULL_QUERY)
             {
                 bm.d->query = newquery(bm.d);
@@ -856,6 +861,7 @@ void rendermapmodel(int idx, int anim, const vec &o, float yaw, float pitch, flo
     if(!mapmodels.inrange(idx)) return;
     mapmodelinfo &mmi = mapmodels[idx];
     model *m = mmi.m ? mmi.m : loadmodel(mmi.name);
+    if(!m) return;
 
     vec center, bbradius;
     m->boundbox(center, bbradius);

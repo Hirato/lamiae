@@ -281,7 +281,7 @@ void renderao()
         if(msaasamples) glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, msdepthtex);
         else glBindTexture(GL_TEXTURE_RECTANGLE, gdepthtex);
     }
-    else 
+    else
     {
         if(msaasamples) glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, msnormaltex);
         else glBindTexture(GL_TEXTURE_RECTANGLE, gnormaltex);
@@ -418,11 +418,11 @@ void doscale(int w, int h)
         screenquad(gw, gh);
     }
 
-     endtimer(scaletimer);
- }
+    endtimer(scaletimer);
+}
 
- VARFP(glineardepth, 0, 0, 3, initwarning("g-buffer setup", INIT_LOAD, CHANGE_SHADERS));
- VAR(gdepthformat, 1, 0, 0);
+VARFP(glineardepth, 0, 0, 3, initwarning("g-buffer setup", INIT_LOAD, CHANGE_SHADERS));
+VAR(gdepthformat, 1, 0, 0);
 VARFP(msaa, 0, 0, 16, initwarning("MSAA setup", INIT_LOAD, CHANGE_SHADERS));
 VARFP(csaa, 0, 0, 16, initwarning("MSAA setup", INIT_LOAD, CHANGE_SHADERS));
 VARF(msaadepthstencil, 0, 1, 1, cleanupgbuffer());
@@ -3325,9 +3325,9 @@ int calcshadowinfo(const extentity &e, vec &origin, float &radius, vec &spotloc,
 
     return type;
 }
-   
+
 glmatrix shadowmatrix;
- 
+
 void rendershadowmaps()
 {
     float polyfactor = smpolyfactor, polyoffset = smpolyoffset;
@@ -3550,7 +3550,7 @@ void rendertransparent()
 
     if(stencilformat) glEnable(GL_STENCIL_TEST);
 
-    glmatrix raymatrix(vec(-0.5f*vieww*projmatrix.a.x, 0, 0.5f*vieww), 
+    glmatrix raymatrix(vec(-0.5f*vieww*projmatrix.a.x, 0, 0.5f*vieww),
                        vec(0, -0.5f*viewh*projmatrix.b.y, 0.5f*viewh));
     raymatrix.mul(cammatrix);
     GLOBALPARAM(raymatrix, raymatrix);
@@ -3752,7 +3752,7 @@ void rendergbuffer(bool depthclear)
         maskgbuffer("c");
         renderdecals();
         maskgbuffer("cngd");
-//         GLERROR;
+        GLERROR;
         renderavatar();
         GLERROR;
     }
@@ -3812,7 +3812,7 @@ void shademodelpreview(int x, int y, int w, int h, bool background, bool scissor
     {
         screenquad(vieww, viewh);
 
-        glBindFramebuffer_(GL_FRAMEBUFFER, 0); 
+        glBindFramebuffer_(GL_FRAMEBUFFER, 0);
         glViewport(x, y, w, h);
         glBindTexture(GL_TEXTURE_RECTANGLE, scaletex[0]);
         SETSHADER(scalelinear);

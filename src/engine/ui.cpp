@@ -1982,17 +1982,16 @@ namespace UI
         void draw(float sx, float sy)
         {
             glDisable(GL_BLEND);
-            varray::disable();
             // GL_SCISSOR_TEST causes problems with rendering
             // disable it and restore it afterwards.
             if(clipstack.length()) glDisable(GL_SCISSOR_TEST);
-
 
             int x = floor( (sx + world->margin) * screenw / world->w),
                 dx = ceil(w * screenw / world->w),
                 y = ceil(( 1 - (h + sy) ) * world->size),
                 dy = ceil(h * world->size);
 
+            varray::disable();
             modelpreview::start(x, y, dx, dy, false, clipstack.length() >= 1);
 
             model *m = loadmodel(mdl);
@@ -2024,12 +2023,13 @@ namespace UI
             //note that modelpreview::start changes the clip area via preparegbuffer, we restore it here.
             if(clipstack.length()) clipstack.last().scissor();
             modelpreview::end();
-            glEnable(GL_BLEND);
-            if(clipstack.length()) glEnable(GL_SCISSOR_TEST);
 
             hudshader->set();
             varray::defvertex(2);
             varray::deftexcoord0();
+            glEnable(GL_BLEND);
+            if(clipstack.length()) glEnable(GL_SCISSOR_TEST);
+
             Object::draw(sx, sy);
         }
 

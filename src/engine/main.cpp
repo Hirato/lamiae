@@ -156,6 +156,7 @@ void renderbackground(const char *caption, Texture *mapshot, const char *mapname
 
     int w = screenw, h = screenh;
     getbackgroundres(w, h);
+    if(forceaspect) w = int(ceil(h*forceaspect));
     gettextres(w, h);
 
     static int lastupdate = -1, lastw = -1, lasth = -1;
@@ -383,7 +384,6 @@ void renderprogress(float bar, const char *text, GLuint tex, bool background)   
     if(background) restorebackground();
 
     int w = screenw, h = screenh;
-    if(forceaspect) w = int(ceil(h*forceaspect));
     if(forceaspect) w = int(ceil(h*forceaspect));
     getbackgroundres(w, h);
     gettextres(w, h);
@@ -1183,7 +1183,7 @@ int main(int argc, char **argv)
             case 'd': dedicated = atoi(&argv[i][2]); if(dedicated<=0) dedicated = 2; break;
             case 'w': scr_w = clamp(atoi(&argv[i][2]), SCR_MINW, SCR_MAXW); if(!findarg(argc, argv, "-h")) scr_h = -1; break;
             case 'h': scr_h = clamp(atoi(&argv[i][2]), SCR_MINH, SCR_MAXH); if(!findarg(argc, argv, "-w")) scr_w = -1; break;
-            case 'z': /* compat, ignore */ break;;
+            case 'z': /* compat, ignore */ break;
             case 'b': /* compat, ignore */ break;
             case 'a': /* compat, ignore */ break;
             case 'v': vsync = atoi(&argv[i][2]); if(vsync < 0) { vsynctear = 1; vsync = 1; } else vsynctear = 0; break;

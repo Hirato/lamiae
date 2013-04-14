@@ -409,9 +409,6 @@ static inline void rendermapmodel(extentity &e)
     if(e.flags&extentity::F_ANIM) entities::animatemapmodel(e, anim, basetime);
 
     rendermapmodel(e.attr[1], anim, e.o, e.attr[0], 0, 0, MDL_CULL_VFC | MDL_CULL_DIST, basetime);
-
-//     mapmodelinfo *mmi = getmminfo(e.attr[1]);
-//     if(mmi) rendermodel(&e.light, mmi->name, anim, e.o, e.attr[0], 0, 0, MDL_CULL_VFC | MDL_CULL_DIST | MDL_DYNLIGHT, NULL, NULL, basetime, 0, 1, e.attr[5]? e.attr[5] : 0xFFFFFF);
 }
 
 void rendermapmodels()
@@ -1626,7 +1623,7 @@ void rendergeom()
         for(vtxarray *va = visibleva; va; va = va->next) if(va->texs && va->occluded >= OCCLUDE_GEOM)
         {
             if((va->parent && va->parent->occluded >= OCCLUDE_BB) ||
-                     (va->query && checkquery(va->query)))
+                    (va->query && checkquery(va->query)))
             {
                 va->occluded = OCCLUDE_BB;
                 continue;

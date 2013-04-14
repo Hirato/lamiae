@@ -30,15 +30,10 @@ Texture *cloudoverlay = NULL;
 
 Texture *loadskyoverlay(const char *basename)
 {
-    //const char *ext = strrchr(basename, '.');
     string name;
     copystring(name, makerelpath("packages", basename));
     Texture *t = notexture;
-    //if(ext) t = textureload(name, 0, true, false);
-    //else
-    //{
-        t = textureload(name, 0, true, false);
-    //}
+    t = textureload(name, 0, true, false);
     if(t==notexture) conoutf(CON_ERROR, "could not load sky overlay texture %s", basename);
     return t;
 }
@@ -146,7 +141,7 @@ void draw_env_overlay(int w, Texture *overlay = NULL, float tx = 0, float ty = 0
     {
         vec p(1, 1, 0);
         p.rotate_around_z((-2.0f*M_PI*i)/cloudsubdiv);
-        varray::attribf(p.x*psz, p.y*psz, z); 
+        varray::attribf(p.x*psz, p.y*psz, z);
             varray::attribf(tx + p.x*tsz, ty + p.y*tsz);
     }
     xtraverts += varray::end();
@@ -360,7 +355,7 @@ static void drawfogdome(int farplane)
     glmatrix skymatrix = cammatrix, skyprojmatrix;
     skymatrix.d = vec4(0, 0, 0, 1);
     skymatrix.translate(0, 0, farplane*fogdomeheight*0.5f);
-    skymatrix.scale(farplane/2, farplane/2, farplane*(0.5f - fogdomeheight*0.5f)); 
+    skymatrix.scale(farplane/2, farplane/2, farplane*(0.5f - fogdomeheight*0.5f));
     skyprojmatrix.mul(projmatrix, skymatrix);
     LOCALPARAM(skymatrix, skyprojmatrix);
 
@@ -417,8 +412,8 @@ void drawskybox(int farplane)
     {
         drawfogdome(farplane);
     }
-   
-    SETSHADER(skybox); 
+
+    SETSHADER(skybox);
 
     if(cloudbox[0])
     {

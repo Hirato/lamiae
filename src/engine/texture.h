@@ -93,7 +93,7 @@ struct SlotShaderParamState : LocalShaderParamState
 enum
 {
     SHADER_DEFAULT    = 0,
-    SHADER_WORLD      = 1<<0, 
+    SHADER_WORLD      = 1<<0,
     SHADER_ENVMAP     = 1<<1,
     SHADER_REFRACT    = 1<<2,
     SHADER_OPTION     = 1<<3,
@@ -299,7 +299,7 @@ struct GlobalShaderParam
     void set(const ivec &v, int w = 0) { seti(v.x, v.y, v.z, w); }
     void set(const ivec2 &v, int z = 0, int w = 0) { seti(v.x, v.y, z, w); }
     void set(const ivec4 &v) { seti(v.x, v.y, v.z, v.w); }
- 
+
     template<class T>
     T *reserve(int n = 1) { return (T *)resolve()->buf; }
 };
@@ -393,10 +393,10 @@ struct LocalShaderParam
 #define LOCALPARAMF(name, vals) do { static LocalShaderParam param( #name ); param.setf vals ; } while(0)
 #define LOCALPARAMI(name, vals) do { static LocalShaderParam param( #name ); param.seti vals ; } while(0)
 #define LOCALPARAMV(name, vals, num) do { static LocalShaderParam param( #name ); param.setv(vals, num); } while(0)
-#define GLOBALPARAM(name, vals) do { static GlobalShaderParam param( #name ); param.set(vals); } while(0) 
-#define GLOBALPARAMF(name, vals) do { static GlobalShaderParam param( #name ); param.setf vals ; } while(0) 
-#define GLOBALPARAMI(name, vals) do { static GlobalShaderParam param( #name ); param.seti vals ; } while(0) 
-#define GLOBALPARAMV(name, vals, num) do { static GlobalShaderParam param( #name ); param.setv(vals, num); } while(0) 
+#define GLOBALPARAM(name, vals) do { static GlobalShaderParam param( #name ); param.set(vals); } while(0)
+#define GLOBALPARAMF(name, vals) do { static GlobalShaderParam param( #name ); param.setf vals ; } while(0)
+#define GLOBALPARAMI(name, vals) do { static GlobalShaderParam param( #name ); param.seti vals ; } while(0)
+#define GLOBALPARAMV(name, vals, num) do { static GlobalShaderParam param( #name ); param.setv(vals, num); } while(0)
 
 #define SETSHADER(name) \
     do { \
@@ -529,13 +529,6 @@ struct Texture
     Texture() : alphamask(NULL) {}
 };
 
-struct frame
-{
-    GLuint num;
-    int slot; //solely for cfg generation
-    frame(int _s, GLuint _n) : num(_n), slot(_s) {}
-};
-
 enum
 {
     TEX_DIFFUSE = 0,
@@ -543,7 +536,7 @@ enum
     TEX_GLOW,
     TEX_ENVMAP,
     TEX_DECAL,
-    
+
     TEX_SPEC,
     TEX_DEPTH,
     TEX_UNKNOWN
