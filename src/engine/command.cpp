@@ -2710,7 +2710,7 @@ ICOMMAND(loopdir, "rse", (ident *id, char *dir, uint *body),
     {
         bool redundant = false;
         if(strstr(files[i], ".")) redundant = true;
-        if(!redundant) loopj(i) if(strcmp(files[i], files[j]))
+        if(!redundant) loopj(i) if(!strcmp(files[i], files[j]))
         {
             redundant = true; break;
         }
