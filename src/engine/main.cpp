@@ -135,8 +135,245 @@ void bgquad(float x, float y, float w, float h, float tx = 0, float ty = 0, floa
     varray::end();
 }
 
-extern void renderbackground(const char *caption, Texture *mapshot, const char *mapname, const char *mapinfo, bool restore, bool force);
-extern void restorebackground();
+static void getbackgroundres(int &w, int &h)
+{
+    float wk = 1, hk = 1;
+    if(w < 1024) wk = 1024.0f/w;
+    if(h < 768) hk = 768.0f/h;
+    wk = hk = max(wk, hk);
+    w = int(ceil(w*wk));
+    h = int(ceil(h*hk));
+}
+
+string backgroundcaption = "";
+Texture *backgroundmapshot = NULL;
+string backgroundmapname = "";
+char *backgroundmapinfo = NULL;
+
+void restorebackground()
+{
+    if(renderedframe) return;
+    renderbackground(backgroundcaption[0] ? backgroundcaption : NULL, backgroundmapshot, backgroundmapname[0] ? backgroundmapname : NULL, backgroundmapinfo, true);
+}
+
+VARP(showversion, 0, 0, 2);
+
+void renderbackground(const char *caption, Texture *mapshot, const char *mapname, const char *mapinfo, bool restore, bool force)
+{
+    if(!inbetweenframes && !force) return;
+
+    stopsounds();
+
+    int w = screenw, h = screenh;
+    getbackgroundres(w, h);
+    gettextres(w, h);
+
+    static int lastupdate = -1, lastw = -1, lasth = -1;
+    static struct ray { vec2 coords[2]; } rays[5];
+
+    if((renderedframe && !UI::mainmenu && lastupdate != lastmillis) || lastw != w || lasth != h)
+    {
+        lastupdate = lastmillis;
+        lastw = w;
+        lasth = h;
+
+        loopi(sizeof(rays)/sizeof(rays[0]))
+        {
+            ray &r = rays[i];
+            r.coords[0] = vec2(w/2 + rndscale(w), h/3 + rndscale(h * 1.25));
+            r.coords[1] = vec2(w/2 + rndscale(w), h/3 + rndscale(h * 1.25));
+        }
+    }
+    else if(lastupdate != lastmillis) lastupdate = lastmillis;
+
+    loopi(restore ? 1 : 3)
+    {
+        hudmatrix.ortho(0, w, h, 0, -1, 1);
+        resethudmatrix();
+        hudnotextureshader->set();
+
+        varray::defvertex(2);
+        varray::colorf(.8, .775, .65);
+
+        varray::begin(GL_TRIANGLE_STRIP);
+
+        varray::attribf(0, 0);
+        varray::attribf(w, 0);
+        varray::attribf(0, h);
+        varray::attribf(w, h);
+
+        varray::end();
+
+        hudshader->set();
+        varray::defvertex(2);
+        varray::deftexcoord0();
+        varray::colorf(1, 1, 1);
+
+        settexture("<premul>data/lamiae", 3);
+        glEnable(GL_BLEND);
+
+        {
+            float ldim, hoffset;
+            if(mapshot || mapname || mapinfo)
+            {
+                ldim = min(w, h) * .15;
+                hoffset = h * 0.175;
+            }
+            else
+            {
+                ldim = min(w, h) * .45;
+                hoffset = h / 2;
+            }
+            bgquad(w / 2 - ldim, hoffset - ldim, 2 * ldim, 2 * ldim);
+
+        }
+
+        float bh = 0.1f * min(w, h),
+              bw = bh * 2,
+              bx = 0.1f * bw,
+              by = h - 1.1f * bh;
+
+        settexture("<premul>data/cube2badge", 3);
+        bdquad(bx, by, bx+bw, by+bh);
+
+
+        hudnotextureshader->set();
+        varray::defvertex(2);
+        varray::defcolor(4);
+
+        float roffset = -max(w, h) * 0.02;
+        varray::begin(GL_TRIANGLES)
+        loopi(sizeof(rays)/sizeof(rays[0]))
+        {
+            varray::attribf(roffset, roffset);
+            varray::attribf(1, 1, 1, .4);
+
+            varray::attribf(rays[i].coords[0]);
+            varray::attribf(1, 1, 1, 0);
+
+            varray::attribf(rays[i].coords[1]);
+            varray::attribf(1, 1, 1, 0);
+        }
+        varray::end();
+
+        hudshader->set();
+        varray::defvertex(2)
+        varray::deftexcoord0();
+
+        if(caption)
+        {
+            int tw = text_width(caption);
+            float tsz = 0.04 * min(w, h)/FONTH;
+            float tx = 0.5 * (w - tw * tsz);
+            float ty = h - .125 * min(w, h) - 1.25 * FONTH * tsz;
+
+            pushhudmatrix();
+            hudmatrix.translate(tx, ty, 0);
+            hudmatrix.scale(tsz, tsz, 1);
+            flushhudmatrix();
+
+            draw_text(caption, 0, 0);
+
+            pophudmatrix();
+        }
+
+        if(mapshot || mapname)
+        {
+            int infowidth = 16 * FONTH;
+            float sz = 0.35 * min(w, h);
+            float isz = (0.85 * min(w, h) - sz) / infowidth;
+            float x = .5 * w - sz / 2;
+            float y = .55 * h - sz / 2;
+
+            if(mapinfo)
+            {
+                int mw, mh;
+                text_bounds(mapinfo, mw, mh, infowidth);
+                x = (w - sz - FONTH - mw * isz) / 2 + sz + FONTH;
+
+                pushhudmatrix();
+                hudmatrix.translate(x, y, 0);
+                hudmatrix.scale(isz, isz, 1);
+                flushhudmatrix();
+
+                draw_text(mapinfo, 0, 0, 0xFF, 0xCF, 0x5F, 0xFF, -1, infowidth);
+
+                pophudmatrix();
+
+                x -= sz + FONTH;
+            }
+
+            if(mapshot != notexture)
+            {
+                glBindTexture(GL_TEXTURE_2D, mapshot->id);
+                bgquad(x, y, sz, sz);
+            }
+            else
+            {
+                float tsz = sz / max(FONTH, FONTW);
+
+                pushhudmatrix();
+                hudmatrix.translate(x + (sz - FONTW * tsz) / 2 , y + (sz - FONTH * tsz) / 2, 0);
+                hudmatrix.scale(tsz, tsz, 1);
+                flushhudmatrix();
+
+                draw_text("?", 0, 0);
+
+                pophudmatrix();
+            }
+
+            settexture("data/mapshot_frame", 3);
+            bgquad(x, y, sz, sz);
+
+            if(mapname)
+            {
+                int tw = text_width(mapname);
+                float tsz = min(.75, sz * .9 / tw);
+
+                pushhudmatrix();
+                hudmatrix.translate(x + (sz - tw * tsz) / 2, y - FONTH + sz * 0.9, 0);
+                hudmatrix.scale(tsz, tsz, 1);
+                flushhudmatrix();
+
+                draw_text(mapname, 0, 0);
+
+                pophudmatrix();
+            }
+        }
+
+        if(showversion == 2 || (!mapshot && !mapname && !caption && !mapinfo && showversion))
+        {
+            int tw = text_width(version);
+            float sz = min(0.75, min(w, h) * .1 / max(1, tw));
+
+            pushhudmatrix();
+            hudmatrix.translate(w * .875, h * .95 - FONTH * sz, 0);
+            hudmatrix.scale(sz, sz, 1);
+            flushhudmatrix();
+
+            draw_text(version, 0, 0);
+
+            pophudmatrix();
+        }
+
+        glDisable(GL_BLEND);
+        if(!restore) swapbuffers();
+    }
+
+    if(!restore)
+    {
+        renderedframe = false;
+        copystring(backgroundcaption, caption ? caption : "");
+        backgroundmapshot = mapshot;
+        copystring(backgroundmapname, mapname ? mapname : "");
+        if(mapinfo != backgroundmapinfo)
+        {
+            DELETEA(backgroundmapinfo);
+            if(mapinfo)
+                backgroundmapinfo = newstring(mapinfo);
+        }
+    }
+}
 
 float loadprogress = 0;
 
@@ -157,38 +394,45 @@ void renderprogress(float bar, const char *text, GLuint tex, bool background)   
     if(forceaspect) w = int(ceil(h*forceaspect));
     getbackgroundres(w, h);
     gettextres(w, h);
+    hudmatrix.ortho(0, w, h, 0, -1, 1);
+    resethudmatrix();
 
-    notextureshader->set();
+    hudnotextureshader->set();
 
-    ///TODO replace this with a texture of some sort
-    //use rendererframe to check for backdrops
+    /// TODO 1) replace this with a texture of some sort
+    /// TODO 2) use renderedframe to check for backdrops
     float fh = 0.03 * min(w, h) + FONTH;
     float fw = 0.02 * min(w, h) + min(fh * 100, w * .75f);
     float fx = (w - fw) / 2;
     float fy = h - fh - FONTH + 0.01 * min(w, h);
 
-    glColor3f(1, 1, 1);
-    glBegin(GL_TRIANGLE_STRIP);
-    glVertex2f(fx, fy);
-    glVertex2f(fx + fw, fy);
-    glVertex2f(fx, fy + fh);
-    glVertex2f(fx + fw, fy + fh);
-    glEnd();
+    varray::colorf(1, 1, 1);
+    varray::defvertex(2);
+    varray::begin(GL_TRIANGLE_STRIP);
 
-    glColor3f(0, 0, 0);
-    glBegin(GL_LINES);
-    glVertex2f(fx, fy);
-    glVertex2f(fx + fw, fy);
+    varray::attribf(fx, fy);
+    varray::attribf(fx + fw, fy);
+    varray::attribf(fx, fy + fh);
+    varray::attribf(fx + fw, fy + fh);
 
-    glVertex2f(fx + fw, fy);
-    glVertex2f(fx + fw, fy + fh);
+    varray::end();
 
-    glVertex2f(fx + fw, fy + fh);
-    glVertex2f(fx, fy + fh);
+    varray::colorf(0, 0, 0);
+    varray::begin(GL_LINES);
 
-    glVertex2f(fx, fy + fh);
-    glVertex2f(fx, fy);
-    glEnd();
+    varray::attribf(fx, fy);
+    varray::attribf(fx + fw, fy);
+
+    varray::attribf(fx + fw, fy);
+    varray::attribf(fx + fw, fy + fh);
+
+    varray::attribf(fx + fw, fy + fh);
+    varray::attribf(fx, fy + fh);
+
+    varray::attribf(fx, fy + fh);
+    varray::attribf(fx, fy);
+
+    varray::end();
 
 
     float bh = 0.01 * min(w, h) + FONTH;
@@ -198,15 +442,17 @@ void renderprogress(float bar, const char *text, GLuint tex, bool background)   
 
     if(bar > 0)
     {
-        glBegin(GL_TRIANGLE_STRIP);
-        glVertex2f(bx, by);
-        glVertex2f(bx + bw * bar, by);
-        glVertex2f(bx, by + bh);
-        glVertex2f(bx + bw * bar, by + bh);
-        glEnd();
+        varray::begin(GL_TRIANGLE_STRIP);
+        varray::attribf(bx, by);
+        varray::attribf(bx + bw * bar, by);
+        varray::attribf(bx, by + bh);
+        varray::attribf(bx + bw * bar, by + bh);
+        varray::end();
     }
 
     defaultshader->set();
+    varray::defvertex(2);
+    varray::deftexcoord0();
 
     if(text)
     {
@@ -218,11 +464,13 @@ void renderprogress(float bar, const char *text, GLuint tex, bool background)   
         float tx = bx + offset + (bw - tw * tsz) / 2;
         float ty = by + offset + (FONTH - FONTH * tsz) / 2;
 
-        glPushMatrix();
-        glTranslatef(tx, ty, 0);
-        glScalef(tsz, tsz, 1);
+        pushhudmatrix();
+        hudmatrix.translate(tx, ty, 0);
+        hudmatrix.scale(tsz, tsz, 1);
+        flushhudmatrix();
         draw_text(text, 0, 0);
-        glPopMatrix();
+        pophudmatrix();
+
         glDisable(GL_BLEND);
     }
 
@@ -233,25 +481,11 @@ void renderprogress(float bar, const char *text, GLuint tex, bool background)   
         float y = .5 * h - sz / 2;
 
         glBindTexture(GL_TEXTURE_2D, tex);
-        glBegin(GL_TRIANGLE_STRIP);
+        bgquad(x, y, sz, sz);
 
-        glTexCoord2f(0, 0); glVertex2f(x, y);
-        glTexCoord2f(1, 0); glVertex2f(x + sz, y);
-        glTexCoord2f(0, 1); glVertex2f(x, y + sz);
-        glTexCoord2f(1, 1); glVertex2f(x + sz, y + sz);
-
-        glEnd();
         glEnable(GL_BLEND);
-
         settexture("data/mapshot_frame", 3);
-        glBegin(GL_TRIANGLE_STRIP);
-
-        glTexCoord2f(0, 0); glVertex2f(x, y);
-        glTexCoord2f(1, 0); glVertex2f(x + sz, y);
-        glTexCoord2f(0, 1); glVertex2f(x, y + sz);
-        glTexCoord2f(1, 1); glVertex2f(x + sz, y + sz);
-
-        glEnd();
+        bgquad(x, y, sz, sz);
         glDisable(GL_BLEND);
     }
 
@@ -479,7 +713,72 @@ void setupscreen()
 
 }
 
-extern void resetgl();
+bool resettextures()
+{
+    if(
+        reloadtexture("data/loadingscreen/engine_badge.png")  &&
+        reloadtexture("data/loadingscreen/load_back.png")     &&
+        reloadtexture("data/loadingscreen/load_bar.png")      &&
+        reloadtexture("data/loadingscreen/load_frame.png")    &&
+        reloadtexture("data/loadingscreen/mapshot_frame.png") &&
+        reloadtexture("data/loadingscreen/title.png")         &&
+        reloadtexture(imagelogo)
+    ) return true;
+    return false;
+}
+
+void resetgl()
+{
+    clearchanges(CHANGE_GFX|CHANGE_SHADERS);
+    renderbackground("resetting OpenGL");
+
+    extern void cleanupva();
+    extern void cleanupparticles();
+    extern void cleanupdecals();
+    extern void cleanupsky();
+    extern void cleanupmodels();
+    extern void cleanuptextures();
+    extern void cleanupblendmap();
+    extern void cleanuplights();
+    extern void cleanupshaders();
+    extern void cleanupgl();
+    recorder::cleanup();
+    cleanupva();
+    cleanupparticles();
+    cleanupdecals();
+    cleanupsky();
+    cleanupmodels();
+    cleanuptextures();
+    cleanupblendmap();
+    cleanuplights();
+    cleanupshaders();
+    cleanupgl();
+
+    setupscreen();
+
+    inputgrab(grabinput);
+
+    gl_init(scr_w, scr_h);
+
+    extern void reloadfonts();
+    extern void reloadtextures();
+    extern void reloadshaders();
+    inbetweenframes = false;
+
+    if(!resettextures())
+        fatal("failed to reload core texture");
+
+    reloadfonts();
+    inbetweenframes = true;
+    renderbackground("initializing...");
+    extern void restoregamma();
+    restoregamma();
+    initgbuffer();
+    reloadshaders();
+    reloadtextures();
+    initlights();
+    allchanged(true);
+}
 
 COMMAND(resetgl, "");
 
