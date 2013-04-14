@@ -60,10 +60,10 @@ namespace game
 
 		pushhudmatrix();
 		hudmatrix.translate(x + dx / 2, y + dy / 2, 0);
+		if(minimapup) hudmatrix.rotate((d->yaw + 180) * RAD, vec(0, 0, -1));
 		flushhudmatrix();
 
 		glDisable(GL_BLEND);
-		if(minimapup) hudmatrix.rotate(d->yaw + 180, vec(0, 0, -1));
 
 		if(curmap->flags & mapinfo::F_NOMINIMAP)
 		{
