@@ -405,18 +405,18 @@ namespace UI
             return NULL;
         }
 
-        virtual bool key(int code, bool isdown, int cooked)
+        virtual bool key(int code, bool isdown)
         {
             loopchildrenrev(o,
             {
-                if(o->key(code, isdown, cooked)) return true;
+                if(o->key(code, isdown)) return true;
             });
             return false;
         }
 
-        virtual bool hoverkey(int code, bool isdown, int cooked)
+        virtual bool hoverkey(int code, bool isdown)
         {
-            if(parent) return parent->hoverkey(code, isdown, cooked);
+            if(parent) return parent->hoverkey(code, isdown);
             return false;
         }
 
@@ -928,7 +928,7 @@ namespace UI
             return Object::select(cx + offsetx, cy + offsety);
         }
 
-        bool hoverkey(int code, bool isdown, int cooked);
+        bool hoverkey(int code, bool isdown);
 
         void draw(float sx, float sy)
         {
@@ -995,9 +995,9 @@ namespace UI
 
         virtual void scrollto(float cx, float cy) {}
 
-        bool hoverkey(int code, bool isdown, int cooked)
+        bool hoverkey(int code, bool isdown)
         {
-            if(code != -4 && code != -5) return Object::hoverkey(code, isdown, cooked);
+            if(code != -4 && code != -5) return Object::hoverkey(code, isdown);
 
             if(!isdown) return false;
 
@@ -1050,9 +1050,9 @@ namespace UI
         virtual void movebutton(Object *o, float fromx, float fromy, float tox, float toy) = 0;
     };
 
-    bool Scroller::hoverkey(int code, bool isdown, int cooked)
+    bool Scroller::hoverkey(int code, bool isdown)
     {
-        if(code != -4 && code != -5) return Object::hoverkey(code, isdown, cooked);
+        if(code != -4 && code != -5) return Object::hoverkey(code, isdown);
 
         if(!canscroll || !isdown) return false;
 
@@ -1266,7 +1266,7 @@ namespace UI
             updateval(var, min(vmax, vmin) + newstep * stepsize, onchange);
         }
 
-        bool hoverkey(int code, bool isdown, int cooked)
+        bool hoverkey(int code, bool isdown)
         {
             switch(code)
             {
@@ -1286,7 +1286,7 @@ namespace UI
                     return true;
             }
 
-             return Object::hoverkey(code, isdown, cooked);
+             return Object::hoverkey(code, isdown);
         }
 
         int forks() const { return 5; }
@@ -2186,7 +2186,7 @@ namespace UI
             offsety = cy;
         }
 
-        bool hoverkey(int code, bool isdown, int cooked)
+        bool hoverkey(int code, bool isdown)
         {
             switch(code)
             {
@@ -2196,23 +2196,23 @@ namespace UI
                 case SDLK_DOWN:
                 case -4:
                 case -5:
-                    if(isdown) edit->key(code, cooked);
+                    if(isdown) edit->key(code);
                     return true;
             }
-            return Object::hoverkey(code, isdown, cooked);
+            return Object::hoverkey(code, isdown);
         }
 
-        bool key(int code, bool isdown, int cooked)
+        bool key(int code, bool isdown)
         {
-            if(Object::key(code, isdown, cooked)) return true;
+            if(Object::key(code, isdown)) return true;
             if(!isfocused(this)) return false;
             switch(code)
             {
                 case SDLK_RETURN:
                 case SDLK_KP_ENTER:
-                    if(!cooked) return true;
                 case SDLK_TAB:
                     if(edit->maxy != 1) break;
+
                 case SDLK_ESCAPE:
                     setfocus(NULL);
                     return true;
@@ -2236,11 +2236,11 @@ namespace UI
                 case SDLK_v:
                     if(SDL_GetModState()) break;
                 default:
-                    if(!cooked || code<32) return false;
-                    if(keyfilter && !strchr(keyfilter, cooked)) return true;
+                    if(code<32) return false;
+                    if(keyfilter && !strchr(keyfilter, code)) return true;
                     break;
             }
-            if(isdown) edit->key(code, cooked);
+            if(isdown) edit->key(code);
             return true;
         }
 
@@ -2306,9 +2306,9 @@ namespace UI
             updateval(var, edit->lines[0].text, onchange);
         }
 
-        bool hoverkey(int code, bool isdown, int cooked)
+        bool hoverkey(int code, bool isdown)
         {
-            return key(code, isdown, cooked);
+            return key(code, isdown);
         }
 
         void resetvalue()
@@ -2317,9 +2317,9 @@ namespace UI
             if(strcmp(edit->lines[0].text, str)) edit->clear(str);
         }
 
-        bool key(int code, bool isdown, int cooked)
+        bool key(int code, bool isdown)
         {
-            if(Object::key(code, isdown, cooked)) return true;
+            if(Object::key(code, isdown)) return true;
             if(!isfocused(this)) return false;
 
             switch(code)
@@ -2330,7 +2330,6 @@ namespace UI
                 case SDLK_KP_ENTER:
                 case SDLK_RETURN:
                 case SDLK_TAB:
-                    if(!cooked) return false;
                     commit();
                     setfocus(NULL);
                     return true;
@@ -2343,14 +2342,22 @@ namespace UI
                     break;
 
                 default:
-                    if(!cooked || code<32) return false;
-                    if(keyfilter && !strchr(keyfilter, cooked)) return true;
+                    if(code<32) return false;
+                    if(keyfilter && !strchr(keyfilter, code)) return true;
                     break;
             }
-            if(isdown) edit->key(code, cooked);
+            if(isdown) edit->key(code);
             return true;
         }
     };
+
+    bool input(const char *str, int len)
+    {
+        if(!focused || focused->type != TYPE_TEXTEDITOR) return false;
+
+        ((Texteditor *) focused)->edit->input(str, len);
+        return true;
+    }
 
     struct NamedObject : Object
     {
@@ -2711,8 +2718,8 @@ namespace UI
             case SDLK_DOWN:
             case SDLK_UP:
             {
-                if((focused && focused->hoverkey(code, isdown, cooked)) ||
-                    (hovering && hovering->hoverkey(code, isdown, cooked)))
+                if((focused && focused->hoverkey(code, isdown)) ||
+                    (hovering && hovering->hoverkey(code, isdown)))
                     return true;
                 return false;
             }
@@ -2728,7 +2735,7 @@ namespace UI
             }
 
             default:
-                return world->key(code, isdown, cooked);
+                return world->key(code, isdown);
         }
     }
 

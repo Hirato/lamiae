@@ -458,7 +458,6 @@ struct editor
         }
     }
 
-    //FIXME get rid of the cooked stuff
     void key(int code)
     {
         #ifdef __APPLE__
@@ -466,6 +465,8 @@ struct editor
         #else
             #define MOD_KEYS (KMOD_LCTRL|KMOD_RCTRL)
         #endif
+
+        extern editor *useeditor(const char *name, int mode, bool focus, const char *initval = NULL);
 
         switch(code)
         {
@@ -586,13 +587,6 @@ struct editor
                 scrollonscreen();
                 break;
             }
-            case SDLK_LSHIFT:
-            case SDLK_RSHIFT:
-            case SDLK_LCTRL:
-            case SDLK_RCTRL:
-            case SDLK_LMETA:
-            case SDLK_RMETA:
-                break;
             case SDLK_RETURN:
             {
                 //maintain indentation
@@ -638,56 +632,49 @@ struct editor
                         }
                     }
                 }
-                else if(cooked)
-                    insert(cooked);
+                else insert('\t');
+
                 scrollonscreen();
                 break;
             }
             case SDLK_a:
-            case SDLK_x:
-            case SDLK_c:
-            case SDLK_v:
-                if(SDL_GetModState() & MOD_KEYS) break;
-                if(!cooked) break;
-            default:
-                insert(cooked);
+                if(! (SDL_GetModState() & MOD_KEYS)) break;
+                    selectall();
                 scrollonscreen();
                 break;
-        }
 
-        if(SDL_GetModState() & MOD_KEYS)
-        {
-            extern editor *useeditor(const char *name, int mode, bool focus, const char *initval = NULL);
-
-            switch(code)
+            case SDLK_x:
             {
-                case SDLK_a:
-                    selectall();
-                    break;
-                case SDLK_x:
-                {
-                    editor *b = useeditor(PASTEBUFFER, EDITORFOREVER, false);
-                    if(this == b) break;
-                    copyselectionto(b);
-                    del();
-                    break;
-                }
-                case SDLK_c:
-                {
-                    editor *b = useeditor(PASTEBUFFER, EDITORFOREVER, false);
-                    if(this == b) break;
-                    copyselectionto(b);
-                    break;
-                }
-                case SDLK_v:
-                {
-                    editor *b = useeditor(PASTEBUFFER, EDITORFOREVER, false);
-                    if(this == b) break;
-                    insertallfrom(b);
-                    break;
-                }
+                if(! (SDL_GetModState() & MOD_KEYS)) break;
+                editor *b = useeditor(PASTEBUFFER, EDITORFOREVER, false);
+                if(this == b) break;
+                copyselectionto(b);
+                del();
+                scrollonscreen();
+                break;
             }
-            scrollonscreen();
+            case SDLK_c:
+            {
+                if(! (SDL_GetModState() & MOD_KEYS)) break;
+                editor *b = useeditor(PASTEBUFFER, EDITORFOREVER, false);
+                if(this == b) break;
+                copyselectionto(b);
+                scrollonscreen();
+                break;
+            }
+            case SDLK_v:
+            {
+                if(! (SDL_GetModState() & MOD_KEYS)) break;
+                editor *b = useeditor(PASTEBUFFER, EDITORFOREVER, false);
+                if(this == b) break;
+                insertallfrom(b);
+                scrollonscreen();
+                break;
+            }
+
+            default:
+                scrollonscreen();
+                break;
         }
 
         #undef MOD_KEYS
