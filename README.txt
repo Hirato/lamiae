@@ -18,7 +18,6 @@ Inspiration
 Note that these are taken at a cursory look at the games in question, with no knowledge of their actual inner workings.
 
 Arcanum
-* File structure - we also use numbered "prototypes," albeit in plaintext.
 * Dialogue Tree format - partially true, our dialogue nodes are named and use named destinations, not numbers.
 * Status effects centred around polymorphing targets.
 * Global flags and variables.
@@ -89,17 +88,21 @@ If you need to build a binary first, see the section below.
 
 Windows
 There is a lamiae.bat in the main directory, this is your sole means of launching lamiae.
+If you're having issues running the game, make sure that your drivers are properly installed and that your GPU can at least match Intel's Sandy Bridge in all aspects.
+
 
 Linux/FreeBSD
 There is a script named lamiae.sh in the main directory, running this will launch the proper binary for your platform.
 A multitude of command line options are available, run with --help, -h or -? to get a list.
+If you have problems running it, make sure that SDL2, SDL2_mixer and SDL2_image is installed. If you have an Nvidia GPU, you should also make sure that the proprietary drivers are installed and working.
+
 
 Mac (OS X) *UNSUPPORTED*
 Hopw Roewur Ne.
 
 
 
-Once up and running, if you want to dive straight into making an RPG, go to data/rpg/games and copy the "base" directory, this is the basis for your game.
+Once up and running, if you want to dive straight into making something, go to data/rpg/games and copy the "base" directory, this is the basis for your game.
 You'll find additional readmes and instructions inside.
 Good Luck!
 
@@ -116,16 +119,19 @@ Windows
 
 
 Linux/FreeBSD
-1. Install GCC, and the sdl1.2, sdl_mixer and sdl_image libraries as well as their *-dev counterparts
-2. make -C src install
+1. Install GCC
+2. Install SDL 2.0, sdl2_mixer and sdl2_image, as well as their *-dev counterparts
+3. make -C src install
 
+* SDL 2.0 is currently in development, and otherwise known as SDL-hg.
+    Most distros don't package SDL 2.0, Archlinux has sdl-hg packages in the AUR with which you may use to easily build it yourself, and Ubuntu derivatives can access pre-built apckages via PPAs. You'll need to do it manually otherwise.
 * if you want a debug binary instead, use "make -C src -f Makefile.debug install"
 * If you're using BSD, you may need to specify the GNU version of the make utility.
 
 
 Macintosh (OS X) *UNSUPPORTED*
 1. Install Xcode
-2. Manually install SDL, SDL_image, and SDL_mixer Frameworks.
+2. Manually install SDL2, SDL2_image, and SDL2_mixer Frameworks.
 3. Create, setup, and otherwise configure an xcode project for Lamiae.
 4. ???
 5. Profit.
