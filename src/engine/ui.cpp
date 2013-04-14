@@ -2806,7 +2806,8 @@ namespace UI
 
         if(refreshrepeat || (textediting!=NULL) != wastextediting)
         {
-            keyrepeat(textediting!=NULL || editmode);
+            textinput(textediting != NULL, TI_GUI);
+            keyrepeat(textediting != NULL, KR_GUI);
             refreshrepeat = 0;
         }
     }
