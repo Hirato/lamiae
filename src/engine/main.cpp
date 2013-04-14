@@ -347,6 +347,9 @@ void renderbackground(const char *caption, Texture *mapshot, const char *mapname
         }
 
         glDisable(GL_BLEND);
+
+        varray::disable();
+
         if(!restore) swapbuffers();
     }
 

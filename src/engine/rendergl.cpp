@@ -2213,7 +2213,7 @@ void gl_drawmainmenu(int w, int h)
     renderbackground(NULL, NULL, NULL, NULL, true, true);
 
     UI::render();
-	gl_drawhud(w, h);
+    gl_drawhud(w, h);
 }
 
 VARNP(damagecompass, usedamagecompass, 0, 1, 1);

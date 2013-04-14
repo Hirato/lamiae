@@ -154,18 +154,18 @@ namespace UI
 
     static inline void quad(float x, float y, float w, float h, float tx = 0, float ty = 0, float tw = 1, float th = 1)
     {
-        varray::attribf(tx     , ty     ); varray::attribf(x    , y    );
-        varray::attribf(tx + tw, ty     ); varray::attribf(x + w, y    );
-        varray::attribf(tx + tw, ty + th); varray::attribf(x + w, y + h);
-        varray::attribf(tx     , ty + th); varray::attribf(x    , y + h);
+        varray::attribf(x    , y    ); varray::attribf(tx     , ty     );
+        varray::attribf(x + w, y    ); varray::attribf(tx + tw, ty     );
+        varray::attribf(x + w, y + h); varray::attribf(tx + tw, ty + th);
+        varray::attribf(x    , y + h); varray::attribf(tx     , ty + th);
     }
 
     static inline void quadtri(float x, float y, float w, float h, float tx = 0, float ty = 0, float tw = 1, float th = 1)
     {
-        varray::attribf(tx     , ty     ); varray::attribf(x    , y    );
-        varray::attribf(tx + tw, ty     ); varray::attribf(x + w, y    );
-        varray::attribf(tx     , ty + th); varray::attribf(x    , y + h);
-        varray::attribf(tx + tw, ty + th); varray::attribf(x + w, y + h);
+        varray::attribf(x    , y    ); varray::attribf(tx     , ty     );
+        varray::attribf(x + w, y    ); varray::attribf(tx + tw, ty     );
+        varray::attribf(x    , y + h); varray::attribf(tx     , ty + th);
+        varray::attribf(x + w, y + h); varray::attribf(tx + tw, ty + th);
     }
 
     struct ClipArea
