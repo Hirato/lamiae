@@ -478,7 +478,7 @@ void rendereditcursor()
         if (showselgrid)
         {
             vec a, b;
-            glColor3ub(20, 20, 60);
+            varray::colorub(40, 40, 80);
             //note that vector b is multiplied by g (aka, sel.grid) inside the function, so undo that here
             (a=sel.o.tovec()).x=0; (b=sel.s.tovec()).x=worldsize/sel.grid; boxs3D(a, b, sel.grid);
             (a=sel.o.tovec()).y=0; (b=sel.s.tovec()).y=worldsize/sel.grid; boxs3D(a, b, sel.grid);
