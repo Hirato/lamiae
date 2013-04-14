@@ -695,12 +695,7 @@ void rendershadowmodelbatches(bool dynmodel)
             batchedmodel &bm = batchedmodels[j];
             j = bm.next;
             if(!(bm.visible&(1<<shadowside))) continue;
-            if(!rendered)
-            {
-                b.m->startrender();
-                rendered = true;
-                setaamask(b.m->animated());
-            }
+            if(!rendered) { b.m->startrender(); rendered = true; }
             renderbatchedmodel(b.m, bm);
         }
         if(rendered) b.m->endrender();
@@ -755,7 +750,7 @@ void rendermodelbatches()
             {
                 b.m->startrender();
                 rendered = true;
-                setaamask(b.m->animated());
+                setaamask(true);
             }
             if(bm.flags&MDL_CULL_QUERY)
             {
