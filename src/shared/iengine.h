@@ -282,9 +282,8 @@ extern void pushhudmatrix();
 extern void flushhudmatrix(bool flushparams = true);
 extern void pophudmatrix(bool flush = true, bool flushparams = true);
 
-extern void setnotextureshader();
-extern void setdefaultshader();
-extern void setlineshader();
+extern void sethudnotextureshader();
+extern void sethudshader();
 
 // renderparticles
 enum

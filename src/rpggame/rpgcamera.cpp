@@ -221,12 +221,13 @@ namespace camera
 		int offset = 128;
 		if(DEBUG_CAMERA) loopv(pending)
 		{
-			glPushMatrix();
-			glScalef(.3, .3, 1);
+			pushhudmatrix();
+			hudmatrix.scale(.3, .3, 1);
+			flushhudmatrix();
 
 			pending[i]->debug(offset, true);
 
-			glPopMatrix();
+			pophudmatrix();
 		}
 	}
 
@@ -454,13 +455,14 @@ namespace camera
 			hoffset += 64;
 			action::debug(hoffset, false); //useless here, probably useful for derived classes
 
-			glPushMatrix();
-			glTranslatef(128, 0, 0);
+			pushhudmatrix();
+			hudmatrix.translate(128, 0, 0);
+			flushhudmatrix();
 
 			loopv(pending)
 				pending[i]->debug(hoffset, true);
 
-			glPopMatrix();
+			pophudmatrix();
 		}
 
 		void getsignal(const char *signal)
@@ -489,10 +491,11 @@ namespace camera
 		{
 			float mul = interp(startmillis, duration, false);
 
-			glPushMatrix();
-			glTranslatef(dx * mul, dy * mul, 0);
+			pushhudmatrix();
+			hudmatrix.translate(dx * mul, dy * mul, 0);
+			flushhudmatrix();
 			container::render(w, h);
-			glPopMatrix();
+			pophudmatrix();
 		}
 
 		void debug(int &hoffset, bool type)
@@ -521,10 +524,11 @@ namespace camera
 			float mul = interp(startmillis, duration, false);
 			vec d = vec(dx, dy, 1).mul(mul).add(1 - mul);
 
-			glPushMatrix();
-			glScalef(d.x, d.y, d.z);
+			pushhudmatrix();
+			hudmatrix.scale(d.x, d.y, d.z);
+			flushhudmatrix();
 			container::render(w, h);
-			glPopMatrix();
+			pophudmatrix();
 		}
 
 		void debug(int &hoffset, bool type)
@@ -551,10 +555,11 @@ namespace camera
 
 		void render(int w, int h)
 		{
-			glPushMatrix();
-			glRotatef(0, 0, -1, angle * interp(startmillis, duration, false));
+			pushhudmatrix();
+			hudmatrix.rotate(0, 0, -1, angle * interp(startmillis, duration, false));
+			flushhudmatrix();
 			container::render(w, h);
-			glPopMatrix();
+			pophudmatrix();
 		}
 
 		void debug(int &hoffset, bool type)
@@ -674,7 +679,7 @@ namespace camera
 
 			if(modulate) glBlendFunc(GL_ZERO, GL_SRC_COLOR);
 			glDisable(GL_TEXTURE_2D);
-			setnotextureshader();
+			sethudnotextureshader();
 
 			glBegin(GL_TRIANGLE_STRIP);
 			glVertex2i(x, y);
@@ -685,7 +690,7 @@ namespace camera
 
 			if(modulate) glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 			glEnable(GL_TEXTURE_2D);
-			setdefaultshader();
+			sethudshader();
 		}
 
 		void debug(int &hoffset, bool type)

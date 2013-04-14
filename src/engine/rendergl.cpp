@@ -2608,12 +2608,12 @@ void cleanupgl()
     varray::cleanup();
 }
 
-void setnotextureshader()
+void sethudnotextureshader()
 {
-    notextureshader->set();
+    hudnotextureshader->set();
 }
 
-void setdefaultshader()
+void sethudshader()
 {
-    defaultshader->set();
+    hudshader->set();
 }
