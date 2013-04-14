@@ -1982,6 +1982,7 @@ namespace UI
         void draw(float sx, float sy)
         {
             glDisable(GL_BLEND);
+            varray::disable();
             // GL_SCISSOR_TEST causes problems with rendering
             // disable it and restore it afterwards.
             if(clipstack.length()) glDisable(GL_SCISSOR_TEST);
@@ -2026,7 +2027,9 @@ namespace UI
             glEnable(GL_BLEND);
             if(clipstack.length()) glEnable(GL_SCISSOR_TEST);
 
-            hudshader->set(); //refresh the shader, just in case.
+            hudshader->set();
+            varray::defvertex(2);
+            varray::deftexcoord0();
             Object::draw(sx, sy);
         }
 
