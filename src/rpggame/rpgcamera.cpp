@@ -556,7 +556,7 @@ namespace camera
 		void render(int w, int h)
 		{
 			pushhudmatrix();
-			hudmatrix.rotate(angle * interp(startmillis, duration, false), vec(0, 0, -1));
+			hudmatrix.rotate(RAD * angle * interp(startmillis, duration, false), vec(0, 0, -1));
 			flushhudmatrix();
 			container::render(w, h);
 			pophudmatrix();
