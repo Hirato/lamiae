@@ -224,7 +224,7 @@ void renderbackground(const char *caption, Texture *mapshot, const char *mapname
               by = h - 1.1f * bh;
 
         settexture("<premul>data/cube2badge", 3);
-        bgquad(bx, by, bx+bw, by+bh);
+        bgquad(bx, by, bw, bh);
 
 
         hudnotextureshader->set();

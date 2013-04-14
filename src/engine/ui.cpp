@@ -1530,17 +1530,17 @@ namespace UI
         {
             if(type==MODULATE) glBlendFunc(GL_ZERO, GL_SRC_COLOR);
             hudnotextureshader->set();
+            varray::color(color);
+
             varray::defvertex(2);
 
-            varray::color(color);
             varray::begin(GL_TRIANGLE_STRIP);
-
             varray::attribf(sx,     sy);
             varray::attribf(sx + w, sy);
             varray::attribf(sx,     sy + h);
             varray::attribf(sx + w, sy + h);
-
             varray::end();
+
             hudshader->set();
             varray::colorf(1, 1, 1, 1);
             varray::defvertex(2);
