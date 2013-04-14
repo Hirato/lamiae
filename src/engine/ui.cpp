@@ -154,18 +154,18 @@ namespace UI
 
     static inline void quad(float x, float y, float w, float h, float tx = 0, float ty = 0, float tw = 1, float th = 1)
     {
-        glTexCoord2f(tx,      ty);      glVertex2f(x,     y);
-        glTexCoord2f(tx + tw, ty);      glVertex2f(x + w, y);
-        glTexCoord2f(tx + tw, ty + th); glVertex2f(x + w, y + h);
-        glTexCoord2f(tx,      ty + th); glVertex2f(x,     y + h);
+        varray::attribf(tx     , ty     ); varray::attribf(x    , y    );
+        varray::attribf(tx + tw, ty     ); varray::attribf(x + w, y    );
+        varray::attribf(tx + tw, ty + th); varray::attribf(x + w, y + h);
+        varray::attribf(tx     , ty + th); varray::attribf(x    , y + h);
     }
 
     static inline void quadtri(float x, float y, float w, float h, float tx = 0, float ty = 0, float tw = 1, float th = 1)
     {
-        glTexCoord2f(tx,      ty);      glVertex2f(x,     y);
-        glTexCoord2f(tx + tw, ty);      glVertex2f(x + w, y);
-        glTexCoord2f(tx,      ty + th); glVertex2f(x,     y + h);
-        glTexCoord2f(tx + tw, ty + th); glVertex2f(x + w, y + h);
+        varray::attribf(tx     , ty     ); varray::attribf(x    , y    );
+        varray::attribf(tx + tw, ty     ); varray::attribf(x + w, y    );
+        varray::attribf(tx     , ty + th); varray::attribf(x    , y + h);
+        varray::attribf(tx + tw, ty + th); varray::attribf(x + w, y + h);
     }
 
     struct ClipArea
@@ -1529,20 +1529,24 @@ namespace UI
         void draw(float sx, float sy)
         {
             if(type==MODULATE) glBlendFunc(GL_ZERO, GL_SRC_COLOR);
-            glDisable(GL_TEXTURE_2D);
-            notextureshader->set();
-            glColor4fv(color.v);
-            glBegin(GL_TRIANGLE_STRIP);
-            glVertex2f(sx,     sy);
-            glVertex2f(sx + w, sy);
-            glVertex2f(sx,     sy + h);
-            glVertex2f(sx + w, sy + h);
-            glEnd();
-            glColor3f(1, 1, 1);
-            glEnable(GL_TEXTURE_2D);
-            defaultshader->set();
-            if(type==MODULATE) glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            hudnotextureshader->set();
+            varray::defvertex(2);
 
+            varray::colorf(color);
+            varray::begin(GL_TRIANGLE_STRIP);
+
+            varray::attribf(sx,     sy);
+            varray::attribf(sx + w, sy);
+            varray::attribf(sx,     sy + h);
+            varray::attribf(sx + w, sy + h);
+
+            varray::end();
+            hudshader->set();
+            varray::colorf(1, 1, 1, 1);
+            varray::defvertex(2);
+            varray::deftexcoord0();
+
+            if(type==MODULATE) glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             Object::draw(sx, sy);
         }
     };
@@ -1566,9 +1570,9 @@ namespace UI
         void draw(float sx, float sy)
         {
             glBindTexture(GL_TEXTURE_2D, tex->id);
-            glBegin(GL_TRIANGLE_STRIP);
+            varray::begin(GL_TRIANGLE_STRIP);
             quadtri(sx, sy, w, h);
-            glEnd();
+            varray::end();
 
             Object::draw(sx, sy);
         }
@@ -1663,9 +1667,7 @@ namespace UI
             xt = min(1.0f, tex->xs/(float)tex->ys),
             yt = min(1.0f, tex->ys/(float)tex->xs);
 
-            static Shader *rgbonlyshader = NULL;
-            if(!rgbonlyshader) rgbonlyshader = lookupshaderbyname("rgbonly");
-            rgbonlyshader->set();
+            SETSHADER(hudrgb);
 
             float tc[4][2] = { { 0, 0 }, { 1, 0 }, { 1, 1 }, { 0, 1 } };
             int xoff = vslot.xoffset, yoff = vslot.yoffset;
@@ -1676,43 +1678,44 @@ namespace UI
                 if(vslot.rotation <= 2 || vslot.rotation == 5) { yoff *= -1; loopk(4) tc[k][1] *= -1; }
             }
             loopk(4) { tc[k][0] = tc[k][0]/xt - float(xoff)/tex->xs; tc[k][1] = tc[k][1]/yt - float(yoff)/tex->ys; }
-            if(slot.loaded) glColor3fv(vslot.colorscale.v);
+            if(slot.loaded) varray::colorf(vslot.colorscale.v);
             glBindTexture(GL_TEXTURE_2D, tex->id);
-            glBegin(GL_TRIANGLE_STRIP);
-            glTexCoord2fv(tc[0]); glVertex2f(sx,   sy);
-            glTexCoord2fv(tc[1]); glVertex2f(sx+w, sy);
-            glTexCoord2fv(tc[3]); glVertex2f(sx,   sy+h);
-            glTexCoord2fv(tc[2]); glVertex2f(sx+w, sy+h);
-            glEnd();
+
+            varray::begin(GL_TRIANGLE_STRIP);
+            varray::attribf(sx  , sy  ); varray::attribf(tc[0]);
+            varray::attribf(sx+w, sy  ); varray::attribf(tc[1]);
+            varray::attribf(sx  , sy+h); varray::attribf(tc[2]);
+            varray::attribf(sx+w, sy+h); varray::attribf(tc[3]);
+            varray::end();
 
             if(glowtex)
             {
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE);
                 glBindTexture(GL_TEXTURE_2D, glowtex->id);
-                glColor3fv(vslot.glowcolor.v);
-                glBegin(GL_TRIANGLE_STRIP);
-                glTexCoord2fv(tc[0]); glVertex2f(sx,   sy);
-                glTexCoord2fv(tc[1]); glVertex2f(sx+w, sy);
-                glTexCoord2fv(tc[3]); glVertex2f(sx,   sy+h);
-                glTexCoord2fv(tc[2]); glVertex2f(sx+w, sy+h);
-                glEnd();
+                varray:colorf(vslot.glowcolor.v);
+                varray::begin(GL_TRIANGLE_STRIP);
+                varray::attribf(sx  , sy  ); varray::attribf(tc[0]);
+                varray::attribf(sx+w, sy  ); varray::attribf(tc[1]);
+                varray::attribf(sx  , sy+h); varray::attribf(tc[2]);
+                varray::attribf(sx+w, sy+h); varray::attribf(tc[3]);
+                varray::end();
 
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             }
             if(layertex)
             {
                 glBindTexture(GL_TEXTURE_2D, layertex->id);
-                glColor3fv(layer->colorscale.v);
-                glBegin(GL_TRIANGLE_STRIP);
-                glTexCoord2fv(tc[0]); glVertex2f(sx+w/2, sy+h/2);
-                glTexCoord2fv(tc[1]); glVertex2f(sx+w,   sy+h/2);
-                glTexCoord2fv(tc[3]); glVertex2f(sx+w/2, sy+h);
-                glTexCoord2fv(tc[2]); glVertex2f(sx+w,   sy+h);
-                glEnd();
+                varray:colorf(layer->colorscale.v);
+                varray::begin(GL_TRIANGLE_STRIP);
+                varray::attribf(sx  , sy  ); varray::attribf(tc[0]);
+                varray::attribf(sx+w, sy  ); varray::attribf(tc[1]);
+                varray::attribf(sx  , sy+h); varray::attribf(tc[2]);
+                varray::attribf(sx+w, sy+h); varray::attribf(tc[3]);
+                varray::end();
             }
-            glColor3f(1, 1, 1);
+            varray::colorf(1, 1, 1);
 
-            defaultshader->set();
+            hudshader->set();
         }
 
         void draw(float sx, float sy)
@@ -1754,9 +1757,9 @@ namespace UI
         void draw(float sx, float sy)
         {
             glBindTexture(GL_TEXTURE_2D, tex->id);
-            glBegin(GL_TRIANGLE_STRIP);
+            varray::begin(GL_TRIANGLE_STRIP);
             quadtri(sx, sy, w, h, cropx, cropy, cropw, croph);
-            glEnd();
+            varray::end();
 
             Object::draw(sx, sy);
         }
@@ -1788,7 +1791,7 @@ namespace UI
         void draw(float sx, float sy)
         {
             glBindTexture(GL_TEXTURE_2D, tex->id);
-            glBegin(GL_QUADS);
+            varray::begin(GL_QUADS);
             float splitw = (minw ? min(minw, w) : w) / 2,
                   splith = (minh ? min(minh, h) : h) / 2,
                   vy = sy, ty = 0;
@@ -1820,7 +1823,7 @@ namespace UI
                 ty += th;
                 if(ty >= 1) break;
             }
-            glEnd();
+            varray::end();
 
             Object::draw(sx, sy);
         }
@@ -1860,7 +1863,7 @@ namespace UI
         void draw(float sx, float sy)
         {
             glBindTexture(GL_TEXTURE_2D, tex->id);
-            glBegin(GL_QUADS);
+            varray::begin(GL_QUADS);
             float vy = sy, ty = 0;
             loopi(3)
             {
@@ -1888,7 +1891,7 @@ namespace UI
                 vy += vh;
                 ty += th;
             }
-            glEnd();
+            varray::end();
 
             Object::draw(sx, sy);
         }
@@ -1920,7 +1923,7 @@ namespace UI
             if(tex->clamp)
             {
                 float dx = 0, dy = 0;
-                glBegin(GL_QUADS);
+                varray::begin(GL_QUADS);
                 while(dx < w)
                 {
                     while(dy < h)
@@ -1936,13 +1939,13 @@ namespace UI
                     dx += tilew;
                 }
 
-                glEnd();
+                varray::end();
             }
             else
             {
-                glBegin(GL_TRIANGLE_STRIP);
+                varray::begin(GL_TRIANGLE_STRIP);
                 quadtri(sx, sy, w, h, 0, 0, w/tilew, h/tileh);
-                glEnd();
+                varray::end();
             }
 
             Object::draw(sx, sy);
@@ -2023,6 +2026,7 @@ namespace UI
             glEnable(GL_BLEND);
             if(clipstack.length()) glEnable(GL_SCISSOR_TEST);
 
+            hudshader->set(); //refresh the shader, just in case.
             Object::draw(sx, sy);
         }
 
@@ -2053,11 +2057,12 @@ namespace UI
         void draw(float sx, float sy)
         {
             float k = drawscale();
-            glPushMatrix();
-            glScalef(k, k, 1);
+            pushhudmatrix();
+            hudmatrix.scale(k, k, 1);
+            flushhudmatrix();
             draw_text(str, int(sx/k), int(sy/k), color.x * 255, color.y * 255, color.z * 255, 255, -1, wrap <= 0 ? -1 : wrap/k);
-            glColor3f(1, 1, 1);
-            glPopMatrix();
+
+            pophudmatrix();
 
             Object::draw(sx, sy);
         }
@@ -2102,11 +2107,13 @@ namespace UI
             executeret(cmd, result);
 
             float k = drawscale();
-            glPushMatrix();
-            glScalef(k, k, 1);
+            pushhudmatrix();
+            hudmatrix.scale(k, k, 1);
+            flushhudmatrix();
+
             draw_text(result.getstr(), int(sx/k), int(sy/k), color.x * 255, color.y * 255, color.z * 255, 255, -1, wrap <= 0 ? -1 : wrap/k);
-            glColor3f(1, 1, 1);
-            glPopMatrix();
+
+            pophudmatrix();
 
             Object::draw(sx, sy);
         }
@@ -2280,12 +2287,14 @@ namespace UI
 
         void draw(float sx, float sy)
         {
-            glPushMatrix();
-            glTranslatef(sx, sy, 0);
-            glScalef(scale/(FONTH*uitextrows), scale/(FONTH*uitextrows), 1);
+            pushhudmatrix();
+            hudmatrix.translate(sx, sy, 0);
+            hudmatrix.scale(scale/(FONTH*uitextrows), scale/(FONTH*uitextrows), 1);
+            flushhudmatrix();
+
             edit->draw(FONTW/2, 0, 0xFFFFFF, isfocused(this));
-            glColor3f(1, 1, 1);
-            glPopMatrix();
+
+            pophudmatrix();
 
             Object::draw(sx, sy);
         }
@@ -2812,16 +2821,13 @@ namespace UI
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        glMatrixMode(GL_PROJECTION);
-        glPushMatrix();
-        glLoadIdentity();
-        glOrtho(world->x, world->x + world->w, world->y + world->h, world->y, -1, 1);
+        hudmatrix.ortho(world->x, world->x + world->w, world->y + world->h, world->y, -1, 1);
+        resethudmatrix();
+        hudshader->set();
 
-        glMatrixMode(GL_MODELVIEW);
-        glPushMatrix();
-        glLoadIdentity();
-
-        glColor3f(1, 1, 1);
+        varray::colorf(1, 1, 1);
+        varray::defvertex(2);
+        varray::deftexcoord0();
 
         world->draw();
 
@@ -2845,11 +2851,7 @@ namespace UI
             tooltip->draw(x, y);
         }
 
-        glMatrixMode(GL_PROJECTION);
-        glPopMatrix();
-        glMatrixMode(GL_MODELVIEW);
-        glPopMatrix();
-        glEnable(GL_BLEND);
+        varray::disable();
     }
 }
 
@@ -2917,26 +2919,28 @@ FVARP(fullconblend, 0, .8, 1);
 
 void consolebox(int x1, int y1, int x2, int y2)
 {
-    glPushMatrix();
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDisable(GL_TEXTURE_2D);
-    notextureshader->set();
 
-    glTranslatef(x1, y1, 0);
+    pushhudmatrix();
+    hudmatrix.translate(x1, y1);
+    flushhudmatrix();
+
+    hudnotextureshader->set();
+
     float r = ((fullconcolor >> 16) & 0xFF) / 255.f,
         g = ((fullconcolor >> 8) & 0xFF) / 255.f,
         b = (fullconcolor & 0xFF) / 255.f;
-    glColor4f(r, g, b, fullconblend);
-    glBegin(GL_TRIANGLE_STRIP);
+    varray::colorf(r, g, b, fullconblend);
+    varray::defvertex(2);
 
-    glVertex2i(x1, y1);
-    glVertex2i(x2, y1);
-    glVertex2i(x1, y2);
-    glVertex2i(x2, y2);
+    varray::begin(GL_TRIANGLE_STRIP);
+    varray::attribf(x1, y1);
+    varray::attribf(x2, y1);
+    varray::attribf(x1, y2);
+    varray::attribf(x2, y2);
 
-    glEnd();
-    glEnable(GL_TEXTURE_2D);
-    defaultshader->set();
+    varray::end();
 
-    glPopMatrix();
+    pophudmatrix();
+    hudshader->set();
 }
