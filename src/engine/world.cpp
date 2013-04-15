@@ -686,7 +686,7 @@ void renderhelpers()
         if((showentradius == 2 && entities::radiusent(e))|| (showentdir == 2 && entities::dirent(e)))
         {
             glDepthFunc(GL_GREATER);
-            glColor3f(0.25f, 0.25f, 0.25f);
+            gle::colorf(0.25f, 0.25f, 0.25f);
             renderentradius(e, false);
             glDepthFunc(GL_LESS);
             renderentradius(e, true);

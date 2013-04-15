@@ -40,16 +40,6 @@ namespace game
 			curmap->aeffects[i]->dynlight();
 	}
 
-	void quad(vec ur, vec ul, vec ll, vec lr)
-	{
-		glBegin(GL_TRIANGLE_FAN);
-		glTexCoord2f(0, 0); glVertex3f(ur.x, ur.y, ur.z);
-		glTexCoord2f(1, 0); glVertex3f(ul.x, ul.y, ul.z);
-		glTexCoord2f(1, 1); glVertex3f(ll.x, ll.y, ll.z);
-		glTexCoord2f(0, 1); glVertex3f(lr.x, lr.y, lr.z);
-		glEnd();
-	}
-
 	void rendergame()
 	{
 		if(!curmap) return;

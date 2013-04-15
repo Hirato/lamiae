@@ -632,13 +632,13 @@ namespace camera
 			a = (a ? a : 255) * interp(startmillis, duration, false);
 			settexture(img, true);
 
-			glColor4f(r / 255.f, g / 255.f, b / 255.f, a / 255.f);
-			glBegin(GL_TRIANGLE_STRIP);
-			glTexCoord2i(0, 0); glVertex2f(x, y);
-			glTexCoord2i(1, 0); glVertex2f(x + dx, y);
-			glTexCoord2i(0, 1); glVertex2f(x, y + dy);
-			glTexCoord2i(1, 1); glVertex2f(x + dx, y + dy);
-			glEnd();
+			gle::colorub(r, g, b, a);
+			gle::begin(GL_TRIANGLE_STRIP);
+			gle::attribf(x, y);           gle::attribf(0, 0);
+			gle::attribf(x + dx, y);      gle::attribf(1, 0);
+			gle::attribf(x, y + dy);      gle::attribf(0, 1);
+			gle::attribf(x + dx, y + dy); gle::attribf(1, 1);
+			gle::end();
 		}
 
 		void debug(int &hoffset, bool type)
@@ -675,22 +675,23 @@ namespace camera
 				g = (colour >> 8) & 255,
 				b = colour & 255;
 			a = (a ? a : 255) * interp(startmillis, duration, false);
-			glColor4f(r / 255.f, g / 255.f, b / 255.f, a / 255.f);
+			gle::colorub(r, g, b, a);
 
 			if(modulate) glBlendFunc(GL_ZERO, GL_SRC_COLOR);
-			glDisable(GL_TEXTURE_2D);
 			sethudnotextureshader();
+			gle::defvertex(2);
 
-			glBegin(GL_TRIANGLE_STRIP);
-			glVertex2i(x, y);
-			glVertex2i(x + dx, y);
-			glVertex2i(x, y + dy);
-			glVertex2i(x + dx, y + dy);
-			glEnd();
+			gle::begin(GL_TRIANGLE_STRIP);
+			gle::attribf(x, y);
+			gle::attribf(x + dx, y);
+			gle::attribf(x, y + dy);
+			gle::attribf(x + dx, y + dy);
+			gle::end();
 
 			if(modulate) glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			glEnable(GL_TEXTURE_2D);
 			sethudshader();
+			gle::defvertex(2);
+			gle::deftexcoord0();
 		}
 
 		void debug(int &hoffset, bool type)
