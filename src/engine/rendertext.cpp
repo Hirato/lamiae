@@ -181,7 +181,7 @@ static float draw_char(Texture *&tex, int c, float x, float y, float scale)
     font::charinfo &info = curfont->chars[c-curfont->charoffset];
     if(tex != curfont->texs[info.tex])
     {
-        xtraverts += varray::end();
+        xtraverts += gle::end();
         tex = curfont->texs[info.tex];
         glBindTexture(GL_TEXTURE_2D, tex->id);
     }
@@ -197,17 +197,17 @@ static float draw_char(Texture *&tex, int c, float x, float y, float scale)
 
     if(textmatrix)
     {
-        varray::attrib(textmatrix->transform(vec2(x1, y1))); varray::attribf(tx1, ty1);
-        varray::attrib(textmatrix->transform(vec2(x2, y1))); varray::attribf(tx2, ty1);
-        varray::attrib(textmatrix->transform(vec2(x2, y2))); varray::attribf(tx2, ty2);
-        varray::attrib(textmatrix->transform(vec2(x1, y2))); varray::attribf(tx1, ty2);
+        gle::attrib(textmatrix->transform(vec2(x1, y1))); gle::attribf(tx1, ty1);
+        gle::attrib(textmatrix->transform(vec2(x2, y1))); gle::attribf(tx2, ty1);
+        gle::attrib(textmatrix->transform(vec2(x2, y2))); gle::attribf(tx2, ty2);
+        gle::attrib(textmatrix->transform(vec2(x1, y2))); gle::attribf(tx1, ty2);
     }
     else
     {
-        varray::attribf(x1, y1); varray::attribf(tx1, ty1);
-        varray::attribf(x2, y1); varray::attribf(tx2, ty1);
-        varray::attribf(x2, y2); varray::attribf(tx2, ty2);
-        varray::attribf(x1, y2); varray::attribf(tx1, ty2);
+        gle::attribf(x1, y1); gle::attribf(tx1, ty1);
+        gle::attribf(x2, y1); gle::attribf(tx2, ty1);
+        gle::attribf(x2, y2); gle::attribf(tx2, ty2);
+        gle::attribf(x1, y2); gle::attribf(tx1, ty2);
     }
 
     return scale*info.advance;
@@ -223,7 +223,7 @@ static void text_color(char c, char *stack, int size, int &sp, bvec colour, int 
     }
     else
     {
-        xtraverts += varray::end();
+        xtraverts += gle::end();
         if(c=='r') c = stack[(sp > 0) ? --sp : sp]; // restore color
         else stack[sp] = c;
         switch(c)
@@ -265,7 +265,7 @@ static void text_color(char c, char *stack, int size, int &sp, bvec colour, int 
             case 'Y': colour = bvec(255, 255,  96); break; //yellow
             case 'Z': colour = bvec(224, 192, 160); break; //zinnwaldite
         }
-        varray::color(colour, a);
+        gle::color(colour, a);
     }
 }
 
@@ -399,16 +399,16 @@ void draw_text(const char *str, int left, int top, int r, int g, int b, int a, i
     (textshader ? textshader : hudshader)->setvariant(hasTRG ? (tex->bpp==1 ? 0 : (tex->bpp==2 ? 1 : -1)) : -1, 0);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glBindTexture(GL_TEXTURE_2D, tex->id);
-    varray::color(color, a);
-    varray::defvertex(textmatrix ? 3 : 2);
-    varray::deftexcoord0();
-    varray::begin(GL_QUADS);
+    gle::color(color, a);
+    gle::defvertex(textmatrix ? 3 : 2);
+    gle::deftexcoord0();
+    gle::begin(GL_QUADS);
     TEXTSKELETON
     TEXTEND(cursor)
-    xtraverts += varray::end();
+    xtraverts += gle::end();
     if(cursor >= 0 && (totalmillis/250)&1)
     {
-        varray::color(color, a);
+        gle::color(color, a);
         if(maxwidth != -1 && cx >= maxwidth) { cx = 0; cy += FONTH; }
         if(verttextcursor)
         {
@@ -419,9 +419,9 @@ void draw_text(const char *str, int left, int top, int r, int g, int b, int a, i
             draw_char(tex, '|', left+cx, top+cy, scale);
         }
         else draw_char(tex, '_', left+cx, top+cy, scale);
-        xtraverts += varray::end();
+        xtraverts += gle::end();
     }
-    varray::disable();
+    gle::disable();
     if(oldshader == hudshader->detailshader) oldshader->bindprograms();
 
     #undef TEXTINDEX

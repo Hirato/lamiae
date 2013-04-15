@@ -75,9 +75,9 @@ struct animmodel : model
         Texture *tex, *decal, *masks, *envmap, *normalmap;
         Shader *shader;
         float spec, ambient, glow, glowdelta, glowpulse, fullbright, envmapmin, envmapmax, scrollu, scrollv, alphatest;
-        bool alphablend, cullface;
+        bool cullface;
 
-        skin() : owner(0), tex(notexture), decal(NULL), masks(notexture), envmap(NULL), normalmap(NULL), shader(NULL), spec(1.0f), ambient(0.3f), glow(3.0f), glowdelta(0), glowpulse(0), fullbright(0), envmapmin(0), envmapmax(0), scrollu(0), scrollv(0), alphatest(0.9f), alphablend(false), cullface(true) {}
+        skin() : owner(0), tex(notexture), decal(NULL), masks(notexture), envmap(NULL), normalmap(NULL), shader(NULL), spec(1.0f), ambient(0.3f), glow(3.0f), glowdelta(0), glowpulse(0), fullbright(0), envmapmin(0), envmapmax(0), scrollu(0), scrollv(0), alphatest(0.9f), cullface(true) {}
 
         bool envmapped() { return envmapmax>0 && envmapmodels; }
         bool bumpmapped() { return normalmap && bumpmodels; }
@@ -91,6 +91,8 @@ struct animmodel : model
             if(alphatested) GLOBALPARAMF(alphatest, (alphatest));
 
             if(!skinned) return;
+
+            GLOBALPARAMF(transparent, (transparent));
 
             if(fullbright) GLOBALPARAMF(fullbright, (0.0f, fullbright));
             else GLOBALPARAMF(fullbright, (1.0f, as->cur.anim&ANIM_FULLBRIGHT ? 0.5f*fullbrightmodels/100.0f : 0.0f));
@@ -163,7 +165,6 @@ struct animmodel : model
 
             if(as->cur.anim&ANIM_NOSKIN)
             {
-                if(enablealphablend) { glDisable(GL_BLEND); enablealphablend = false; }
                 if(alphatest > 0 && s->type&Texture::ALPHA)
                 {
                     if(s!=lasttex)
@@ -205,23 +206,6 @@ struct animmodel : model
                 activetmu = 4;
                 glBindTexture(GL_TEXTURE_2D, decal->id);
                 lastdecal = n;
-            }
-            if(s->type&Texture::ALPHA)
-            {
-                if(alphablend)
-                {
-                    if(!enablealphablend)
-                    {
-                        glEnable(GL_BLEND);
-                        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-                        enablealphablend = true;
-                    }
-                }
-                else if(enablealphablend) { glDisable(GL_BLEND); enablealphablend = false; }
-            }
-            else
-            {
-                if(enablealphablend) { glDisable(GL_BLEND); enablealphablend = false; }
             }
             if(m!=lastmasks && m!=notexture)
             {
@@ -440,8 +424,8 @@ struct animmodel : model
             if(lastvbuf!=vbuf)
             {
                 glBindBuffer_(GL_ARRAY_BUFFER, vbuf);
-                if(!lastvbuf) varray::enablevertex();
-                varray::vertexpointer(stride, v);
+                if(!lastvbuf) gle::enablevertex();
+                gle::vertexpointer(stride, v);
                 lastvbuf = vbuf;
             }
         }
@@ -450,12 +434,12 @@ struct animmodel : model
         {
             if(!enabletc)
             {
-                varray::enabletexcoord0();
+                gle::enabletexcoord0();
                 enabletc = true;
             }
             if(lasttcbuf!=lastvbuf)
             {
-                varray::texcoord0pointer(stride, v);
+                gle::texcoord0pointer(stride, v);
                 lasttcbuf = lastvbuf;
             }
         }
@@ -464,12 +448,12 @@ struct animmodel : model
         {
             if(!enablenormals)
             {
-                varray::enablenormal();
+                gle::enablenormal();
                 enablenormals = true;
             }
             if(lastnbuf!=lastvbuf)
             {
-                varray::normalpointer(stride, v);
+                gle::normalpointer(stride, v);
                 lastnbuf = lastvbuf;
             }
         }
@@ -478,12 +462,12 @@ struct animmodel : model
         {
             if(!enabletangents)
             {
-                varray::enabletangent();
+                gle::enabletangent();
                 enabletangents = true;
             }
             if(lastxbuf!=lastvbuf)
             {
-                varray::tangentpointer(stride, v);
+                gle::tangentpointer(stride, v);
                 lastxbuf = lastvbuf;
             }
         }
@@ -492,14 +476,14 @@ struct animmodel : model
         {
             if(!enablebones)
             {
-                varray::enableboneweight();
-                varray::enableboneindex();
+                gle::enableboneweight();
+                gle::enableboneindex();
                 enablebones = true;
             }
             if(lastbbuf!=lastvbuf)
             {
-                varray::boneweightpointer(stride, wv);
-                varray::boneindexpointer(stride, bv);
+                gle::boneweightpointer(stride, wv);
+                gle::boneindexpointer(stride, bv);
                 lastbbuf = lastvbuf;
             }
         }
@@ -873,7 +857,7 @@ struct animmodel : model
             }
 
             float resize = model->scale * sizescale;
-            int oldpos = matrixpos; 
+            int oldpos = matrixpos;
             vec oaxis, oforward;
             matrixstack[matrixpos].transposedtransformnormal(axis, oaxis);
             float pitchamount = pitchscale*pitch + pitchoffset;
@@ -886,7 +870,7 @@ struct animmodel : model
                 matrixstack[matrixpos] = matrixstack[matrixpos-1];
                 matrixstack[matrixpos].rotate(pitchamount*RAD, oaxis);
             }
-            if(!index && !model->translate.iszero()) 
+            if(!index && !model->translate.iszero())
             {
                 if(oldpos == matrixpos)
                 {
@@ -1148,7 +1132,7 @@ struct animmodel : model
         }
     }
 
-    void render(int anim, int basetime, int basetime2, const vec &o, float yaw, float pitch, float roll, dynent *d, modelattach *a, float size)
+    void render(int anim, int basetime, int basetime2, const vec &o, float yaw, float pitch, float roll, dynent *d, modelattach *a, float size, float trans)
     {
         if(!loaded) return;
 
@@ -1186,6 +1170,8 @@ struct animmodel : model
 
         if(!(anim&ANIM_NOSKIN))
         {
+            transparent = trans;
+
             if(envmapped()) envmaptmu = 2;
             else if(a) for(int i = 0; a[i].tag; i++) if(a[i].m && a[i].m->envmapped())
             {
@@ -1351,12 +1337,6 @@ struct animmodel : model
         loopv(parts) loopvj(parts[i]->skins) parts[i]->skins[j].alphatest = alphatest;
     }
 
-    void setalphablend(bool alphablend)
-    {
-        if(parts.empty()) loaddefaultparts();
-        loopv(parts) loopvj(parts[i]->skins) parts[i]->skins[j].alphablend = alphablend;
-    }
-
     void setfullbright(float fullbright)
     {
         if(parts.empty()) loaddefaultparts();
@@ -1383,8 +1363,8 @@ struct animmodel : model
         center.add(radius);
     }
 
-    static bool enabletc, enablealphablend, enablecullface, enablenormals, enabletangents, enablebones, enabledepthoffset;
-    static float sizescale;
+    static bool enabletc, enablecullface, enablenormals, enabletangents, enablebones, enabledepthoffset;
+    static float sizescale, transparent;
     static GLuint lastvbuf, lasttcbuf, lastnbuf, lastxbuf, lastbbuf, lastebuf, lastenvmaptex, closestenvmaptex;
     static Texture *lasttex, *lastdecal, *lastmasks, *lastnormalmap;
     static int envmaptmu, matrixpos;
@@ -1392,36 +1372,36 @@ struct animmodel : model
 
     void startrender()
     {
-        enabletc = enablealphablend = enablenormals = enabletangents = enablebones = enabledepthoffset = false;
+        enabletc = enablenormals = enabletangents = enablebones = enabledepthoffset = false;
         enablecullface = true;
         lastvbuf = lasttcbuf = lastnbuf = lastxbuf = lastbbuf = lastebuf = lastenvmaptex = closestenvmaptex = 0;
         lasttex = lastdecal = lastmasks = lastnormalmap = NULL;
         envmaptmu = -1;
-        sizescale = 1;
+        sizescale = transparent = 1;
     }
 
     static void disablebones()
     {
-        varray::disableboneweight();
-        varray::disableboneindex();
+        gle::disableboneweight();
+        gle::disableboneindex();
         enablebones = false;
     }
 
     static void disabletangents()
     {
-        varray::disabletangent();
+        gle::disabletangent();
         enabletangents = false;
     }
 
     static void disabletc()
     {
-        varray::disabletexcoord0();
+        gle::disabletexcoord0();
         enabletc = false;
     }
 
     static void disablenormals()
     {
-        varray::disablenormal();
+        gle::disablenormal();
         enablenormals = false;
     }
 
@@ -1429,7 +1409,7 @@ struct animmodel : model
     {
         glBindBuffer_(GL_ARRAY_BUFFER, 0);
         glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, 0);
-        varray::disablevertex();
+        gle::disablevertex();
         if(enabletc) disabletc();
         if(enablenormals) disablenormals();
         if(enabletangents) disabletangents();
@@ -1440,7 +1420,6 @@ struct animmodel : model
     void endrender()
     {
         if(lastvbuf || lastebuf) disablevbo();
-        if(enablealphablend) glDisable(GL_BLEND);
         if(!enablecullface) glEnable(GL_CULL_FACE);
         if(enabledepthoffset) disablepolygonoffset(GL_POLYGON_OFFSET_FILL);
     }
@@ -1448,11 +1427,11 @@ struct animmodel : model
 
 int animmodel::intersectresult = -1, animmodel::intersectmode = 0;
 float animmodel::intersectdist = 0, animmodel::intersectscale = 1;
-bool animmodel::enabletc = false, animmodel::enablealphablend = false,
+bool animmodel::enabletc = false,
      animmodel::enablecullface = true,
      animmodel::enablenormals = false, animmodel::enabletangents = false,
      animmodel::enablebones = false, animmodel::enabledepthoffset = false;
-float animmodel::sizescale = 1;
+float animmodel::sizescale = 1, animmodel::transparent = 1;
 GLuint animmodel::lastvbuf = 0, animmodel::lasttcbuf = 0, animmodel::lastnbuf = 0, animmodel::lastxbuf = 0, animmodel::lastbbuf = 0, animmodel::lastebuf = 0,
        animmodel::lastenvmaptex = 0, animmodel::closestenvmaptex = 0;
 Texture *animmodel::lasttex = NULL, *animmodel::lastdecal = NULL, *animmodel::lastmasks = NULL, *animmodel::lastnormalmap = NULL;
@@ -1541,11 +1520,6 @@ template<class MDL, class MESH> struct modelcommands
         loopskins(meshname, s, s.alphatest = max(0.0f, min(1.0f, *cutoff)));
     }
 
-    static void setalphablend(char *meshname, int *blend)
-    {
-        loopskins(meshname, s, s.alphablend = *blend!=0);
-    }
-
     static void setcullface(char *meshname, int *cullface)
     {
         loopskins(meshname, s, s.cullface = *cullface!=0);
@@ -1613,7 +1587,6 @@ template<class MDL, class MESH> struct modelcommands
             modelcommand(setambient, "ambient", "si");
             modelcommand(setglow, "glow", "siif");
             modelcommand(setalphatest, "alphatest", "sf");
-            modelcommand(setalphablend, "alphablend", "si");
             modelcommand(setcullface, "cullface", "si");
             modelcommand(setenvmap, "envmap", "ss");
             modelcommand(setbumpmap, "bumpmap", "ss");

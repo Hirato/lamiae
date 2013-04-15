@@ -127,12 +127,12 @@ static void getbackgroundres(int &w, int &h)
 
 void bgquad(float x, float y, float w, float h, float tx = 0, float ty = 0, float tw = 1, float th = 1)
 {
-    varray::begin(GL_TRIANGLE_STRIP);
-    varray::attribf(x,   y);   varray::attribf(tx,      ty);
-    varray::attribf(x+w, y);   varray::attribf(tx + tw, ty);
-    varray::attribf(x,   y+h); varray::attribf(tx,      ty + th);
-    varray::attribf(x+w, y+h); varray::attribf(tx + tw, ty + th);
-    varray::end();
+    gle::begin(GL_TRIANGLE_STRIP);
+    gle::attribf(x,   y);   gle::attribf(tx,      ty);
+    gle::attribf(x+w, y);   gle::attribf(tx + tw, ty);
+    gle::attribf(x,   y+h); gle::attribf(tx,      ty + th);
+    gle::attribf(x+w, y+h); gle::attribf(tx + tw, ty + th);
+    gle::end();
 }
 
 string backgroundcaption = "";
@@ -183,22 +183,22 @@ void renderbackground(const char *caption, Texture *mapshot, const char *mapname
         resethudmatrix();
         hudnotextureshader->set();
 
-        varray::defvertex(2);
-        varray::colorf(.8, .775, .65);
+        gle::defvertex(2);
+        gle::colorf(.8, .775, .65);
 
-        varray::begin(GL_TRIANGLE_STRIP);
+        gle::begin(GL_TRIANGLE_STRIP);
 
-        varray::attribf(0, 0);
-        varray::attribf(w, 0);
-        varray::attribf(0, h);
-        varray::attribf(w, h);
+        gle::attribf(0, 0);
+        gle::attribf(w, 0);
+        gle::attribf(0, h);
+        gle::attribf(w, h);
 
-        varray::end();
+        gle::end();
 
         hudshader->set();
-        varray::defvertex(2);
-        varray::deftexcoord0();
-        varray::colorf(1, 1, 1);
+        gle::defvertex(2);
+        gle::deftexcoord0();
+        gle::colorf(1, 1, 1);
 
         settexture("<premul>data/lamiae", 3);
         glEnable(GL_BLEND);
@@ -229,27 +229,27 @@ void renderbackground(const char *caption, Texture *mapshot, const char *mapname
 
 
         hudnotextureshader->set();
-        varray::defvertex(2);
-        varray::defcolor(4);
+        gle::defvertex(2);
+        gle::defcolor(4);
 
         float roffset = -max(w, h) * 0.02;
-        varray::begin(GL_TRIANGLES);
+        gle::begin(GL_TRIANGLES);
         loopi(sizeof(rays)/sizeof(rays[0]))
         {
-            varray::attribf(roffset, roffset);
-            varray::attribf(1, 1, 1, .4);
+            gle::attribf(roffset, roffset);
+            gle::attribf(1, 1, 1, .4);
 
-            varray::attrib(rays[i].coords[0]);
-            varray::attribf(1, 1, 1, 0);
+            gle::attrib(rays[i].coords[0]);
+            gle::attribf(1, 1, 1, 0);
 
-            varray::attrib(rays[i].coords[1]);
-            varray::attribf(1, 1, 1, 0);
+            gle::attrib(rays[i].coords[1]);
+            gle::attribf(1, 1, 1, 0);
         }
-        varray::end();
+        gle::end();
 
         hudshader->set();
-        varray::defvertex(2);
-        varray::deftexcoord0();
+        gle::defvertex(2);
+        gle::deftexcoord0();
 
         if(caption)
         {
@@ -349,7 +349,7 @@ void renderbackground(const char *caption, Texture *mapshot, const char *mapname
 
         glDisable(GL_BLEND);
 
-        varray::disable();
+        gle::disable();
 
         if(!restore) swapbuffers();
     }
@@ -399,33 +399,33 @@ void renderprogress(float bar, const char *text, GLuint tex, bool background)   
     float fx = (w - fw) / 2;
     float fy = h - fh - FONTH + 0.01 * min(w, h);
 
-    varray::colorf(1, 1, 1);
-    varray::defvertex(2);
-    varray::begin(GL_TRIANGLE_STRIP);
+    gle::colorf(1, 1, 1);
+    gle::defvertex(2);
+    gle::begin(GL_TRIANGLE_STRIP);
 
-    varray::attribf(fx, fy);
-    varray::attribf(fx + fw, fy);
-    varray::attribf(fx, fy + fh);
-    varray::attribf(fx + fw, fy + fh);
+    gle::attribf(fx, fy);
+    gle::attribf(fx + fw, fy);
+    gle::attribf(fx, fy + fh);
+    gle::attribf(fx + fw, fy + fh);
 
-    varray::end();
+    gle::end();
 
-    varray::colorf(0, 0, 0);
-    varray::begin(GL_LINES);
+    gle::colorf(0, 0, 0);
+    gle::begin(GL_LINES);
 
-    varray::attribf(fx, fy);
-    varray::attribf(fx + fw, fy);
+    gle::attribf(fx, fy);
+    gle::attribf(fx + fw, fy);
 
-    varray::attribf(fx + fw, fy);
-    varray::attribf(fx + fw, fy + fh);
+    gle::attribf(fx + fw, fy);
+    gle::attribf(fx + fw, fy + fh);
 
-    varray::attribf(fx + fw, fy + fh);
-    varray::attribf(fx, fy + fh);
+    gle::attribf(fx + fw, fy + fh);
+    gle::attribf(fx, fy + fh);
 
-    varray::attribf(fx, fy + fh);
-    varray::attribf(fx, fy);
+    gle::attribf(fx, fy + fh);
+    gle::attribf(fx, fy);
 
-    varray::end();
+    gle::end();
 
 
     float bh = 0.01 * min(w, h) + FONTH;
@@ -435,17 +435,17 @@ void renderprogress(float bar, const char *text, GLuint tex, bool background)   
 
     if(bar > 0)
     {
-        varray::begin(GL_TRIANGLE_STRIP);
-        varray::attribf(bx, by);
-        varray::attribf(bx + bw * bar, by);
-        varray::attribf(bx, by + bh);
-        varray::attribf(bx + bw * bar, by + bh);
-        varray::end();
+        gle::begin(GL_TRIANGLE_STRIP);
+        gle::attribf(bx, by);
+        gle::attribf(bx + bw * bar, by);
+        gle::attribf(bx, by + bh);
+        gle::attribf(bx + bw * bar, by + bh);
+        gle::end();
     }
 
     hudshader->set();
-    varray::defvertex(2);
-    varray::deftexcoord0();
+    gle::defvertex(2);
+    gle::deftexcoord0();
 
     if(text)
     {
@@ -482,7 +482,7 @@ void renderprogress(float bar, const char *text, GLuint tex, bool background)   
         glDisable(GL_BLEND);
     }
 
-    varray::disable();
+    gle::disable();
     swapbuffers();
 }
 

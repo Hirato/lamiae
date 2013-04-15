@@ -154,18 +154,18 @@ namespace UI
 
     static inline void quad(float x, float y, float w, float h, float tx = 0, float ty = 0, float tw = 1, float th = 1)
     {
-        varray::attribf(x    , y    ); varray::attribf(tx     , ty     );
-        varray::attribf(x + w, y    ); varray::attribf(tx + tw, ty     );
-        varray::attribf(x + w, y + h); varray::attribf(tx + tw, ty + th);
-        varray::attribf(x    , y + h); varray::attribf(tx     , ty + th);
+        gle::attribf(x    , y    ); gle::attribf(tx     , ty     );
+        gle::attribf(x + w, y    ); gle::attribf(tx + tw, ty     );
+        gle::attribf(x + w, y + h); gle::attribf(tx + tw, ty + th);
+        gle::attribf(x    , y + h); gle::attribf(tx     , ty + th);
     }
 
     static inline void quadtri(float x, float y, float w, float h, float tx = 0, float ty = 0, float tw = 1, float th = 1)
     {
-        varray::attribf(x    , y    ); varray::attribf(tx     , ty     );
-        varray::attribf(x + w, y    ); varray::attribf(tx + tw, ty     );
-        varray::attribf(x    , y + h); varray::attribf(tx     , ty + th);
-        varray::attribf(x + w, y + h); varray::attribf(tx + tw, ty + th);
+        gle::attribf(x    , y    ); gle::attribf(tx     , ty     );
+        gle::attribf(x + w, y    ); gle::attribf(tx + tw, ty     );
+        gle::attribf(x    , y + h); gle::attribf(tx     , ty + th);
+        gle::attribf(x + w, y + h); gle::attribf(tx + tw, ty + th);
     }
 
     struct ClipArea
@@ -1530,21 +1530,21 @@ namespace UI
         {
             if(type==MODULATE) glBlendFunc(GL_ZERO, GL_SRC_COLOR);
             hudnotextureshader->set();
-            varray::color(color);
+            gle::color(color);
 
-            varray::defvertex(2);
+            gle::defvertex(2);
 
-            varray::begin(GL_TRIANGLE_STRIP);
-            varray::attribf(sx,     sy);
-            varray::attribf(sx + w, sy);
-            varray::attribf(sx,     sy + h);
-            varray::attribf(sx + w, sy + h);
-            varray::end();
+            gle::begin(GL_TRIANGLE_STRIP);
+            gle::attribf(sx,     sy);
+            gle::attribf(sx + w, sy);
+            gle::attribf(sx,     sy + h);
+            gle::attribf(sx + w, sy + h);
+            gle::end();
 
             hudshader->set();
-            varray::colorf(1, 1, 1, 1);
-            varray::defvertex(2);
-            varray::deftexcoord0();
+            gle::colorf(1, 1, 1, 1);
+            gle::defvertex(2);
+            gle::deftexcoord0();
 
             if(type==MODULATE) glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             Object::draw(sx, sy);
@@ -1570,9 +1570,9 @@ namespace UI
         void draw(float sx, float sy)
         {
             glBindTexture(GL_TEXTURE_2D, tex->id);
-            varray::begin(GL_TRIANGLE_STRIP);
+            gle::begin(GL_TRIANGLE_STRIP);
             quadtri(sx, sy, w, h);
-            varray::end();
+            gle::end();
 
             Object::draw(sx, sy);
         }
@@ -1678,42 +1678,42 @@ namespace UI
                 if(vslot.rotation <= 2 || vslot.rotation == 5) { yoff *= -1; loopk(4) tc[k][1] *= -1; }
             }
             loopk(4) { tc[k][0] = tc[k][0]/xt - float(xoff)/tex->xs; tc[k][1] = tc[k][1]/yt - float(yoff)/tex->ys; }
-            if(slot.loaded) varray::color(vslot.colorscale);
+            if(slot.loaded) gle::color(vslot.colorscale);
             glBindTexture(GL_TEXTURE_2D, tex->id);
 
-            varray::begin(GL_TRIANGLE_STRIP);
-            varray::attribf(sx  , sy  ); varray::attrib(tc[0]);
-            varray::attribf(sx+w, sy  ); varray::attrib(tc[1]);
-            varray::attribf(sx  , sy+h); varray::attrib(tc[2]);
-            varray::attribf(sx+w, sy+h); varray::attrib(tc[3]);
-            varray::end();
+            gle::begin(GL_TRIANGLE_STRIP);
+            gle::attribf(sx  , sy  ); gle::attrib(tc[0]);
+            gle::attribf(sx+w, sy  ); gle::attrib(tc[1]);
+            gle::attribf(sx  , sy+h); gle::attrib(tc[2]);
+            gle::attribf(sx+w, sy+h); gle::attrib(tc[3]);
+            gle::end();
 
             if(glowtex)
             {
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE);
                 glBindTexture(GL_TEXTURE_2D, glowtex->id);
-                varray::color(vslot.glowcolor);
-                varray::begin(GL_TRIANGLE_STRIP);
-                varray::attribf(sx  , sy  ); varray::attrib(tc[0]);
-                varray::attribf(sx+w, sy  ); varray::attrib(tc[1]);
-                varray::attribf(sx  , sy+h); varray::attrib(tc[2]);
-                varray::attribf(sx+w, sy+h); varray::attrib(tc[3]);
-                varray::end();
+                gle::color(vslot.glowcolor);
+                gle::begin(GL_TRIANGLE_STRIP);
+                gle::attribf(sx  , sy  ); gle::attrib(tc[0]);
+                gle::attribf(sx+w, sy  ); gle::attrib(tc[1]);
+                gle::attribf(sx  , sy+h); gle::attrib(tc[2]);
+                gle::attribf(sx+w, sy+h); gle::attrib(tc[3]);
+                gle::end();
 
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             }
             if(layertex)
             {
                 glBindTexture(GL_TEXTURE_2D, layertex->id);
-                varray::color(layer->colorscale);
-                varray::begin(GL_TRIANGLE_STRIP);
-                varray::attribf(sx  , sy  ); varray::attrib(tc[0]);
-                varray::attribf(sx+w, sy  ); varray::attrib(tc[1]);
-                varray::attribf(sx  , sy+h); varray::attrib(tc[2]);
-                varray::attribf(sx+w, sy+h); varray::attrib(tc[3]);
-                varray::end();
+                gle::color(layer->colorscale);
+                gle::begin(GL_TRIANGLE_STRIP);
+                gle::attribf(sx  , sy  ); gle::attrib(tc[0]);
+                gle::attribf(sx+w, sy  ); gle::attrib(tc[1]);
+                gle::attribf(sx  , sy+h); gle::attrib(tc[2]);
+                gle::attribf(sx+w, sy+h); gle::attrib(tc[3]);
+                gle::end();
             }
-            varray::colorf(1, 1, 1);
+            gle::colorf(1, 1, 1);
 
             hudshader->set();
         }
@@ -1757,9 +1757,9 @@ namespace UI
         void draw(float sx, float sy)
         {
             glBindTexture(GL_TEXTURE_2D, tex->id);
-            varray::begin(GL_TRIANGLE_STRIP);
+            gle::begin(GL_TRIANGLE_STRIP);
             quadtri(sx, sy, w, h, cropx, cropy, cropw, croph);
-            varray::end();
+            gle::end();
 
             Object::draw(sx, sy);
         }
@@ -1791,7 +1791,7 @@ namespace UI
         void draw(float sx, float sy)
         {
             glBindTexture(GL_TEXTURE_2D, tex->id);
-            varray::begin(GL_QUADS);
+            gle::begin(GL_QUADS);
             float splitw = (minw ? min(minw, w) : w) / 2,
                   splith = (minh ? min(minh, h) : h) / 2,
                   vy = sy, ty = 0;
@@ -1823,7 +1823,7 @@ namespace UI
                 ty += th;
                 if(ty >= 1) break;
             }
-            varray::end();
+            gle::end();
 
             Object::draw(sx, sy);
         }
@@ -1863,7 +1863,7 @@ namespace UI
         void draw(float sx, float sy)
         {
             glBindTexture(GL_TEXTURE_2D, tex->id);
-            varray::begin(GL_QUADS);
+            gle::begin(GL_QUADS);
             float vy = sy, ty = 0;
             loopi(3)
             {
@@ -1891,7 +1891,7 @@ namespace UI
                 vy += vh;
                 ty += th;
             }
-            varray::end();
+            gle::end();
 
             Object::draw(sx, sy);
         }
@@ -1923,7 +1923,7 @@ namespace UI
             if(tex->clamp)
             {
                 float dx = 0, dy = 0;
-                varray::begin(GL_QUADS);
+                gle::begin(GL_QUADS);
                 while(dx < w)
                 {
                     while(dy < h)
@@ -1939,13 +1939,13 @@ namespace UI
                     dx += tilew;
                 }
 
-                varray::end();
+                gle::end();
             }
             else
             {
-                varray::begin(GL_TRIANGLE_STRIP);
+                gle::begin(GL_TRIANGLE_STRIP);
                 quadtri(sx, sy, w, h, 0, 0, w/tilew, h/tileh);
-                varray::end();
+                gle::end();
             }
 
             Object::draw(sx, sy);
@@ -1991,7 +1991,7 @@ namespace UI
                 y = ceil(( 1 - (h + sy) ) * world->size),
                 dy = ceil(h * world->size);
 
-            varray::disable();
+            gle::disable();
             modelpreview::start(x, y, dx, dy, false, clipstack.length() >= 1);
 
             model *m = loadmodel(mdl);
@@ -2025,8 +2025,8 @@ namespace UI
             modelpreview::end();
 
             hudshader->set();
-            varray::defvertex(2);
-            varray::deftexcoord0();
+            gle::defvertex(2);
+            gle::deftexcoord0();
             glEnable(GL_BLEND);
             if(clipstack.length()) glEnable(GL_SCISSOR_TEST);
 
@@ -2826,9 +2826,9 @@ namespace UI
         resethudmatrix();
         hudshader->set();
 
-        varray::colorf(1, 1, 1);
-        varray::defvertex(2);
-        varray::deftexcoord0();
+        gle::colorf(1, 1, 1);
+        gle::defvertex(2);
+        gle::deftexcoord0();
 
         world->draw();
 
@@ -2852,7 +2852,7 @@ namespace UI
             tooltip->draw(x, y);
         }
 
-        varray::disable();
+        gle::disable();
     }
 }
 
@@ -2931,16 +2931,16 @@ void consolebox(int x1, int y1, int x2, int y2)
     float r = ((fullconcolor >> 16) & 0xFF) / 255.f,
         g = ((fullconcolor >> 8) & 0xFF) / 255.f,
         b = (fullconcolor & 0xFF) / 255.f;
-    varray::colorf(r, g, b, fullconblend);
-    varray::defvertex(2);
+    gle::colorf(r, g, b, fullconblend);
+    gle::defvertex(2);
 
-    varray::begin(GL_TRIANGLE_STRIP);
-    varray::attribf(x1, y1);
-    varray::attribf(x2, y1);
-    varray::attribf(x1, y2);
-    varray::attribf(x2, y2);
+    gle::begin(GL_TRIANGLE_STRIP);
+    gle::attribf(x1, y1);
+    gle::attribf(x2, y1);
+    gle::attribf(x1, y2);
+    gle::attribf(x2, y2);
 
-    varray::end();
+    gle::end();
 
     pophudmatrix();
     hudshader->set();

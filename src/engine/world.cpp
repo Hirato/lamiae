@@ -545,17 +545,17 @@ VARP(showentdir, 0, 1, 2);
 void renderentring(const extentity &e, float radius, int axis)
 {
     if(radius <= 0 || !showentradius) return;
-    varray::defvertex();
-    varray::begin(GL_LINE_LOOP);
+    gle::defvertex();
+    gle::begin(GL_LINE_LOOP);
     loopi(15)
     {
         vec p(e.o);
         const vec2 &sc = sincos360[i*(360/15)];
         p[axis>=2 ? 1 : 0] += radius*sc.x;
         p[axis>=1 ? 2 : 1] += radius*sc.y;
-        varray::attrib(p);
+        gle::attrib(p);
     }
-    varray::end();
+    gle::end();
 }
 
 void renderentsphere(const extentity &e, float radius)
@@ -567,11 +567,11 @@ void renderentsphere(const extentity &e, float radius)
 void renderentattachment(const extentity &e)
 {
     if(!e.attached || !showentdir) return;
-    varray::defvertex();
-    varray::begin(GL_LINES);
-    varray::attrib(e.o);
-    varray::attrib(e.attached->o);
-    varray::end();
+    gle::defvertex();
+    gle::begin(GL_LINES);
+    gle::attrib(e.o);
+    gle::attrib(e.attached->o);
+    gle::end();
 }
 
 void renderentarrow(const extentity &e, const vec &dir, float radius)
@@ -583,17 +583,17 @@ void renderentarrow(const extentity &e, const vec &dir, float radius)
     spoke.normalize();
     spoke.mul(arrowsize);
 
-    varray::defvertex();
+    gle::defvertex();
 
-    varray::begin(GL_LINES);
-    varray::attrib(e.o);
-    varray::attrib(target);
-    varray::end();
+    gle::begin(GL_LINES);
+    gle::attrib(e.o);
+    gle::attrib(target);
+    gle::end();
 
-    varray::begin(GL_TRIANGLE_FAN);
-    varray::attrib(target);
-    loopi(5) varray::attrib(vec(spoke).rotate(2*M_PI*i/4.0f, dir).add(arrowbase));
-    varray::end();
+    gle::begin(GL_TRIANGLE_FAN);
+    gle::attrib(target);
+    loopi(5) gle::attrib(vec(spoke).rotate(2*M_PI*i/4.0f, dir).add(arrowbase));
+    gle::end();
 }
 
 void renderentcone(const extentity &e, const vec &dir, float radius, float angle)
@@ -604,19 +604,19 @@ void renderentcone(const extentity &e, const vec &dir, float radius, float angle
     spoke.normalize();
     spoke.mul(radius*sinf(angle*RAD));
 
-    varray::defvertex();
+    gle::defvertex();
 
-    varray::begin(GL_LINES);
+    gle::begin(GL_LINES);
     loopi(8)
     {
-        varray::attrib(e.o);
-        varray::attrib(vec(spoke).rotate(2*M_PI*i/8.0f, dir).add(spot));
+        gle::attrib(e.o);
+        gle::attrib(vec(spoke).rotate(2*M_PI*i/8.0f, dir).add(spot));
     }
-    varray::end();
+    gle::end();
 
-    varray::begin(GL_LINE_LOOP);
-    loopi(8) varray::attrib(vec(spoke).rotate(2*M_PI*i/8.0f, dir).add(spot));
-    varray::end();
+    gle::begin(GL_LINE_LOOP);
+    loopi(8) gle::attrib(vec(spoke).rotate(2*M_PI*i/8.0f, dir).add(spot));
+    gle::end();
 }
 
 void renderentradius(extentity &e, bool color)
@@ -624,14 +624,14 @@ void renderentradius(extentity &e, bool color)
     switch(e.type)
     {
         case ET_LIGHT:
-            if(color) varray::colorf(e.attr[1]/255.0f, e.attr[2]/255.0f, e.attr[3]/255.0f);
+            if(color) gle::colorf(e.attr[1]/255.0f, e.attr[2]/255.0f, e.attr[3]/255.0f);
             renderentsphere(e, e.attr[0]);
             break;
 
         case ET_SPOTLIGHT:
             if(e.attached)
             {
-                if(color) varray::colorf(e.attached->attr[1]/255.0f, e.attached->attr[2]/255.0f, e.attached->attr[3]/255.0f);
+                if(color) gle::colorf(e.attached->attr[1]/255.0f, e.attached->attr[2]/255.0f, e.attached->attr[3]/255.0f);
                 float radius = e.attached->attr[0];
                 if(!radius) radius = 2*e.o.dist(e.attached->o);
                 vec dir = vec(e.o).sub(e.attached->o).normalize();
@@ -642,7 +642,7 @@ void renderentradius(extentity &e, bool color)
             break;
 
         case ET_SOUND:
-            if(color) varray::colorf(0, 1, 1);
+            if(color) gle::colorf(0, 1, 1);
             renderentsphere(e, e.attr[1]);
             renderentsphere(e, min(e.attr[1], e.attr[2]));
             break;
@@ -650,7 +650,7 @@ void renderentradius(extentity &e, bool color)
         case ET_ENVMAP:
         {
             extern int envmapradius;
-            if(color) varray::colorf(0, 1, 1);
+            if(color) gle::colorf(0, 1, 1);
             renderentsphere(e, e.attr[0] ? max(0, min(10000, int(e.attr[0]))) : envmapradius);
             break;
         }
@@ -658,7 +658,7 @@ void renderentradius(extentity &e, bool color)
         case ET_MAPMODEL:
         case ET_PLAYERSTART:
         {
-            if(color) varray::colorf(0, 1, 1);
+            if(color) gle::colorf(0, 1, 1);
             entities::entradius(e, color);
             vec dir;
             vecfromyawpitch(e.attr[0], 0, 1, 0, dir);
@@ -669,7 +669,7 @@ void renderentradius(extentity &e, bool color)
         default:
             if(e.type>=ET_GAMESPECIFIC)
             {
-                if(color) varray::colorf(0, 1, 1);
+                if(color) gle::colorf(0, 1, 1);
                 entities::entradius(e, color);
             }
             break;
@@ -700,7 +700,7 @@ void renderentselection(const vec &o, const vec &ray, bool entmoving)
     {
         vec eo, es;
 
-        varray::colorub(0, 40, 0);
+        gle::colorub(0, 40, 0);
         loopv(entgroup) entfocus(entgroup[i],
             entselectionbox(e, eo, es);
             boxs3D(eo, es, 1);
@@ -714,18 +714,18 @@ void renderentselection(const vec &o, const vec &ray, bool entmoving)
             if(entmoving && entmovingshadow==1)
             {
                 vec a, b;
-                varray::colorub(20, 20, 20);
+                gle::colorub(20, 20, 20);
                 (a = eo).x = eo.x - fmod(eo.x, worldsize); (b = es).x = a.x + worldsize; boxs3D(a, b, 1);
                 (a = eo).y = eo.y - fmod(eo.y, worldsize); (b = es).y = a.x + worldsize; boxs3D(a, b, 1);
                 (a = eo).z = eo.z - fmod(eo.z, worldsize); (b = es).z = a.x + worldsize; boxs3D(a, b, 1);
             }
-            varray::colorub(150,0,0);
+            gle::colorub(150,0,0);
             boxs(entorient, eo, es);
         }
         if(showenthelpers>=1 && (entgroup.length() || enthover >= 0))
         {
             glDepthFunc(GL_GREATER);
-            varray::colorf(0.25f, 0.25f, 0.25f);
+            gle::colorf(0.25f, 0.25f, 0.25f);
             loopv(entgroup)
             {
                 extentity &e = *entities::getents()[entgroup[i]];
@@ -741,7 +741,7 @@ void renderentselection(const vec &o, const vec &ray, bool entmoving)
                 renderentradius(e, true);
             }
             if(enthover>=0) entfocus(enthover, renderentradius(e, true));
-            varray::disable();
+            gle::disable();
         }
     }
 }

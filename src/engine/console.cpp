@@ -365,7 +365,7 @@ vector<releaseaction> releaseactions;
 
 const char *addreleaseaction(char *s)
 {
-    if(!keypressed) return NULL;
+    if(!keypressed) { delete[] s; return NULL; }
     releaseaction &ra = releaseactions.add();
     ra.key = keypressed;
     ra.action = s;
@@ -436,7 +436,7 @@ bool consolekey(int code, bool isdown)
     if(commandmillis < 0) return false;
 
     #ifdef __APPLE__
-        #define MOD_KEYS (KMOD_LMETA|KMOD_RMETA)
+        #define MOD_KEYS (KMOD_LGUI|KMOD_RGUI) 
     #else
         #define MOD_KEYS (KMOD_LCTRL|KMOD_RCTRL)
     #endif
