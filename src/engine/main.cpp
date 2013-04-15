@@ -202,6 +202,7 @@ void renderbackground(const char *caption, Texture *mapshot, const char *mapname
 
         settexture("<premul>data/lamiae", 3);
         glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         {
             float ldim, hoffset;
@@ -227,7 +228,6 @@ void renderbackground(const char *caption, Texture *mapshot, const char *mapname
         settexture("<premul>data/cube2badge", 3);
         bgquad(bx, by, bw, bh);
 
-
         hudnotextureshader->set();
         gle::defvertex(2);
         gle::defcolor(4);
@@ -248,6 +248,7 @@ void renderbackground(const char *caption, Texture *mapshot, const char *mapname
         gle::end();
 
         hudshader->set();
+        gle::colorf(1, 1, 1);
         gle::defvertex(2);
         gle::deftexcoord0();
 
@@ -267,6 +268,7 @@ void renderbackground(const char *caption, Texture *mapshot, const char *mapname
 
             pophudmatrix();
         }
+
 
         if(mapshot || mapname)
         {
@@ -288,6 +290,7 @@ void renderbackground(const char *caption, Texture *mapshot, const char *mapname
                 flushhudmatrix();
 
                 draw_text(mapinfo, 0, 0, 0xFF, 0xCF, 0x5F, 0xFF, -1, infowidth);
+                gle::colorf(1, 1, 1);
 
                 pophudmatrix();
 
@@ -391,6 +394,8 @@ void renderprogress(float bar, const char *text, GLuint tex, bool background)   
     resethudmatrix();
 
     hudnotextureshader->set();
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     /// TODO 1) replace this with a texture of some sort
     /// TODO 2) use renderedframe to check for backdrops
@@ -443,13 +448,8 @@ void renderprogress(float bar, const char *text, GLuint tex, bool background)   
         gle::end();
     }
 
-    hudshader->set();
-    gle::defvertex(2);
-    gle::deftexcoord0();
-
     if(text)
     {
-        glEnable(GL_BLEND);
         int tw, th;
         text_bounds(text, tw, th);
         float offset = 0.005 * min(w, h);
@@ -463,9 +463,10 @@ void renderprogress(float bar, const char *text, GLuint tex, bool background)   
         flushhudmatrix();
         draw_text(text, 0, 0);
         pophudmatrix();
-
-        glDisable(GL_BLEND);
     }
+    hudshader->set();
+    gle::defvertex(2);
+    gle::deftexcoord0();
 
     if(tex)
     {
@@ -476,12 +477,11 @@ void renderprogress(float bar, const char *text, GLuint tex, bool background)   
         glBindTexture(GL_TEXTURE_2D, tex);
         bgquad(x, y, sz, sz);
 
-        glEnable(GL_BLEND);
         settexture("data/mapshot_frame", 3);
         bgquad(x, y, sz, sz);
-        glDisable(GL_BLEND);
     }
 
+    glDisable(GL_BLEND);
     gle::disable();
     swapbuffers();
 }
@@ -674,7 +674,7 @@ void setupscreen()
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);
-    screen = SDL_CreateWindow("Tesseract", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, scr_w, scr_h, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS | flags);
+    screen = SDL_CreateWindow("Lamiae", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, scr_w, scr_h, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS | flags);
     if(!screen) fatal("failed to create OpenGL window: %s", SDL_GetError());
     if(flags&SDL_WINDOW_RESIZABLE)
     {

@@ -409,6 +409,7 @@ void draw_text(const char *str, int left, int top, int r, int g, int b, int a, i
     if(cursor >= 0 && (totalmillis/250)&1)
     {
         gle::color(color, a);
+        gle::begin(GL_QUADS);
         if(maxwidth != -1 && cx >= maxwidth) { cx = 0; cy += FONTH; }
         if(verttextcursor)
         {
