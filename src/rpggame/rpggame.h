@@ -94,6 +94,34 @@ struct use;
 struct use_weapon;
 struct waypoint;
 
+enum                            // static entity types
+{
+	NOTUSED = ET_EMPTY,         // entity slot not in use in map
+	LIGHT = ET_LIGHT,           // lightsource, attr1 = radius, attr2 = intensity
+	MAPMODEL = ET_MAPMODEL,     // attr1 = angle, attr2 = idx
+	PLAYERSTART,                // attr1 = angle, attr2 = team
+	ENVMAP = ET_ENVMAP,         // attr1 = radius
+	PARTICLES = ET_PARTICLES,
+	MAPSOUND = ET_SOUND,
+	SPOTLIGHT = ET_SPOTLIGHT,
+	TELEDEST, //attr1 = yaw, attr2 = from
+	JUMPPAD, //attr1 = Z, attr2 = Y, attr3 = X, attr4 = radius
+	CHECKPOINT,
+	SPAWN,
+	LOCATION,
+	RESERVED, //backwards compatibility
+	BLIP,
+	CAMERA,
+	PLATFORMROUTE,
+	CRITTER,
+	ITEM,
+	OBSTACLE,
+	CONTAINER,
+	PLATFORM,
+	TRIGGER,
+	MAXENTTYPES
+};
+
 namespace ai
 {
 	extern int dropwaypoints;
@@ -164,6 +192,9 @@ namespace game
 	extern hashset<mapinfo> *mapdata;
 	extern mapinfo *curmap;
 
+	extern const char *cpmap; extern int cpnum;
+	extern void setcheckpoint(const char *map, int dest);
+
 	extern void openworld(const char *name);
 	extern bool newgame(const char *game, bool restore = false);
 	extern mapinfo *accessmap(const char *name);
@@ -217,7 +248,7 @@ namespace entities
 	extern vector<int> intents;
 	extern void startmap();
 	extern void spawn(const extentity &e, const char *ind, int type, int qty);
-	extern void teleport(rpgent *d, int dest);
+	extern void teleport(rpgent *d, int dest, const int etype = TELEDEST);
 	extern void genentlist();
 	extern void touchents(rpgent *d);
 	extern void renderentities();
@@ -241,34 +272,6 @@ namespace rpggui
 	void forcegui();
 	bool hotkey(int n);
 }
-
-enum                            // static entity types
-{
-	NOTUSED = ET_EMPTY,         // entity slot not in use in map
-	LIGHT = ET_LIGHT,           // lightsource, attr1 = radius, attr2 = intensity
-	MAPMODEL = ET_MAPMODEL,     // attr1 = angle, attr2 = idx
-	PLAYERSTART,                // attr1 = angle, attr2 = team
-	ENVMAP = ET_ENVMAP,         // attr1 = radius
-	PARTICLES = ET_PARTICLES,
-	MAPSOUND = ET_SOUND,
-	SPOTLIGHT = ET_SPOTLIGHT,
-	TELEDEST, //attr1 = yaw, attr2 = from
-	JUMPPAD, //attr1 = Z, attr2 = Y, attr3 = X, attr4 = radius
-	CHECKPOINT,
-	SPAWN,
-	LOCATION,
-	RESERVED, //backwards compatibility
-	BLIP,
-	CAMERA,
-	PLATFORMROUTE,
-	CRITTER,
-	ITEM,
-	OBSTACLE,
-	CONTAINER,
-	PLATFORM,
-	TRIGGER,
-	MAXENTTYPES
-};
 
 struct rpgentity : extentity
 {
@@ -1729,12 +1732,12 @@ struct action
 struct action_teleport : action
 {
 	rpgent *ent;
-	int dest;
+	int dest, etype;
 
 	void exec();
 	const int type() {return ACTION_TELEPORT;}
 
-	action_teleport(rpgent *e, int d) : ent(e), dest(d) {}
+	action_teleport(rpgent *pl, int d, int e = TELEDEST) : ent(pl), dest(d), etype(e) {}
 	~action_teleport() {}
 };
 

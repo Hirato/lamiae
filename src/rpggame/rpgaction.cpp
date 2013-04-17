@@ -6,7 +6,7 @@ void action_teleport::exec()
 {
 	if(DEBUG_SCRIPT)
 		DEBUGF("executing delayed teleport to dest %i", dest);
-	entities::teleport(ent, dest);
+	entities::teleport(ent, dest, etype);
 }
 
 void action_spawn::exec()

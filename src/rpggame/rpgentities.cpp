@@ -50,8 +50,14 @@ namespace entities
 		loopv(ents)
 		{
 			const int t = ents[i]->type;
-			if(t == JUMPPAD)
-				intents.add(i);
+			switch(t)
+			{
+				case JUMPPAD:
+				case CHECKPOINT:
+					intents.add(i);
+				default:
+					break;
+			}
 		}
 	}
 
@@ -70,6 +76,12 @@ namespace entities
 					d->vel.add(vec(e.attr[2], e.attr[1], e.attr[0]).mul(10));
 
 					d->lasttouch = lastmillis;
+					break;
+
+				case CHECKPOINT:
+					if(d == game::player1 && d->state == CS_ALIVE && (e.attr[2] ? e.attr[2] : 12) >= d->o.dist(e.o))
+						game::setcheckpoint(game::curmap->name, e.attr[1]);
+
 					break;
 			}
 		}
@@ -302,11 +314,11 @@ namespace entities
 		ent->getsignal("spawn", false);
 	}
 
-	void teleport(rpgent *d, int dest)
+	void teleport(rpgent *d, int dest, const int etype)
 	{
 		loopv(ents)
 		{
-			if(ents[i]->type == TELEDEST && ents[i]->attr[1] == dest)
+			if(ents[i]->type == etype && ents[i]->attr[1] == dest)
 			{
 				d->yaw = ents[i]->attr[0];
 				d->pitch = 0;
@@ -342,7 +354,7 @@ namespace entities
 			{
 				vec dir(e.attr[0] * RAD, 0);
 				renderentarrow(e, dir, 12);
-				renderentsphere(e, e.attr[3] ? e.attr[3] : 12);
+				renderentsphere(e, e.attr[2] ? e.attr[2] : 12);
 
 				break;
 			}
@@ -424,9 +436,9 @@ namespace entities
 				);
 				break;
 			case CHECKPOINT:
-				pos.z += 1.5f;
-				formatstring(tmp)("Yaw: %i",
-					e.attr[0]
+				pos.z += 4.5f;
+				formatstring(tmp)("Yaw: %i\nTag: %i\nRadius: %i",
+					e.attr[0], e.attr[1], e.attr[2]
 				);
 				break;
 			case SPAWN:
@@ -499,7 +511,7 @@ namespace entities
 		{
 			2, //teledest
 			4, //jumppad
-			1, //checkpoint
+			3, //checkpoint
 			3, //spawn
 			2, //location
 			0, //reserved

@@ -32,6 +32,20 @@ namespace game
 
 	rpgchar *player1 = new rpgchar();
 
+	const char *cpmap = NULL;
+	int cpnum = -1;
+
+	void setcheckpoint(const char *map, int dest)
+	{
+		if(cpmap && cpnum == dest && !strcmp(cpmap, map)) return;
+
+		DELETEA(cpmap);
+		cpmap = newstring(map);
+		cpnum = dest;
+		conoutf("Checkpoint set!");
+	}
+	ICOMMAND(setcheckpoint, "si", (const char *m, int *d), setcheckpoint(m, *d));
+
 	const char *queryhashpool(const char *str)
 	{
 		if(!initedhashpool)
@@ -186,6 +200,7 @@ namespace game
 		colcache.setsize(0);
 		mergecache.setsize(0);
 		camera::cleanup(true);
+		DELETEA(cpmap); cpnum = -1;
 
 		if(DEBUG_WORLD)
 			DEBUGF("resetting map directory");
@@ -494,7 +509,22 @@ namespace game
 	void respawn()
 	{
 		if(player1->state==CS_DEAD && !camera::cutscene)
+		{
 			player1->revive();
+			if(cpmap)
+			{
+				if(strcmp(cpmap, curmap->name))
+				{
+					mapinfo *dst = accessmap(cpmap);
+					dst->loadactions.add(new action_teleport(player1, cpnum, CHECKPOINT));
+					load_world(cpmap);
+				}
+				else
+				{
+					entities::teleport(player1, cpnum, CHECKPOINT);
+				}
+			}
+		}
 	}
 
 	mapinfo *accessmap(const char *name)

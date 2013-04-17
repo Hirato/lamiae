@@ -4,8 +4,8 @@ extern bool reloadtexture(const char *name); //texture.cpp
 
 namespace rpgio
 {
-	#define GAME_VERSION 43
-	#define COMPAT_VERSION 43
+	#define GAME_VERSION 44
+	#define COMPAT_VERSION 44
 	#define GAME_MAGIC "RPGS"
 
 	/**
@@ -1034,11 +1034,13 @@ namespace rpgio
 					int ent = f->getlil<int>();
 					if(!entfromnum(ent))
 					{//how'd that happen?
-					WARNINGF("loaded teleport loadaction for invalid ent? ignoring");
-					f->getlil<int>();
-					continue;
+						WARNINGF("loaded teleport loadaction for invalid ent? ignoring");
+						f->getlil<int>();
+						continue;
 					}
-					act = new action_teleport(entfromnum(ent), f->getlil<int>());
+					int d = f->getlil<int>();
+					int t = f->getlil<int>();
+					act = new action_teleport(entfromnum(ent), d, t);
 					break;
 				}
 				case ACTION_SPAWN:
@@ -1232,6 +1234,7 @@ namespace rpgio
 					action_teleport *act = (action_teleport *) saving->loadactions[i];
 					f->putlil(enttonum(act->ent));
 					f->putlil(act->dest);
+					f->putlil(act->etype);
 
 					break;
 				}
@@ -1689,8 +1692,13 @@ namespace rpgio
 		vector<mapinfo *> maps;
 		const char *data = readstring(f);
 		const char *curmap = readstring(f);
+		const char *cpmap = readstring(f);
+		int cpnum = f->getlil<int>();
 		abort = !game::newgame(data, true);
+		if(cpmap) game::setcheckpoint(cpmap, cpnum);
+
 		delete[] data;
+		delete[] cpmap;
 
 		if(game::compatversion > hdr.gversion)
 		{
@@ -1847,6 +1855,8 @@ namespace rpgio
 
 		writestring(f, game::data);
 		writestring(f, game::curmap->name);
+		writestring(f, game::cpmap);
+		f->putlil(game::cpnum);
 
 		#define WRITE(m, v, b) \
 			f->putlil(v.length()); \
