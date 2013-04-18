@@ -168,6 +168,8 @@ namespace game
 
 		settexture("data/rpg/hud/compass", 3);
 		quad(-dx / 2 - 2, -dy / 2 - 2, dx + 4, dy + 4);
+
+		gle::disable();
 		pophudmatrix();
 	}
 	ICOMMAND(r_hud_minimap, "sffff", (const char *r, float *x, float *y, float *dx, float *dy),

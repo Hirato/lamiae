@@ -246,6 +246,7 @@ void renderbackground(const char *caption, Texture *mapshot, const char *mapname
             gle::attribf(1, 1, 1, 0);
         }
         gle::end();
+        gle::disable();
 
         hudshader->set();
         gle::colorf(1, 1, 1);
