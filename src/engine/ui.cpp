@@ -1669,7 +1669,7 @@ namespace UI
 
             SETSHADER(hudrgb);
 
-            vec2 tc[4] = { vec2(0, 0), vec2(1, 0), vec2(1, 1), vec2(0, 1) };
+            vec2 tc[4] = { vec2(0, 0), vec2(1, 0), vec2(0, 1), vec2(1, 1) };
             int xoff = vslot.offset.x, yoff = vslot.offset.y;
             if(vslot.rotation)
             {
@@ -1678,9 +1678,11 @@ namespace UI
                 if(vslot.rotation <= 2 || vslot.rotation == 5) { yoff *= -1; loopk(4) tc[k][1] *= -1; }
             }
             loopk(4) { tc[k][0] = tc[k][0]/xt - float(xoff)/tex->xs; tc[k][1] = tc[k][1]/yt - float(yoff)/tex->ys; }
-            if(slot.loaded) gle::color(vslot.colorscale);
+
             glBindTexture(GL_TEXTURE_2D, tex->id);
 
+            if(slot.loaded) gle::color(vslot.colorscale);
+            else gle::colorf(1, 1, 1);
             gle::begin(GL_TRIANGLE_STRIP);
             gle::attribf(sx  , sy  ); gle::attrib(tc[0]);
             gle::attribf(sx+w, sy  ); gle::attrib(tc[1]);
