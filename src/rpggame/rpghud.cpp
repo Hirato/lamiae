@@ -63,8 +63,6 @@ namespace game
 		if(minimapup) hudmatrix.rotate((d->yaw + 180) * RAD, vec(0, 0, -1));
 		flushhudmatrix();
 
-		glDisable(GL_BLEND);
-
 		if(curmap->flags & mapinfo::F_NOMINIMAP)
 		{
 			gle::colorf(0, 0, 0);
@@ -100,6 +98,7 @@ namespace game
 			vec pos = vec(d->o).sub(minimapcenter).mul(minimapscale).add(.5f);
 			gle::colorf(1, 1, 1);
 			bindminimap();
+
 			gle::begin(GL_TRIANGLE_FAN);
 			loopi(16)
 			{
@@ -108,7 +107,10 @@ namespace game
 				gle::attribf(1.0f - (pos.x + dir.x * offset * minimapscale.x), pos.y + dir.y * offset * minimapscale.y);
 			}
 			gle::end();
-			glEnable(GL_BLEND);
+
+			gle::defvertex(2);
+			gle::deftexcoord0();
+			gle::defcolor(4);
 
 			settexture("data/rpg/hud/player", 3);
 			gle::begin(GL_QUADS);
@@ -116,17 +118,16 @@ namespace game
 			{
 				rpgent *m = curmap->objs[i];
 				vec pos = vec(m->o).sub(d->o).div(offset); pos.z = 0;
-				vec col = m->blipcol();
-
 				if(pos.magnitude() >= 1) continue;
 
-				gle::colorf(col.x, col.y, col.z, 3 - 3 * pos.magnitude());
+				vec4 col = vec4(m->blipcol(), min<float>(1, 3 - 3 * pos.magnitude()));
 
 				loopi(4)
 				{
 					vec dir((m->yaw) * RAD + M_PI * i / 2.0f, 0);
 					gle::attribf(pos.x * dx / 2 + dx / 24 * dir.x, pos.y * dy / 2 + dy / 24 * dir.y);
 					gle::attribf(coords[i][0], coords[i][1]);
+					gle::attrib(col);
 				}
 			}
 			gle::end();
@@ -140,28 +141,31 @@ namespace game
 				if(pos.magnitude() >= 1)
 					continue;
 
-				if(!i || p.owner != curmap->projs[i-1]->owner)
-				{
-					gle::end();
-					gle::begin(GL_QUADS);
-					gle::colorf(p.owner != d, p.owner == d, 0, min<float>(1, 3 - 3 * pos.magnitude()));
-				}
+				vec4 col = vec4(p.owner != d, p.owner == d, 0, min<float>(1, 3 - 3 * pos.magnitude()));
 
 				gle::attribf(pos.x * dx / 2 - dx / 64, pos.y * dy / 2 - dy / 64);
 				gle::attribf(0, 0);
+				gle::attrib(col);
 				gle::attribf(pos.x * dx / 2 + dx / 64, pos.y * dy / 2 - dy / 64);
 				gle::attribf(1, 0);
+				gle::attrib(col);
 				gle::attribf(pos.x * dx / 2 + dx / 64, pos.y * dy / 2 + dy / 64);
 				gle::attribf(1, 1);
+				gle::attrib(col);
 				gle::attribf(pos.x * dx / 2 - dx / 64, pos.y * dy / 2 + dy / 64);
 				gle::attribf(0, 1);
+				gle::attrib(col);
 			}
 
 			//TODO loopv(curmap->blips) {}
 			gle::end();
+
+			gle::defvertex(2);
+			gle::deftexcoord0();
 		}
 
 		gle::colorf(1, 1, 1);
+
 		settexture("data/rpg/hud/compass", 3);
 		quad(-dx / 2 - 2, -dy / 2 - 2, dx + 4, dy + 4);
 		pophudmatrix();
@@ -175,18 +179,14 @@ namespace game
 
 	void drawhorizbar(const char *img, float x, float y, float dx, float dy, float progress, int colour)
 	{
-		vec col((colour >> 16) & 255, (colour >> 8) & 255, colour & 255);
-		col.div(255.f);
-
 		settexture(*img ? img : "data/rpg/hud/hbar", 3);
-		gle::begin(GL_TRIANGLE_FAN);
+		gle::colorub((colour >> 16) & 255, (colour >> 8) & 255, colour & 255);
 
-		gle::color(col);
+		gle::begin(GL_TRIANGLE_FAN);
 		gle::attribf(x , y);                     gle::attribf(0, 0);
 		gle::attribf(x + dx * progress, y);      gle::attribf(progress, 0);
 		gle::attribf(x + dx * progress, y + dy); gle::attribf(progress, 1);
 		gle::attribf(x, y + dy);                 gle::attribf(0, 1);
-
 		gle::end();
 	}
 	ICOMMAND(r_hud_horizbar, "sfffffii", (const char *i, float *x, float *y, float *dx, float *dy, float *p, int *col),
@@ -195,18 +195,14 @@ namespace game
 
 	void drawvertbar(const char *img, float x, float y, float dx, float dy, float progress, int colour)
 	{
-		vec col((colour >> 16) & 255, (colour >> 8) & 255, colour & 255);
-		col.div(255.f);
-
 		settexture(*img ? img : "data/rpg/hud/vbar", 3);
-		gle::begin(GL_TRIANGLE_FAN);
+		gle::colorub((colour >> 16) & 255, (colour >> 8) & 255, colour & 255);
 
-		gle::color(col);
+		gle::begin(GL_TRIANGLE_FAN);
 		gle::attribf(x , y);                     gle::attribf(0, 0);
 		gle::attribf(x + dx, y);                 gle::attribf(1, 0);
 		gle::attribf(x + dx, y + dy * progress); gle::attribf(1, progress);
 		gle::attribf(x, y + dy * progress);      gle::attribf(0, progress);
-
 		gle::end();
 	}
 	ICOMMAND(r_hud_vertbar, "sfffffi", (const char *i, float *x, float *y, float *dx, float *dy, float *p, int *col),
@@ -232,9 +228,8 @@ namespace game
 	void drawimage(const char *img, float x, float y, float dx, float dy, int colour)
 	{
 		settexture(img, 3);
-		vec col = vec((colour >> 16) & 255, (colour >> 8) & 255, colour & 255).div(255.f);
+		gle::colorub((colour >> 16) & 255, (colour >> 8) & 255, colour & 255);
 
-		gle::color(col);
 		quad(x, y, dx, dy);
 	}
 	ICOMMAND(r_hud_image, "sffffi", (const char *i, float *x, float *y, float *dx, float *dy, int *c),
@@ -243,9 +238,7 @@ namespace game
 
 	void drawsolid(float x, float y, float dx, float dy, int colour)
 	{
-		vec col = vec((colour >> 16) & 255, (colour >> 8) & 255, colour & 255).div(255.f);
-
-		gle::color(col);
+		gle::colorub((colour >> 16) & 255, (colour >> 8) & 255, colour & 255);
 		gle::defvertex(2);
 
 		gle::begin(GL_TRIANGLE_STRIP);
