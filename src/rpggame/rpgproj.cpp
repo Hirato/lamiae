@@ -235,7 +235,7 @@ bool projectile::update()
 		if(!wep) return true;
 
 		//see if the used ammo is retained after use
-		if(wep->ammo >= 0 &&
+		if(!game::ammotypes.access(wep->ammo)->reserved &&
 			o.x >= 0 && o.x < getworldsize() &&
 			o.y >= 0 && o.y < getworldsize() &&
 			o.z >= 0 && o.z < getworldsize()

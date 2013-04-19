@@ -14,9 +14,11 @@ namespace reserved
 		amm_health = queryhashpool("health");
 		amm_experience = queryhashpool("experience");
 
+
 		ammotype *am = NULL;
 
 		am = &ammotypes[amm_mana];
+		am->reserved = true;
 		if (!am->key)
 		{
 			WARNINGF("mana ammotype declared implicitly!");
@@ -25,6 +27,7 @@ namespace reserved
 		}
 
 		am = &ammotypes[amm_health];
+		am->reserved = true;
 		if (!am->key)
 		{
 			WARNINGF("health ammotype declared implicitly!");
@@ -33,6 +36,7 @@ namespace reserved
 		}
 
 		am = &ammotypes[amm_experience];
+		am->reserved = true;
 		if (!am->key)
 		{
 			WARNINGF("experience ammotype declared implicitly!");

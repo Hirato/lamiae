@@ -1542,7 +1542,7 @@ namespace UI
             gle::end();
 
             hudshader->set();
-            gle::colorf(1, 1, 1, 1);
+            gle::colorf(1, 1, 1);
             gle::defvertex(2);
             gle::deftexcoord0();
 
@@ -2068,6 +2068,7 @@ namespace UI
             draw_text(str, int(sx/k), int(sy/k), color.x * 255, color.y * 255, color.z * 255, 255, -1, wrap <= 0 ? -1 : wrap/k);
 
             pophudmatrix();
+            gle::colorf(1, 1, 1);
 
             Object::draw(sx, sy);
         }
@@ -2119,6 +2120,7 @@ namespace UI
             draw_text(result.getstr(), int(sx/k), int(sy/k), color.x * 255, color.y * 255, color.z * 255, 255, -1, wrap <= 0 ? -1 : wrap/k);
 
             pophudmatrix();
+            gle::colorf(1, 1, 1);
 
             Object::draw(sx, sy);
         }
@@ -2941,7 +2943,6 @@ void consolebox(int x1, int y1, int x2, int y2)
     gle::attribf(x2, y1);
     gle::attribf(x1, y2);
     gle::attribf(x2, y2);
-
     gle::end();
 
     pophudmatrix();

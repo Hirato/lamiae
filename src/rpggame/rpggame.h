@@ -1441,9 +1441,10 @@ struct ammotype
 {
 	const char *key;
 	const char *name;
+	bool reserved;
 	vector<const char *> items;
 
-	ammotype() : key(NULL), name(NULL) {}
+	ammotype() : key(NULL), name(NULL), reserved(false) {}
 	~ammotype() { delete[] name; }
 };
 static inline bool htcmp(const char *key, const ammotype &ref) { return !strcmp(key, ref.key); }
