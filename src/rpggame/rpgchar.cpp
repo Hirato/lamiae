@@ -592,7 +592,7 @@ void rpgchar::render()
 
 	if(aiflags & AI_ANIM) hold = (forceanim & ANIM_INDEX) | ANIM_LOOP;
 
-	renderclient(this, temp.mdl ? temp.mdl : mdl, attachments.buf, hold, anim, delay, lastaction, state != CS_DEAD ? 0 : 0 /* lastpain */, 1, true, temp.alpha);
+	renderclient(this, temp.mdl ? temp.mdl : mdl, attachments.buf, hold, anim, delay, lastaction, state == CS_ALIVE ? lastpain : 0, 1, true, temp.alpha);
 
 	emitter = emitters;
 	loopv(equipped)
@@ -748,6 +748,8 @@ void rpgchar::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float 
 
 	if(!hit_friendly)
 	{
+		lastpain = lastmillis;
+
 		if(this == game::player1 && hit_total)
 			damagecompass(hit_total, attacker->o);
 

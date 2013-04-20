@@ -1516,7 +1516,7 @@ struct rpgchar : rpgent
 
 	float health, mana;
 
-	int lastaction, lastai;
+	int lastaction, lastai, lastpain;
 	int charge;
 	bool primary, secondary;
 	bool lastprimary, lastsecondary;
@@ -1579,7 +1579,7 @@ struct rpgchar : rpgent
 
 	void cleanup();
 
-	rpgchar() : name(NULL), mdl(newstring(DEFAULTMODEL)), portrait(NULL), script(DEFAULTCHARSCR), faction(DEFAULTFACTION), merchant(NULL), base(stats(this)), lastaction(0), lastai(0), charge(0), primary(false), secondary(false), lastprimary(false), lastsecondary(false), attack(NULL), aiflags(0), target(NULL), forceanim(0)
+	rpgchar() : name(NULL), mdl(newstring(DEFAULTMODEL)), portrait(NULL), script(DEFAULTCHARSCR), faction(DEFAULTFACTION), merchant(NULL), base(stats(this)), lastaction(0), lastai(0), lastpain(0), charge(0), primary(false), secondary(false), lastprimary(false), lastsecondary(false), attack(NULL), aiflags(0), target(NULL), forceanim(0)
 	{
 		health = base.getmaxhp();
 		mana = base.getmaxmp();
