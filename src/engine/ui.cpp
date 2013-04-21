@@ -1517,6 +1517,11 @@ namespace UI
         return false;
     }
 
+    static inline void setshadervariant(Shader *shader, Texture *tex)
+    {
+        shader->setvariant(hasTRG ? (tex->bpp==1 ? 0 : (tex->bpp==2 ? 1 : -1)) : -1, 0);
+    }
+
     struct Rectangle : Filler
     {
         enum { SOLID = 0, MODULATE };
@@ -1541,7 +1546,6 @@ namespace UI
             gle::attribf(sx + w, sy + h);
             gle::end();
 
-            hudshader->set();
             gle::colorf(1, 1, 1);
             gle::defvertex(2);
             gle::deftexcoord0();
@@ -1569,6 +1573,7 @@ namespace UI
 
         void draw(float sx, float sy)
         {
+            setshadervariant(hudshader, tex);
             glBindTexture(GL_TEXTURE_2D, tex->id);
             gle::begin(GL_TRIANGLE_STRIP);
             quadtri(sx, sy, w, h);
@@ -1667,8 +1672,6 @@ namespace UI
             xt = min(1.0f, tex->xs/(float)tex->ys),
             yt = min(1.0f, tex->ys/(float)tex->xs);
 
-            SETSHADER(hudrgb);
-
             vec2 tc[4] = { vec2(0, 0), vec2(1, 0), vec2(0, 1), vec2(1, 1) };
             int xoff = vslot.offset.x, yoff = vslot.offset.y;
             if(vslot.rotation)
@@ -1678,6 +1681,9 @@ namespace UI
                 if(vslot.rotation <= 2 || vslot.rotation == 5) { yoff *= -1; loopk(4) tc[k][1] *= -1; }
             }
             loopk(4) { tc[k][0] = tc[k][0]/xt - float(xoff)/tex->xs; tc[k][1] = tc[k][1]/yt - float(yoff)/tex->ys; }
+
+            if (slot.loaded) SETSHADER(hudrgb);
+            else setshadervariant(hudshader, tex);
 
             glBindTexture(GL_TEXTURE_2D, tex->id);
 
@@ -1716,8 +1722,6 @@ namespace UI
                 gle::end();
             }
             gle::colorf(1, 1, 1);
-
-            hudshader->set();
         }
 
         void draw(float sx, float sy)
@@ -1758,6 +1762,7 @@ namespace UI
 
         void draw(float sx, float sy)
         {
+            setshadervariant(hudshader, tex);
             glBindTexture(GL_TEXTURE_2D, tex->id);
             gle::begin(GL_TRIANGLE_STRIP);
             quadtri(sx, sy, w, h, cropx, cropy, cropw, croph);
@@ -1792,6 +1797,7 @@ namespace UI
 
         void draw(float sx, float sy)
         {
+            setshadervariant(hudshader, tex);
             glBindTexture(GL_TEXTURE_2D, tex->id);
             gle::begin(GL_QUADS);
             float splitw = (minw ? min(minw, w) : w) / 2,
@@ -1864,6 +1870,7 @@ namespace UI
 
         void draw(float sx, float sy)
         {
+            setshadervariant(hudshader, tex);
             glBindTexture(GL_TEXTURE_2D, tex->id);
             gle::begin(GL_QUADS);
             float vy = sy, ty = 0;
@@ -1919,6 +1926,7 @@ namespace UI
 
         void draw(float sx, float sy)
         {
+            setshadervariant(hudshader, tex);
             glBindTexture(GL_TEXTURE_2D, tex->id);
 
             //we cannot use the built in OpenGL texture repeat with clamped textures.
