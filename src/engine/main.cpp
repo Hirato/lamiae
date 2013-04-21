@@ -2,7 +2,7 @@
 #include "engine.h"
 
 SVARO(version, "0.1.0");
-string imagelogo = "data/lamiae";
+string imagelogo = "<premul>data/lamiae";
 
 extern void cleargamma();
 
@@ -200,7 +200,7 @@ void renderbackground(const char *caption, Texture *mapshot, const char *mapname
         gle::deftexcoord0();
         gle::colorf(1, 1, 1);
 
-        settexture("<premul>data/lamiae", 3);
+        settexture(imagelogo, 3);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -710,12 +710,8 @@ void setupscreen()
 bool resettextures()
 {
     if(
-        reloadtexture("data/loadingscreen/engine_badge.png")  &&
-        reloadtexture("data/loadingscreen/load_back.png")     &&
-        reloadtexture("data/loadingscreen/load_bar.png")      &&
-        reloadtexture("data/loadingscreen/load_frame.png")    &&
-        reloadtexture("data/loadingscreen/mapshot_frame.png") &&
-        reloadtexture("data/loadingscreen/title.png")         &&
+        reloadtexture("<premul>data/cube2badge") &&
+        reloadtexture("data/mapshot_frame") &&
         reloadtexture(imagelogo)
     ) return true;
     return false;
