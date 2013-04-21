@@ -115,17 +115,17 @@ namespace game
 		{
 			if(!left || !left->hudmdl) return;
 
-			rendermodel(left->hudmdl, ANIM_HIDLE|ANIM_LOOP, player1->o, player1->yaw+90, player1->pitch, player1->roll, MDL_NOBATCH, NULL, NULL, player1->lastaction, 500);
+			rendermodel(left->hudmdl, ANIM_HIDLE|ANIM_LOOP, player1->o, player1->yaw+90, player1->pitch, player1->roll, MDL_NOBATCH, NULL, NULL, player1->lastprimaryaction, 500);
 		}
 		else
 		{
 			if(left && left->hudmdl)
 			{
-				rendermodel(left->hudmdl, ANIM_HIDLE|ANIM_LOOP, player1->o, player1->yaw+90, player1->pitch, player1->roll, MDL_NOBATCH, NULL, NULL, player1->lastaction, 500);
+				rendermodel(left->hudmdl, ANIM_HIDLE|ANIM_LOOP, player1->o, player1->yaw+90, player1->pitch, player1->roll, MDL_NOBATCH, NULL, NULL, player1->lastprimaryaction, 500);
 			}
 			if(right && right->hudmdl)
 			{
-				rendermodel(left->hudmdl, ANIM_HIDLE|ANIM_LOOP, player1->o, player1->yaw+90, player1->pitch, player1->roll, MDL_NOBATCH, NULL, NULL, player1->lastaction, 500);
+				rendermodel(left->hudmdl, ANIM_HIDLE|ANIM_LOOP, player1->o, player1->yaw+90, player1->pitch, player1->roll, MDL_NOBATCH, NULL, NULL, player1->lastsecondaryaction, 500);
 			}
 		}
 	}

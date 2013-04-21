@@ -4,8 +4,8 @@ extern bool reloadtexture(const char *name); //texture.cpp
 
 namespace rpgio
 {
-	#define GAME_VERSION 44
-	#define COMPAT_VERSION 44
+	#define GAME_VERSION 45
+	#define COMPAT_VERSION 45
 	#define GAME_MAGIC "RPGS"
 
 	/**
@@ -532,7 +532,8 @@ namespace rpgio
 
 				loading->health = f->getlil<float>();
 				loading->mana = f->getlil<float>();
-				loading->lastaction = f->getlil<int>() + lastmillis;
+				loading->lastprimaryaction = f->getlil<int>() + lastmillis;
+				loading->lastsecondaryaction = f->getlil<int>() + lastmillis;
 
 				vector<item *> items;
 				int num = f->getlil<int>();
@@ -819,7 +820,9 @@ namespace rpgio
 
 				f->putlil(saving->health);
 				f->putlil(saving->mana);
-				f->putlil(saving->lastaction - lastmillis);
+				f->putlil(saving->lastprimaryaction - lastmillis);
+				f->putlil(saving->lastsecondaryaction - lastmillis);
+
 
 				vector<item *> items;
 				enumerate(saving->inventory, vector<item *>, stack,

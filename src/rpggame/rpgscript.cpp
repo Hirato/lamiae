@@ -1759,8 +1759,13 @@ namespace rpgscript
 	ICOMMAND(r_get_lastaction, "s", (const char *ref),
 		getreference(ref, ent, ent->getchar(entidx) || ent->gettrigger(entidx), intret(lastmillis), r_get_lastaction)
 
-		if(ent->getchar(entidx)) intret(ent->getchar(entidx)->lastaction);
-		else if(ent->gettrigger(entidx)) intret(ent->gettrigger(entidx)->lasttrigger);
+		if(ent->getchar(entidx))
+		{
+			rpgchar *d = ent->getchar(entidx);
+			intret(max(d->lastprimaryaction, d->lastsecondaryaction));
+		}
+		else if(ent->gettrigger(entidx))
+			intret(ent->gettrigger(entidx)->lasttrigger);
 	)
 
 	ICOMMAND(r_get_charge, "s", (const char *ref),

@@ -184,6 +184,19 @@ void rpgchar::doattack(equipment *eleft, equipment *eright, equipment *quiver)
 	else if((primary && left) ^ (secondary && right))
 		attack = (primary && left) ? left : right;
 
+	if(lastprimaryaction >= lastmillis && attack == left)
+	{
+		lastprimary = false;
+		if(attack == right) lastsecondary = false;
+		return;
+	}
+	else if (lastsecondary >= lastmillis && attack == right)
+	{
+		lastsecondary = false;
+		return;
+	}
+	else if (attack != right) lastsecondary = false;
+
 	lastprimary = primary; lastsecondary = secondary;
 
 	//we're attacking and can attack, oh noes!
@@ -194,7 +207,9 @@ void rpgchar::doattack(equipment *eleft, equipment *eright, equipment *quiver)
 		//function will invalidate the quiver if needed
 		if(!checkammo(attack == left ? *eleft : *eright, quiver))
 		{
-			lastaction = lastmillis + 100;
+			if(attack == left) lastprimaryaction = lastmillis + 100;
+			if(attack == right) lastsecondaryaction = lastmillis + 100;
+
 			primary = secondary = 0;
 			return; //we lack the catalysts, don't attack
 		}
@@ -347,7 +362,8 @@ void rpgchar::doattack(equipment *eleft, equipment *eright, equipment *quiver)
 		if(attack->cost)
 			checkammo(attack == left ? *eleft : *eright, quiver, true); //remove ammo
 
-		lastaction = lastmillis + attack->cooldown + (ammo ? ammo->cooldown : 0);
+		if(attack == left) lastprimaryaction = lastmillis + attack->cooldown + (ammo ? ammo->cooldown : 0);
+		if(attack == right) lastsecondaryaction = lastmillis + attack->cooldown + (ammo ? ammo->cooldown : 0);
 	}
 }
 
@@ -550,13 +566,12 @@ void rpgchar::update()
 	moveplayer(this, this == game::player1 ? 8 : 2, true);
 	entities::touchents(this);
 
-	if(lastmillis >= lastaction)
-		doattack(eleft, eright, quiver);
+	doattack(eleft, eright, quiver);
 }
 
 void rpgchar::render()
 {
-	int lastaction = this->lastaction,
+	int lastaction = max(lastprimaryaction, lastsecondaryaction),
 		anim = ANIM_MSTRIKE,
 		delay = 300,
 		hold = ANIM_MHOLD|ANIM_LOOP;

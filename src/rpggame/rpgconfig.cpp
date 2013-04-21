@@ -1047,6 +1047,8 @@ namespace game
 	STATS(base)
 	FLOAT(health, 0, e->base.getmaxhp())
 	FLOAT(mana, 0, e->base.getmaxmp())
+	INTNRO(lastprimary, lastprimaryaction)
+	INTNRO(lastsecondary, lastsecondaryaction)
 
 	#undef START
 	#undef INIT
