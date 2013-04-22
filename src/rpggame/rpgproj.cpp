@@ -258,6 +258,7 @@ bool projectile::update()
 					it->transfer(*rit);
 
 					vectoyawpitch(dir, rit->yaw, rit->pitch);
+					rit->yaw += 90; //adjust for projectile yaw.
 					rit->resetmdl();
 					setbbfrommodel(rit, rit->temp.mdl);
 					rit->o = o;

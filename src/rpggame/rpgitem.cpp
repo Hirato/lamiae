@@ -16,7 +16,7 @@ void rpgitem::update()
 	moveplayer(this, 2, false);
 	if(!timeinair && !floor.iszero())
 	{
-		vec dir = vec(floor).rotate(PI / 2, vec((yaw + 90) * RAD, 0));
+		vec dir = vec(floor).rotate(PI / 2, vec(yaw * RAD, 0));
 		vectoyawpitch(dir, roll, pitch);
 	}
 	entities::touchents(this);
