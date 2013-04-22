@@ -190,7 +190,7 @@ void rpgchar::doattack(equipment *eleft, equipment *eright, equipment *quiver)
 		if(attack == right) lastsecondary = false;
 		return;
 	}
-	else if (lastsecondary >= lastmillis && attack == right)
+	else if (lastsecondaryaction >= lastmillis && attack == right)
 	{
 		lastsecondary = false;
 		return;
