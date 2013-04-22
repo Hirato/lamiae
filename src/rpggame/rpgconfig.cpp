@@ -1138,7 +1138,7 @@ namespace game
 	START(addroute, "ii", (int *from, int *to),
 		INIT
 		if(!e) return;
-		vector<int> &detours = e->routes.access(*from, vector<int>());
+		vector<int> &detours = e->routes[*from];
 		if(detours.find(*to) == -1)
 		{
 			detours.add(*to);
@@ -1147,6 +1147,24 @@ namespace game
 		}
 		else if(DEBUG_CONF)
 			DEBUGF("route from %i to %i already registred for " DEBUG_STR, *from, *to, DEBUG_IND);
+	)
+
+	START(delroute, "ii", (int *from, int *to),
+		INIT
+		vector <int> *detours = NULL;
+		if(!e || !(detours = e->routes.access(*from))) return;
+
+		if(DEBUG_CONF)
+			DEBUGF("attempting to remote route from %i to %i for " DEBUG_STR, *from, *to, DEBUG_IND);
+		detours->removeobj(*to);
+	)
+
+	START(clearroutes, "", (),
+		INIT
+		if(!e) return;
+		if(DEBUG_CONF)
+			DEBUGF("clearing all route information for platform " DEBUG_STR, DEBUG_IND);
+		e->routes.clear();
 	)
 
 

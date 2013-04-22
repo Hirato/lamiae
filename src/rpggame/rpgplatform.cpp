@@ -1,5 +1,7 @@
 #include "rpggame.h"
 
+VAR(route_tag, 1, 0, -1);
+
 void rpgplatform::update()
 {
 	if(!entities::ents.inrange(target) || entities::ents[target]->type != PLATFORMROUTE)
@@ -32,6 +34,10 @@ void rpgplatform::update()
 			}
 
 			if(delta <= 0) break;
+			route_tag = entities::ents[target]->attr[0];
+			getsignal("arrived", true, this);
+			if(!(flags & F_ACTIVE)) break;
+
 
 			vector<int> &detours = *routes.access(entities::ents[target]->attr[0]);
 			target = -1;
