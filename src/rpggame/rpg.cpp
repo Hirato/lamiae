@@ -66,7 +66,7 @@ namespace game
 	SVAR(firstmap, "");
 	VAR(gameversion, 0, 0, 0x7FFFFFFF);
 	VAR(compatversion, 0, 0, 0x7FFFFFFF);
-	//friendlyfire
+	VARP(friendlyfire, 0, 0, 3);
 	//
 
 	ICOMMAND(primaryattack, "D", (int *down),

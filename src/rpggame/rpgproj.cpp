@@ -1,7 +1,6 @@
 #include "rpggame.h"
 
 VARP(firemethod, 0, 1, 1);
-VARP(friendlyfire, 0, 0, 1);
 
 void projectile::init(rpgchar *d, equipment *w, equipment *a, int fuzzy, float mult, float speed)
 {
@@ -283,7 +282,7 @@ bool projectile::update()
 					rpgent *d = game::curmap->objs[i];
 
 					//TODO improve friendly fire check
-					if((d == owner && !friendlyfire) || hits.find(d) >= 0)
+					if((d == owner && game::friendlyfire) || hits.find(d) >= 0)
 						continue;
 
 					const vec min = vec(d->o.x - d->radius, d->o.y - d->radius, d->o.z - d->eyeheight);
@@ -373,7 +372,7 @@ float projectile::travel(float &distance, vector<rpgent *> &victims)
 		{
 			static float tmp;
 			rpgent *vic = game::curmap->objs[i];
-			if((vic != owner || friendlyfire) && game::intersect(vic, o, pos, tmp))
+			if((vic != owner || game::friendlyfire) && game::intersect(vic, o, pos, tmp))
 			{
 				if(DEBUG_PROJ) DEBUGF("piercing projectile %p, adding victim %p", this, vic);
 				victims.add(vic);
@@ -388,7 +387,7 @@ float projectile::travel(float &distance, vector<rpgent *> &victims)
 		normal = hitsurface;
 
 		float entdist = 0;
-		rpgent *vic = game::intersectclosest(o, pos, friendlyfire ? NULL : owner, entdist, 2);
+		rpgent *vic = game::intersectclosest(o, pos, game::friendlyfire ? owner : NULL, entdist, 2);
 		if(vic && entdist <= 1)
 		{
 			if(DEBUG_PROJ) DEBUGF("projectile %p has victim %p", this, vic);
