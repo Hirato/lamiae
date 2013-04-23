@@ -705,6 +705,13 @@ namespace game
 			return;
 		}
 
+		if(!camera::cutscene && thirdperson == 1)
+		{
+			vec dir(worldpos);
+			dir.sub(player1->o);
+			vectoyawpitch(dir, player1->yaw, player1->pitch);
+		}
+
 		loopv(curmap->objs)
 		{
 			rpgent *d = curmap->objs[i];
@@ -1017,7 +1024,7 @@ namespace game
 	}
 
 	void loadconfigs() {}
-	bool detachcamera() { return player1->state == CS_DEAD; }
+	bool detachcamera() { return thirdperson || player1->state == CS_DEAD; }
 
 	void toserver(char *text) { execute(text); } //since we don't talk, just execute if the / is forgotten
 }
