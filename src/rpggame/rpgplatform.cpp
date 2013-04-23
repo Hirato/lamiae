@@ -18,46 +18,44 @@ void rpgplatform::update()
 			}
 		}
 	}
-	if(flags & F_ACTIVE)
+
+	float delta = speed * curtime / 1000.f;
+	while(flags && F_ACTIVE && target >= 0 && delta > 0)
 	{
-		float delta = speed * curtime / 1000.f;
-		while(target >= 0 && delta > 0)
+		float dist = min(delta, entities::ents[target]->o.dist(o));
+		if(dist > 0) //avoid divide by 0 for normalisation
 		{
-			float dist = min(delta, entities::ents[target]->o.dist(o));
-			if(dist > 0) //avoid divide by 0 for normalisation
-			{
-				delta -= dist;
-				vec move = vec(entities::ents[target]->o).sub(o).normalize().mul(dist);
+			delta -= dist;
+			vec move = vec(entities::ents[target]->o).sub(o).normalize().mul(dist);
 
-				o.add(move);
-				loopv(stack) {stack[i]->o.add(move); stack[i]->resetinterp();}
-			}
-
-			if(delta <= 0) break;
-			route_tag = entities::ents[target]->attr[0];
-			getsignal("arrived", true, this);
-			if(!(flags & F_ACTIVE)) break;
-
-
-			vector<int> &detours = *routes.access(entities::ents[target]->attr[0]);
-			target = -1;
-
-			//we pick a random one; we test up to n times if we fail to get a destination
-			loopi(detours.length())
-			{
-				int tag = detours[rnd(detours.length())];
-				loopvj(entities::ents)
-				{
-					extentity &e = *entities::ents[j];
-					if(e.type == PLATFORMROUTE && e.attr[0] == tag)
-					{
-						target = j;
-						break;
-					}
-				}
-				if(target >= 0) break;
-			}
+			o.add(move);
+			loopv(stack) {stack[i]->o.add(move); stack[i]->resetinterp();}
 		}
+
+		if(delta < 0) break;
+		route_tag = entities::ents[target]->attr[0];
+
+		vector<int> &detours = *routes.access(entities::ents[target]->attr[0]);
+		target = -1;
+
+		// we pick a random one; we test up to n times if we fail to get a destination
+		// Ideally this loop will only ever run once
+		loopi(detours.length())
+		{
+			int tag = detours[rnd(detours.length())];
+			loopvj(entities::ents)
+			{
+				extentity &e = *entities::ents[j];
+				if(e.type == PLATFORMROUTE && e.attr[0] == tag)
+				{
+					target = j;
+					break;
+				}
+			}
+			if(target >= 0) break;
+		}
+
+		getsignal("arrived", true, this);
 	}
 
 	stack.setsize(0);
