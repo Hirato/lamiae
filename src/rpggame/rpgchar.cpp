@@ -622,7 +622,7 @@ void rpgchar::equip(item *it, int u)
 {
 	if(primary || secondary || lastprimary || lastsecondary)
 	{
-		game::hudline("You can't equip items while attacking!");
+		if(this == game::player1) game::hudline("You can't equip items while attacking!");
 		return;
 	}
 
@@ -635,7 +635,7 @@ void rpgchar::equip(item *it, int u)
 	if(usecase->type < USE_ARMOUR) return;
 	if(!usecase->reqs.meet(base))
 	{
-		game::hudline("You cannot wield this item! You do not meet the requirements!");
+		if(this == game::player1) game::hudline("You cannot wield this item! You do not meet the requirements!");
 		return;
 	}
 
@@ -645,7 +645,7 @@ void rpgchar::equip(item *it, int u)
 		it->quantity--;
 		it->getsignal("equip", false, this, u);
 	}
-	else
+	else if(this == game::player1)
 		game::hudline("Unable to equip: required slot unavailable");
 }
 
@@ -653,7 +653,7 @@ bool rpgchar::dequip(const char *base, int slots)
 {
 	if(primary || secondary || lastprimary || lastsecondary)
 	{
-		game::hudline("You can't dequip items while attacking!");
+		if(this == game::player1) game::hudline("You can't dequip items while attacking!");
 		return false;
 	}
 
