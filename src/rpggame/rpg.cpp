@@ -66,7 +66,7 @@ namespace game
 	SVAR(firstmap, "");
 	VAR(gameversion, 0, 0, 0x7FFFFFFF);
 	VAR(compatversion, 0, 0, 0x7FFFFFFF);
-	VARP(friendlyfire, 0, 0, 3);
+	VARP(friendlyfire, 0, 1, 3);
 	//
 
 	ICOMMAND(primaryattack, "D", (int *down),
@@ -196,6 +196,7 @@ namespace game
 	void cleangame()
 	{
 		gameversion = compatversion = 0;
+		friendlyfire = 1;
 
 		colcache.setsize(0);
 		mergecache.setsize(0);
