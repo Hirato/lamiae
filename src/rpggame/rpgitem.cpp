@@ -14,11 +14,14 @@ void rpgitem::update()
 
 	lastupdate = lastmillis;
 	moveplayer(this, 2, false);
-	if(!timeinair && !floor.iszero())
-	{
-		vec dir = vec(floor).rotate(PI / 2, vec(yaw * RAD, 0));
-		vectoyawpitch(dir, roll, pitch);
-	}
+	//FIXME align items to the ground properly, do not change yaw.
+// 	if(!timeinair && !floor.iszero())
+// 	{
+// 		vec dir = vec(floor).neg();
+// 		vectoyawpitch(dir, yaw, pitch);
+// 		pitch += 90;
+// 		yaw += 90;
+// 	}
 	entities::touchents(this);
 }
 
