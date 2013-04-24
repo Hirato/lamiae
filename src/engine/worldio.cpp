@@ -958,6 +958,10 @@ bool save_world(const char *mname, bool nolms, bool octa)
                         }
                     }
                         break;
+                    case ET_MAPMODEL:
+                        swap(ent.attr1, ent.attr2);
+                        ent.attr3 = ent.attr4 = ent.attr5 = 0;
+                        break;
                     default:
                         break;
                 }
@@ -1136,6 +1140,10 @@ bool read_octaworld(stream *f, octaheader &hdr)
         //OCTA entities have an unused reserved byte at the end
         f->getchar();
 
+        e.spawned = false;
+        e.inoctanode = false;
+        fixent(e, octaversion);
+
         //need changes for larger attribute size and changed indices.
         if(e.type == ET_PARTICLES)
         {
@@ -1178,10 +1186,12 @@ bool read_octaworld(stream *f, octaheader &hdr)
                 }
             }
         }
+        else if(e.type == ET_MAPMODEL)
+        {
+            swap(e.attr[0], e.attr[1]);
+            e.attr[2] = e.attr[3] = e.attr[4] = 0;
+        }
 
-        e.spawned = false;
-        e.inoctanode = false;
-        fixent(e, octaversion);
         if(samegame)
         {
             if(eif > 0) f->read(ebuf, eif);
@@ -1256,7 +1266,7 @@ bool read_lamiaeworld(stream *f, octaheader &hdr)
 
     //corresponding octaversions
     static const int versions[] = {
-        32, 33
+        32, 33, 33
     };
 
     if(hdr.version <= 0 || hdr.version > int(sizeof(versions)/sizeof(versions[0])))
@@ -1400,6 +1410,11 @@ bool read_lamiaeworld(stream *f, octaheader &hdr)
                 entities::deleteentity(ents.pop());
                 continue;
             }
+        }
+        if(e.type == ET_MAPMODEL && hdr.version < 3)
+        {
+            swap(e.attr[0], e.attr[1]);
+            e.attr[2] = e.attr[3] = e.attr[4] = 0;
         }
         if(!insideworld(e.o))
         {

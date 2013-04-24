@@ -751,11 +751,16 @@ bool mmcollide(physent *d, const vec &dir, octaentities &oc)               // co
     {
         extentity &e = *ents[oc.mapmodels[i]];
         if(e.flags&extentity::F_NOCOLLIDE) continue;
-        model *m = loadmodel(NULL, e.attr[1]);
+        model *m = loadmodel(NULL, e.attr[0]);
         if(!m || !m->collide) continue;
+        int yaw = e.attr[1];
         vec center, radius;
         m->collisionbox(center, radius);
-        float yaw = e.attr[0];
+        if(e.attr[4] > 0)
+        {
+            center.mul(e.attr[4] / 100.0f);
+            radius.mul(e.attr[4] / 100.0f);
+        }
         switch(d->collidetype)
         {
             case COLLIDE_ELLIPSE:
@@ -776,7 +781,7 @@ bool mmcollide(physent *d, const vec &dir, octaentities &oc)               // co
                 break;
             case COLLIDE_AABB:
             default:
-                rotatebb(center, radius, e.attr[0]);
+                rotatebb(center, radius, e.attr[1]);
                 if(!rectcollide(d, dir, center.add(e.o), radius.x, radius.y, radius.z, radius.z)) return false;
                 break;
         }

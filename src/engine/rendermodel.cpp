@@ -380,7 +380,7 @@ void preloadusedmapmodels(bool msg, bool bih)
     loopv(ents)
     {
         extentity &e = *ents[i];
-        if(e.type==ET_MAPMODEL && e.attr[1] >= 0 && mapmodels.find(e.attr[1]) < 0) mapmodels.add(e.attr[1]);
+        if(e.type==ET_MAPMODEL && e.attr[0] >= 0 && mapmodels.find(e.attr[0]) < 0) mapmodels.add(e.attr[0]);
     }
 
     loopv(mapmodels)

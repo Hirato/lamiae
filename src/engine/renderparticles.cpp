@@ -1427,14 +1427,13 @@ void renderentinfo(int i)
             break;
 
         case ET_MAPMODEL:
-            pos.z += 9.0;
-            formatstring(tmp)("Yaw: %i\nModel: %s (%i)\nTrigger Type: %i\nTag: level_trigger_%i\nRadius: %i\nColour: \fs\fR%i \fJ%i \fD%i\fr",
-                e.attr[0],
-                mapmodelname(e.attr[1]), e.attr[1],
+            pos.z += 7.5;
+            formatstring(tmp)("Model: %s (%i)\nYaw: %i\nPitch: %i\nRoll: %i\nSize: %i",
+                mapmodelname(e.attr[0]), e.attr[0],
+                e.attr[1],
                 e.attr[2],
                 e.attr[3],
-                e.attr[4],
-                (e.attr[5] >> 16) & 0xFF, (e.attr[5] >> 8) & 0xFF, e.attr[5] & 0xFF
+                e.attr[4]
             );
             break;
         case ET_PLAYERSTART:
