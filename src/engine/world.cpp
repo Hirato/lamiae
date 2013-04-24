@@ -946,24 +946,21 @@ extentity *newentity(bool local, const vec &o, int type, int *attrs, int &idx)
     {
         switch(type)
         {
-        case ET_PARTICLES:
-            switch(e.attr[0])
-            {
-                case 0: case 1: case 2: case 6: case 7: case 9: case 10: case 11: case 12: case 13: case 14: case 15:
-                    if(!e.attr[3]) e.attr[3] |= 0x0F0F0F;
-                    if(e.attr[0] != 6 && e.attr[0] != 7) break;
-                case 5: case 8:
-                    if(!e.attr[2]) e.attr[2] |= 0x0F0F0F;
-                    break;
-            }
-            break;
-                case ET_MAPMODEL:
-                    e.attr[1] = camera1->yaw;
-                    break;
-                case ET_PLAYERSTART:
-                    e.attr.pop();
-                    e.attr.insert(0, camera1->yaw);
-                    break;
+            case ET_PARTICLES:
+                switch(e.attr[0])
+                {
+                    case 0: case 1: case 2: case 6: case 7: case 9: case 10: case 11: case 12: case 13: case 14: case 15:
+                        if(!e.attr[3]) e.attr[3] |= 0x0F0F0F;
+                        if(e.attr[0] != 6 && e.attr[0] != 7) break;
+                    case 5: case 8:
+                        if(!e.attr[2]) e.attr[2] |= 0x0F0F0F;
+                        break;
+                }
+                break;
+            case ET_PLAYERSTART:
+                e.attr.pop();
+                e.attr.insert(0, camera1->yaw);
+                break;
         }
         entities::fixentity(e);
     }
