@@ -1459,7 +1459,7 @@ namespace rpgscript
 		result(s);
 	)
 
-	ICOMMAND(r_add_effect, "ssfi", (const char *ref, const char *st, float *mul, int *flags),
+	ICOMMAND(r_add_status, "ssfi", (const char *ref, const char *st, float *mul, int *flags),
 		if(!statuses.access(st)) return;
 		getreference(ref, victim, victim->getent(victimidx), , r_add_effect)
 
