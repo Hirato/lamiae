@@ -115,17 +115,17 @@ namespace game
 		{
 			if(!left || !left->hudmdl) return;
 
-			rendermodel(left->hudmdl, ANIM_HIDLE|ANIM_LOOP, player1->o, player1->yaw+90, player1->pitch, player1->roll, MDL_NOBATCH, NULL, NULL, player1->lastprimaryaction, 500);
+			rendermodel(left->hudmdl, ANIM_HIDLE|ANIM_LOOP, player1->o, player1->yaw+90, player1->pitch, player1->roll, MDL_NOBATCH, NULL, NULL, player1->lastattack, max(0, player1->lastprimaryaction - player1->lastattack));
 		}
 		else
 		{
 			if(left && left->hudmdl)
 			{
-				rendermodel(left->hudmdl, ANIM_HIDLE|ANIM_LOOP, player1->o, player1->yaw+90, player1->pitch, player1->roll, MDL_NOBATCH, NULL, NULL, player1->lastprimaryaction, 500);
+				rendermodel(left->hudmdl, ANIM_HIDLE|ANIM_LOOP, player1->o, player1->yaw+90, player1->pitch, player1->roll, MDL_NOBATCH, NULL, NULL, player1->lastattack, max(0, player1->lastprimaryaction - player1->lastattack));
 			}
 			if(right && right->hudmdl)
 			{
-				rendermodel(left->hudmdl, ANIM_HIDLE|ANIM_LOOP, player1->o, player1->yaw+90, player1->pitch, player1->roll, MDL_NOBATCH, NULL, NULL, player1->lastsecondaryaction, 500);
+				rendermodel(left->hudmdl, ANIM_HIDLE|ANIM_LOOP, player1->o, player1->yaw+90, player1->pitch, player1->roll, MDL_NOBATCH, NULL, NULL, player1->lastattack, max(0, player1->lastsecondaryaction - player1->lastattack));
 			}
 		}
 	}

@@ -364,6 +364,7 @@ void rpgchar::doattack(equipment *eleft, equipment *eright, equipment *quiver)
 
 		if(attack == left) lastprimaryaction = lastmillis + attack->cooldown + (ammo ? ammo->cooldown : 0);
 		if(attack == right) lastsecondaryaction = lastmillis + attack->cooldown + (ammo ? ammo->cooldown : 0);
+		lastattack = lastmillis;
 	}
 }
 
@@ -571,11 +572,10 @@ void rpgchar::update()
 
 void rpgchar::render()
 {
-	int lastaction = max(lastprimaryaction, lastsecondaryaction),
+	int lastaction = lastattack,
 		anim = ANIM_MSTRIKE,
-		delay = 300,
+		delay = max(lastprimaryaction, lastsecondaryaction) - lastattack,
 		hold = ANIM_MHOLD|ANIM_LOOP;
-	lastaction -= delay;
 
 	vector<modelattach> attachments;
 	vec *emitter = emitters;
