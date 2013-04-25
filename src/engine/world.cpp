@@ -271,7 +271,8 @@ char *entname(entity &e)
 extern selinfo sel;
 extern bool havesel, selectcorners;
 int entlooplevel = 0;
-int efocus = -1, enthover = -1, entorient = -1, oldhover = -1;
+int efocus = -1, enthover = -1, oldhover = -1;
+VAR(entorient, 1, -1, -1);
 bool undonext = true;
 
 VARF(entediting, 0, 0, 1, { if(!entediting) { entcancel(); efocus = enthover = -1; } });
