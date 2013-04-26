@@ -2,15 +2,13 @@
 
 victimeffect::victimeffect(rpgent *o, inflict *inf, int chargeflags, float mul) : owner(o)
 {
-	statusgroup *sg = game::statuses.access(inf->status);
-
-	group = inf->status;
-	elem = sg->friendly ? ATTACK_NONE : inf->element;
+	group = game::statuses.access(inf->status);
+	elem = group->friendly ? ATTACK_NONE : inf->element;
 	mul *= inf->mul;
 
-	loopv(sg->effects)
+	loopv(group->effects)
 	{
-		status *st = effects.add(sg->effects[i]->dup());
+		status *st = effects.add(group->effects[i]->dup());
 		st->remain = st->duration;
 
 		if(chargeflags & CHARGE_MAG) st->strength *= mul;
@@ -29,8 +27,10 @@ bool victimeffect::update(rpgent *victim)
 		thresh = d->base.getthreshold(elem);
 	}
 
+	bool instant = true;
 	loopvrev(effects)
 	{
+		instant = instant && effects[i]->duration == 0;
 		effects[i]->update(victim, owner, resist, thresh);
 
 		if(effects[i]->duration >= 0 && (effects[i]->remain -= curtime) <= 0)
@@ -39,11 +39,23 @@ bool victimeffect::update(rpgent *victim)
 		}
 	}
 
+	if(group->fx)
+		group->fx->drawaura(victim, 1, instant ? effect::DEATH : effect::DEATH_PROLONG, curtime);
+
 	return effects.length();
 }
 
 bool areaeffect::update()
 {
+	vector<int> removing;
+	bool instant = true;
+	loopvrev(effects)
+	{
+		instant = instant && effects[i]->duration == 0;
+		if(effects[i]->duration >= 0 && (effects[i]->remain -= curtime) <= 0)
+			removing.add(i);
+	}
+
 	loopvj(game::curmap->objs)
 	{
 		//checking the head and the feet should be sufficiently accurate for gaming purposes
@@ -65,16 +77,13 @@ bool areaeffect::update()
 			loopvrev(effects)
 				effects[i]->update(victim, owner, resist, thresh);
 
+			if(group->fx)
+				group->fx->drawaura(victim, 1, instant ? effect::DEATH : effect::DEATH_PROLONG, curtime);
+
 		}
 	}
 
-	loopvrev(effects)
-	{
-		if(effects[i]->duration >= 0 && (effects[i]->remain -= curtime) <= 0)
-		{
-			delete effects.remove(i);
-		}
-	}
+	loopv(removing) delete effects.remove(removing[i]);
 
 	return effects.length();
 }

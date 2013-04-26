@@ -688,8 +688,10 @@ namespace rpgio
 			ent->seffects.add(eff);
 
 			updates.add(reference(f->getlil<int>(), lastmap, eff->owner));
-			READHASH(eff->group);
-			VALIDHASH(eff->group, game::statuses, ent)
+			const char *group;
+			READHASH(group);
+			VALIDHASH(group, game::statuses, ent)
+			eff->group = game::statuses.access(group);
 			eff->elem = f->getlil<int>();
 			int numstat = f->getlil<int>();
 			loopj(numstat)
@@ -927,7 +929,8 @@ namespace rpgio
 		loopv(d->seffects)
 		{
 			f->putlil(enttonum(d->seffects[i]->owner));
-			writestring(f, d->seffects[i]->group);
+			const char *group = d->seffects[i]->group ? d->seffects[i]->group->key : NULL;
+			writestring(f, group);
 			f->putlil(d->seffects[i]->elem);
 			f->putlil(d->seffects[i]->effects.length());
 
@@ -1127,8 +1130,10 @@ namespace rpgio
 			aeff->owner = entfromnum(f->getlil<int>());
 			readvec(aeff->o);
 			aeff->lastemit = 0; //should emit immediately
-			READHASH(aeff->group)
-			VALIDHASH(aeff->group, game::statuses, loading)
+			const char *group;
+			READHASH(group)
+			VALIDHASH(group, game::statuses, loading)
+			aeff->group = game::statuses.access(group);
 
 			const char *fx;
 			READHASH(fx)
@@ -1307,7 +1312,7 @@ namespace rpgio
 
 			f->putlil(enttonum(aeff->owner));
 			writevec(aeff->o);
-			writestring(f, aeff->group);
+			writestring(f, aeff->group ? aeff->group->key : NULL);
 			writestring(f, aeff->fx ? aeff->fx->key : NULL);
 			f->putlil(aeff->elem);
 			f->putlil(aeff->radius);

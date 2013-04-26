@@ -27,7 +27,7 @@ namespace game
 	hashset<mapinfo> *mapdata = NULL;
 	mapinfo *curmap = NULL;
 	bool connected = false;
-	bool transfer = false;
+	bool transfer = false;f
 	bool abort = false;
 
 	rpgchar *player1 = new rpgchar();

@@ -137,7 +137,7 @@ namespace test
 
 		areaeffect *aeff = curmap->aeffects.add(new areaeffect());
 		aeff->o = vec(x, y, z);
-		aeff->group = st;
+		aeff->group = sg;
 		aeff->fx = efx[rnd(efx.length())];
 		aeff->radius = rnd(161) + 32;
 		if(chargeflags & CHARGE_RADIUS) aeff->radius *= charge;

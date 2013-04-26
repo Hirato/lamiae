@@ -74,8 +74,8 @@ namespace game
 	CHECK(script, script, scripts, NULL)
 	CHECK(effect, effect, effects, NULL)
 	CHECK(statusgroup, status, statuses,
-		obj->getveffect(objidx) ? obj->getveffect(objidx)->group :
-		obj->getaeffect(objidx) ? obj->getaeffect(objidx)->group :
+		obj->getveffect(objidx) ? obj->getveffect(objidx)->group->key :
+		obj->getaeffect(objidx) ? obj->getaeffect(objidx)->group->key :
 		NULL
 	)
 	CHECK(faction, faction, factions,
@@ -726,6 +726,7 @@ namespace game
 	STRING(icon)
 	STRING(name)
 	STRING(description)
+	HASHF(persisteffect, effects.access(s), e->fx = effects.access(s))
 
 	#undef START
 	#undef INIT

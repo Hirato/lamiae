@@ -311,7 +311,7 @@ bool projectile::update()
 
 					if(wep->deatheffect)
 						aeff->fx = game::effects.access(wep->deatheffect);
-					aeff->group = wep->effects[i]->status;
+					aeff->group = sg;
 					aeff->elem = sg->friendly ? ATTACK_NONE : wep->effects[i]->element;
 
 					loopvj(sg->effects)
@@ -337,7 +337,7 @@ bool projectile::update()
 
 					if(amm->deatheffect)
 						aeff->fx = game::effects.access(amm->deatheffect);
-					aeff->group = amm->effects[i]->status;
+					aeff->group = sg;
 					aeff->elem = sg->friendly ? ATTACK_NONE : amm->effects[i]->element;
 
 					loopvj(sg->effects)

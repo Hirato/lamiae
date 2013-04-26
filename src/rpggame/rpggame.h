@@ -709,8 +709,10 @@ struct statusgroup
 	bool friendly;
 
 	const char *icon, *name, *description;
+	const char *persisteffect;
+	effect *fx;
 
-	statusgroup() : key(NULL), friendly(false), icon(NULL), name(NULL), description(NULL) {}
+	statusgroup() : key(NULL), friendly(false), icon(NULL), name(NULL), description(NULL), persisteffect(NULL), fx(NULL) {}
 	~statusgroup()
 	{
 		delete[] icon;
@@ -733,7 +735,7 @@ struct areaeffect
 {
 	rpgent *owner;
 	vec o;
-	const char *group;
+	statusgroup *group;
 	effect *fx;
 	int lastemit, elem, radius;
 
@@ -750,7 +752,7 @@ struct areaeffect
 struct victimeffect
 {
 	rpgent *owner;
-	const char *group;
+	statusgroup *group;
 	int elem;
 	vector<status *> effects;
 
