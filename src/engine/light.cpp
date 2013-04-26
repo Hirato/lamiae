@@ -302,7 +302,7 @@ void getlightprops(const extentity &e, int &radius, int &red, int &green, int &b
 
     if(e.attr[5] > 0)
     {
-        dynlightprops &dlp = dynlightpropcache.access(e.attr[5], dynlightprops());
+        dynlightprops &dlp = dynlightpropcache[e.attr[5]];
 
         if(dlp.lastupdate < lastmillis)
         {

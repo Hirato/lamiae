@@ -1258,36 +1258,108 @@ void regularlensflare(vec o, uchar r, uchar g, uchar b, bool sun, bool sparkle, 
     flares.addflare(o, r, g, b, sun, sparkle, sizemod);
 }
 
+struct dynpartprops
+{
+    int lastupdate, num;
+    int attr1, attr2, attr3, attr4, attr5, attr6, attr7, attr8;
+
+    dynpartprops() : lastupdate(0), num(0), attr1(0), attr2(0), attr3(0), attr4(0), attr5(0), attr6(0), attr7(0), attr8(0) {}
+    ~dynpartprops() {}
+};
+
+hashtable<int, dynpartprops> dynpartpropcache;
+
+static void getpartprops(const entity &e, int &attr1, int &attr2, int &attr3, int &attr4, int &attr5, int &attr6, int &attr7, int &attr8)
+{
+    attr1 = e.attr[0]; attr2 = e.attr[1]; attr3 = e.attr[2]; attr4 = e.attr[3];
+    attr5 = e.attr[4]; attr6 = e.attr[5]; attr7 = e.attr[6]; attr8 = e.attr[7];
+
+    if(e.attr[8] > 0)
+    {
+        dynpartprops &dpp = dynpartpropcache[e.attr[8]];
+
+        if(dpp.lastupdate < lastmillis)
+        {
+            dpp.lastupdate = lastmillis;
+            dpp.num = 0;
+
+            static string pcmd;
+            formatstring(pcmd)("particles_%i", e.attr[8]);
+
+            char *ret = executestr(pcmd);
+            if(ret)
+            {
+                vector<char *> vals;
+                explodelist(ret, vals, 8);
+                dpp.num = vals.length();
+
+                switch(vals.length())
+                {
+                    case 8: dpp.attr8 = parseint(vals[7]);
+                    case 7: dpp.attr7 = parseint(vals[6]);
+                    case 6: dpp.attr6 = parseint(vals[5]);
+                    case 5: dpp.attr5 = parseint(vals[4]);
+                    case 4: dpp.attr4 = parseint(vals[3]);
+                    case 3: dpp.attr3 = parseint(vals[2]);
+                    case 2: dpp.attr2 = parseint(vals[1]);
+                    case 1: dpp.attr1 = parseint(vals[0]);
+                    case 0: break;
+                }
+
+                DELETEA(ret);
+                vals.deletearrays();
+            }
+
+        }
+
+        switch(dpp.num)
+        {
+            case 8: attr8 = dpp.attr8;
+            case 7: attr7 = dpp.attr7;
+            case 6: attr6 = dpp.attr6;
+            case 5: attr5 = dpp.attr5;
+            case 4: attr4 = dpp.attr4;
+            case 3: attr3 = dpp.attr3;
+            case 2: attr2 = dpp.attr2;
+            case 1: attr1 = dpp.attr1;
+            case 0: break;
+        }
+    }
+}
+
 VARP(showentities, 0, 1, 2);
 
 static void makeparticles(entity &e)
 {
-    switch(e.attr[0])
+    int attr1, attr2, attr3, attr4, attr5, attr6, attr7, attr8;
+    getpartprops(e, attr1, attr2, attr3, attr4, attr5, attr6, attr7, attr8);
+
+    switch(attr1)
     {
         case 0: //fire and smoke -  <radius> <height> <rgb> - 0 values default to compat for old maps
         {
-            float radius = e.attr[1] ? float(e.attr[1])/100.0f : 1.5f,
-                  height = e.attr[2] ? float(e.attr[2])/100.0f : radius/3;
-            regularflame(PART_FLAME, e.o, radius, height, e.attr[3] ? e.attr[3] & 0xFFFFFF : 0x903020, 3, e.attr[4] ? 0.01f * abs(e.attr[4]) : 2.0f, e.attr[5] ? 0.02f * abs(e.attr[5]): 200.0f, e.attr[6] ? abs(e.attr[6]) : 600.0f, e.attr[7] ? e.attr[7]: -15.0f);
-            regularflame(PART_SMOKE, vec(e.o.x, e.o.y, e.o.z + 4.0f*min(radius, height)), radius, height, 0x303020, 1, e.attr[4] ? .02f * abs(e.attr[4]) : 4.0f, e.attr[5] ? 0.01f * abs(e.attr[5]) : 100.0f, e.attr[6] ? abs(e.attr[6]) + 1400: 2000.0f, e.attr[7] ? e.attr[7] - 5 : -20.0f);
+            float radius = attr2 ? float(attr2)/100.0f : 1.5f,
+                  height = attr3 ? float(attr3)/100.0f : radius/3;
+            regularflame(PART_FLAME, e.o, radius, height, attr4 ? attr4 & 0xFFFFFF : 0x903020, 3, attr5 ? 0.01f * abs(attr5) : 2.0f, attr6 ? 0.02f * abs(attr6): 200.0f, attr7 ? abs(attr7) : 600.0f, attr8 ? attr8: -15.0f);
+            regularflame(PART_SMOKE, vec(e.o.x, e.o.y, e.o.z + 4.0f*min(radius, height)), radius, height, 0x303020, 1, attr5 ? .02f * abs(attr5) : 4.0f, attr6 ? 0.01f * abs(attr6) : 100.0f, attr7 ? abs(attr7) + 1400: 2000.0f, attr8 ? attr8 - 5 : -20.0f);
             break;
         }
         case 1: // flame <radius> <height> <rgb> - radius=100, height=100 is the classic size
-            regularflame(PART_FLAME, e.o, float(e.attr[1])/100.0f, float(e.attr[2])/100.0f, e.attr[3] & 0xFFFFFF, 3, e.attr[4] ? 0.01f * abs(e.attr[4]) : 2.0f, e.attr[5] ? 0.02f * abs(e.attr[5]): 200.0f, e.attr[6] ? abs(e.attr[6]) : 600.0f, e.attr[7] ? e.attr[7]: -15.0f);
+            regularflame(PART_FLAME, e.o, float(attr2)/100.0f, float(attr3)/100.0f, attr4 & 0xFFFFFF, 3, attr5 ? 0.01f * abs(attr5) : 2.0f, attr6 ? 0.02f * abs(attr6): 200.0f, attr7 ? abs(attr7) : 600.0f, attr8 ? attr8: -15.0f);
             break;
         case 2: // smoke plume <radius> <height> <rgb>
-            regularflame(PART_SMOKE, e.o, float(e.attr[1])/100.0f, float(e.attr[2])/100.0f, e.attr[3] & 0xFFFFFF, 1, e.attr[4] ? .02f * abs(e.attr[4]) : 4.0f, e.attr[5] ? 0.01f * abs(e.attr[5]) : 100.0f, e.attr[6] ? abs(e.attr[6]): 2000.0f, e.attr[7] ? e.attr[7]: -20.0f);
+            regularflame(PART_SMOKE, e.o, float(attr2)/100.0f, float(attr3)/100.0f, attr4 & 0xFFFFFF, 1, attr5 ? .02f * abs(attr5) : 4.0f, attr6 ? 0.01f * abs(attr6) : 100.0f, attr7 ? abs(attr7): 2000.0f, attr8 ? attr8: -20.0f);
             break;
         case 3: //steam vent - <dir>
-            regularsplash(PART_STEAM, 0x897661, e.attr[2] ? abs(e.attr[2]) : 50, 1, e.attr[3] ? abs(e.attr[3]) : 200, offsetvec(e.o, e.attr[1], rnd(10)), e.attr[4] ? abs(e.attr[4]) *.01f : 2.4f, e.attr[5] ? e.attr[5] : -20);
+            regularsplash(PART_STEAM, 0x897661, attr3 ? abs(attr3) : 50, 1, attr4 ? abs(attr4) : 200, offsetvec(e.o, attr2, rnd(10)), attr5 ? abs(attr5) *.01f : 2.4f, attr6 ? attr6 : -20);
             break;
         case 4: //water fountain - <dir>
         {
             int color;
-            if(e.attr[6] > 0) color = e.attr[6];
+            if(attr7 > 0) color = attr7;
             else
             {
-                int mat = MAT_WATER + clamp(-e.attr[6], 0, 3);
+                int mat = MAT_WATER + clamp(-attr7, 0, 3);
                 const bvec &wfcol = getwaterfallcolor(mat);
                 color = (int(wfcol[0])<<16) | (int(wfcol[1])<<8) | int(wfcol[2]);
                 if(!color)
@@ -1297,29 +1369,29 @@ static void makeparticles(entity &e)
                 }
             }
 
-            regularsplash(PART_WATER, color, e.attr[2] ? abs(e.attr[2]) : 150, 4, e.attr[3] ? abs(e.attr[3]) : 200, offsetvec(e.o, e.attr[1], rnd(10)), e.attr[4] ? abs(e.attr[4]) *.01f : 0.6f, e.attr[5] ? e.attr[5] : 2);
+            regularsplash(PART_WATER, color, attr3 ? abs(attr3) : 150, 4, attr4 ? abs(attr4) : 200, offsetvec(e.o, attr2, rnd(10)), attr5 ? abs(attr5) *.01f : 0.6f, attr6 ? attr6 : 2);
             break;
         }
         case 5: //fire ball - <size> <rgb>
-           newparticle(e.o, vec(0, 0, 1), 1, PART_EXPLOSION, e.attr[2] & 0xFFFFFF, 4.0f)->val = 1+e.attr[1];
+           newparticle(e.o, vec(0, 0, 1), 1, PART_EXPLOSION, attr3 & 0xFFFFFF, 4.0f)->val = 1+attr2;
             break;
         case 6: //meter, metervs - <percent> <rgb> <rgb2>
         case 7:
         {
-            particle *p = newparticle(e.o, vec(0, 0, 1), 1, e.attr[0]==6 ? PART_METER : PART_METER_VS, e.attr[2] & 0xFFFFFF, 2.0f);
-            int color2 = e.attr[3] & 0xFFFFFF;
+            particle *p = newparticle(e.o, vec(0, 0, 1), 1, attr1==6 ? PART_METER : PART_METER_VS, attr3 & 0xFFFFFF, 2.0f);
+            int color2 = attr4 & 0xFFFFFF;
             p->color2[0] = color2>>16;
             p->color2[1] = (color2>>8)&0xFF;
             p->color2[2] = color2&0xFF;
-            p->progress = clamp(int(e.attr[1]), 0, 100);
+            p->progress = clamp(int(attr2), 0, 100);
             break;
         }
         case 8:
             if(editmode || (game::showenthelpers() && showentities >= 1) || showentities==2) break;
 
-            defformatstring(aliasname)("part_text_%d", e.attr[1]);
+            defformatstring(aliasname)("part_text_%d", attr2);
             if(identexists(aliasname))
-                particle_textcopy(e.o, getalias(aliasname), PART_TEXT, 1, e.attr[2] & 0xFFFFFF, e.attr[3] > 0 ? e.attr[3] : 200);
+                particle_textcopy(e.o, getalias(aliasname), PART_TEXT, 1, attr3 & 0xFFFFFF, attr4 > 0 ? attr4 : 200);
             break;
         case 9:  //tape - <dir> <length> <rgb>
         case 10:  //lightning
@@ -1333,22 +1405,22 @@ static void makeparticles(entity &e)
             const float sizemap[] = { 0.28, 1.0, 4.8, 2.4, 0.60, 0.5, 1   };
             const float velmap[]  = {  200, 200, 200, 200,  200,  40, 100 };
             const int gravmap[] =   {    0,   0,  20, -20,    2, 200, 40  };
-            int type = typemap[e.attr[0]-9], gravity = e.attr[7] ? e.attr[7] : gravmap[e.attr[0]-9];
-            float size = e.attr[5] ? abs(e.attr[5]) * .01f : sizemap[e.attr[0]-9], vel = e.attr[6] ? e.attr[6] * .1f : velmap[e.attr[0]-9];
+            int type = typemap[attr1-9], gravity = attr8 ? attr8 : gravmap[attr1-9];
+            float size = attr6 ? abs(attr6) * .01f : sizemap[attr1-9], vel = attr7 ? attr7 * .1f : velmap[attr1-9];
 
-            if(e.attr[1] >= 256) regularshape(type, max(1+e.attr[2], 1), e.attr[3] & 0xFFFFFF, e.attr[1]-256, 5, e.attr[4] != 0 ? e.attr[4] : 200, e.o, size*particlesize/100.0, vel, gravity);
-            else newparticle(e.o, offsetvec(e.o, e.attr[1], max(1+e.attr[2], 1)), 1, type, e.attr[3] & 0xFFFFFF, size, gravity);
+            if(attr2 >= 256) regularshape(type, max(1+attr3, 1), attr4 & 0xFFFFFF, attr2-256, 5, attr5 != 0 ? attr5 : 200, e.o, size*particlesize/100.0, vel, gravity);
+            else newparticle(e.o, offsetvec(e.o, attr2, max(1+attr3, 1)), 1, type, attr4 & 0xFFFFFF, size, gravity);
             break;
         }
         case 32: //lens flares - plain/sparkle/sun/sparklesun <red> <green> <blue>
         case 33:
         case 34:
         case 35:
-            flares.addflare(e.o, e.attr[1], e.attr[2], e.attr[3], (e.attr[0]&0x02)!=0, (e.attr[0]&0x01)!=0, e.attr[4]);
+            flares.addflare(e.o, attr2, attr3, attr4, (attr1&0x02)!=0, (attr1&0x01)!=0, attr5);
             break;
         default:
-            if(editmode) return;
-            defformatstring(ds)("particles %d?", e.attr[0]);
+            if(editmode || e.attr[8]) return;
+            defformatstring(ds)("particles %d?", attr1);
             particle_textcopy(e.o, ds, PART_TEXT, 1, 0x6496FF, 2.0f);
             break;
     }
@@ -1360,19 +1432,19 @@ bool printparticles(extentity &e, char *buf)
     {
         case 0: case 1: case 2: case 9: case 10: case 11: case 12: case 13: case 14: case 15:
         {
-            defformatstring(ds)("%d %d %d 0x%.6X %d %d %d %d", e.attr[0], e.attr[1], e.attr[2], e.attr[3], e.attr[4], e.attr[5], e.attr[6], e.attr[7]);
+            defformatstring(ds)("%d %d %d 0x%.6X %d %d %d %d %d", e.attr[0], e.attr[1], e.attr[2], e.attr[3], e.attr[4], e.attr[5], e.attr[6], e.attr[7], e.attr[8]);
             concatstring(buf, ds);
             return true;
         }
         case 5: case 8:
         {
-            defformatstring(ds)("%d %d 0x%.6X %d %d %d %d %d", e.attr[0], e.attr[1], e.attr[2], e.attr[3], e.attr[4], e.attr[5], e.attr[6], e.attr[7]);
+            defformatstring(ds)("%d %d 0x%.6X %d %d %d %d %d %d", e.attr[0], e.attr[1], e.attr[2], e.attr[3], e.attr[4], e.attr[5], e.attr[6], e.attr[7], e.attr[8]);
             concatstring(buf, ds);
             return true;
         }
         case 6: case 7:
         {
-            defformatstring(ds)("%d %d 0x%.6X 0x%.6X %d %d %d %d", e.attr[0], e.attr[1], e.attr[2], e.attr[3], e.attr[4], e.attr[5], e.attr[6], e.attr[7]);
+            defformatstring(ds)("%d %d 0x%.6X 0x%.6X %d %d %d %d %d", e.attr[0], e.attr[1], e.attr[2], e.attr[3], e.attr[4], e.attr[5], e.attr[6], e.attr[7], e.attr[8]);
             concatstring(buf, ds);
             return true;
         }
@@ -1455,8 +1527,8 @@ void renderentinfo(int i)
             switch(e.attr[0])
             {
                 case 0:
-                    pos.z += 12.0f;
-                    formatstring(tmp)("Type: Fire (0)\nRadius: %f\nHeight: %f\nColour: \fs\fR%i \fJ%i \fD%i\fr\nSize: %i\nSpeed: %i\nFade: %i\nGravity: %i",
+                    pos.z += 13.5f;
+                    formatstring(tmp)("Type: Fire (0)\nRadius: %f\nHeight: %f\nColour: \fs\fR%i \fJ%i \fD%i\fr\nSize: %i\nSpeed: %i\nFade: %i\nGravity: %i\nTag: %i",
                         //NULL,
                         e.attr[1] ? float(e.attr[1])/100.0f : 1.5f,
                         e.attr[2] ? float(e.attr[2])/100.0f : (e.attr[2] ? float(e.attr[2])/100.0f : 1.5f)/3,
@@ -1464,61 +1536,67 @@ void renderentinfo(int i)
                         e.attr[4],
                         e.attr[5],
                         e.attr[6],
-                        e.attr[7]
+                        e.attr[7],
+                        e.attr[8]
                     );
                     break;
                 case 1:
                 case 2:
-                    pos.z += 12.0f;
-                    formatstring(tmp)("Type: %s (%i)\nRadius: %i\nHeight: %i\nColour: \fs\fR%i \fJ%i \fD%i\fr\nSize: %i\nSpeed: %i\nFade: %i\nGravity: %i",
+                    pos.z += 13.5f;
+                    formatstring(tmp)("Type: %s (%i)\nRadius: %i\nHeight: %i\nColour: \fs\fR%i \fJ%i \fD%i\fr\nSize: %i\nSpeed: %i\nFade: %i\nGravity: %i\nTag: %i",
                         e.attr[0]==1 ? "Flame" : "Smoke Plume", e.attr[0],
-                            e.attr[1],
-                            e.attr[2],
-                            (e.attr[3] & 0xFF0000) >> 16, (e.attr[3] & 0xFF00) >> 8, e.attr[3] & 0xFF,
-                            e.attr[4],
-                            e.attr[5],
-                            e.attr[6],
-                            e.attr[7]
-                            );
+                        e.attr[1],
+                        e.attr[2],
+                        (e.attr[3] & 0xFF0000) >> 16, (e.attr[3] & 0xFF00) >> 8, e.attr[3] & 0xFF,
+                        e.attr[4],
+                        e.attr[5],
+                        e.attr[6],
+                        e.attr[7],
+                        e.attr[8]
+                    );
 
-                            break;
+                    break;
                 case 3:
                 case 4:
-                    pos.z += 9.0f;
-                    formatstring(tmp)("Type: %s (%i)\nDirection: %i\nRadius: %i\nFade: %i\nSize: %i\nGravity: %i",
+                    pos.z += 10.5f;
+                    formatstring(tmp)("Type: %s (%i)\nDirection: %i\nRadius: %i\nFade: %i\nSize: %i\nGravity: %i\nTag: %i",
                         e.attr[0]==3 ? "Smoke" : "Fountain", e.attr[0],
                         e.attr[1],
                         e.attr[2],
                         e.attr[3],
                         e.attr[4],
-                        e.attr[5]
+                        e.attr[5],
+                        e.attr[8]
                     );
                     break;
                 case 5:
-                    pos.z += 9.0;
-                    formatstring(tmp)("Type: Explosion (5)\nSize: %i\nColour: \fs\fR%i \fJ%i \fD%i\fr",
+                    pos.z += 10.5;
+                    formatstring(tmp)("Type: Explosion (5)\nSize: %i\nColour: \fs\fR%i \fJ%i \fD%i\fr\nTag: %i",
                         //NULL,
                         e.attr[1],
-                        (e.attr[2] & 0xFF0000) >> 16, (e.attr[2] & 0xFF00) >> 8, e.attr[2] & 0xFF
+                        (e.attr[2] & 0xFF0000) >> 16, (e.attr[2] & 0xFF00) >> 8, e.attr[2] & 0xFF,
+                        e.attr[8]
                     );
                     break;
                 case 6:
                 case 7:
-                    pos.z += 6;
-                    formatstring(tmp)("Type: Meter%s (%i)\nPercentage: %i\n1st Colour: \fs\fR%i \fJ%i \fD%i\fr\n2nd Colour: \fs\fR%i \fJ%i \fD%i\fr",
+                    pos.z += 7.5;
+                    formatstring(tmp)("Type: Meter%s (%i)\nPercentage: %i\n1st Colour: \fs\fR%i \fJ%i \fD%i\fr\n2nd Colour: \fs\fR%i \fJ%i \fD%i\fr\nTag: %i",
                         e.attr[0]==7 ? " Versus" : "", e.attr[0],
-                            e.attr[1],
-                            (e.attr[2] & 0xFF0000) >> 16, (e.attr[2] & 0xFF00) >> 8, e.attr[2] & 0xFF,
-                            (e.attr[3] & 0xFF0000) >> 16, (e.attr[3] & 0xFF00) >> 8, e.attr[3] & 0xFF
-                            );
-                            break;
+                        e.attr[1],
+                        (e.attr[2] & 0xFF0000) >> 16, (e.attr[2] & 0xFF00) >> 8, e.attr[2] & 0xFF,
+                        (e.attr[3] & 0xFF0000) >> 16, (e.attr[3] & 0xFF00) >> 8, e.attr[3] & 0xFF,
+                        e.attr[8]
+                    );
+                    break;
                 case 8:
-                    pos.z += 6;
-                    formatstring(tmp)("Type: Text (8)\nTag: part_text_%i\nColour: \fs\fR%i \fJ%i \fD%i\fr\nSize %i",
+                    pos.z += 7.5;
+                    formatstring(tmp)("Type: Text (8)\nTag: part_text_%i\nColour: \fs\fR%i \fJ%i \fD%i\fr\nSize %i\nTag: %i",
                         //NULL,
                         e.attr[1],
                         (e.attr[2] & 0xFF0000) >> 16, (e.attr[2] & 0xFF00) >> 8, e.attr[2] & 0xFF,
-                        e.attr[3]
+                        e.attr[3],
+                        e.attr[8]
                     );
                     break;
                 case 9:
@@ -1529,9 +1607,9 @@ void renderentinfo(int i)
                 case 14:
                 case 15:
                 {
-                    pos.z += 12.0f;
+                    pos.z += 13.5f;
                     const static char *typenames[] = {"Flare", "Lightning", "Fire", "Smoke", "Water", "Snow", "Leaves"};
-                    formatstring(tmp)("Type: %s (%i)\n%s : %i\nLength: %i\nColour: \fs\fR%i \fJ%i \fD%i\fr\nFadetime w/%s collision: %i\nSize: %i\nVel: %i\nGravity: %i",
+                    formatstring(tmp)("Type: %s (%i)\n%s : %i\nLength: %i\nColour: \fs\fR%i \fJ%i \fD%i\fr\nFadetime w/%s collision: %i\nSize: %i\nVel: %i\nGravity: %i\nTag: %i",
                         typenames[e.attr[0] - 9], e.attr[0],
                         e.attr[1] >= 256 ? "Effect" : "Direction", e.attr[1],
                         e.attr[2],
@@ -1539,7 +1617,8 @@ void renderentinfo(int i)
                         e.attr[4] < 0 ? "" : "o", abs(e.attr[4]),
                         e.attr[5],
                         e.attr[6],
-                        e.attr[7]
+                        e.attr[7],
+                        e.attr[8]
                     );
                     break;
                 }
@@ -1550,16 +1629,18 @@ void renderentinfo(int i)
                 case 33:
                 case 34:
                 case 35:
-                    pos.z += 7.5;
-                    formatstring(tmp)("Type: %sLens Flare w/%s Sparkle (%i)\n\fs\fRRed: %i\n\fJGreen: %i\n\fDBlue: %i\n\frSize: %i",
+                    pos.z += 9.0;
+                    formatstring(tmp)("Type: %sLens Flare w/%s Sparkle (%i)\n\fs\fRRed: %i\n\fJGreen: %i\n\fDBlue: %i\n\frSize: %i\nTag: %i",
                         (e.attr[0]==32 || e.attr[0] == 33) ? "" : "Fixed-Size ", (e.attr[0]==32 || e.attr[0]==34) ? "o" : "", e.attr[0],
                         e.attr[1],
                         e.attr[2],
                         e.attr[3],
-                        e.attr[4]
+                        e.attr[4],
+                        e.attr[8]
                     );
                     break;
                 default:
+                    if(e.attr[8]) break;
                     pos.z += 1.5;
                     formatstring(tmp)("Invalid type: %i", e.attr[0]);
                     break;

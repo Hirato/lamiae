@@ -959,7 +959,7 @@ const int getattrnum(int type)
         6, //mapmodel
         2, //playerstart
         3, //envmap
-        8, //particles
+        9, //particles
         3, //sound
         1  //spotlight
     };
