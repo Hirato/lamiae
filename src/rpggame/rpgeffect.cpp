@@ -2,7 +2,16 @@
 
 //essentially a collection of functions to greatly simplify the use of assorted effects while making the aesthetics more consistent
 
-inline void setvars(effect *e, int type, int &fade, int &gravity, int &num)
+#define getreference(var, name) \
+	int name ## idx; \
+	rpgscript::parseref(var, name ## idx); \
+	rpgent *name = NULL; \
+	do { \
+		reference *__ ## name = rpgscript::searchstack(var); \
+		if(__ ## name) name = __ ## name->getent(name ## idx); \
+	} while(0);
+
+inline void setvars(effect *e, int type, int &fade, int &gravity, int &num, int &elapse)
 {
 	num = 1;
 	fade = e->fade;
@@ -13,16 +22,22 @@ inline void setvars(effect *e, int type, int &fade, int &gravity, int &num)
 		case effect::PROJ:
 			fade = 1;
 			gravity = 0;
+			elapse = 0;
 			break;
 		case effect::TRAIL_SINGLE:
 			num = 15;
+			elapse = 0;
 			break;
 		case effect::DEATH:
 			num = 20;
+			elapse = 0;
 			break;
 		case effect::DEATH_PROLONG:
 			if(e->particle == PART_EXPLOSION || e->particle == PART_EXPLOSION_BLUE)
+			{
 				fade = 1;
+				elapse = 0;
+			}
 			break;
 		default:
 			break;
@@ -37,7 +52,7 @@ void effect::drawsphere(const vec &o, float radius, float size, int type, int el
 
 	size *= this->size;
 	int fade, gravity, num;
-	setvars(this, type, fade, gravity, num);
+	setvars(this, type, fade, gravity, num, elapse);
 	num *= .1 * radius / (1 + size) * partmul * (elapse ? logf(elapse) / 3 : 1);
 	if(elapse && !num && rnd(int(10 / partmul))) return; //sometimes particles should not be drawn
 	num = max(1, num);
@@ -68,13 +83,21 @@ void effect::drawsphere(const vec &o, float radius, float size, int type, int el
 	}
 }
 
+ICOMMAND(r_effect_emitsphere, "ssffi", (const char *eff, const char *ref, float *radius, float *size, int *style),
+	effect *e = game::effects.access(eff);
+	getreference(ref, d);
+	if(!e || !d) return;
+
+	e->drawsphere(d->o, max(1.0f, *radius), *size, clamp(*style, effect::PROJ, effect::DEATH_PROLONG), curtime);
+)
+
 void effect::drawsplash(const vec &o, vec dir, float radius, float size, int type, int elapse)
 {
 	if(size <= 0) return;
 
 	size *= this->size;
 	int fade, gravity, num;
-	setvars(this, type, fade, gravity, num);
+	setvars(this, type, fade, gravity, num, elapse);
 	num *= .1 * radius / (1 + size) * partmul * (elapse ? logf(elapse) / 3 : 1);
 	if(elapse && !num && rnd(int(10 / partmul))) return; //sometimes particles should not be drawn
 	num = max(1, num);
@@ -111,6 +134,14 @@ void effect::drawsplash(const vec &o, vec dir, float radius, float size, int typ
 	}
 }
 
+ICOMMAND(r_effect_emitsplash, "ssffi", (const char *eff, const char *ref, float *radius, float *size, int *style),
+	effect *e = game::effects.access(eff);
+	getreference(ref, d);
+	if(!e || !d) return;
+
+	e->drawsplash(d->o, vec(0, 0, 1), max(1.0f, *radius), *size, clamp(*style, effect::PROJ, effect::DEATH_PROLONG), curtime);
+)
+
 VARP(linemaxsteps, 8, 32, 1024);
 VARP(linemininterval, 1, 8, 32);
 
@@ -120,7 +151,7 @@ bool effect::drawline(vec &from, const vec &to, float size, int type, int elapse
 
 	size *= this->size;
 	int fade, gravity, num;
-	setvars(this, type, fade, gravity, num);
+	setvars(this, type, fade, gravity, num, elapse);
 	num *= from.dist(to) / (10 * size) * partmul * (elapse ? logf(elapse) / 3 : 1);
 	if(particle == PART_STREAK || particle == PART_LIGHTNING)
 		num /= 2;
@@ -157,6 +188,16 @@ bool effect::drawline(vec &from, const vec &to, float size, int type, int elapse
 	return true;
 }
 
+ICOMMAND(r_effect_emitline, "sssffi", (const char *eff, const char *from, const char *to, float *size, int *style),
+	effect *e = game::effects.access(eff);
+	getreference(from, f);
+	getreference(to, t);
+	if(!e || !f || !t) return;
+
+	vec o(f->o);
+	e->drawline(o, t->o, *size, clamp(*style, effect::PROJ, effect::DEATH_PROLONG), curtime);
+)
+
 void effect::drawwield(vec &from, const vec &to, float size, int type, int elapse)
 {
 	if(size <= 0) return;
@@ -169,7 +210,7 @@ void effect::drawwield(vec &from, const vec &to, float size, int type, int elaps
 
 	size *= this->size;
 	int fade, gravity, num;
-	setvars(this, type, fade, gravity, num);
+	setvars(this, type, fade, gravity, num, elapse);
 
 	num *= partmul * (elapse ? (logf(elapse) / 3) : 1) / (1 + size);
 
@@ -199,7 +240,7 @@ void effect::drawaura(rpgent *d, float size, int type, int elapse)
 
 	size *= this->size;
 	int fade, gravity, num;
-	setvars(this, type, fade, gravity, num);
+	setvars(this, type, fade, gravity, num, elapse);
 
 	num *= .2 * PI * d->radius / (1 + size) * partmul * (elapse ? logf(elapse) / 3 : 1);
 	if(elapse && !num && rnd(int(10 / partmul))) return; //sometimes particles should not be drawn
@@ -229,13 +270,21 @@ void effect::drawaura(rpgent *d, float size, int type, int elapse)
 	}
 }
 
+ICOMMAND(r_effect_emitaura, "ssfi", (const char *eff, const char *ref, float *size, int *style),
+	effect *e = game::effects.access(eff);
+	getreference(ref, d);
+	if(!e || !d) return;
+
+	e->drawaura(d, *size, clamp(*style, effect::PROJ, effect::DEATH_PROLONG), curtime);
+)
+
 void effect::drawcircle(const vec &o, vec dir, const vec &axis, int angle, float radius, float size, int type, int elapse)
 {
 	if(size <= 0) return;
 
 	size *= this->size;
 	int fade, gravity, num;
-	setvars(this, type, fade, gravity, num);
+	setvars(this, type, fade, gravity, num, elapse);
 
 	num *= angle * (particle == PART_STREAK || particle == PART_LIGHTNING ? 1 : partmul) /
 		size / 30 * (elapse ? logf(elapse) / 3 : 1);
@@ -284,7 +333,7 @@ void effect::drawcone(const vec &o, vec dir, const vec &axis, int angle, float r
 
 	size *= this->size;
 	int fade, gravity, num;
-	setvars(this, type, fade, gravity, num);
+	setvars(this, type, fade, gravity, num, elapse);
 
 	num *= angle * (particle == PART_STREAK || particle == PART_LIGHTNING ? 1 : partmul) /
 		size / 30 * (elapse ? logf(elapse) / 3 : 1);
