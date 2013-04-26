@@ -27,7 +27,7 @@ namespace game
 	hashset<mapinfo> *mapdata = NULL;
 	mapinfo *curmap = NULL;
 	bool connected = false;
-	bool transfer = false;f
+	bool transfer = false;
 	bool abort = false;
 
 	rpgchar *player1 = new rpgchar();
@@ -271,9 +271,9 @@ namespace game
 	}
 
 	template<class T>
-	static inline void loadassets(const char *dir, T *&var, hashset<T> &objects)
+	static inline void loadassets(const char *dir, T *&var, hashset<T> &objects, bool clear = true)
 	{
-		objects.clear();
+		if(clear) objects.clear();
 		vector<char *> files;
 		string file;
 
@@ -282,16 +282,21 @@ namespace game
 		{
 			const char *hash = queryhashpool(files[i]);
 
-			if(objects.access(hash))
+			if((var = objects.access(hash)))
 			{
-				WARNINGF("Duplicate instance: \"%s/%s.cfg\" - ignoring", dir, files[i]);
-				continue;
+				if(clear)
+				{
+					WARNINGF("Duplicate instance: \"%s/%s.cfg\" - ignoring", dir, files[i]);
+					continue;
+				}
+				var->~T();
+				new (var) T();
 			}
 
 			if(DEBUG_WORLD)
 				DEBUGF("registering hash %s from \"%s/%s.cfg\"", hash, dir, files[i]);
 
-			var = &objects[hash];
+			if(!var) var = &objects[hash];
 			var->key = hash;
 			formatstring(file)("%s/%s.cfg", dir, files[i]);
 			execfile(file);
@@ -302,14 +307,15 @@ namespace game
 	}
 
 	template<class T>
-	static inline void loadassets_2pass(const char *dir, T *&var, hashset<T> &objects)
+	static inline void loadassets_2pass(const char *dir, T *&var, hashset<T> &objects, bool clear = true)
 	{
-		objects.clear();
+		if(clear) objects.clear();
 		vector<char *> files;
 		string file;
 
 		listfiles(dir, "cfg", files);
-		loopv(files)
+
+		if(clear) loopv(files)
 		{
 			const char *hash = queryhashpool(files[i]);
 
@@ -324,6 +330,21 @@ namespace game
 				DEBUGF("registering hash: %s", hash);
 
 			objects[hash].key = hash;
+		}
+		else loopvrev(files)
+		{
+			bool redundant = false;
+			loopj(i) if(!strcmp(files[i], files[j])) { redundant = true; break; }
+			if(redundant) { delete[] files.remove(i); continue; }
+
+			const char *hash = queryhashpool(files[i]);
+			if((var = objects.access(hash)))
+			{
+				var->~T();
+				new (var) T();
+				var->key = hash;
+			}
+			else objects[hash].key = hash;
 		}
 
 		loopv(files)
@@ -343,7 +364,7 @@ namespace game
 		var = NULL;
 	}
 
-	void loadassets(const char *dir, bool definitions = false)
+	void loadassets(const char *dir, bool definitions = false, bool clear = true)
 	{
 		forceverbose++;
 		string pth;
@@ -377,38 +398,38 @@ namespace game
 
 		if(DEBUG_WORLD) DEBUGF("loading merchants");
 		formatstring(pth)("%s/merchants", dir);
-		loadassets(pth, loadingmerchant, merchants);
+		loadassets(pth, loadingmerchant, merchants, clear);
 
 		if(DEBUG_WORLD) DEBUGF("loading scripts");
 		formatstring(pth)("%s/scripts", dir);
-		loadassets(pth, loadingscript, scripts);
+		loadassets(pth, loadingscript, scripts, clear);
 		RANGECHECK(scripts);
 
 		if(DEBUG_WORLD) DEBUGF("loading particle effects");
 		formatstring(pth)("%s/effects", dir);
-		loadassets(pth, loadingeffect, effects);
+		loadassets(pth, loadingeffect, effects, clear);
 
 		if(DEBUG_WORLD) DEBUGF("loading statuses");
 		formatstring(pth)("%s/statuses", dir);
-		loadassets(pth, loadingstatusgroup, statuses);
+		loadassets(pth, loadingstatusgroup, statuses, clear);
 
 		if(DEBUG_WORLD) DEBUGF("loading ammotypes");
 		formatstring(pth)("%s/ammo", dir);
-		loadassets(pth, loadingammotype, ammotypes);
+		loadassets(pth, loadingammotype, ammotypes, clear);
 
 		if(DEBUG_WORLD) DEBUGF("loading factions");
 		formatstring(pth)("%s/factions", dir);
-		loadassets_2pass(pth, loadingfaction, factions);
+		loadassets_2pass(pth, loadingfaction, factions, clear);
 		RANGECHECK(factions);
 
 		if(DEBUG_WORLD) DEBUGF("loading mapscripts");
 		formatstring(pth)("%s/mapscripts", dir);
-		loadassets(pth, loadingmapscript, mapscripts);
+		loadassets(pth, loadingmapscript, mapscripts, clear);
 		RANGECHECK(mapscripts);
 
 		if(DEBUG_WORLD) DEBUGF("loading recipes");
 		formatstring(pth)("%s/recipes", dir);
-		loadassets(pth, loadingrecipe, recipes);
+		loadassets(pth, loadingrecipe, recipes, clear);
 
 		reserved::load();
 
@@ -432,7 +453,7 @@ namespace game
 	ICOMMAND(r_rehash, "", (),
 		if(!mapdata) return;
 		conoutf("Reloading configuration files in data/rpg/games/%s", data);
-		loadassets(datapath(), true);
+		loadassets(datapath(), true, false);
 		if(abort)
 		{
 			ERRORF("game breaking errors were encountered while parsing files; aborting current game");
