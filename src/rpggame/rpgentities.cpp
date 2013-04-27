@@ -410,7 +410,7 @@ namespace entities
 			case PLATFORM:
 			case TRIGGER:
 			case SPAWN:
-				e.attr.pop();
+				e.attr.drop();
 				e.attr.insert(0, game::player1->yaw);
 		}
 	}

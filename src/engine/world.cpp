@@ -936,7 +936,7 @@ extentity *newentity(bool local, const vec &o, int type, int *attrs, int &idx)
             break;
                 case ET_MAPMODEL:
                 case ET_PLAYERSTART:
-                    e.attr.pop();
+                    e.attr.drop();
                     e.attr.insert(0, camera1->yaw);
                     break;
         }
@@ -1141,7 +1141,7 @@ void enttype(char *type, int *numargs)
             e.type = typeidx;
             int numattrs = getattrnum(typeidx);
             while(e.attr.length() < numattrs) e.attr.add(0);
-            while(e.attr.length() > numattrs) e.attr.pop();
+            while(e.attr.length() > numattrs) e.attr.drop();
         );
     }
     else entfocus(efocus,
