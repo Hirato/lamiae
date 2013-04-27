@@ -999,10 +999,10 @@ namespace UI
         {
             if(code != -4 && code != -5) return Object::hoverkey(code, isdown);
 
-            if(!isdown) return false;
-
             Scroller *scroller = (Scroller *) findsibling(TYPE_SCROLLER, NULL);
             if(!scroller || !scroller->canscroll) return false;
+
+            if(!isdown) return true;
 
              float adjust = (code == -4 ? -.2 : .2) * arrowspeed;
             if(getorient() == ORIENT_VERT)
@@ -1054,10 +1054,9 @@ namespace UI
     {
         if(code != -4 && code != -5) return Object::hoverkey(code, isdown);
 
-        if(!canscroll || !isdown) return false;
-
         ScrollBar *slider = (ScrollBar *) findsibling(TYPE_SCROLLBAR, NULL);
-        if(!slider) return false;;
+        if(!slider || !canscroll) return false;;
+        if(!isdown) return true;
 
         float adjust = (code == -4 ? -.2 : .2) * slider->arrowspeed;
         if(slider->getorient() == ORIENT_VERT)
@@ -2330,7 +2329,7 @@ namespace UI
 
         bool hoverkey(int code, bool isdown)
         {
-            return key(code, isdown);
+            return key(code, isdown) || Object::hoverkey(code, isdown);
         }
 
         void resetvalue()
@@ -2364,7 +2363,6 @@ namespace UI
                     break;
 
                 default:
-                    if(code<32) return false;
                     if(keyfilter && !strchr(keyfilter, code)) return true;
                     break;
             }
@@ -2757,7 +2755,7 @@ namespace UI
             }
 
             default:
-                return world->key(code, isdown);
+                return world->key(code, isdown) || textediting;
         }
     }
 
@@ -2909,7 +2907,7 @@ void applychanges()
 {
     static uint *resetgl = compilecode("resetgl");
     static uint *resetsound = compilecode("resetsound");
-	static uint *resetshaders = compilecode("resetshaders");
+    static uint *resetshaders = compilecode("resetshaders");
 
     int changetypes = 0;
     loopv(needsapply) changetypes |= needsapply[i].type;
@@ -2919,7 +2917,7 @@ void applychanges()
 }
 
 ICOMMAND(pendingchanges, "", (), intret(needsapply.length()));
-ICOMMAND(clearchanges, "", (), clearchanges(CHANGE_GFX|CHANGE_SOUND));
+ICOMMAND(clearchanges, "", (), clearchanges(CHANGE_GFX|CHANGE_SOUND|CHANGE_SHADERS));
 COMMAND(applychanges, "");
 
 ICOMMAND(loopchanges, "se", (char *var, uint *body),
