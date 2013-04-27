@@ -6,7 +6,7 @@ enum                            // hardcoded texture numbers
 };
 
 #define OCTAVERSION 33           // bump if map format changes, see worldio.cpp
-#define LAMIAMAPVERSION 2
+#define LAMIAMAPVERSION 3
 
 struct octaheader
 {

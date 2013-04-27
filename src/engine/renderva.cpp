@@ -408,7 +408,7 @@ static inline void rendermapmodel(extentity &e)
     int anim = ANIM_MAPMODEL|ANIM_LOOP, basetime = 0;
     if(e.flags&extentity::F_ANIM) entities::animatemapmodel(e, anim, basetime);
 
-    rendermapmodel(e.attr[1], anim, e.o, e.attr[0], 0, 0, MDL_CULL_VFC | MDL_CULL_DIST, basetime);
+    rendermapmodel(e.attr[0], anim, e.o, e.attr[1], e.attr[2], e.attr[3], MDL_CULL_VFC | MDL_CULL_DIST, basetime, e.attr[4] > 0 ? e.attr[4] / 100.f : 1);
 }
 
 void rendermapmodels()

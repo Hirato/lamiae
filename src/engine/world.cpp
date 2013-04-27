@@ -18,12 +18,17 @@ bool getentboundingbox(extentity &e, ivec &o, ivec &r)
             return false;
         case ET_MAPMODEL:
         {
-            model *m = loadmodel(NULL, e.attr[1]);
+            model *m = loadmodel(NULL, e.attr[0]);
             if(m)
             {
                 vec center, radius;
                 m->boundbox(center, radius);
-                rotatebb(center, radius, e.attr[0]);
+                if(e.attr[4] > 0)
+                {
+                    center.mul(e.attr[4] / 100.0f);
+                    radius.mul(e.attr[4] / 100.0f);
+                }
+                rotatebb(center, radius, e.attr[1]);
 
                 o = e.o;
                 o.add(center);
@@ -65,7 +70,7 @@ void modifyoctaentity(int flags, int id, extentity &e, cube *c, const ivec &cor,
             switch(e.type)
             {
                 case ET_MAPMODEL:
-                    if(loadmodel(NULL, e.attr[1]))
+                    if(loadmodel(NULL, e.attr[0]))
                     {
                         if(va)
                         {
@@ -93,7 +98,7 @@ void modifyoctaentity(int flags, int id, extentity &e, cube *c, const ivec &cor,
             switch(e.type)
             {
                 case ET_MAPMODEL:
-                    if(loadmodel(NULL, e.attr[1]))
+                    if(loadmodel(NULL, e.attr[0]))
                     {
                         oe.mapmodels.removeobj(id);
                         if(va)
@@ -266,7 +271,8 @@ char *entname(entity &e)
 extern selinfo sel;
 extern bool havesel, selectcorners;
 int entlooplevel = 0;
-int efocus = -1, enthover = -1, entorient = -1, oldhover = -1;
+int efocus = -1, enthover = -1, oldhover = -1;
+VAR(entorient, 1, -1, -1);
 bool undonext = true;
 
 VARF(entediting, 0, 0, 1, { if(!entediting) { entcancel(); efocus = enthover = -1; } });
@@ -467,6 +473,7 @@ float getentyaw(const entity &e)
     switch(e.type)
     {
         case ET_MAPMODEL:
+            return e.attr[1];
         case ET_PLAYERSTART:
             return e.attr[0];
         default:
@@ -479,11 +486,17 @@ void entselectionbox(const entity &e, vec &eo, vec &es)
     model *m = NULL;
     const char *mname = entities::entmodel(e);
     if(mname) m = loadmodel(mname);
-    else if(e.type == ET_MAPMODEL) m = loadmodel(NULL, e.attr[1]);
+    else if(e.type == ET_MAPMODEL) m = loadmodel(NULL, e.attr[0]);
 
     if(m)
     {
         m->collisionbox(eo, es);
+        if(e.type == ET_MAPMODEL && e.attr[4] > 0)
+        {
+            eo.mul(e.attr[4] / 100.0f);
+            es.mul(e.attr[4] / 100.0f);
+        }
+
         loopi(3) if(es.v[i] < entselradius)
             es.v[i] = entselradius;
 
@@ -656,10 +669,16 @@ void renderentradius(extentity &e, bool color)
         }
 
         case ET_MAPMODEL:
+        {
+            if(color) gle::colorf(0, 1, 1);
+            vec dir;
+            vecfromyawpitch(e.attr[1], 0, 1, 0, dir);
+            renderentarrow(e, dir, 4);
+            break;
+        }
         case ET_PLAYERSTART:
         {
             if(color) gle::colorf(0, 1, 1);
-            entities::entradius(e, color);
             vec dir;
             vecfromyawpitch(e.attr[0], 0, 1, 0, dir);
             renderentarrow(e, dir, 4);
@@ -844,12 +863,17 @@ bool dropentity(entity &e, int drop = -1)
     if(drop<0) drop = entdrop;
     if(e.type == ET_MAPMODEL)
     {
-        model *m = loadmodel(NULL, e.attr[1]);
+        model *m = loadmodel(NULL, e.attr[0]);
         if(m)
         {
             vec center;
             m->boundbox(center, radius);
-            rotatebb(center, radius, e.attr[0]);
+            if(e.attr[4] > 0)
+            {
+                center.mul(e.attr[4] / 100.0f);
+                radius.mul(e.attr[4] / 100.0f);
+            }
+            rotatebb(center, radius, e.attr[1]);
             radius.x += fabs(center.x);
             radius.y += fabs(center.y);
         }
@@ -923,22 +947,21 @@ extentity *newentity(bool local, const vec &o, int type, int *attrs, int &idx)
     {
         switch(type)
         {
-        case ET_PARTICLES:
-            switch(e.attr[0])
-            {
-                case 0: case 1: case 2: case 6: case 7: case 9: case 10: case 11: case 12: case 13: case 14: case 15:
-                    if(!e.attr[3]) e.attr[3] |= 0x0F0F0F;
-                    if(e.attr[0] != 6 && e.attr[0] != 7) break;
-                case 5: case 8:
-                    if(!e.attr[2]) e.attr[2] |= 0x0F0F0F;
-                    break;
-            }
-            break;
-                case ET_MAPMODEL:
-                case ET_PLAYERSTART:
-                    e.attr.drop();
-                    e.attr.insert(0, camera1->yaw);
-                    break;
+            case ET_PARTICLES:
+                switch(e.attr[0])
+                {
+                    case 0: case 1: case 2: case 6: case 7: case 9: case 10: case 11: case 12: case 13: case 14: case 15:
+                        if(!e.attr[3]) e.attr[3] |= 0x0F0F0F;
+                        if(e.attr[0] != 6 && e.attr[0] != 7) break;
+                    case 5: case 8:
+                        if(!e.attr[2]) e.attr[2] |= 0x0F0F0F;
+                        break;
+                }
+                break;
+            case ET_PLAYERSTART:
+                e.attr.drop();
+                e.attr.insert(0, camera1->yaw);
+                break;
         }
         entities::fixentity(e);
     }
@@ -956,7 +979,7 @@ const int getattrnum(int type)
     {
         0, //empty
         6, //light
-        6, //mapmodel
+        5, //mapmodel
         2, //playerstart
         3, //envmap
         9, //particles
