@@ -713,8 +713,6 @@ void rpgchar::revive(bool spawn)
 	getsignal("resurrect", true, NULL);
 }
 
-extern int friendlyfire;
-
 VAR(hit_friendly, 1, 0, -1);
 VAR(hit_total, 1, 0, -1);
 
@@ -722,11 +720,21 @@ void rpgchar::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float 
 {
 	hit_friendly = 1;
 	hit_total = 0;
+	vector<victimeffect *> neweffects;
+	bool protect = false;
+
+	if (attacker->type() == ENT_CHAR)
+	{
+		rpgchar *d = (rpgchar *) attacker;
+		if(game::friendlyfire >= 2 && faction == d->faction) protect = true;
+		else if (game::friendlyfire >= 3 && game::factions.access(faction)->getrelation(d->faction) > 50) protect = true;
+	}
+
 	loopv(weapon->effects)
 	{
 		statusgroup *sg = game::statuses.access(weapon->effects[i]->status);
 		if(!sg->friendly) hit_friendly = 0;
-		victimeffect &v = *seffects.add(new victimeffect(attacker, weapon->effects[i], weapon->chargeflags, mul));
+		victimeffect &v = *neweffects.add(new victimeffect(attacker, weapon->effects[i], weapon->chargeflags, mul));
 		loopvj(v.effects) hit_total += v.effects[j]->value();
 	}
 
@@ -734,20 +742,18 @@ void rpgchar::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float 
 	{
 		statusgroup *sg = game::statuses.access(ammo->effects[i]->status);
 		if(!sg->friendly) hit_friendly = 0;
-		victimeffect &v = *seffects.add(new victimeffect(attacker, ammo->effects[i], weapon->chargeflags, mul));
+		victimeffect &v = *neweffects.add(new victimeffect(attacker, ammo->effects[i], weapon->chargeflags, mul));
 		loopvj(v.effects) hit_total += v.effects[j]->value();
 	}
 
-	vec kickback = dir.mul(weapon->kickback + (ammo ? ammo->kickback : 0));
-	if(state == CS_DEAD && ragdoll)
-	{
-		kickback.mul(2);
-		ragdolladdvel(this, kickback);
-	}
-	else vel.add(kickback);
-
 	if(!hit_friendly)
 	{
+		if(protect)
+		{
+			neweffects.deletecontents();
+			return;
+		}
+
 		lastpain = lastmillis;
 
 		if(this == game::player1 && hit_total)
@@ -768,6 +774,16 @@ void rpgchar::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float 
 			useitem(armour[i]->it, armour[i]);
 		}
 	}
+
+	loopv(neweffects) seffects.add(neweffects[i]);
+
+	vec kickback = dir.mul(weapon->kickback + (ammo ? ammo->kickback : 0));
+	if(state == CS_DEAD && ragdoll)
+	{
+		kickback.mul(2);
+		ragdolladdvel(this, kickback);
+	}
+	else vel.add(kickback);
 
 	if(this == game::player1 && !hit_friendly && hit_total) damagecompass(hit_total, attacker->o);
 	getsignal("hit", false, attacker);

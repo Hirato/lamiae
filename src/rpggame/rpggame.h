@@ -146,6 +146,8 @@ namespace reserved
 namespace game
 {
 	extern int mapgameversion;
+	//somewhat unintuitive, 0 - no prtection 3 - protects against hurting all friendlies.
+	extern int friendlyfire;
 	extern string data;
 	extern const char *datapath(const char *subdir = "");
 	//NOTE: queryhashpool will register the string
