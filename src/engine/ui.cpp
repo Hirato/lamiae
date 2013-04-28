@@ -2237,27 +2237,6 @@ namespace UI
                 case SDLK_ESCAPE:
                     setfocus(NULL);
                     return true;
-
-                case SDLK_HOME:
-                case SDLK_END:
-                case SDLK_PAGEUP:
-                case SDLK_PAGEDOWN:
-                case SDLK_DELETE:
-                case SDLK_BACKSPACE:
-                case SDLK_LSHIFT:
-                case SDLK_RSHIFT:
-                case SDLK_LCTRL:
-                case SDLK_RCTRL:
-                    break;
-                case SDLK_a:
-                case SDLK_x:
-                case SDLK_c:
-                case SDLK_v:
-                    if(SDL_GetModState()) break;
-                default:
-                    if(code<32) return false;
-                    if(keyfilter && !strchr(keyfilter, code)) return true;
-                    break;
             }
             if(isdown) edit->key(code);
             return true;
@@ -2354,17 +2333,6 @@ namespace UI
                     commit();
                     setfocus(NULL);
                     return true;
-                case SDLK_HOME:
-                case SDLK_END:
-                case SDLK_DELETE:
-                case SDLK_BACKSPACE:
-                case SDLK_LEFT:
-                case SDLK_RIGHT:
-                    break;
-
-                default:
-                    if(keyfilter && !strchr(keyfilter, code)) return true;
-                    break;
             }
             if(isdown) edit->key(code);
             return true;
@@ -2375,7 +2343,17 @@ namespace UI
     {
         if(!focused || focused->gettype() != TYPE_TEXTEDITOR) return false;
 
-        ((TextEditor *) focused)->edit->input(str, len);
+        TextEditor *field = (TextEditor *) focused;
+        if(field->keyfilter)
+        {
+            vector<char> filtered;
+            loopi(len) if(strchr(field->keyfilter, str[i]))
+                filtered.add(str[i]);
+            field->edit->input(filtered.getbuf(), filtered.length());
+
+        }
+        else field->edit->input(str, len);
+
         return true;
     }
 
