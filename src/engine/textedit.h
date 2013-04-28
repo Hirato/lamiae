@@ -1,4 +1,3 @@
-#define PASTEBUFFER "#pastebuffer"
 struct editline
 {
     enum { CHUNKSIZE = 256 };
@@ -257,31 +256,6 @@ struct editor
         return lines[cy];
     }
 
-    void copyselectionto(editor *b)
-    {
-        if(b==this) return;
-
-        b->clear(NULL);
-        int sx, sy, ex, ey;
-        region(sx, sy, ex, ey);
-        loopi(1+ey-sy)
-        {
-            if(b->maxy != -1 && b->lines.length() >= b->maxy) break;
-            int y = sy+i;
-            char *line = lines[y].text;
-            int len = lines[y].len;
-            if(y == sy && y == ey)
-            {
-                line += sx;
-                len = ex - sx;
-            }
-            else if(y == sy) { line += sx; len -= sx; }
-            else if(y == ey) len = ex;
-            b->lines.add().set(line, len);
-        }
-        if(b->lines.empty()) b->lines.add().set("");
-    }
-
     char *tostring()
     {
         int len = 0;
@@ -314,13 +288,21 @@ struct editor
                 line += sx;
                 len = ex - sx;
             }
-            else if(y == sy) line += sx;
+            else if(y == sy) { line += sx; len -= sx; }
             else if(y == ey) len = ex;
             buf.put(line, len);
             buf.add('\n');
         }
         buf.add('\0');
         return newstring(buf.getbuf(), buf.length()-1);
+    }
+
+    void copyselection()
+    {
+        char *text = selectiontostring();
+
+        if(text[0]) SDL_SetClipboardText(text);
+        delete[] text;
     }
 
     void removelines(int start, int count)
@@ -393,45 +375,14 @@ struct editor
         while(*s) insert(*s++);
     }
 
-    void insertallfrom(editor *b)
+    void pasteinto()
     {
-        if(b==this) return;
+        if(!SDL_HasClipboardText()) return;
 
-        del();
-
-        if(b->lines.length() == 1 || maxy == 1)
-        {
-            editline &current = currentline();
-            char *str = b->lines[0].text;
-            int slen = b->lines[0].len;
-            if(maxx >= 0 && b->lines[0].len + cx > maxx) slen = maxx-cx;
-            if(slen > 0)
-            {
-                int len = current.len;
-                if(maxx >= 0 && slen + cx + len > maxx) len = max(0, maxx-(cx+slen));
-                current.insert(str, cx, slen);
-                cx += slen;
-            }
-        }
-        else
-        {
-            loopv(b->lines)
-            {
-                if(!i)
-                {
-                    editline newline(&lines[cy].text[cx]);
-                    lines[cy].chop(cx);
-                    lines[cy].insert(b->lines[i].text,cx);
-                    lines.insert(++cy, newline);
-                }
-                else if(i >= b->lines.length() - 1)
-                {
-                    cx = b->lines[i].len;
-                    lines[cy].prepend(b->lines[i].text);
-                }
-                else if(maxy < 0 || lines.length() < maxy) lines.insert(cy++, editline(b->lines[i].text));
-            }
-        }
+        if(mx > 0) del();
+        char *cb = SDL_GetClipboardText();
+        insert(cb);
+        SDL_free(cb);
     }
 
     void movementmark()
@@ -465,8 +416,6 @@ struct editor
         #else
             #define MOD_KEYS (KMOD_LCTRL|KMOD_RCTRL)
         #endif
-
-        extern editor *useeditor(const char *name, int mode, bool focus, const char *initval = NULL);
 
         switch(code)
         {
@@ -658,35 +607,29 @@ struct editor
             }
             case SDLK_a:
                 if(! (SDL_GetModState() & MOD_KEYS)) break;
-                    selectall();
+                selectall();
                 scrollonscreen();
                 break;
 
             case SDLK_x:
             {
-                if(! (SDL_GetModState() & MOD_KEYS)) break;
-                editor *b = useeditor(PASTEBUFFER, EDITORFOREVER, false);
-                if(this == b) break;
-                copyselectionto(b);
+                if(! (SDL_GetModState() & MOD_KEYS) || mx == -1) break;
+                copyselection();
                 del();
                 scrollonscreen();
                 break;
             }
             case SDLK_c:
             {
-                if(! (SDL_GetModState() & MOD_KEYS)) break;
-                editor *b = useeditor(PASTEBUFFER, EDITORFOREVER, false);
-                if(this == b) break;
-                copyselectionto(b);
+                if(! (SDL_GetModState() & MOD_KEYS) || mx == -1) break;
+                copyselection();
                 scrollonscreen();
                 break;
             }
             case SDLK_v:
             {
                 if(! (SDL_GetModState() & MOD_KEYS)) break;
-                editor *b = useeditor(PASTEBUFFER, EDITORFOREVER, false);
-                if(this == b) break;
-                insertallfrom(b);
+                pasteinto();
                 scrollonscreen();
                 break;
             }
@@ -854,7 +797,7 @@ static void flusheditors()
     }
 }
 
-editor *useeditor(const char *name, int mode, bool focus, const char *initval = NULL)
+static editor *useeditor(const char *name, int mode, bool focus, const char *initval = NULL)
 {
     loopv(editors) if(strcmp(editors[i]->name, name) == 0)
     {
@@ -921,8 +864,8 @@ TEXTCOMMAND(textinit, "sss", (char *name, char *file, char *initval), // loads i
         e->load();
     }
 });
-TEXTCOMMAND(textcopy, "", (), editor *b = useeditor(PASTEBUFFER, EDITORFOREVER, false); top->copyselectionto(b););
-TEXTCOMMAND(textpaste, "", (), editor *b = useeditor(PASTEBUFFER, EDITORFOREVER, false); top->insertallfrom(b););
+TEXTCOMMAND(textcopy, "", (), top->copyselection());
+TEXTCOMMAND(textpaste, "", (), top->pasteinto());
 TEXTCOMMAND(textmark, "i", (int *m),  // (1=mark, 2=unmark), return current mark setting if no args
     if(*m) top->mark(*m==1);
     else intret(top->region() ? 1 : 2);
