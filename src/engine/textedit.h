@@ -299,6 +299,8 @@ struct editor
 
     void copyselection()
     {
+        if(!region()) return;
+
         char *text = selectiontostring();
 
         if(text[0]) SDL_SetClipboardText(text);
@@ -379,7 +381,7 @@ struct editor
     {
         if(!SDL_HasClipboardText()) return;
 
-        if(mx > 0) del();
+        if(region()) del();
         char *cb = SDL_GetClipboardText();
         insert(cb);
         SDL_free(cb);
@@ -613,7 +615,7 @@ struct editor
 
             case SDLK_x:
             {
-                if(! (SDL_GetModState() & MOD_KEYS) || mx == -1) break;
+                if(! (SDL_GetModState() & MOD_KEYS) || !region()) break;
                 copyselection();
                 del();
                 scrollonscreen();
@@ -621,7 +623,7 @@ struct editor
             }
             case SDLK_c:
             {
-                if(! (SDL_GetModState() & MOD_KEYS) || mx == -1) break;
+                if(! (SDL_GetModState() & MOD_KEYS) || !region()) break;
                 copyselection();
                 scrollonscreen();
                 break;
@@ -704,7 +706,7 @@ struct editor
             {
                 int width, height;
                 text_bounds(lines[i].text, width, height, maxwidth);
-                if(h + height > pixelheight) { maxy = i; break; }
+                if(h + height > pixelheight) { maxy = i + 1; break; }
                 if(i == sy) psy += h;
                 if(i == ey) { pey += h; break; }
                 h += height;
