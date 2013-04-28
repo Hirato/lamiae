@@ -632,7 +632,26 @@ struct editor
                         }
                     }
                 }
-                else insert('\t');
+                else if(SDL_GetModState() & KMOD_SHIFT)
+                {
+                    if(cx > 0)
+                    {
+                        if(lines[cy].text[0] == '\t')
+                        {
+                            lines[cy].del(0, 1);
+                            cx--;
+                        }
+                        else loopj(min(4, lines[cy].len)) if(lines[cy].text[0] == ' ')
+                        {
+                            lines[cy].del(0, 1);
+                            cx--;
+                        }
+                    }
+                }
+                else
+                {
+                    insert('\t');
+                }
 
                 scrollonscreen();
                 break;
