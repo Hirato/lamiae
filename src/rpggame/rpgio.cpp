@@ -81,16 +81,6 @@ namespace rpgio
 		delete[] _str; \
 	} while(0);
 
-	#define VALIDHASH(val, ht, ret) \
-	do { \
-		if(!val || !(ht).access(val)) \
-		{ \
-			abort = true; \
-			ERRORF(#val " (%s / %p) infers an invalid entry from " #ht " at " __FILE__ ":%i", val, val, __LINE__); \
-			return ret; \
-		} \
-	} while(0);
-
 	struct saveheader
 	{
 		char magic[4];
