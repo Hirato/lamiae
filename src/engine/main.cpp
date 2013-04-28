@@ -105,6 +105,9 @@ void writeinitcfg()
     f->printf("fullscreen %d\n", fullscreen);
     f->printf("scr_w %d\n", scr_w);
     f->printf("scr_h %d\n", scr_h);
+    extern int vsync, vsynctear;
+    f->printf("vsync %d\n", vsync);
+    f->printf("vsynctear %d\n", vsynctear);
     extern int sound, soundchans, soundfreq, soundbufferlen;
     f->printf("sound %d\n", sound);
     f->printf("soundchans %d\n", soundchans);
@@ -962,8 +965,8 @@ void checkinput()
                 break;
 
             case SDL_MOUSEWHEEL:
-                if(event.wheel.y > 0) processkey(-4, true);
-                else if(event.wheel.y < 0) processkey(-5, true);
+                if(event.wheel.y > 0) { processkey(-4, true); processkey(-4, false); }
+                else if(event.wheel.y < 0) { processkey(-5, true); processkey(-5, false); }
                 break;
         }
     }
