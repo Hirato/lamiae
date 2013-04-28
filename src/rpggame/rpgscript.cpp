@@ -251,7 +251,7 @@ void mapinfo::getsignal(const char *sig, bool prop, rpgent *sender)
 	if(DEBUG_VSCRIPT)
 		DEBUGF("map %p received signal %s with sender %p; propagating: %s", this, sig, sender, prop ? "yes" : "no");
 
-	signal *listen = game::mapscripts.access(script)->listeners.access(sig);
+	signal *listen = script->listeners.access(sig);
 	if(listen) loopv(listen->code)
 		rpgscript::domapscript(this, sender, listen->code[i]);
 
@@ -655,12 +655,13 @@ namespace rpgscript
 			mapinfo *tmp = accessmap(m);
 			if(!tmp) return;
 
-			if(mapscripts.access(scr))
+			mapscript *s = mapscripts.access(scr);
+			if(!s)
 			{
 				if(DEBUG_SCRIPT)
 					DEBUGF("Prepared mapinfo for %s with script %s and flags %i", m, scr, *f);
 
-				tmp->script = queryhashpool(scr);
+				tmp->script = s;
 			}
 			else
 				ERRORF("Cannot assign script %s to map %s; flags %i still applied", scr, m, *f);
@@ -1462,10 +1463,9 @@ namespace rpgscript
 	ICOMMAND(r_add_status, "ssfi", (const char *ref, const char *st, float *mul, int *flags),
 		if(!statuses.access(st)) return;
 		getreference(ref, victim, victim->getent(victimidx), , r_add_effect)
+		statusgroup *sg = statuses.access(st);
 
-		st = queryhashpool(st);
-
-		inflict inf(st, ATTACK_NONE, 1); //resistances aren't applied
+		inflict inf(sg, ATTACK_NONE, 1); //resistances aren't applied
 		victim->getent(victimidx)->seffects.add(new victimeffect(NULL, &inf, *flags, *mul));
 	)
 

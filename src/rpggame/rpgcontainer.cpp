@@ -146,12 +146,12 @@ void rpgcontainer::init(const char *base)
 
 bool rpgcontainer::validate()
 {
-	if(!game::scripts.access(script))
+	if(!script)
 	{
-		ERRORF("Container %p uses invalid script: %s - trying fallback", this, script);
+		ERRORF("Container %p uses invalid script - trying fallback: null", this);
 		script = DEFAULTSCR;
 
-		if(!game::scripts.access(script)) return false;
+		if(!script) return false;
 	}
 
 	return true;

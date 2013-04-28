@@ -49,12 +49,12 @@ void rpgobstacle::init(const char *base)
 
 bool rpgobstacle::validate()
 {
-	if(!game::scripts.access(script))
+	if(!script)
 	{
-		ERRORF("Obstacle %p uses invalid script: %s - trying fallback", this, script);
+		ERRORF("Obstacle %p uses invalid script - trying fallback: null", this);
 		script = DEFAULTSCR;
 
-		if(!game::scripts.access(script)) return false;
+		if(!script) return false;
 	}
 
 	return true;

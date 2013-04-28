@@ -10,16 +10,16 @@
 
 #define DEFAULTMODEL "xonotic/gak"
 
-#define DEFAULTITEMSCR game::queryhashpool("default item")
-#define DEFAULTCHARSCR game::queryhashpool("default critter")
-#define DEFAULTOBSTSCR game::queryhashpool("default obstacle")
-#define DEFAULTCONTSCR game::queryhashpool("default container")
-#define DEFAULTPLATSCR game::queryhashpool("default platform")
-#define DEFAULTTRIGSCR game::queryhashpool("default trigger")
-#define DEFAULTSCR     game::queryhashpool("null")
-#define DEFAULTMAPSCR  game::queryhashpool("null")
-#define DEFAULTFACTION game::queryhashpool("player")
-#define DEFAULTAMMO    game::queryhashpool("mana")
+#define DEFAULTITEMSCR game::scripts.access("default item")
+#define DEFAULTCHARSCR game::scripts.access("default critter")
+#define DEFAULTOBSTSCR game::scripts.access("default obstacle")
+#define DEFAULTCONTSCR game::scripts.access("default container")
+#define DEFAULTPLATSCR game::scripts.access("default platform")
+#define DEFAULTTRIGSCR game::scripts.access("default trigger")
+#define DEFAULTSCR     game::scripts.access("null")
+#define DEFAULTMAPSCR  game::mapscripts.access("null")
+#define DEFAULTFACTION game::factions.access("player")
+#define DEFAULTAMMO    game::ammotypes.access("mana")
 
 #ifdef NO_DEBUG
 
@@ -711,10 +711,9 @@ struct statusgroup
 	bool friendly;
 
 	const char *icon, *name, *description;
-	const char *persisteffect;
-	effect *fx;
+	effect *persisteffect;
 
-	statusgroup() : key(NULL), friendly(false), icon(NULL), name(NULL), description(NULL), persisteffect(NULL), fx(NULL) {}
+	statusgroup() : key(NULL), friendly(false), icon(NULL), name(NULL), description(NULL), persisteffect(NULL) {}
 	~statusgroup()
 	{
 		delete[] icon;
@@ -784,7 +783,6 @@ struct rpgent : dynent
 		vec4 light; //w == radius x y z == R G B
 		float alpha;
 		const char *mdl;
-		script *scr;
 	} temp;
 
 	///everything can suffer some status effects, whether this is just invisibility or something more sinister is up for debate
@@ -827,7 +825,6 @@ struct rpgent : dynent
 		temp.mdl = NULL;
 		temp.light = vec4(0, 0, 0, 0);
 		temp.alpha = 1;
-		temp.scr = NULL;
 	}
 	virtual ~rpgent()
 	{
@@ -993,7 +990,7 @@ enum
 
 struct inflict
 {
-	const char *status;
+	statusgroup *status;
 	int element;
 	float mul;
 
@@ -1003,21 +1000,19 @@ struct inflict
 			return false;
 		return true;
 	}
-	inflict(const char *st, int el, float m) : status(st), element(el), mul(m) {}
+	inflict(statusgroup *st, int el, float m) : status(st), element(el), mul(m) {}
 	~inflict() { }
 };
 
 struct use
 {
 	const char *name, *description, *icon;
-	const char *script; //id
+	::script *script;
 	int type; //refers to above
 	int cooldown;
 	int chargeflags;
 
 	vector<inflict *> effects;
-
-	::script *scr;
 
 	virtual use *dup(use *o = NULL)
 	{
@@ -1049,7 +1044,7 @@ struct use
 
 		return true;
 	}
-	use(const char *scr) : name(NULL), description(NULL), icon(NULL), script(scr), type(USE_CONSUME), cooldown(500), chargeflags(CHARGE_MAG), scr(NULL) {}
+	use(::script *scr) : name(NULL), description(NULL), icon(NULL), script(scr), type(USE_CONSUME), cooldown(500), chargeflags(CHARGE_MAG) {}
 	virtual ~use()
 	{
 		delete[] name;
@@ -1063,7 +1058,7 @@ struct use_armour : use
 {
 	const char *vwepmdl;
 	const char *hudmdl;
-	const char *idlefx;
+	::effect *idlefx;
 	statreq reqs;
 	int slots;
 	int skill;
@@ -1096,14 +1091,14 @@ struct use_armour : use
 
 		return use::compare(o);
 	}
-	use_armour(const char *scr) : use(scr), vwepmdl(NULL), hudmdl(NULL), idlefx(NULL), reqs(statreq()), slots(0), skill(SKILL_ARMOUR) {type = USE_ARMOUR;}
+	use_armour(::script *scr) : use(scr), vwepmdl(NULL), hudmdl(NULL), idlefx(NULL), reqs(statreq()), slots(0), skill(SKILL_ARMOUR) {type = USE_ARMOUR;}
 	~use_armour() { delete[] vwepmdl; delete[] hudmdl;}
 };
 
 struct use_weapon : use_armour
 {
-	const char *projeffect, *traileffect, *deatheffect;
-	const char *ammo; //refers to item in ammotype vector<>, -ves use mana
+	effect *projeffect, *traileffect, *deatheffect;
+	ammotype *ammo; //refers to item in ammotype vector<>, -ves use mana
 	int range;
 	int angle;
 	int lifetime;
@@ -1144,7 +1139,7 @@ struct use_weapon : use_armour
 
 		return use_armour::compare(o);
 	}
-	use_weapon(const char *scr) : use_armour(scr), projeffect(NULL), traileffect(NULL), deatheffect(NULL), ammo(DEFAULTAMMO), range(256), angle(60), lifetime(10000), gravity(0), cost(10), pflags(P_DIST|P_TIME), target(T_SINGLE), radius(32), kickback(10), recoil(0), charge(0), basecharge(.5f), mincharge(.5f), maxcharge(1.0f), elasticity(0.8), speed(1.0f) {type = USE_WEAPON;}
+	use_weapon(::script *scr) : use_armour(scr), projeffect(NULL), traileffect(NULL), deatheffect(NULL), ammo(DEFAULTAMMO), range(256), angle(60), lifetime(10000), gravity(0), cost(10), pflags(P_DIST|P_TIME), target(T_SINGLE), radius(32), kickback(10), recoil(0), charge(0), basecharge(.5f), mincharge(.5f), maxcharge(1.0f), elasticity(0.8), speed(1.0f) {type = USE_WEAPON;}
 	~use_weapon() {}
 };
 
@@ -1161,7 +1156,7 @@ struct item
 	const char *name, *icon, *description, *mdl;
 	// NOTE: this points to a pointer in the hashpool - DO NOT FREE!
 	// it also allows cheap equivalency testing
-	const char *script; //id
+	::script *script;
 	const char *base;
 
 	int quantity;
@@ -1178,17 +1173,10 @@ struct item
 	vector<use *> uses;
 	int locals;
 
-	::script *scr;
 	inline ::script *getscript(int use = -1)
 	{
-		if(uses.inrange(use))
-		{
-			::use &u = *uses[use];
-			if(u.scr && u.scr->key == u.script) return u.scr;
-			return (u.scr = game::scripts.access(u.script));
-		}
-		if(scr && scr->key == script) return scr;
-		return (scr = game::scripts.access(script));
+		if(uses.inrange(use)) return uses[use]->script;
+		return script;
 	}
 
 	void getsignal(const char *sig, bool prop = true, rpgent *sender = NULL, int use = -1);
@@ -1235,7 +1223,7 @@ struct item
 		return true;
 	}
 
-	item() : name(NULL), icon(NULL), description(NULL), mdl(newstring(DEFAULTMODEL)), script(DEFAULTITEMSCR), base(NULL), quantity(1), category(0), flags(0), value(0), maxdurability(0), charges(-2), weight(0), durability(0), recovery(1), locals(-1), scr(NULL) {}
+	item() : name(NULL), icon(NULL), description(NULL), mdl(newstring(DEFAULTMODEL)), script(DEFAULTITEMSCR), base(NULL), quantity(1), category(0), flags(0), value(0), maxdurability(0), charges(-2), weight(0), durability(0), recovery(1), locals(-1) {}
 	~item()
 	{
 		delete[] name;
@@ -1280,7 +1268,7 @@ struct rpgobstacle : rpgent
 	};
 
 	const char *mdl;
-	const char *script; //id
+	::script *script;
 	int weight;
 	int flags;
 	int lastupdate;
@@ -1288,11 +1276,7 @@ struct rpgobstacle : rpgent
 	void update();
 	void resetmdl() { temp.mdl = mdl;}
 	void render();
-	inline ::script *getscript()
-	{
-		if(temp.scr && temp.scr->key == script) return temp.scr;
-		return (temp.scr = game::scripts.access(script));
-	}
+	inline ::script *getscript() { return script; }
 	vec blipcol() { return vec(1, 1, 1);}
 	const char *getname() const { return NULL; }
 	const int type() { return ENT_OBSTACLE; }
@@ -1315,17 +1299,15 @@ struct rpgcontainer : rpgent
 	const char *mdl, *name;
 	hashtable<const char *, vector<item *> > inventory;
 	int capacity;
-	const char *faction, *merchant, *script;
+	::faction *faction;
+	::merchant *merchant;
+	::script *script;
 	int lock, magelock;
 
 	void update();
 	void resetmdl();
 	void render();
-	inline ::script *getscript()
-	{
-		if(temp.scr && temp.scr->key == script) return temp.scr;
-		return (temp.scr = game::scripts.access(script));
-	}
+	inline ::script *getscript() { return script; }
 	vec blipcol() { return vec(1, 1, 1);}
 	const char *getname() const { return name; }
 	const int type() { return ENT_CONTAINER; }
@@ -1366,7 +1348,7 @@ struct rpgplatform : rpgent
 	};
 
 	const char *mdl;
-	const char *script; //id
+	::script *script;
 	int speed;
 	int flags;
 
@@ -1378,11 +1360,7 @@ struct rpgplatform : rpgent
 	void update();
 	void resetmdl() { temp.mdl = (mdl && mdl[0]) ? mdl : DEFAULTMODEL; }
 	void render();
-	inline ::script *getscript()
-	{
-		if(temp.scr && temp.scr->key == script) return temp.scr;
-		return (temp.scr = game::scripts.access(script));
-	}
+	inline ::script *getscript() { return script; }
 	vec blipcol() { return vec(1, 1, 1);}
 	const char *getname() const { return NULL; }
 	const int type() { return ENT_PLATFORM; }
@@ -1409,18 +1387,14 @@ struct rpgtrigger : rpgent
 	};
 
 	const char *mdl, *name;
-	const char *script; //id
+	::script *script; //id
 	int flags;
 	int lasttrigger;
 
 	void update();
 	void resetmdl() { temp.mdl = (mdl && mdl[0]) ? mdl : DEFAULTMODEL; }
 	void render();
-	inline ::script *getscript()
-	{
-		if(temp.scr && temp.scr->key == script) return temp.scr;
-		return (temp.scr = game::scripts.access(script));
-	}
+	inline ::script *getscript() { return script; }
 	vec blipcol() { return vec(1, 1, 1);}
 	const char *getname() const { return name; }
 	const int type() { return ENT_TRIGGER; }
@@ -1479,6 +1453,25 @@ struct faction
 };
 static inline bool htcmp(const char *key, const faction &ref) { return !strcmp(key, ref.key); }
 
+struct merchant
+{
+	const char *key;
+	struct rate
+	{
+		float buy, sell;
+		rate(float b, float s) : buy(b), sell(s) {}
+	};
+
+	vector<rate> rates;
+	const char *currency;
+	int credit; //store credit, a measure of how much money the merchant owes you.
+
+	rate getrate(const rpgchar &buyer, int cat) const;
+
+	merchant() : key(NULL), currency(NULL), credit(0) {}
+};
+static inline bool htcmp(const char *key, const merchant &ref) { return !strcmp(key, ref.key); }
+
 //directives are sorted by priority, the most important ones are done first.
 //for example, self defense is high priority while fleeing is an even higher priority,
 //directives also include rudimentary things such as picking stuff up
@@ -1513,7 +1506,9 @@ struct rpgchar : rpgent
 	vec emitters[SLOT_NUM * 2]; //two emitters a slot; start and end
 
 	const char *name, *mdl, *portrait;
-	const char *script, *faction, *merchant; //id
+	::script *script;
+	::faction *faction;
+	::merchant *merchant;
 
 	stats base;
 	hashtable<const char *, vector<item *> > inventory;
@@ -1549,11 +1544,7 @@ struct rpgchar : rpgent
 	void render();
 	const char *getname() const;
 	const int type() {return ENT_CHAR;}
-	inline ::script *getscript()
-	{
-		if(temp.scr && temp.scr->key == script) return temp.scr;
-		return (temp.scr = game::scripts.access(script));
-	}
+	inline ::script *getscript() { return script; }
 	void init(const char *base);
 	bool validate();
 
@@ -1600,35 +1591,18 @@ struct rpgchar : rpgent
 	}
 };
 
-struct merchant
+inline merchant::rate merchant::getrate(const rpgchar &buyer, int cat) const
 {
-	const char *key;
-	struct rate
-	{
-		float buy, sell;
-		rate(float b, float s) : buy(b), sell(s) {}
-	};
+	if(!rates.inrange(cat))
+		return rate(0, 0);
 
-	vector<rate> rates;
-	const char *currency;
-	int credit; //store credit, a measure of how much money the merchant owes you.
+	rate r = rates[cat];
+	float diff = (r.buy - r.sell) * clamp(buyer.base.getskill(SKILL_DIPLOMACY), 0, 100) / 200.0f;
 
-	rate getrate(const rpgchar &buyer, int cat) const
-	{
-		if(!rates.inrange(cat))
-			return rate(0, 0);
-
-		rate r = rates[cat];
-		float diff = (r.buy - r.sell) * clamp(buyer.base.getskill(SKILL_DIPLOMACY), 0, 100) / 200.0f;
-
-		r.buy -= diff;
-		r.sell += diff;
-		return r;
-	}
-
-	merchant() : key(NULL), currency(NULL), credit(0) {}
-};
-static inline bool htcmp(const char *key, const merchant &ref) { return !strcmp(key, ref.key); }
+	r.buy -= diff;
+	r.sell += diff;
+	return r;
+}
 
 struct recipe
 {
@@ -1796,7 +1770,7 @@ struct mapinfo
 
 	// we track the map's key here; we risk leaking memory otherwise
 	const char *name;
-	const char *script; //id
+	mapscript *script; //id
 	int flags;
 	int locals;
 	bool loaded;

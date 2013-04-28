@@ -41,12 +41,9 @@ void projectile::init(rpgchar *d, equipment *w, equipment *a, int fuzzy, float m
 		item = *w;
 		use_weapon *wep = (use_weapon *) w->it->uses[w->use];
 
-		if(wep->projeffect)
-			projfx = game::effects.access(wep->projeffect);
-		if(wep->traileffect)
-			trailfx = game::effects.access(wep->traileffect);
-		if(wep->deatheffect)
-			deathfx = game::effects.access(wep->deatheffect);
+		if(wep->projeffect) projfx = wep->projeffect;
+		if(wep->traileffect) trailfx = wep->traileffect;
+		if(wep->deatheffect) deathfx = wep->deatheffect;
 
 		dist = wep->range;
 		time = wep->lifetime;
@@ -58,7 +55,12 @@ void projectile::init(rpgchar *d, equipment *w, equipment *a, int fuzzy, float m
 		chargeflags = wep->chargeflags;
 
 		if(DEBUG_PROJ)
-			DEBUGF("weapon was provided... fx: %s; %s; %s dist: %i time: %i pflags: %i elasticity %f radius: %i speed %f gravity: %i", wep->projeffect, wep->traileffect, wep->deatheffect, dist, time, pflags, elasticity, radius, dir.magnitude(), gravity);
+		{
+			const char *dp = wep->projeffect ? wep->projeffect->key : NULL,
+				*dt = wep->traileffect ? wep->traileffect->key : NULL,
+				*dd = wep->deatheffect ? wep->deatheffect->key : NULL;
+			DEBUGF("weapon has provided... fx: %s; %s; %s dist: %i time: %i pflags: %i elasticity %f radius: %i speed %f gravity: %i", dp, dt, dd, dist, time, pflags, elasticity, radius, dir.magnitude(), gravity);
+		}
 	}
 	if(a)
 	{
@@ -66,12 +68,9 @@ void projectile::init(rpgchar *d, equipment *w, equipment *a, int fuzzy, float m
 		use_weapon *wep = (use_weapon *) a->it->uses[a->use];
 
 		 //visuals take precedence - if they have them
-		if(wep->projeffect)
-			projfx = game::effects.access(wep->projeffect);
-		if(wep->traileffect)
-			trailfx = game::effects.access(wep->traileffect);
-		if(wep->deatheffect)
-			deathfx = game::effects.access(wep->deatheffect);
+		if(wep->projeffect) projfx = wep->projeffect;
+		if(wep->traileffect) trailfx = wep->traileffect;
+		if(wep->deatheffect) deathfx = wep->deatheffect;
 
 		dist += wep->range;
 		time += wep->lifetime;
@@ -83,7 +82,12 @@ void projectile::init(rpgchar *d, equipment *w, equipment *a, int fuzzy, float m
 		chargeflags |= wep->chargeflags;
 
 		if(DEBUG_PROJ)
-			DEBUGF("ammo was provided... fx: %s; %s; %s dist: %i time: %i pflags: %i elasticity %f radius: %i speed: %f gravity: %i", wep->projeffect, wep->traileffect, wep->deatheffect, dist, time, pflags, elasticity, radius, dir.magnitude(), gravity);
+		{
+			const char *dp = wep->projeffect ? wep->projeffect->key : NULL,
+				*dt = wep->traileffect ? wep->traileffect->key : NULL,
+				*dd = wep->deatheffect ? wep->deatheffect->key : NULL;
+			DEBUGF("ammo was provided, complementing... fx: %s; %s; %s dist: %i time: %i pflags: %i elasticity %f radius: %i speed %f gravity: %i", dp, dt, dd, dist, time, pflags, elasticity, radius, dir.magnitude(), gravity);
+		}
 	}
 	radius = max(1, radius);
 	dir.mul(speed);
@@ -234,7 +238,7 @@ bool projectile::update()
 		if(!wep) return true;
 
 		//see if the used ammo is retained after use
-		if(!game::ammotypes.access(wep->ammo)->reserved &&
+		if(!wep->ammo->reserved &&
 			o.x >= 0 && o.x < getworldsize() &&
 			o.y >= 0 && o.y < getworldsize() &&
 			o.z >= 0 && o.z < getworldsize()
@@ -302,14 +306,14 @@ bool projectile::update()
 				loopv(wep->effects)
 				{
 					areaeffect *aeff = game::curmap->aeffects.add(new areaeffect());
-					statusgroup *sg = game::statuses.access(wep->effects[i]->status);
+					statusgroup *sg = wep->effects[i]->status;
 
 					aeff->owner = owner;
 					aeff->o = o;
 					aeff->radius = radius;
 
 					if(wep->deatheffect)
-						aeff->fx = game::effects.access(wep->deatheffect);
+						aeff->fx = wep->deatheffect;
 					aeff->group = sg;
 					aeff->elem = sg->friendly ? ATTACK_NONE : wep->effects[i]->element;
 
@@ -328,14 +332,14 @@ bool projectile::update()
 				if(amm) loopv(amm->effects)
 				{
 					areaeffect *aeff = game::curmap->aeffects.add(new areaeffect());
-					statusgroup *sg = game::statuses.access(amm->effects[i]->status);
+					statusgroup *sg = amm->effects[i]->status;
 
 					aeff->owner = owner;
 					aeff->o = o;
 					aeff->radius = radius;
 
 					if(amm->deatheffect)
-						aeff->fx = game::effects.access(amm->deatheffect);
+						aeff->fx = amm->deatheffect;
 					aeff->group = sg;
 					aeff->elem = sg->friendly ? ATTACK_NONE : amm->effects[i]->element;
 

@@ -60,22 +60,22 @@ void rpgitem::init(const char *base)
 
 bool item::validate()
 {
-	if(!game::scripts.access(script))
+	if(!script)
 	{
-		ERRORF("Item %p uses invalid script: %s - trying fallback", this, script);
+		ERRORF("Item %p uses invalid script - trying fallback: null", this);
 		script = DEFAULTSCR;
 
-		if(!game::scripts.access(script)) return false;
+		if(!script) return false;
 	}
 
 	loopv(uses)
 	{
-		if(!game::scripts.access(uses[i]->script))
+		if(!uses[i]->script)
 		{
-			ERRORF("Item[%p]->uses[%i] uses invalid script: %s - trying fallback", this, i, uses[i]->script);
+			ERRORF("Item[%p]->uses[%i] uses invalid script- trying fallback: null", this, i);
 			uses[i]->script = DEFAULTSCR;
 
-			if(!game::scripts.access(uses[i]->script)) return false;
+			if(!uses[i]->script) return false;
 		}
 	}
 

@@ -102,11 +102,10 @@ namespace test
 			ERRORF("statusgroup[%s] has not been defined, aborting test", st);
 			return;
 		}
-		st = queryhashpool(st);
 
 		conoutf("inflicting statusgroup[%s] on player, with charge %f and chargeflags %i", st, charge, chargeflags);
 
-		inflict tmp = inflict(st, ATTACK_FIRE, charge);
+		inflict tmp = inflict(sg, ATTACK_FIRE, charge);
 		player1->seffects.add(new victimeffect(NULL, &tmp, chargeflags, 1));
 	}
 	ICOMMAND(testeffect, "sfi", (const char *st, float *m, int *f), testeffect(st, *m, *f))
@@ -127,7 +126,6 @@ namespace test
 			ERRORF("statusgroup[%s] has not been defined, aborting test", st);
 			return;
 		}
-		st = queryhashpool(st);
 
 		vector<effect *> efx;
 		efx.add(NULL);

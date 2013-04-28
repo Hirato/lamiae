@@ -45,8 +45,8 @@ namespace game
 			reference *obj = rpgscript::searchstack(ref, false); \
 			if(obj) \
 			{ \
-				const char *idx = select; \
-				if(idx && (loading ## x = (vec).access(idx)) && DEBUG_VCONF) \
+				loading ## x = select; \
+				if(loading ## x && DEBUG_VCONF) \
 					DEBUGF("successfully selected \"" #c "\" from reference %s", ref); \
 			} \
 			\
@@ -74,8 +74,8 @@ namespace game
 	CHECK(script, script, scripts, NULL)
 	CHECK(effect, effect, effects, NULL)
 	CHECK(statusgroup, status, statuses,
-		obj->getveffect(objidx) ? obj->getveffect(objidx)->group->key :
-		obj->getaeffect(objidx) ? obj->getaeffect(objidx)->group->key :
+		obj->getveffect(objidx) ? obj->getveffect(objidx)->group :
+		obj->getaeffect(objidx) ? obj->getaeffect(objidx)->group :
 		NULL
 	)
 	CHECK(faction, faction, factions,
@@ -336,6 +336,27 @@ namespace game
 	#define HASHF(var, verify, body) HASHNF(var, var, verify, body)
 	#define HASHN(name, var, verify) HASHNF(name, var, verify, )
 	#define HASH(var, verify) HASHF(var, verify, )
+
+	#define SHASHNF(name, var, ht, ver, body) \
+		START(name, "sN$", (const char *s, int *numargs, ident *self), \
+			PREAMBLE(name, , result(e->var ? e->var->key : ""), printsvar(self, e->var ? e->var->key : "")) \
+			void **v = (void **) &e->var; \
+			void *ptr = NULL; \
+			if((ver || s[0]) && !(ptr = (void *) ht.access(s))) \
+			{ \
+				ERRORF("\"%s\" is not a valid hash value for " DEBUG_STR "->" #var " - The command was ignored", s, DEBUG_IND); \
+				return; \
+			} \
+			else s = ""; \
+			*v = ptr; \
+			body; \
+			if(DEBUG_CONF) \
+				conoutf(DEBUG_STR "->" #var " = %s", DEBUG_IND, s); \
+		)
+
+	#define SHASHF(var, ht, ver, body) SHASHNF(var, var, ht, ver, body)
+	#define SHASHN(name, var, ht, ver) SHASHNF(name, var, ht, ver, )
+	#define SHASH(var, ht, ver) SHASHF(var, ht, ver, )
 
 	#define VECF(var, l1, l2, l3, h1, h2, h3, body) VECNF(var, var, l1, l2, l3, h1, h2, h3, body)
 	#define VECN(name, var, l1, l2, l3, h1, h2, h3) VECNF(name, var, l1, l2, l3, h1, h2, h3, )
@@ -726,7 +747,7 @@ namespace game
 	STRING(icon)
 	STRING(name)
 	STRING(description)
-	HASHF(persisteffect, effects.access(s), e->fx = effects.access(s))
+	SHASH(persisteffect, effects, 0)
 
 	#undef START
 	#undef INIT
@@ -803,7 +824,7 @@ namespace game
 	STRING(icon)
 	STRING(description)
 	MODEL(mdl)
-	HASH(script, scripts.access(s))
+	SHASH(script, scripts, 1)
 
 	INT(quantity, 0, 0xFFFFFF)
 	INT(category, 0, categories.length() - 1)
@@ -829,7 +850,7 @@ namespace game
 	#define TYPE USE_CONSUME
 
 	INTRO(type)
-	HASH(script, scripts.access(s))
+	SHASH(script, scripts, 1)
 
 	STRING(name)
 	STRING(description)
@@ -839,11 +860,12 @@ namespace game
 
 	START(new_status, "sif", (const char *st, int *el, float *m),
 		INIT if(!e) return;
-		if(statuses.access(st))
+		statusgroup *sg = statuses.access(st);
+		if(st)
 		{
 			if(DEBUG_CONF)
 				DEBUGF(DEBUG_STR " received status effect %s of element %i; multiplier %f", DEBUG_IND, st, *el, *m);
-			e->effects.add(new inflict(queryhashpool(st), *el, *m));
+			e->effects.add(new inflict(sg, *el, *m));
 		}
 		else
 			ERRORF("r_item_use_new_status: statuseffect \"%s\" does not exist", st);
@@ -856,7 +878,7 @@ namespace game
 
 	MODEL(vwepmdl)
 	MODEL(hudmdl)
-	HASH(idlefx, !*s || effects.access(s))
+	SHASH(idlefx, effects, 0)
 
 	STATREQ(reqs)
 	INT(slots, 0, SLOT_MAX)
@@ -867,10 +889,10 @@ namespace game
 	#define CAST use_weapon
 	#define TYPE USE_WEAPON
 
-	HASH(projeffect, !*s || effects.access(s))
-	HASH(traileffect, !*s || effects.access(s))
-	HASH(deatheffect, !*s || effects.access(s))
-	HASH(ammo, ammotypes.access(s))
+	SHASH(projeffect, effects, 0)
+	SHASH(traileffect, effects, 0)
+	SHASH(deatheffect, effects, 0)
+	SHASH(ammo, ammotypes, 1)
 
 	INT(range, 0, 1024)
 	INT(angle, 0, 360)
@@ -1041,9 +1063,9 @@ namespace game
 	STRING(name)
 	MODEL(mdl)
 	STRING(portrait)
-	HASH(script, scripts.access(s))
-	HASH(faction, factions.access(s))
-	HASH(merchant, !*s || merchants.access(s))
+	SHASH(script, scripts, 1)
+	SHASH(faction, factions, 1)
+	SHASH(merchant, merchants, 0)
 
 	STATS(base)
 	FLOAT(health, 0, e->base.getmaxhp())
@@ -1096,7 +1118,7 @@ namespace game
 	#define DEBUG_IND loadingrpgobstacle
 
 	MODEL(mdl)
-	HASH(script, scripts.access(s))
+	SHASH(script, scripts, 1)
 	INT(weight, 0, 0xFFFF)
 	INT(flags, 0, rpgobstacle::F_MAX)
 
@@ -1113,9 +1135,9 @@ namespace game
 
 	MODEL(mdl)
 	STRING(name)
-	HASH(script, scripts.access(s))
-	HASH(faction, !*s || factions.access(s))
-	HASH(merchant, !*s || merchants.access(s))
+	SHASH(script, scripts, 1)
+	SHASH(faction, factions, 0)
+	SHASH(merchant, merchants, 0)
 	INT(capacity, 0, 0xFFFF)
 	INT(lock, 0, 100)
 	INT(magelock, 0, 100)
@@ -1132,7 +1154,7 @@ namespace game
 	#define DEBUG_IND loadingrpgplatform
 
 	MODEL(mdl)
-	HASH(script, scripts.access(s))
+	SHASH(script, scripts, 1)
 	INT(speed, 1, 1000)
 	INT(flags, 0, rpgplatform::F_MAX)
 
@@ -1182,7 +1204,7 @@ namespace game
 
 	MODEL(mdl)
 	STRING(name)
-	HASH(script, scripts.access(s))
+	SHASH(script, scripts, 1)
 	INT(flags, 0, rpgtrigger::F_MAX)
 
 	#undef START

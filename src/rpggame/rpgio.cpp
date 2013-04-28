@@ -73,6 +73,14 @@ namespace rpgio
 		delete[] _str; \
 	} while(0);
 
+	#define READHASHEXTENDED(val, ht) \
+	do { \
+		const char *_str = readstring(f); \
+		if(_str) val = ht.access(_str); \
+		else val = NULL; \
+		delete[] _str; \
+	} while(0);
+
 	#define VALIDHASH(val, ht, ret) \
 	do { \
 		if(!val || !(ht).access(val)) \
@@ -245,10 +253,10 @@ namespace rpgio
 		NOTNULL(it->mdl, it);
 		preloadmodel(it->mdl);
 
-		READHASH(it->script);
+		READHASHEXTENDED(it->script, game::scripts);
 		READHASH(it->base);
 
-		VALIDHASH(it->script, game::scripts, it)
+		NOTNULL(it->script, it)
 		NOTNULL(it->base, it);
 
 		it->quantity = f->getlil<int>();
@@ -276,15 +284,12 @@ namespace rpgio
 					if(!u) u = new use_weapon(NULL);
 					use_weapon *wp = (use_weapon *) u;
 
-					READHASH(wp->projeffect)
-					READHASH(wp->traileffect)
-					READHASH(wp->deatheffect)
-					READHASH(wp->ammo)
+					READHASHEXTENDED(wp->projeffect, game::effects)
+					READHASHEXTENDED(wp->traileffect, game::effects)
+					READHASHEXTENDED(wp->deatheffect, game::effects)
+					READHASHEXTENDED(wp->ammo, game::ammotypes)
 
-					VALIDHASH(wp->ammo, game::ammotypes, it);
-					if(wp->projeffect)  VALIDHASH(wp->projeffect,  game::effects, it)
-					if(wp->traileffect) VALIDHASH(wp->traileffect, game::effects, it)
-					if(wp->deatheffect) VALIDHASH(wp->deatheffect, game::effects, it)
+					NOTNULL(wp->ammo, it);
 
 					wp->range = f->getlil<int>();
 					wp->angle = f->getlil<int>();
@@ -317,8 +322,7 @@ namespace rpgio
 
 					if(ar->vwepmdl) preloadmodel(ar->vwepmdl);
 					if(ar->hudmdl) preloadmodel(ar->hudmdl);
-					READHASH(ar->idlefx);
-					if(ar->idlefx) VALIDHASH(ar->idlefx, game::effects, it)
+					READHASHEXTENDED(ar->idlefx, game::effects);
 
 					ar->slots = f->getlil<int>();
 					ar->skill = f->getlil<int>();
@@ -338,8 +342,8 @@ namespace rpgio
 					u->description = readstring(f);
 					u->icon = readstring(f);
 
-					READHASH(u->script);
-					VALIDHASH(u->script, game::scripts, it);
+					READHASHEXTENDED(u->script, game::scripts);
+					NOTNULL(u->script, it);
 
 					u->cooldown = f->getlil<int>();
 					u->chargeflags = f->getlil<int>();
@@ -349,9 +353,9 @@ namespace rpgio
 					{
 						CHECKEOF(*f, it)
 
-						const char *status = NULL;
-						READHASH(status);
-						VALIDHASH(status, game::statuses, it);
+						statusgroup *status = NULL;
+						READHASHEXTENDED(status, game::statuses);
+						NOTNULL(status, it);
 
 						int e = f->getlil<int>();
 						float m = f->getlil<float>();
@@ -373,7 +377,7 @@ namespace rpgio
 		writestring(f, it->description);
 		writestring(f, it->mdl);
 
-		writestring(f, it->script);
+		writestring(f, it->script->key);
 		writestring(f, it->base);
 
 		f->putlil(it->quantity);
@@ -398,10 +402,10 @@ namespace rpgio
 				{
 					use_weapon *wp = (use_weapon *) it->uses[i];
 
-					writestring(f, wp->projeffect);
-					writestring(f, wp->traileffect);
-					writestring(f, wp->deatheffect);
-					writestring(f, wp->ammo);
+					writestring(f, wp->projeffect ? wp->projeffect->key : NULL);
+					writestring(f, wp->traileffect ? wp->traileffect->key : NULL);
+					writestring(f, wp->deatheffect ? wp->deatheffect->key : NULL);
+					writestring(f, wp->ammo->key);
 
 					f->putlil(wp->range);
 					f->putlil(wp->angle);
@@ -428,7 +432,7 @@ namespace rpgio
 
 					writestring(f, ar->vwepmdl);
 					writestring(f, ar->hudmdl);
-					writestring(f, ar->idlefx);
+					writestring(f, ar->idlefx ? ar->idlefx->key : NULL);
 
 					f->putlil(ar->slots);
 					f->putlil(ar->skill);
@@ -444,7 +448,7 @@ namespace rpgio
 					writestring(f, u->name);
 					writestring(f, u->description);
 					writestring(f, u->icon);
-					writestring(f, u->script);
+					writestring(f, u->script->key);
 
 					f->putlil(u->cooldown);
 					f->putlil(u->chargeflags);
@@ -452,7 +456,7 @@ namespace rpgio
 					f->putlil(u->effects.length());
 					loopvj(u->effects)
 					{
-						writestring(f, u->effects[j]->status);
+						writestring(f, u->effects[j]->status->key);
 						f->putlil(u->effects[j]->element);
 						f->putlil(u->effects[j]->mul);
 					}
@@ -523,12 +527,13 @@ namespace rpgio
 
 				#undef x
 
-				READHASH(loading->script);
-				READHASH(loading->faction);
-				READHASH(loading->merchant);
-				VALIDHASH(loading->script, game::scripts, ent)
-				VALIDHASH(loading->faction, game::factions, ent)
-				if(loading->merchant) VALIDHASH(loading->merchant, game::merchants, ent)
+				READHASHEXTENDED(loading->script, game::scripts)
+				READHASHEXTENDED(loading->faction, game::factions)
+				READHASHEXTENDED(loading->merchant, game::merchants)
+
+				NOTNULL(loading->script, ent)
+				NOTNULL(loading->faction, ent)
+				if(loading->merchant) NOTNULL(loading->merchant, ent)
 
 				loading->health = f->getlil<float>();
 				loading->mana = f->getlil<float>();
@@ -578,8 +583,8 @@ namespace rpgio
 				NOTNULL(loading->mdl, ent);
 				preloadmodel(loading->mdl);
 
-				READHASH(loading->script);
-				VALIDHASH(loading->script, game::scripts, ent);
+				READHASHEXTENDED(loading->script, game::scripts);
+				NOTNULL(loading->script, ent);
 
 				loading->weight = f->getlil<int>();
 				loading->flags = f->getlil<int>();
@@ -600,12 +605,12 @@ namespace rpgio
 				NOTNULL(loading->mdl, ent);
 				preloadmodel(loading->mdl);
 
-				READHASH(loading->faction)
-				READHASH(loading->merchant)
-				READHASH(loading->script)
-				if(loading->faction) VALIDHASH(loading->faction, game::factions, ent);
-				if(loading->merchant) VALIDHASH(loading->merchant, game::merchants, ent);
-				VALIDHASH(loading->script, game::scripts, ent)
+				READHASHEXTENDED(loading->faction, game::factions)
+				READHASHEXTENDED(loading->merchant, game::merchants)
+				READHASHEXTENDED(loading->script, game::scripts)
+				if(loading->faction) NOTNULL(loading->faction, ent);
+				if(loading->merchant) NOTNULL(loading->merchant, ent);
+				NOTNULL(loading->script, ent)
 
 				loading->capacity = f->getlil<int>();
 				loading->lock = f->getlil<int>();
@@ -632,8 +637,8 @@ namespace rpgio
 				NOTNULL(loading->mdl, ent);
 				preloadmodel(loading->mdl);
 
-				READHASH(loading->script)
-				VALIDHASH(loading->script, game::scripts, ent);
+				READHASHEXTENDED(loading->script, game::scripts)
+				NOTNULL(loading->script, ent)
 
 				loading->speed = f->getlil<int>();
 				loading->flags = f->getlil<int>();
@@ -665,8 +670,8 @@ namespace rpgio
 				preloadmodel(loading->mdl);
 
 				loading->name = readstring(f);
-				READHASH(loading->script);
-				VALIDHASH(loading->script, game::scripts, ent);
+				READHASHEXTENDED(loading->script, game::scripts)
+				NOTNULL(loading->script, ent)
 				loading->flags = f->getlil<int>();
 				loading->lasttrigger = f->getlil<int>() + lastmillis;
 
@@ -688,10 +693,10 @@ namespace rpgio
 			ent->seffects.add(eff);
 
 			updates.add(reference(f->getlil<int>(), lastmap, eff->owner));
-			const char *group;
-			READHASH(group);
-			VALIDHASH(group, game::statuses, ent)
-			eff->group = game::statuses.access(group);
+
+			READHASHEXTENDED(eff->group, game::statuses);
+			NOTNULL(eff->group, ent);
+
 			eff->elem = f->getlil<int>();
 			int numstat = f->getlil<int>();
 			loopj(numstat)
@@ -815,9 +820,9 @@ namespace rpgio
 				#undef x
 
 
-				writestring(f, saving->script);
-				writestring(f, saving->faction);
-				writestring(f, saving->merchant);
+				writestring(f, saving->script->key);
+				writestring(f, saving->faction->key);
+				writestring(f, saving->merchant ? saving->merchant->key : NULL);
 
 				f->putlil(saving->health);
 				f->putlil(saving->mana);
@@ -853,7 +858,7 @@ namespace rpgio
 				rpgobstacle *saving = (rpgobstacle *) d;
 
 				writestring(f, saving->mdl);
-				writestring(f, saving->script);
+				writestring(f, saving->script->key);
 
 				f->putlil(saving->weight);
 				f->putlil(saving->flags);
@@ -866,9 +871,9 @@ namespace rpgio
 
 				writestring(f, saving->mdl);
 				writestring(f, saving->name);
-				writestring(f, saving->faction);
-				writestring(f, saving->merchant);
-				writestring(f, saving->script);
+				writestring(f, saving->faction ? saving->faction->key : NULL);
+				writestring(f, saving->merchant ? saving->merchant->key : NULL);
+				writestring(f, saving->script->key );
 
 				f->putlil(saving->capacity);
 				f->putlil(saving->lock);
@@ -889,7 +894,7 @@ namespace rpgio
 				rpgplatform *saving = (rpgplatform *) d;
 
 				writestring(f, saving->mdl);
-				writestring(f, saving->script);
+				writestring(f, saving->script->key);
 
 				f->putlil(saving->speed);
 				f->putlil(saving->flags);
@@ -913,7 +918,7 @@ namespace rpgio
 
 				writestring(f, saving->mdl);
 				writestring(f, saving->name);
-				writestring(f, saving->script);
+				writestring(f, saving->script->key);
 				f->putlil(saving->flags);
 				f->putlil(saving->lasttrigger - lastmillis);
 
@@ -929,8 +934,7 @@ namespace rpgio
 		loopv(d->seffects)
 		{
 			f->putlil(enttonum(d->seffects[i]->owner));
-			const char *group = d->seffects[i]->group ? d->seffects[i]->group->key : NULL;
-			writestring(f, group);
+			writestring(f, d->seffects[i]->group->key);
 			f->putlil(d->seffects[i]->elem);
 			f->putlil(d->seffects[i]->effects.length());
 
@@ -998,8 +1002,8 @@ namespace rpgio
 		lastmap = loading;
 
 		loading->name = name;
-		READHASH(loading->script)
-		VALIDHASH(loading->script, game::mapscripts, loading);
+		READHASHEXTENDED(loading->script, game::mapscripts);
+		NOTNULL(loading->script, loading);
 
 		loading->flags = f->getlil<int>();
 		loading->loaded = f->getchar();
@@ -1105,15 +1109,13 @@ namespace rpgio
 			p->time = f->getlil<int>();
 			p->dist = f->getlil<int>();
 
-			const char *pfx = NULL, *tfx = NULL, *dfx = NULL;
+			READHASHEXTENDED(p->projfx, game::effects)
+			READHASHEXTENDED(p->trailfx, game::effects)
+			READHASHEXTENDED(p->deathfx, game::effects)
 
-			READHASH(pfx)
-			READHASH(tfx)
-			READHASH(dfx)
-
-			if(pfx) { p->projfx = game::effects.access(pfx); NOTNULL(p->projfx, loading); }
-			if(tfx) { p->trailfx = game::effects.access(tfx); NOTNULL(p->trailfx, loading); }
-			if(dfx) { p->deathfx = game::effects.access(dfx); NOTNULL(p->deathfx, loading); }
+			if(p->projfx) NOTNULL(p->projfx, loading);
+			if(p->trailfx) NOTNULL(p->trailfx, loading);
+			if(p->deathfx) NOTNULL(p->deathfx, loading);
 
 			p->radius = f->getlil<int>();
 			p->elasticity = f->getlil<float>();
@@ -1130,14 +1132,11 @@ namespace rpgio
 			aeff->owner = entfromnum(f->getlil<int>());
 			readvec(aeff->o);
 			aeff->lastemit = 0; //should emit immediately
-			const char *group;
-			READHASH(group)
-			VALIDHASH(group, game::statuses, loading)
-			aeff->group = game::statuses.access(group);
+			READHASHEXTENDED(aeff->group, game::statuses)
+			NOTNULL(aeff->group, loading);
 
-			const char *fx;
-			READHASH(fx)
-			if(fx) { aeff->fx = game::effects.access(fx); NOTNULL(aeff->fx, loading); }
+			READHASHEXTENDED(aeff->fx, game::effects)
+			if(aeff->fx) NOTNULL(aeff->fx, loading);
 
 			aeff->elem = f->getlil<int>();
 			aeff->radius = f->getlil<int>();
@@ -1212,7 +1211,7 @@ namespace rpgio
 		lastmap = saving;
 
 		writestring(f, saving->name);
-		writestring(f, saving->script);
+		writestring(f, saving->script->key);
 		f->putlil(saving->flags);
 		f->putchar(saving->loaded);
 

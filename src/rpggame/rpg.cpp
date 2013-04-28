@@ -6,8 +6,7 @@ namespace game
 	VARP(debug, 0, 0, DEBUG_MAX);
 	VAR(forceverbose, 1, 0, -1);
 
-	bool initedhashpool = false;
-	hashset<const char *> *hashpool = NULL;
+	hashset<const char *> *hashpool = new hashset<const char *>(1 << 12);
 
 	// GAME DEFINITIONS
 	hashset<script> scripts;       ///scripts, includes dialogue
@@ -48,12 +47,6 @@ namespace game
 
 	const char *queryhashpool(const char *str)
 	{
-		if(!initedhashpool)
-		{
-			initedhashpool = true;
-			hashpool = new hashset<const char *>(1 << 12);
-		}
-
 		const char **ret = hashpool->access(str);
 		if(ret) return *ret;
 		if(DEBUG_WORLD)
@@ -263,7 +256,11 @@ namespace game
 
 		if(DEBUG_WORLD)
 			DEBUGF("Clearing hashpool of %i entries", hashpool->length());
-		enumerate(*hashpool, const char *, str, delete[] str;)
+		enumerate(*hashpool, const char *, str,
+			if(DEBUG_VWORLD) conoutf("freeing hashpool[%s]...", str);
+			delete[] str;
+		)
+
 		hashpool->clear();
 
 		//We reset the player here so he has a clean slate on a new game.
@@ -656,7 +653,7 @@ namespace game
 		{
 			enumerate(*mapdata, mapinfo, info,
 				DEBUGF("map %s", info.name);
-				DEBUGF("script %s", info.script);
+				DEBUGF("script %s", info.script->key);
 				DEBUGF("flags %i", info.flags);
 				DEBUGF("loaded %i", info.loaded);
 				DEBUGF("map objects %i", info.objs.length());
@@ -666,9 +663,6 @@ namespace game
 
 		if(tips.inrange(lasttip))
 			conoutf("\f2%s", tips[lasttip]);
-
-		if(!mapscripts.access(curmap->script))
-			WARNINGF("Map %s uses a non-existent mapscript (%s) - \fs\f3this will inhibit save games until fixed!!\fr", curmap->name, curmap->script);
 
 		forceverbose--;
 	}

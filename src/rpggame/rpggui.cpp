@@ -107,9 +107,9 @@ namespace rpggui
 		if(!sellstack || !buystack) { intret(0); return; }
 		merchant *mer = NULL;
 		if(buystack->owner->type() == ENT_CHAR)
-			mer = merchants.access(((rpgchar *) buystack->owner)->merchant);
+			mer = ((rpgchar *) buystack->owner)->merchant;
 		else
-			mer = merchants.access(((rpgcontainer *) buystack->owner)->merchant);
+			mer = ((rpgcontainer *) buystack->owner)->merchant;
 
 		intret(buystack->value(*mer, true));
 	)
@@ -163,9 +163,9 @@ namespace rpggui
 		if(!sellstack || !buystack) { intret(0); return; }
 		merchant *mer = NULL;
 		if(buystack->owner->type() == ENT_CHAR)
-			mer = merchants.access(((rpgchar *) buystack->owner)->merchant);
+			mer = ((rpgchar *) buystack->owner)->merchant;
 		else
-			mer = merchants.access(((rpgcontainer *) buystack->owner)->merchant);
+			mer = ((rpgcontainer *) buystack->owner)->merchant;
 
 		intret(sellstack->value(*mer, false));
 	)
@@ -212,9 +212,9 @@ namespace rpggui
 		if(!sellstack || !buystack) { intret(0); return; }
 		merchant *merch = NULL;
 		if(buystack->owner->type() == ENT_CHAR)
-			merch = merchants.access(((rpgchar *) buystack->owner)->merchant);
+			merch = ((rpgchar *) buystack->owner)->merchant;
 		else
-			merch = merchants.access(((rpgcontainer *) buystack->owner)->merchant);
+			merch = ((rpgcontainer *) buystack->owner)->merchant;
 
 		int buy = buystack->value(*merch, true);
 		int sell = sellstack->value(*merch, false);

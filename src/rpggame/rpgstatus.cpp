@@ -2,7 +2,7 @@
 
 victimeffect::victimeffect(rpgent *o, inflict *inf, int chargeflags, float mul) : owner(o)
 {
-	group = game::statuses.access(inf->status);
+	group = inf->status;
 	elem = group->friendly ? ATTACK_NONE : inf->element;
 	mul *= inf->mul;
 
@@ -39,8 +39,8 @@ bool victimeffect::update(rpgent *victim)
 		}
 	}
 
-	if(group->fx)
-		group->fx->drawaura(victim, 1, instant ? effect::DEATH : effect::DEATH_PROLONG, curtime);
+	if(group->persisteffect)
+		group->persisteffect->drawaura(victim, 1, instant ? effect::DEATH : effect::DEATH_PROLONG, curtime);
 
 	return effects.length();
 }
@@ -77,8 +77,8 @@ bool areaeffect::update()
 			loopvrev(effects)
 				effects[i]->update(victim, owner, resist, thresh);
 
-			if(group->fx)
-				group->fx->drawaura(victim, 1, instant ? effect::DEATH : effect::DEATH_PROLONG, curtime);
+			if(group->persisteffect)
+				group->persisteffect->drawaura(victim, 1, instant ? effect::DEATH : effect::DEATH_PROLONG, curtime);
 
 		}
 	}

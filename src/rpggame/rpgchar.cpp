@@ -15,7 +15,7 @@ void use_armour::apply(rpgchar *user)
 
 	loopv(effects)
 	{
-		statusgroup *sg = game::statuses.access(effects[i]->status);
+		statusgroup *sg = effects[i]->status;
 
 		int resist = 0;
 		int thresh = 0;
@@ -28,7 +28,7 @@ void use_armour::apply(rpgchar *user)
 		loopvj(sg->effects)
 		{
 			if(sg->effects[j]->duration >= 0)
-				ERRORF("statuses[%s]->effect[%i] has a non negative duration, these will not work properly and some will be ridiculously overpowered", effects[i]->status, j);
+				ERRORF("statuses[%s]->effect[%i] has a non negative duration, these will not work properly and some will be ridiculously overpowered", effects[i]->status->key, j);
 			sg->effects[j]->update(user, user, resist, thresh, base, extra);
 		}
 	}
@@ -100,24 +100,20 @@ bool rpgchar::checkammo(equipment &eq, equipment *&quiver, bool remove)
 {
 	//it is assumed it's valid
 	use_weapon *wep = (use_weapon *) eq.it->uses[eq.use];
-	ammotype *at = game::ammotypes.access(wep->ammo);
+	ammotype *at = wep->ammo;
 	item *it = NULL;
 
-	if(!at)
-	{
-		ERRORF("entity %p trying to attack with weapon using invalid ammotype %s; out of range", this, wep->ammo);
-		return false;
-	}
+	//ASSERT(at);
 
 	//check reserved types first...
 	float *fres = NULL;
 	int *ires = NULL;
 
-	if(wep->ammo == reserved::amm_mana)
+	if(at->key == reserved::amm_mana)
 		fres = &mana;
-	else if(wep->ammo == reserved::amm_health)
+	else if(at->key == reserved::amm_health)
 		fres = &health;
-	else if(wep->ammo == reserved::amm_experience)
+	else if(at->key == reserved::amm_experience)
 		ires = &base.experience;
 
 	if(fres || ires)
@@ -234,14 +230,14 @@ void rpgchar::doattack(equipment *eleft, equipment *eright, equipment *quiver)
 		}
 
 		int flags = attack->chargeflags | (ammo ? ammo->chargeflags : 0);
-		effect *death = NULL;
-		effect *trail = NULL;
+		effect *death = attack->deatheffect;
+		effect *trail = attack->traileffect;
 
-		if(ammo && ammo->deatheffect) death = game::effects.access(ammo->deatheffect);
-		if(!death && attack->deatheffect) death = game::effects.access(attack->deatheffect);
-
-		if(ammo && ammo->traileffect) trail = game::effects.access(ammo->traileffect);
-		if(!trail && attack->traileffect) trail = game::effects.access(attack->traileffect);
+		if(ammo)
+		{
+			if(ammo->deatheffect) death = ammo->deatheffect;
+			if(ammo->traileffect) trail = ammo->traileffect;
+		}
 
 		switch(attack->target)
 		{
@@ -415,14 +411,14 @@ void rpgchar::doai(equipment *eleft, equipment *eright, equipment *quiver)
 		if(eleft)
 		{
 			attack = (use_weapon *) eleft->it->uses[eleft->use];
-			if(attack->type < USE_WEAPON || !attack->effects.length() || game::statuses.access(attack->effects[0]->status)->friendly)
+			if(attack->type < USE_WEAPON || !attack->effects.length() || attack->effects[0]->status->friendly)
 				attack = NULL;
 		}
 		if(!attack && eright)
 		{
 			left = false;
 			attack = (use_weapon *) eright->it->uses[eright->use];
-			if(attack->type < USE_WEAPON || !attack->effects.length() || game::statuses.access(attack->effects[0]->status)->friendly)
+			if(attack->type < USE_WEAPON || !attack->effects.length() || attack->effects[0]->status->friendly)
 				attack = NULL;
 		}
 
@@ -601,7 +597,7 @@ void rpgchar::render()
 		if(use->type < USE_ARMOUR || !use->vwepmdl || !use->idlefx || !use->slots)
 			continue;
 
-		game::effects.access(use->idlefx)->drawwield(emitter[0], emitter[1], 1, effect::TRAIL);
+		use->idlefx->drawwield(emitter[0], emitter[1], 1, effect::TRAIL);
 		emitter[0] = emitter[1] = vec(-1, -1, -1);
 		emitter += 2;
 	}
@@ -727,12 +723,12 @@ void rpgchar::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float 
 	{
 		rpgchar *d = (rpgchar *) attacker;
 		if(game::friendlyfire >= 2 && faction == d->faction) protect = true;
-		else if (game::friendlyfire >= 3 && game::factions.access(faction)->getrelation(d->faction) > 50) protect = true;
+		else if (game::friendlyfire >= 3 && faction->getrelation(d->faction->key) > 50) protect = true;
 	}
 
 	loopv(weapon->effects)
 	{
-		statusgroup *sg = game::statuses.access(weapon->effects[i]->status);
+		statusgroup *sg = weapon->effects[i]->status;
 		if(!sg->friendly) hit_friendly = 0;
 		victimeffect &v = *neweffects.add(new victimeffect(attacker, weapon->effects[i], weapon->chargeflags, mul));
 		loopvj(v.effects) hit_total += v.effects[j]->value();
@@ -740,7 +736,7 @@ void rpgchar::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float 
 
 	if(ammo) loopv(ammo->effects)
 	{
-		statusgroup *sg = game::statuses.access(ammo->effects[i]->status);
+		statusgroup *sg = ammo->effects[i]->status;
 		if(!sg->friendly) hit_friendly = 0;
 		victimeffect &v = *neweffects.add(new victimeffect(attacker, ammo->effects[i], weapon->chargeflags, mul));
 		loopvj(v.effects) hit_total += v.effects[j]->value();
@@ -807,20 +803,20 @@ void rpgchar::init(const char *base)
 
 bool rpgchar::validate()
 {
-	if(!game::scripts.access(script))
+	if(!script)
 	{
-		ERRORF("Entity %p uses invalid script: %s - trying fallback", this, script);
+		ERRORF("Entity %p uses invalid script - trying fallback: null", this);
 		script = DEFAULTSCR;
 
-		if(!game::scripts.access(script)) return false;
+		if(!script) return false;
 	}
 
-	if(!game::factions.access(faction))
+	if(!faction)
 	{
-		ERRORF("Entity %p uses invalid faction: %s - trying fallback", this, script);
-		script = DEFAULTFACTION;
+		ERRORF("Entity %p uses invalid faction - trying fallback: player", this);
+		faction = DEFAULTFACTION;
 
-		if(!game::factions.access(faction)) return false;
+		if(!faction) return false;
 	}
 
 	return true;
