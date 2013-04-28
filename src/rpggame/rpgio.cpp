@@ -1103,10 +1103,6 @@ namespace rpgio
 			READHASHEXTENDED(p->trailfx, game::effects)
 			READHASHEXTENDED(p->deathfx, game::effects)
 
-			if(p->projfx) NOTNULL(p->projfx, loading);
-			if(p->trailfx) NOTNULL(p->trailfx, loading);
-			if(p->deathfx) NOTNULL(p->deathfx, loading);
-
 			p->radius = f->getlil<int>();
 			p->elasticity = f->getlil<float>();
 			p->charge = f->getlil<float>();
