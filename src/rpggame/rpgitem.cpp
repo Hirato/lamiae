@@ -89,7 +89,7 @@ bool rpgitem::validate()
 
 item *rpgitem::additem(const char *base, int q)
 {
-	base = game::hashpool->find(base, NULL);
+	base = game::hashpool.find(base, NULL);
 	if(this->base != base) return NULL;
 
 	quantity += q;
@@ -107,7 +107,7 @@ item *rpgitem::additem(item *it) {
 
 int rpgitem::getitemcount(const char *base)
 {
-	base = game::hashpool->find(base, NULL);
+	base = game::hashpool.find(base, NULL);
 
 	return this->base == base ? quantity : 0;
 }

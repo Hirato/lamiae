@@ -153,7 +153,7 @@ namespace game
 	//NOTE: queryhashpool will register the string
 	extern const char *queryhashpool(const char *str);
 
-	extern hashset<const char *> *hashpool;
+	extern hashset<const char *> hashpool;
 
 	extern hashset<script> scripts;       ///scripts, includes dialogue
 	extern hashset<effect> effects;       ///pretty particle effects for spells and stuff

@@ -71,7 +71,7 @@ int rpgcontainer::drop(item *it, int q, bool spawn)
 
 int rpgcontainer::drop(const char *base, int q, bool spawn)
 {
-	base = game::hashpool->find(base, NULL);
+	base = game::hashpool.find(base, NULL);
 	if(!base) return 0;
 
 	vector<item *> &inv = inventory.access(base, vector<item *>());
@@ -85,7 +85,7 @@ int rpgcontainer::drop(const char *base, int q, bool spawn)
 
 int rpgcontainer::getitemcount(const char *base)
 {
-	base = game::hashpool->find(base, NULL);
+	base = game::hashpool.find(base, NULL);
 	if(!base) return 0;
 
 	vector<item *> &inv = inventory.access(base, vector<item *>());

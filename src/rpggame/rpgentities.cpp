@@ -4,12 +4,12 @@ namespace entities
 {
 	hashtable<uint, const char *> modelcache;
 
-	rpgchar      *dummychar      = new rpgchar     ();
-	rpgitem      *dummyitem      = new rpgitem     ();
-	rpgobstacle  *dummyobstacle  = new rpgobstacle ();
-	rpgcontainer *dummycontainer = new rpgcontainer();
-	rpgplatform  *dummyplatform  = new rpgplatform ();
-	rpgtrigger   *dummytrigger   = new rpgtrigger  ();
+	rpgchar      *dummychar      = NULL;
+	rpgitem      *dummyitem      = NULL;
+	rpgobstacle  *dummyobstacle  = NULL;
+	rpgcontainer *dummycontainer = NULL;
+	rpgplatform  *dummyplatform  = NULL;
+	rpgtrigger   *dummytrigger   = NULL;
 
 	vector<extentity *> ents;
 	vector<extentity *> &getents() { return ents; }
@@ -101,6 +101,20 @@ namespace entities
 		modelcache.clear();
 	}
 
+	// WARNING 
+	// without this, windows builds will for some reason try to initialie these
+	// before their dependants: read the hashtables in rpg.cpp.
+	// This basically means it crashes.
+	void initdummies()
+	{
+		if(dummychar     ) dummychar      = new rpgchar     ();
+		if(dummyitem     ) dummyitem      = new rpgitem     ();
+		if(dummyobstacle ) dummyobstacle  = new rpgobstacle ();
+		if(dummycontainer) dummycontainer = new rpgcontainer();
+		if(dummyplatform ) dummyplatform  = new rpgplatform ();
+		if(dummytrigger  ) dummytrigger   = new rpgtrigger  ();
+	}
+
 	const char *entmodel(const entity &ent)
 	{
 		rpgentity &e = *((rpgentity *) &ent);
@@ -113,6 +127,7 @@ namespace entities
 		const char **mdl = modelcache.access(hash);
 		if(mdl) return *mdl;
 
+		initdummies();
 
 		const char *m = NULL;
 		rpgent *dummy = NULL;

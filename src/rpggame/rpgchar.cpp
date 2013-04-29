@@ -653,7 +653,7 @@ bool rpgchar::dequip(const char *base, int slots)
 		return false;
 	}
 
-	if(base) base = game::hashpool->find(base, NULL);
+	if(base) base = game::hashpool.find(base, NULL);
 
 	int rem = 0;
 	loopv(equipped)
@@ -886,7 +886,7 @@ int rpgchar::drop(item *it, int q, bool spawn)
 
 int rpgchar::drop(const char *base, int q, bool spawn)
 {
-	base = game::hashpool->find(base, NULL);
+	base = game::hashpool.find(base, NULL);
 	if(base) return 0;
 
 	vector<item *> &inv = inventory.access(base, vector<item *>());
@@ -947,7 +947,7 @@ int rpgchar::pickup(rpgitem *it)
 
 int rpgchar::getitemcount(const char *base)
 {
-	base = game::hashpool->find(base, NULL);
+	base = game::hashpool.find(base, NULL);
 	if(!base) return 0;
 
 	vector<item *> &inv = inventory.access(base, vector<item *>());
@@ -994,7 +994,7 @@ void rpgchar::compactinventory(const char *base)
 		return;
 	}
 
-	base = game::hashpool->find(base, NULL);
+	base = game::hashpool.find(base, NULL);
 	if(!base) return;
 
 	vector<item *> &stack = *inventory.access(base);
