@@ -6,7 +6,8 @@ namespace game
 	VARP(debug, 0, 0, DEBUG_MAX);
 	VAR(forceverbose, 1, 0, -1);
 
-	hashset<const char *> *hashpool = new hashset<const char *>(1 << 12);
+	bool initedhashpool = false;
+	hashset<const char *> *hashpool = NULL;
 
 	// GAME DEFINITIONS
 	hashset<script> scripts;       ///scripts, includes dialogue
@@ -45,8 +46,18 @@ namespace game
 	}
 	ICOMMAND(setcheckpoint, "si", (const char *m, int *d), setcheckpoint(m, *d));
 
+	inline void inithashpool()
+	{
+		if(initedhashpool) return;
+
+		if(DEBUG_WORLD) DEBUGF("initialising hashpool");
+		hashpool = new hashset<const char *>(1 << 12);
+		initedhashpool = true;
+	}
+
 	const char *queryhashpool(const char *str)
 	{
+		inithashpool();
 		const char **ret = hashpool->access(str);
 		if(ret) return *ret;
 		if(DEBUG_WORLD)
@@ -254,6 +265,7 @@ namespace game
 
 		rpgscript::clean();
 
+		inithashpool();
 		if(DEBUG_WORLD)
 			DEBUGF("Clearing hashpool of %i entries", hashpool->length());
 		enumerate(*hashpool, const char *, str,
