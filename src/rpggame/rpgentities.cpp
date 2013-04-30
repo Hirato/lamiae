@@ -4,13 +4,6 @@ namespace entities
 {
 	hashtable<uint, const char *> modelcache;
 
-	rpgchar      *dummychar      = NULL;
-	rpgitem      *dummyitem      = NULL;
-	rpgobstacle  *dummyobstacle  = NULL;
-	rpgcontainer *dummycontainer = NULL;
-	rpgplatform  *dummyplatform  = NULL;
-	rpgtrigger   *dummytrigger   = NULL;
-
 	vector<extentity *> ents;
 	vector<extentity *> &getents() { return ents; }
 
@@ -101,18 +94,31 @@ namespace entities
 		modelcache.clear();
 	}
 
+#define DUMMIES \
+	x(CRITTER, char) \
+	x(ITEM, item) \
+	x(OBSTACLE, obstacle) \
+	x(CONTAINER, container) \
+	x(PLATFORM, platform) \
+	x(TRIGGER, trigger)
+
+#define x(enum, type) rpg ## type *dummy ## type = NULL;
+
+	DUMMIES
+
+#undef x
+
 	// WARNING
 	// without this, windows builds will for some reason try to initialie these
 	// before their dependants: read the hashtables in rpg.cpp.
 	// This basically means it crashes.
 	void initdummies()
 	{
-		if(!dummychar     ) dummychar      = new rpgchar     ();
-		if(!dummyitem     ) dummyitem      = new rpgitem     ();
-		if(!dummyobstacle ) dummyobstacle  = new rpgobstacle ();
-		if(!dummycontainer) dummycontainer = new rpgcontainer();
-		if(!dummyplatform ) dummyplatform  = new rpgplatform ();
-		if(!dummytrigger  ) dummytrigger   = new rpgtrigger  ();
+#define x(enum, type) if(! dummy ## type) dummy ## type = new rpg ## type();
+
+		DUMMIES
+
+#undef x
 	}
 
 	const char *entmodel(const entity &ent)
@@ -133,12 +139,10 @@ namespace entities
 		rpgent *dummy = NULL;
 		switch(e.type)
 		{
-			case CRITTER:   dummy = dummychar;      break;
-			case ITEM:      dummy = dummyitem;      break;
-			case OBSTACLE:  dummy = dummyobstacle;  break;
-			case CONTAINER: dummy = dummycontainer; break;
-			case PLATFORM:  dummy = dummyplatform;  break;
-			case TRIGGER:   dummy = dummytrigger;   break;
+#define x(enum, type) 	case enum: dummy = dummy ## type; break;
+			DUMMIES
+
+#undef x
 		}
 
 		dummy->init(e.id);
@@ -156,14 +160,10 @@ namespace entities
 
 		switch(e.type)
 		{
-			x(CRITTER,   char     );
-			x(ITEM,      item     );
-			x(OBSTACLE,  obstacle );
-			x(CONTAINER, container);
-			x(PLATFORM,  platform );
-			x(TRIGGER,   trigger  );
+			DUMMIES
 		}
 #undef x
+#undef DUMMIES
 
 		return modelcache.access(hash, m);
 	}

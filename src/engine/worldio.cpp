@@ -827,7 +827,7 @@ bool read_octaworld(stream *f, octaheader &hdr)
 {
     int octaversion = hdr.version;
 
-    if(octaversion <= 31 || octaversion > OCTAVERSION)
+    if(octaversion < 32 || octaversion > OCTAVERSION)
     {
         conoutf("unable to load map, version %i is too %s", hdr.version, octaversion > OCTAVERSION ? "new" : "old");
         return false;
