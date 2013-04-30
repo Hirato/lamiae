@@ -101,18 +101,18 @@ namespace entities
 		modelcache.clear();
 	}
 
-	// WARNING 
+	// WARNING
 	// without this, windows builds will for some reason try to initialie these
 	// before their dependants: read the hashtables in rpg.cpp.
 	// This basically means it crashes.
 	void initdummies()
 	{
-		if(dummychar     ) dummychar      = new rpgchar     ();
-		if(dummyitem     ) dummyitem      = new rpgitem     ();
-		if(dummyobstacle ) dummyobstacle  = new rpgobstacle ();
-		if(dummycontainer) dummycontainer = new rpgcontainer();
-		if(dummyplatform ) dummyplatform  = new rpgplatform ();
-		if(dummytrigger  ) dummytrigger   = new rpgtrigger  ();
+		if(!dummychar     ) dummychar      = new rpgchar     ();
+		if(!dummyitem     ) dummyitem      = new rpgitem     ();
+		if(!dummyobstacle ) dummyobstacle  = new rpgobstacle ();
+		if(!dummycontainer) dummycontainer = new rpgcontainer();
+		if(!dummyplatform ) dummyplatform  = new rpgplatform ();
+		if(!dummytrigger  ) dummytrigger   = new rpgtrigger  ();
 	}
 
 	const char *entmodel(const entity &ent)
