@@ -655,14 +655,6 @@ namespace entities
 
 			memcpy(e.id, buf, 64);
 		}
-
-		if(ver <= 30) switch(e.type)
-		{
-			case TELEDEST:
-			case SPAWN:
-				e.attr[0] = (int(e.attr[0])+180)%360;
-				break;
-		}
 	}
 
 	float dropheight(entity &e)
