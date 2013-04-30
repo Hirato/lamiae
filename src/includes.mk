@@ -12,10 +12,11 @@ endif
 endif
 
 MV=mv
+AR=ar rcus
 
 INCLUDES= -Ishared -Iengine -Ienet/include
 CLIENT_INCLUDES= $(INCLUDES) -I/usr/X11R6/include `sdl2-config --cflags`
-CLIENT_LIBS= -Lenet/.libs -lenet -L/usr/X11R6/lib `sdl2-config --libs` -lSDL2_image -lSDL2_mixer -lz -lGL -lX11
+CLIENT_LIBS= -Lenet -lenet -L/usr/X11R6/lib `sdl2-config --libs` -lSDL2_image -lSDL2_mixer -lz -lGL -lX11
 
 
 PLATFORM= $(shell uname -s)
@@ -59,6 +60,15 @@ endif
 # assume 64bit if in doubt
 MACHINE?=64
 
+ENET_OBJS= \
+	enet/callbacks.o \
+	enet/host.o \
+	enet/list.o \
+	enet/packet.o \
+	enet/peer.o \
+	enet/protocol.o \
+	enet/unix.o \
+	enet/win32.o
 
 CLIENT_OBJS= \
 	shared/crypto.o \
@@ -140,17 +150,13 @@ default: all
 
 all: client
 
-enet/Makefile:
-	cd enet; CFLAGS="$(ENET_CFLAGS)" ./configure --enable-shared=no --enable-static=yes
+$(ENET_OBJS): CFLAGS += $(ENET_CFLAGS) -Ienet/include -DHAS_SOCKLEN_T=1 -Wno-error
 
-libenet: enet/Makefile
-	$(MAKE)	-C enet/ all
-
-clean-enet: enet/Makefile
-	$(MAKE) -C enet/ distclean
+libenet: $(ENET_OBJS)
+	$(AR) enet/libenet.a $(ENET_OBJS)
 
 clean:
-	-$(RM) $(CLIENT_PCH) $(CLIENT_OBJS) $(RPGCLIENT_OBJS) lamiae*.*
+	-$(RM) $(CLIENT_PCH) $(CLIENT_OBJS) $(RPGCLIENT_OBJS) $(ENET_OBJS) lamiae*.*
 
 %.h.gch: %.h
 	$(CXX) $(CXXFLAGS) -o $(subst .h.gch,.tmp.h.gch,$@) $(subst .h.gch,.h,$@)
@@ -186,7 +192,8 @@ cube2font: shared/cube2font.o
 	$(CXX) $(CXXFLAGS) -o cube2font shared/cube2font.o `freetype-config --libs` -lz
 
 depend:
-	makedepend -fincludes.mk -Y -Ishared -Iengine $(subst .o,.cpp,$(CLIENT_OBJS))
+	makedepend -fincludes.mk -Y -Ienet/include $(subst .o,.c,$(ENET_OBJS))
+	makedepend -fincludes.mk -a -Y -Ishared -Iengine $(subst .o,.cpp,$(CLIENT_OBJS))
 	makedepend -fincludes.mk -a -Y -Ishared -Iengine -Irpggame $(subst .o,.cpp,$(RPGCLIENT_OBJS))
 	makedepend -fincludes.mk -a -o.h.gch -Y -Ishared -Iengine -Irpggame $(subst .h.gch,.h,$(CLIENT_PCH))
 
@@ -194,6 +201,29 @@ engine/engine.h.gch: shared/cube.h.gch
 rpggame/rpggame.h.gch: shared/cube.h.gch
 
 # DO NOT DELETE
+
+enet/callbacks.o: enet/include/enet/enet.h enet/include/enet/unix.h
+enet/callbacks.o: enet/include/enet/types.h enet/include/enet/protocol.h
+enet/callbacks.o: enet/include/enet/list.h enet/include/enet/callbacks.h
+enet/host.o: enet/include/enet/enet.h enet/include/enet/unix.h
+enet/host.o: enet/include/enet/types.h enet/include/enet/protocol.h
+enet/host.o: enet/include/enet/list.h enet/include/enet/callbacks.h
+enet/list.o: enet/include/enet/enet.h enet/include/enet/unix.h
+enet/list.o: enet/include/enet/types.h enet/include/enet/protocol.h
+enet/list.o: enet/include/enet/list.h enet/include/enet/callbacks.h
+enet/packet.o: enet/include/enet/enet.h enet/include/enet/unix.h
+enet/packet.o: enet/include/enet/types.h enet/include/enet/protocol.h
+enet/packet.o: enet/include/enet/list.h enet/include/enet/callbacks.h
+enet/peer.o: enet/include/enet/enet.h enet/include/enet/unix.h
+enet/peer.o: enet/include/enet/types.h enet/include/enet/protocol.h
+enet/peer.o: enet/include/enet/list.h enet/include/enet/callbacks.h
+enet/protocol.o: enet/include/enet/utility.h enet/include/enet/time.h
+enet/protocol.o: enet/include/enet/enet.h enet/include/enet/unix.h
+enet/protocol.o: enet/include/enet/types.h enet/include/enet/protocol.h
+enet/protocol.o: enet/include/enet/list.h enet/include/enet/callbacks.h
+enet/unix.o: enet/include/enet/enet.h enet/include/enet/unix.h
+enet/unix.o: enet/include/enet/types.h enet/include/enet/protocol.h
+enet/unix.o: enet/include/enet/list.h enet/include/enet/callbacks.h
 
 shared/crypto.o: shared/cube.h shared/tools.h shared/geom.h shared/ents.h
 shared/crypto.o: shared/command.h shared/glexts.h shared/glemu.h
