@@ -104,14 +104,14 @@ ICOMMAND(r_effect_emitsphere, "ssffi", (const char *eff, const char *ref, float 
 	getreference(ref, d);
 	if(!e || !d) return;
 
-	e->drawsphere(d->o, max(1.0f, *radius), *size, clamp(*style, effect::PROJ, effect::DEATH_PROLONG), curtime);
+	e->drawsphere(d->o, max(1.0f, *radius), *size, clamp(*style, (int)effect::PROJ, (int)effect::DEATH_PROLONG), curtime);
 )
 
 ICOMMAND(r_effect_emitsphere_pos, "ssffi", (const char *eff, const char *pos, float *radius, float *size, int *style),
 	effect *e = game::effects.access(eff);
 	if(!e) return;
 
-	e->drawsphere(parsevec(pos), max(1.0f, *radius), *size, clamp(*style, effect::PROJ, effect::DEATH_PROLONG), curtime);
+	e->drawsphere(parsevec(pos), max(1.0f, *radius), *size, clamp(*style, (int)effect::PROJ, (int)effect::DEATH_PROLONG), curtime);
 )
 
 void effect::drawsplash(const vec &o, vec dir, float radius, float size, int type, int elapse)
@@ -162,14 +162,14 @@ ICOMMAND(r_effect_emitsplash, "ssffi", (const char *eff, const char *ref, float 
 	getreference(ref, d);
 	if(!e || !d) return;
 
-	e->drawsplash(d->o, vec(0, 0, 1), max(1.0f, *radius), *size, clamp(*style, effect::PROJ, effect::DEATH_PROLONG), curtime);
+	e->drawsplash(d->o, vec(0, 0, 1), max(1.0f, *radius), *size, clamp(*style, (int)effect::PROJ, (int)effect::DEATH_PROLONG), curtime);
 )
 
 ICOMMAND(r_effect_emitsphlash_pos, "ssffi", (const char *eff, const char *pos, float *radius, float *size, int *style),
 	effect *e = game::effects.access(eff);
 	if(!e) return;
 
-	e->drawsplash(parsevec(pos), vec(0, 0, 1), max(1.0f, *radius), *size, clamp(*style, effect::PROJ, effect::DEATH_PROLONG), curtime);
+	e->drawsplash(parsevec(pos), vec(0, 0, 1), max(1.0f, *radius), *size, clamp(*style, (int)effect::PROJ, (int)effect::DEATH_PROLONG), curtime);
 )
 
 VARP(linemaxsteps, 8, 32, 1024);
@@ -225,7 +225,7 @@ ICOMMAND(r_effect_emitline, "sssffi", (const char *eff, const char *from, const 
 	if(!e || !f || !t) return;
 
 	vec o(f->o);
-	e->drawline(o, t->o, *size, clamp(*style, effect::PROJ, effect::DEATH_PROLONG), curtime);
+	e->drawline(o, t->o, *size, clamp(*style, (int)effect::PROJ, (int)effect::DEATH_PROLONG), curtime);
 )
 
 ICOMMAND(r_effect_emitline_pos, "sssffi", (const char *eff, const char *from, const char *to, float *radius, float *size, int *style),
@@ -233,7 +233,7 @@ ICOMMAND(r_effect_emitline_pos, "sssffi", (const char *eff, const char *from, co
 	if(!e) return;
 
 	vec f = parsevec(from);
-	e->drawline(f, parsevec(to), *size, clamp(*style, effect::PROJ, effect::DEATH_PROLONG), curtime);
+	e->drawline(f, parsevec(to), *size, clamp(*style, (int)effect::PROJ, (int)effect::DEATH_PROLONG), curtime);
 
 	static string ret;
 	formatstring(ret)("%g %g %g", f.x, f.y, f.x);
@@ -317,7 +317,7 @@ ICOMMAND(r_effect_emitaura, "ssfi", (const char *eff, const char *ref, float *si
 	getreference(ref, d);
 	if(!e || !d) return;
 
-	e->drawaura(d, *size, clamp(*style, effect::PROJ, effect::DEATH_PROLONG), curtime);
+	e->drawaura(d, *size, clamp(*style, (int)effect::PROJ, (int)effect::DEATH_PROLONG), curtime);
 )
 
 ICOMMAND(r_effect_emitaura_pos, "ssffi", (const char *eff, const char *pos, float *radius, float *size, int *style),
@@ -335,7 +335,7 @@ ICOMMAND(r_effect_emitaura_pos, "ssffi", (const char *eff, const char *pos, floa
 	loc->o = parsevec(pos);
 	loc->radius = *radius;
 
-	e->drawaura(loc,  *size, clamp(*style, effect::PROJ, effect::DEATH_PROLONG), curtime);
+	e->drawaura(loc,  *size, clamp(*style, (int)effect::PROJ, (int)effect::DEATH_PROLONG), curtime);
 )
 
 void effect::drawcircle(const vec &o, vec dir, const vec &axis, int angle, float radius, float size, int type, int elapse)
