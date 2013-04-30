@@ -540,11 +540,11 @@ struct effect
 	void drawsplash(const vec &o, vec dir, float radius, float size = 1, int type = PROJ, int elapse = 17);
 	bool drawline(vec &from, const vec &to, float size = 1, int type = PROJ, int elapse = 17);
 	void drawwield(vec &from, const vec &to, float size = 1, int type = PROJ, int elapse = 17);
-	void drawaura(rpgent *d, float size = 1, int type = PROJ, int elapse = 17);
+	void drawaura(physent *d, float size = 1, int type = PROJ, int elapse = 17);
 	void drawcircle(const vec &o, vec dir, const vec &axis, int angle, float radius, float size = 1, int type = PROJ, int elapse = 17);
-	void drawcircle(rpgent *d, use_weapon *wep, float size = 1, int type = PROJ, int elapse = 17);
+	void drawcircle(physent *d, use_weapon *wep, float size = 1, int type = PROJ, int elapse = 17);
 	void drawcone(const vec &o, vec dir, const vec &axis, int angle, float radius, float size, int type = PROJ, int elapse = 17);
-	void drawcone(rpgent *d, use_weapon *wep, float size, int type = PROJ, int elapse = 17);
+	void drawcone(physent *d, use_weapon *wep, float size, int type = PROJ, int elapse = 17);
 };
 static inline bool htcmp(const char *key, const effect &ref) { return !strcmp(key, ref.key); }
 

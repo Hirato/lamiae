@@ -182,6 +182,18 @@ namespace entities
 		result(entmodel(ent));
 	)
 
+	ICOMMAND(r_getentlocation, "i", (int *tag),
+		vec ret = vec(-1);
+		loopv(ents) if(ents[i]->type == LOCATION && ents[i]->attr[0] == *tag)
+		{
+			ret = ents[i]->o;
+			break;
+		}
+		static string str;
+		formatstring(str)("%g %g %g", ret.x, ret.x, ret.z);
+		result(str);
+	)
+
 	FVARP(entpreviewalpha, 0, .4, 1);
 
 	void renderentities()

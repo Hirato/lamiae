@@ -11,6 +11,22 @@
 		if(__ ## name) name = __ ## name->getent(name ## idx); \
 	} while(0);
 
+
+inline const vec &parsevec(const char *str)
+{
+	static vec vals[3];
+	static int idx = 0;
+
+	vec &ret = vals[idx];
+	idx = (idx + 1) % 3;
+
+	vector<char *> list;
+	explodelist(str, list, 3);
+
+	loopi(3) ret.v[i] = (list.length() > i) ? parsefloat(list[i]) : 0;
+	return ret;
+}
+
 inline void setvars(effect *e, int type, int &fade, int &gravity, int &num, int &elapse)
 {
 	num = 1;
@@ -91,6 +107,13 @@ ICOMMAND(r_effect_emitsphere, "ssffi", (const char *eff, const char *ref, float 
 	e->drawsphere(d->o, max(1.0f, *radius), *size, clamp(*style, effect::PROJ, effect::DEATH_PROLONG), curtime);
 )
 
+ICOMMAND(r_effect_emitsphere_pos, "ssffi", (const char *eff, const char *pos, float *radius, float *size, int *style),
+	effect *e = game::effects.access(eff);
+	if(!e) return;
+
+	e->drawsphere(parsevec(pos), max(1.0f, *radius), *size, clamp(*style, effect::PROJ, effect::DEATH_PROLONG), curtime);
+)
+
 void effect::drawsplash(const vec &o, vec dir, float radius, float size, int type, int elapse)
 {
 	if(size <= 0) return;
@@ -140,6 +163,13 @@ ICOMMAND(r_effect_emitsplash, "ssffi", (const char *eff, const char *ref, float 
 	if(!e || !d) return;
 
 	e->drawsplash(d->o, vec(0, 0, 1), max(1.0f, *radius), *size, clamp(*style, effect::PROJ, effect::DEATH_PROLONG), curtime);
+)
+
+ICOMMAND(r_effect_emitsphlash_pos, "ssffi", (const char *eff, const char *pos, float *radius, float *size, int *style),
+	effect *e = game::effects.access(eff);
+	if(!e) return;
+
+	e->drawsplash(parsevec(pos), vec(0, 0, 1), max(1.0f, *radius), *size, clamp(*style, effect::PROJ, effect::DEATH_PROLONG), curtime);
 )
 
 VARP(linemaxsteps, 8, 32, 1024);
@@ -198,6 +228,18 @@ ICOMMAND(r_effect_emitline, "sssffi", (const char *eff, const char *from, const 
 	e->drawline(o, t->o, *size, clamp(*style, effect::PROJ, effect::DEATH_PROLONG), curtime);
 )
 
+ICOMMAND(r_effect_emitline_pos, "sssffi", (const char *eff, const char *from, const char *to, float *radius, float *size, int *style),
+	effect *e = game::effects.access(eff);
+	if(!e) return;
+
+	vec f = parsevec(from);
+	e->drawline(f, parsevec(to), *size, clamp(*style, effect::PROJ, effect::DEATH_PROLONG), curtime);
+
+	static string ret;
+	formatstring(ret)("%g %g %g", f.x, f.y, f.x);
+	result(ret);
+)
+
 void effect::drawwield(vec &from, const vec &to, float size, int type, int elapse)
 {
 	if(size <= 0) return;
@@ -234,7 +276,7 @@ void effect::drawwield(vec &from, const vec &to, float size, int type, int elaps
 	}
 }
 
-void effect::drawaura(rpgent *d, float size, int type, int elapse)
+void effect::drawaura(physent *d, float size, int type, int elapse)
 {
 	if(size <= 0) return;
 
@@ -278,6 +320,24 @@ ICOMMAND(r_effect_emitaura, "ssfi", (const char *eff, const char *ref, float *si
 	e->drawaura(d, *size, clamp(*style, effect::PROJ, effect::DEATH_PROLONG), curtime);
 )
 
+ICOMMAND(r_effect_emitaura_pos, "ssffi", (const char *eff, const char *pos, float *radius, float *size, int *style),
+	effect *e = game::effects.access(eff);
+	if(!e) return;
+
+	static physent *loc = NULL;
+	if(!loc)
+	{
+		loc = new physent();
+		loc->eyeheight = 0;
+		loc->aboveeye = 0;
+	}
+
+	loc->o = parsevec(pos);
+	loc->radius = *radius;
+
+	e->drawaura(loc,  *size, clamp(*style, effect::PROJ, effect::DEATH_PROLONG), curtime);
+)
+
 void effect::drawcircle(const vec &o, vec dir, const vec &axis, int angle, float radius, float size, int type, int elapse)
 {
 	if(size <= 0) return;
@@ -314,7 +374,7 @@ void effect::drawcircle(const vec &o, vec dir, const vec &axis, int angle, float
 	}
 }
 
-void effect::drawcircle(rpgent *d, use_weapon *wep, float size, int type, int elapse)
+void effect::drawcircle(physent *d, use_weapon *wep, float size, int type, int elapse)
 {
 	vec axis;
 	if(wep->target == T_HORIZ)
@@ -361,7 +421,7 @@ void effect::drawcone(const vec &o, vec dir, const vec &axis, int angle, float r
 		}
 	}
 }
-void effect::drawcone(rpgent *d, use_weapon *wep, float size, int type, int elapse)
+void effect::drawcone(physent *d, use_weapon *wep, float size, int type, int elapse)
 {
 	vec dir = vec(d->yaw * RAD, d->pitch * RAD);
 	vec axis = vec(d->yaw * RAD, (d->pitch + 90) * RAD);
