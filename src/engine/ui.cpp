@@ -515,6 +515,28 @@ namespace UI
         float margin;
         int size;
 
+        Object *hover(float cx, float cy)
+        {
+            loopinchildrenrev(o, cx, cy,
+            {
+                Object *c = o->hover(ox, oy);
+                if(c == o) { hoverx = ox; hovery = oy; }
+                return c;
+            });
+            return NULL;
+        }
+
+        Object *select(float cx, float cy)
+        {
+            loopinchildrenrev(o, cx, cy,
+            {
+                Object *c = o->select(ox, oy);
+                if(c == o) { selectx = ox; selecty = oy; }
+                return c;
+            });
+            return NULL;
+        }
+
         void layout()
         {
             Object::layout();
