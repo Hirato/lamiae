@@ -979,6 +979,13 @@ namespace game
 
 	}
 
+	const char *getscreenshotinfo()
+	{
+		if(mapdata) return data;
+		return "title";
+	}
+
+
 	const char *getmapinfo()
 	{
 		if(tips.length())
