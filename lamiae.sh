@@ -55,7 +55,7 @@ do
 			echo "   Script Arguments"
 			echo "  -h|-?|-help|--help	show this help message"
 			echo "  --force-32		forces use of 32bit executables on architectures other than i486, i586 and i686"
-			echo "  --force-64		forces use of 64bit executables on architectures other than x86_64"
+			echo "  --force-64		forces use of 64bit executables on architectures other than x86_64, and amd64"
 			echo "			NOTE: your architecture ($(uname -m)) can be queried via \"uname -m\""
 			echo "  --force-unix		forces use of Linux binaries when outside Linux"
 			echo "  --force-bsd		forces use of the BSD binaries when outside BSD"
@@ -65,7 +65,6 @@ do
 			echo "  --debug		starts the debug build(s) inside GDB"
 			echo "			note that all arguments passed to this script will be"
 			echo "			passed to lamiae when 'run' is invokved in gdb."
-			echo "			it's recommended that you do this in windowed mode (-t0)"
 			echo ""
 			echo "   Engine Options"
 			echo "  -q<string>		use <string> as the home directory (default: ${LAMIAE_HOME})"
@@ -136,7 +135,7 @@ function build {
 	echo "Lamiae will attempt to compile one by executing the following command."
 	echo "	make -C src -f ${LAMIAE_MAKEFILE} install"
 	echo ""
-	echo "Please make sure the SDL, SDL_image, and SDL_mixer, and zlib *Development* libraries are installed."
+	echo "Please make sure the SDL2, SDL2_image, SDL2_mixer, and zlib *Development* libraries are available."
 	echo "Press Enter to proceed or Ctrl-C to abort."
 
 	read -r
