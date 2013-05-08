@@ -1,7 +1,7 @@
 Lamiae source code, any release.
 
 Copyright (C) 2012-2013 Kevin "Hirato Kirata" Meyer
-Copyright (C) 2013 Daniel "quaker66" Kolesa
+Copyright (C) 2013 Daniel "q66" Kolesa
 
 This software is provided 'as-is', without any express or implied
 warranty.  In no event will the authors be held liable for any damages

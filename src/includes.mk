@@ -21,20 +21,23 @@ CLIENT_LIBS= -Lenet -lenet -L/usr/X11R6/lib `sdl2-config --libs` -lSDL2_image -l
 
 PLATFORM= $(shell uname -s)
 PLATFORM_PATH="bin_unk"
+PLATFORM_TYPE=windows
 
 ifeq ($(PLATFORM),Linux)
 	CLIENT_LIBS+= -lrt
 	PLATFORM_PATH=bin_unix
+	PLATFORM_TYPE=unix
 endif
 
 ifeq ($(PLATFORM),SunOS)
 	CLIENT_LIBS+= -lsocket -lnsl -lX11
 	PLATFORM_PATH=bin_sun
+	PLATFORM_TYPE=unix
 endif
 
 ifeq ($(PLATFORM),FreeBSD)
-	#TODO does BSD build?
 	PLATFORM_PATH=bin_bsd
+	PLATFORM_TYPE=unix
 endif
 
 ifeq ($(shell uname -m),x86_64)
@@ -145,15 +148,15 @@ CLIENT_PCH = \
 	engine/engine.h.gch \
 	rpggame/rpggame.h.gch
 
+ifeq (unix,$(PLATFORM_TYPE))
+	ENET_XCFLAGS := $(shell ./check_enet.sh $(CC) $(CFLAGS))
+endif
 
 default: all
 
 all: client
 
-$(ENET_OBJS): CFLAGS += $(ENET_CFLAGS) -Ienet/include -DHAS_SOCKLEN_T=1 -Wno-error
-
-libenet: $(ENET_OBJS)
-	$(AR) enet/libenet.a $(ENET_OBJS)
+$(ENET_OBJS): CFLAGS += $(ENET_CFLAGS) $(ENET_XCFLAGS) -Ienet/include -Wno-error
 
 clean:
 	-$(RM) $(CLIENT_PCH) $(CLIENT_OBJS) $(RPGCLIENT_OBJS) $(ENET_OBJS) lamiae*.*
@@ -174,7 +177,7 @@ $(RPGCLIENT_OBJS): CXXFLAGS += $(CLIENT_INCLUDES) -Irpggame
 $(RPGCLIENT_OBJS): $(filter rpggame/%,$(CLIENT_PCH))
 
 
-client: libenet $(CLIENT_OBJS) $(RPGCLIENT_OBJS)
+client: $(ENET_OBJS) $(CLIENT_OBJS) $(RPGCLIENT_OBJS)
 	$(CXX) $(CXXFLAGS) -o lamiae$(MACHINE).$(BIN_SUFFIX) $(CLIENT_OBJS) $(RPGCLIENT_OBJS) $(CLIENT_LIBS)
 
 install: all
