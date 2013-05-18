@@ -965,7 +965,7 @@ struct animmodel : model
         LINK_REUSE
     };
 
-    virtual int linktype(animmodel *m) const { return LINK_TAG; }
+    virtual int linktype(animmodel *m, part *p) const { return LINK_TAG; }
 
     void intersect(int anim, int basetime, int basetime2, float pitch, const vec &axis, const vec &forward, dynent *d, modelattach *a, const vec &o, const vec &ray)
     {
@@ -982,7 +982,7 @@ struct animmodel : model
                 animmodel *m = (animmodel *)a[i].m;
                 if(!m || !m->loaded) continue;
                 part *p = m->parts[0];
-                switch(linktype(m))
+                switch(linktype(m, p))
                 {
                     case LINK_TAG:
                         p->index = link(p, a[i].tag, vec(0, 0, 0), a[i].anim, a[i].basetime, a[i].pos) ? index : -1;
@@ -1002,12 +1002,27 @@ struct animmodel : model
         animstate as[MAXANIMPARTS];
         parts[0]->intersect(anim, basetime, basetime2, pitch, axis, forward, d, o, ray, as);
 
+        for(int i = 1; i < parts.length(); i++)
+        {
+            part *p = parts[i];
+            switch(linktype(this, p))
+            {
+                case LINK_COOP:
+                    p->intersect(anim, basetime, basetime2, pitch, axis, forward, d, o, ray);
+                    break;
+
+                case LINK_REUSE:
+                    p->intersect(anim | ANIM_REUSE, basetime, basetime2, pitch, axis, forward, d, o, ray, as);
+                    break;
+            }
+        }
+
         if(a) for(int i = numtags-1; i >= 0; i--)
         {
             animmodel *m = (animmodel *)a[i].m;
             if(!m || !m->loaded) continue;
             part *p = m->parts[0];
-            switch(linktype(m))
+            switch(linktype(m, p))
             {
                 case LINK_TAG:
                     if(p->index >= 0) unlink(p);
@@ -1029,24 +1044,31 @@ struct animmodel : model
     static int intersectresult, intersectmode;
     static float intersectdist, intersectscale;
 
-    int intersect(int anim, int basetime, int basetime2, const vec &pos, float yaw, float pitch, dynent *d, modelattach *a, float size, const vec &o, const vec &ray, float &dist, int mode)
+    int intersect(int anim, int basetime, int basetime2, const vec &pos, float yaw, float pitch, float roll, dynent *d, modelattach *a, float size, const vec &o, const vec &ray, float &dist, int mode)
     {
         if(!loaded) return -1;
 
-        yaw += spinyaw*lastmillis/1000.0f;
-        pitch += offsetpitch + spinpitch*lastmillis/1000.0f;
-
-        vec axis(0, -1, 0), forward(1, 0, 0);
+        vec axis(1, 0, 0), forward(0, 1, 0);
 
         matrixpos = 0;
         matrixstack[0].identity();
         if(!d || !d->ragdoll || anim&ANIM_RAGDOLL)
         {
+            float secs = lastmillis/1000.0f;
+            yaw += spinyaw*secs;
+            pitch += spinpitch*secs;
+            roll += spinroll*secs;
+
             matrixstack[0].settranslation(pos);
             matrixstack[0].rotate_around_z(yaw*RAD);
+            bool usepitch = pitched();
+            if(roll && !usepitch) matrixstack[0].rotate_around_y(-roll*RAD);
             matrixstack[0].transformnormal(vec(axis), axis);
             matrixstack[0].transformnormal(vec(forward), forward);
+            if(roll && usepitch) matrixstack[0].rotate_around_y(-roll*RAD);
             if(offsetyaw) matrixstack[0].rotate_around_z(offsetyaw*RAD);
+            if(offsetpitch) matrixstack[0].rotate_around_x(offsetpitch*RAD);
+            if(offsetroll) matrixstack[0].rotate_around_y(-offsetroll*RAD);
         }
         else
         {
@@ -1084,7 +1106,7 @@ struct animmodel : model
                     continue;
                 }
                 part *p = m->parts[0];
-                switch(linktype(m))
+                switch(linktype(m, p))
                 {
                     case LINK_TAG:
                         p->index = link(p, a[i].tag, vec(0, 0, 0), a[i].anim, a[i].basetime, a[i].pos) ? index : -1;
@@ -1104,6 +1126,21 @@ struct animmodel : model
         animstate as[MAXANIMPARTS];
         parts[0]->render(anim, basetime, basetime2, pitch, axis, forward, d, as);
 
+        for(int i = 1; i < parts.length(); i++)
+        {
+            part *p = parts[i];
+            switch(linktype(this, p))
+            {
+                case LINK_COOP:
+                    p->render(anim, basetime, basetime2, pitch, axis, forward, d);
+                    break;
+
+                case LINK_REUSE:
+                    p->render(anim | ANIM_REUSE, basetime, basetime2, pitch, axis, forward, d, as);
+                    break;
+            }
+        }
+
         if(a) for(int i = numtags-1; i >= 0; i--)
         {
             animmodel *m = (animmodel *)a[i].m;
@@ -1113,7 +1150,7 @@ struct animmodel : model
                 continue;
             }
             part *p = m->parts[0];
-            switch(linktype(m))
+            switch(linktype(m, p))
             {
                 case LINK_TAG:
                     if(p->index >= 0) unlink(p);
@@ -1136,22 +1173,27 @@ struct animmodel : model
     {
         if(!loaded) return;
 
-        yaw += spinyaw*lastmillis/1000.0f;
-        pitch += offsetpitch + spinpitch*lastmillis/1000.0f;
-        roll += offsetroll + spinroll*lastmillis/1000.0f;
-
-        vec axis(0, -1, 0), forward(1, 0, 0);
+        vec axis(1, 0, 0), forward(0, 1, 0);
 
         matrixpos = 0;
         matrixstack[0].identity();
         if(!d || !d->ragdoll || anim&ANIM_RAGDOLL)
         {
+            float secs = lastmillis/1000.0f;
+            yaw += spinyaw*secs;
+            pitch += spinpitch*secs;
+            roll += spinroll*secs;
+
             matrixstack[0].settranslation(o);
             matrixstack[0].rotate_around_z(yaw*RAD);
-            matrixstack[0].rotate_around_x(-roll * RAD);
+            bool usepitch = pitched();
+            if(roll && !usepitch) matrixstack[0].rotate_around_y(-roll*RAD);
             matrixstack[0].transformnormal(vec(axis), axis);
             matrixstack[0].transformnormal(vec(forward), forward);
+            if(roll && usepitch) matrixstack[0].rotate_around_y(-roll*RAD);
             if(offsetyaw) matrixstack[0].rotate_around_z(offsetyaw*RAD);
+            if(offsetpitch) matrixstack[0].rotate_around_x(offsetpitch*RAD);
+            if(offsetroll) matrixstack[0].rotate_around_y(-offsetroll*RAD);
         }
         else
         {
@@ -1218,8 +1260,8 @@ struct animmodel : model
     {
         m.identity();
         if(offsetyaw) m.rotate_around_z(offsetyaw*RAD);
-        if(offsetroll) m.rotate_around_x(-offsetroll*RAD);
-        if(offsetpitch) m.rotate_around_y(-offsetpitch*RAD);
+        if(offsetpitch) m.rotate_around_x(offsetpitch*RAD);
+        if(offsetroll) m.rotate_around_y(-offsetroll*RAD);
         m.translate(translate, scale);
     }
 
@@ -1229,6 +1271,18 @@ struct animmodel : model
         matrix3x4 m;
         initmatrix(m);
         parts[0]->gentris(tris, m);
+        for(int i = 1; i < parts.length(); i++)
+        {
+            part *p = parts[i];
+            switch(linktype(this, p))
+            {
+                case LINK_COOP:
+                case LINK_REUSE:
+                    p->gentris(tris, m);
+                    break;
+            }
+        }
+
     }
 
     void preloadBIH()
@@ -1266,9 +1320,14 @@ struct animmodel : model
 
     bool animated() const
     {
-        if(spinyaw || spinpitch) return true;
+        if(spinyaw || spinpitch || spinroll) return true;
         loopv(parts) if(parts[i]->animated()) return true;
         return false;
+    }
+
+    bool pitched() const
+    {
+        return parts[0]->pitchscale != 0;
     }
 
     virtual bool loaddefaultparts()
@@ -1356,6 +1415,17 @@ struct animmodel : model
         matrix3x4 m;
         initmatrix(m);
         parts[0]->calcbb(bbmin, bbmax, m);
+        for(int i = 1; i < parts.length(); i++)
+        {
+            part *p = parts[i];
+            switch(linktype(this, p))
+            {
+                case LINK_COOP:
+                case LINK_REUSE:
+                    p->calcbb(bbmin, bbmax, m);
+                    break;
+            }
+        }
         radius = bbmax;
         radius.sub(bbmin);
         radius.mul(0.5f);

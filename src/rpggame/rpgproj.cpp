@@ -261,7 +261,6 @@ bool projectile::update()
 					it->transfer(*rit);
 
 					vectoyawpitch(dir, rit->yaw, rit->pitch);
-					rit->yaw += 90; //adjust for projectile yaw.
 					rit->resetmdl();
 					setbbfrommodel(rit, rit->temp.mdl);
 					rit->o = o;
@@ -419,7 +418,6 @@ void projectile::render()
 		{
 			float yaw, pitch, roll;
 			vectoyawpitch(dir, yaw, pitch);
-			yaw += 90;
 			roll = 0;
 
 			if(!projfx->spin.iszero())

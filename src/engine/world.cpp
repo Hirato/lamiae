@@ -28,7 +28,7 @@ bool getentboundingbox(extentity &e, ivec &o, ivec &r)
                     center.mul(e.attr[4] / 100.0f);
                     radius.mul(e.attr[4] / 100.0f);
                 }
-                rotatebb(center, radius, e.attr[1]);
+                rotatebb(center, radius, e.attr[1], e.attr[2], e.attr[3]);
 
                 o = e.o;
                 o.add(center);
@@ -269,7 +269,7 @@ char *entname(entity &e)
 }
 
 extern selinfo sel;
-extern bool havesel, selectcorners;
+extern bool havesel;
 int entlooplevel = 0;
 int efocus = -1, enthover = -1, oldhover = -1;
 VAR(entorient, 1, -1, -1);
@@ -500,7 +500,8 @@ void entselectionbox(const entity &e, vec &eo, vec &es)
         loopi(3) if(es.v[i] < entselradius)
             es.v[i] = entselradius;
 
-        rotatebb(eo, es, getentyaw(e));
+        if(e.type == ET_MAPMODEL) rotatebb(eo, es, e.attr[1], e.attr[2], e.attr[3]);
+        else rotatebb(eo, es, getentyaw(e), 0);
         eo.add(e.o);
     }
     else
@@ -671,8 +672,9 @@ void renderentradius(extentity &e, bool color)
         case ET_MAPMODEL:
         {
             if(color) gle::colorf(0, 1, 1);
+            entities::entradius(e, color);
             vec dir;
-            vecfromyawpitch(e.attr[1], 0, 1, 0, dir);
+            vecfromyawpitch(e.attr[1], e.attr[2], 1, 0, dir);
             renderentarrow(e, dir, 4);
             break;
         }
@@ -873,7 +875,7 @@ bool dropentity(entity &e, int drop = -1)
                 center.mul(e.attr[4] / 100.0f);
                 radius.mul(e.attr[4] / 100.0f);
             }
-            rotatebb(center, radius, e.attr[1]);
+            rotatebb(center, radius, e.attr[1], e.attr[2], e.attr[3]);
             radius.x += fabs(center.x);
             radius.y += fabs(center.y);
         }

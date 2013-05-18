@@ -203,7 +203,7 @@ namespace entities
 			rpgentity &e = *((rpgentity *) ents[i]);
 			const char *mdl = entmodel(e);
 			int anim = e.type == CRITTER ? ANIM_IDLE : ANIM_MAPMODEL,
-				yaw = e.attr[0] + (e.type == CRITTER ? 90 : 0);
+				yaw = e.attr[0];
 
 			if(mdl && entpreviewalpha)
 				rendermodel(

@@ -23,6 +23,27 @@ void seedMT(uint seed)
     next = 0;
 }
 
+uint randomMT()
+{
+    int cur = next;
+    if(++next >= N)
+    {
+        if(next > N) { seedMT(5489U + time(NULL)); cur = next++; }
+        else next = 0;
+    }
+    uint y = (state[cur] & 0x80000000U) | (state[next] & 0x7FFFFFFFU);
+    state[cur] = y = state[cur < N-M ? cur + M : cur + M-N] ^ (y >> 1) ^ (-int(y & 1U) & K);
+    y ^= (y >> 11);
+    y ^= (y <<  7) & 0x9D2C5680U;
+    y ^= (y << 15) & 0xEFC60000U;
+    y ^= (y >> 18);
+    return y;
+}
+
+#undef N
+#undef M
+#undef K
+
 ///////////////////////// network ///////////////////////
 
 // all network traffic is in 32bit ints, which are then compressed using the following simple scheme (assumes that most values are small).
@@ -144,19 +165,3 @@ void filtertext(char *dst, const char *src, bool whitespace, int len)
     *dst = '\0';
 }
 
-uint randomMT()
-{
-    int cur = next;
-    if(++next >= N)
-    {
-        if(next > N) { seedMT(5489U + time(NULL)); cur = next++; }
-        else next = 0;
-    }
-    uint y = (state[cur] & 0x80000000U) | (state[next] & 0x7FFFFFFFU);
-    state[cur] = y = state[cur < N-M ? cur + M : cur + M-N] ^ (y >> 1) ^ (-int(y & 1U) & K);
-    y ^= (y >> 11);
-    y ^= (y <<  7) & 0x9D2C5680U;
-    y ^= (y << 15) & 0xEFC60000U;
-    y ^= (y >> 18);
-    return y;
-}

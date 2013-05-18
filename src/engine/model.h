@@ -15,7 +15,7 @@ struct model
 
     virtual ~model() { DELETEP(bih); }
     virtual void calcbb(vec &center, vec &radius) = 0;
-    virtual int intersect(int anim, int basetime, int basetime2, const vec &pos, float yaw, float pitch, dynent *d, modelattach *a, float size, const vec &o, const vec &ray, float &dist, int mode) = 0;
+    virtual int intersect(int anim, int basetime, int basetime2, const vec &pos, float yaw, float pitch, float roll, dynent *d, modelattach *a, float size, const vec &o, const vec &ray, float &dist, int mode) = 0;
     virtual void render(int anim, int basetime, int basetime2, const vec &o, float yaw, float pitch, float roll, dynent *d, modelattach *a = NULL, float size = 1, float trans = 1) = 0;
     virtual bool load() = 0;
     virtual const char *name() const = 0;
@@ -24,6 +24,7 @@ struct model
     virtual bool envmapped() { return false; }
     virtual bool skeletal() const { return false; }
     virtual bool animated() const { return false; }
+    virtual bool pitched() const { return true; }
 
     virtual void setshader(Shader *shader) {}
     virtual void setenvmap(float envmapmin, float envmapmax, Texture *envmap) {}
@@ -55,12 +56,12 @@ struct model
         boundbox(center, radius);
         if(collideradius)
         {
-            center[0] = center[1] = 0;
-            radius[0] = radius[1] = collideradius;
+            center.x = center.y = 0;
+            radius.x = radius.y = collideradius;
         }
         if(collideheight)
         {
-            center[2] = radius[2] = collideheight/2;
+            center.z = radius.z = collideheight/2;
         }
     }
 

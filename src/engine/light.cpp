@@ -420,7 +420,7 @@ const vector<int> &checklightcache(int x, int y)
     return lce.lights;
 }
 
-static uint progress = 0;
+static uint lightprogress = 0;
 
 bool calclight_canceled = false;
 volatile bool check_calclight_progress = false;
@@ -436,7 +436,7 @@ void check_calclight_canceled()
 
 void show_calclight_progress()
 {
-    float bar1 = float(progress) / float(allocnodes);
+    float bar1 = float(lightprogress) / float(allocnodes);
     defformatstring(text1)("%d%%", int(bar1 * 100));
 
     renderprogress(bar1, text1);
@@ -512,18 +512,19 @@ static void calcsurfaces(cube &c, const ivec &co, int size, int usefacemask, int
         vec pos[MAXFACEVERTS], n[MAXFACEVERTS], po = ivec(co).mask(~0xFFF).tovec();
         loopj(numverts) pos[j] = curlitverts[j].getxyz().tovec().mul(1.0f/8).add(po);
 
+        int smooth = vslot.slot->smooth;
         plane planes[2];
         int numplanes = 0;
         planes[numplanes++].toplane(pos[0], pos[1], pos[2]);
-        if(numverts < 4 || !convex) loopk(numverts) findnormal(pos[k], planes[0], n[k]);
+        if(numverts < 4 || !convex) loopk(numverts) findnormal(pos[k], smooth, planes[0], n[k]);
         else
         {
             planes[numplanes++].toplane(pos[0], pos[2], pos[3]);
             vec avg = vec(planes[0]).add(planes[1]).normalize();
-            findnormal(pos[0], avg, n[0]);
-            findnormal(pos[1], planes[0], n[1]);
-            findnormal(pos[2], avg, n[2]);
-            for(int k = 3; k < numverts; k++) findnormal(pos[k], planes[1], n[k]);
+            findnormal(pos[0], smooth, avg, n[0]);
+            findnormal(pos[1], smooth, planes[0], n[1]);
+            findnormal(pos[2], smooth, avg, n[2]);
+            for(int k = 3; k < numverts; k++) findnormal(pos[k], smooth, planes[1], n[k]);
         }
 
         loopk(numverts) curlitverts[k].norm = encodenormal(n[k]);
@@ -548,6 +549,8 @@ static void calcsurfaces(cube &c, const ivec &co, int size, int usefacemask, int
                 x2 = max(x2, int(v.x));
                 y2 = max(y2, int(v.y));
             }
+            x2 = max(x2, x1+1);
+            y2 = max(y2, y1+1);
             x1 = (x1>>3) + (co.x&~0xFFF);
             y1 = (y1>>3) + (co.y&~0xFFF);
             x2 = ((x2+7)>>3) + (co.x&~0xFFF);
@@ -575,7 +578,7 @@ static void calcsurfaces(cube *c, const ivec &co, int size)
 {
     CHECK_CALCLIGHT_PROGRESS(return, show_calclight_progress);
 
-    progress++;
+    lightprogress++;
 
     loopi(8)
     {
@@ -671,7 +674,7 @@ void calclight()
     optimizeblendmap();
     clearlightcache();
     clearsurfaces(worldroot);
-    progress = 0;
+    lightprogress = 0;
     calclight_canceled = false;
     check_calclight_progress = false;
     SDL_TimerID timer = SDL_AddTimer(250, calclighttimer, NULL);
@@ -702,6 +705,7 @@ void clearlights()
     clearlightcache();
     clearshadowcache();
     cleardeferredlightshaders();
+    resetsmoothgroups();
 }
 
 void initlights()

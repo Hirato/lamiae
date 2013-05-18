@@ -533,7 +533,7 @@ bool ellipsecollide(physent *d, const vec &dir, const vec &o, const vec &center,
     yo.rotate_around_z(yaw*RAD);
     yo.add(o);
     float x = yo.x - d->o.x, y = yo.y - d->o.y;
-    float angle = atan2f(y, x), dangle = angle-(d->yaw+90)*RAD, eangle = angle-(yaw+90)*RAD;
+    float angle = atan2f(y, x), dangle = angle-d->yaw*RAD, eangle = angle-yaw*RAD;
     float dx = d->xradius*cosf(dangle), dy = d->yradius*sinf(dangle);
     float ex = xr*cosf(eangle), ey = yr*sinf(eangle);
     float dist = sqrtf(x*x + y*y) - sqrtf(dx*dx + dy*dy) - sqrtf(ex*ex + ey*ey);
@@ -716,23 +716,45 @@ bool plcollide(physent *d, const vec &dir)    // collide with player or monster
     return true;
 }
 
-void rotatebb(vec &center, vec &radius, int yaw)
+void rotatebb(vec &center, vec &radius, int yaw, int pitch, int roll)
 {
-    if(yaw < 0) yaw = 360 + yaw%360;
-    else if(yaw >= 360) yaw %= 360;
-    const vec2 &rot = sincos360[yaw];
-    vec2 oldcenter(center), oldradius(radius);
-    center.x = oldcenter.x*rot.x - oldcenter.y*rot.y;
-    center.y = oldcenter.y*rot.x + oldcenter.x*rot.y;
-    radius.x = fabs(oldradius.x*rot.x) + fabs(oldradius.y*rot.y);
-    radius.y = fabs(oldradius.y*rot.x) + fabs(oldradius.x*rot.y);
+    if(roll)
+    {
+        if(roll < 0) roll = 360 + roll%360;
+        else if(roll >= 360) roll %= 360;
+        const vec2 &rot = sincos360[roll];
+        center.rotate_around_y(rot.x, -rot.y);
+        vec2 oldradius(radius.x, radius.z);
+        radius.x = fabs(oldradius.x*rot.x) + fabs(oldradius.y*rot.y);
+        radius.z = fabs(oldradius.y*rot.x) + fabs(oldradius.x*rot.y);
+    }
+    if(pitch)
+    {
+        if(pitch < 0) pitch = 360 + pitch%360;
+        else if(pitch >= 360) pitch %= 360;
+        const vec2 &rot = sincos360[pitch];
+        center.rotate_around_x(rot.x, rot.y);
+        vec2 oldradius(radius.y, radius.z);
+        radius.y = fabs(oldradius.x*rot.x) + fabs(oldradius.y*rot.y);
+        radius.z = fabs(oldradius.y*rot.x) + fabs(oldradius.x*rot.y);
+    }
+    if(yaw)
+    {
+        if(yaw < 0) yaw = 360 + yaw%360;
+        else if(yaw >= 360) yaw %= 360;
+        const vec2 &rot = sincos360[yaw];
+        center.rotate_around_z(rot.x, rot.y);
+        vec2 oldradius(radius);
+        radius.x = fabs(oldradius.x*rot.x) + fabs(oldradius.y*rot.y);
+        radius.y = fabs(oldradius.y*rot.x) + fabs(oldradius.x*rot.y);
+    }
 }
 
 template<class E, class M>
-static inline bool mmcollide(physent *d, const vec &dir, const extentity &e, const vec &center, const vec &radius, float yaw)
+static inline bool mmcollide(physent *d, const vec &dir, const extentity &e, const vec &center, const vec &radius, float yaw, float pitch, float roll)
 {
     E entvol(d);
-    M mdlvol(e.o, center, radius, yaw);
+    M mdlvol(e.o, center, radius, yaw, pitch, roll);
     vec cp;
     if(mpr::collide(entvol, mdlvol, NULL, NULL, &cp))
     {
@@ -753,7 +775,6 @@ bool mmcollide(physent *d, const vec &dir, octaentities &oc)               // co
         if(e.flags&extentity::F_NOCOLLIDE) continue;
         model *m = loadmodel(NULL, e.attr[0]);
         if(!m || !m->collide) continue;
-        int yaw = e.attr[1];
         vec center, radius;
         m->collisionbox(center, radius);
         if(e.attr[4] > 0)
@@ -761,27 +782,29 @@ bool mmcollide(physent *d, const vec &dir, octaentities &oc)               // co
             center.mul(e.attr[4] / 100.0f);
             radius.mul(e.attr[4] / 100.0f);
         }
+        int yaw = e.attr[1], pitch = e.attr[2], roll = e.attr[3];
         switch(d->collidetype)
         {
             case COLLIDE_ELLIPSE:
+                if(pitch || roll) rotatebb(center, radius, 0, pitch, roll);
                 if(m->ellipsecollide)
                 {
-                    //if(!mmcollide<mpr::EntCylinder, mpr::ModelEllipse>(d, dir, e, center, radius, yaw)) return false;
+                    //if(!mmcollide<mpr::EntCylinder, mpr::ModelEllipse>(d, dir, e, center, radius, yaw, pitch, roll)) return false;
                     if(!ellipsecollide(d, dir, e.o, center, yaw, radius.x, radius.y, radius.z, radius.z)) return false;
                 }
-                //else if(!mmcollide<mpr::EntCylinder, mpr::ModelOBB>(d, dir, e, center, radius, yaw)) return false;
+                //else if(!mmcollide<mpr::EntCylinder, mpr::ModelOBB>(d, dir, e, center, radius, yaw, pitch, roll)) return false;
                 else if(!ellipserectcollide(d, dir, e.o, center, yaw, radius.x, radius.y, radius.z, radius.z)) return false;
                 break;
             case COLLIDE_OBB:
                 if(m->ellipsecollide)
                 {
-                    if(!mmcollide<mpr::EntOBB, mpr::ModelEllipse>(d, dir, e, center, radius, yaw)) return false;
+                    if(!mmcollide<mpr::EntOBB, mpr::ModelEllipse>(d, dir, e, center, radius, yaw, pitch, roll)) return false;
                 }
-                else if(!mmcollide<mpr::EntOBB, mpr::ModelOBB>(d, dir, e, center, radius, yaw)) return false;
+                else if(!mmcollide<mpr::EntOBB, mpr::ModelOBB>(d, dir, e, center, radius, yaw, pitch, roll)) return false;
                 break;
             case COLLIDE_AABB:
             default:
-                rotatebb(center, radius, e.attr[1]);
+                rotatebb(center, radius, yaw, pitch, roll);
                 if(!rectcollide(d, dir, center.add(e.o), radius.x, radius.y, radius.z, radius.z)) return false;
                 break;
         }

@@ -896,6 +896,8 @@ void rendermapmodel(int idx, int anim, const vec &o, float yaw, float pitch, flo
     m->boundbox(center, bbradius);
     float radius = bbradius.magnitude();
     center.mul(size);
+    if(roll) center.rotate_around_y(-roll*RAD);
+    if(pitch && m->pitched()) center.rotate_around_x(pitch*RAD);
     center.rotate_around_z(yaw*RAD);
     center.add(o);
     radius *= size;
@@ -945,6 +947,8 @@ void rendermodel(const char *mdl, int anim, const vec &o, float yaw, float pitch
     else
     {
         center.mul(size);
+        if(roll) center.rotate_around_y(-roll*RAD);
+        if(pitch && m->pitched()) center.rotate_around_x(pitch*RAD);
         center.rotate_around_z(yaw*RAD);
         center.add(o);
     }
@@ -1011,7 +1015,7 @@ void rendermodel(const char *mdl, int anim, const vec &o, float yaw, float pitch
     addbatchedmodel(m, b, batchedmodels.length()-1);
 }
 
-int intersectmodel(const char *mdl, int anim, const vec &pos, float yaw, float pitch, const vec &o, const vec &ray, float &dist, int mode, dynent *d, modelattach *a, int basetime, int basetime2, float size)
+int intersectmodel(const char *mdl, int anim, const vec &pos, float yaw, float pitch, float roll, const vec &o, const vec &ray, float &dist, int mode, dynent *d, modelattach *a, int basetime, int basetime2, float size)
 {
     model *m = loadmodel(mdl);
     if(!m) return -1;
@@ -1019,7 +1023,7 @@ int intersectmodel(const char *mdl, int anim, const vec &pos, float yaw, float p
     {
         if(a[i].name) a[i].m = loadmodel(a[i].name);
     }
-    return m->intersect(anim, basetime, basetime2, pos, yaw, pitch, d, a, size, o, ray, dist, mode);
+    return m->intersect(anim, basetime, basetime2, pos, yaw, pitch, roll, d, a, size, o, ray, dist, mode);
 }
 
 void abovemodel(vec &o, const char *mdl)
@@ -1103,8 +1107,10 @@ VAR(testpitch, -90, 0, 90);
 void renderclient(dynent *d, const char *mdlname, modelattach *attachments, int hold, int attack, int attackdelay, int lastaction, int lastpain, float scale, bool ragdoll, float trans)
 {
     int anim = hold ? hold : ANIM_IDLE|ANIM_LOOP;
-    float yaw = testanims && d==player ? 0 : d->yaw+90,
-          pitch = testpitch && d==player ? testpitch : d->pitch;
+    float yaw = testanims && d==player ? 0 : d->yaw,
+          pitch = testpitch && d==player ? testpitch : d->pitch,
+          roll = d->roll;
+
     vec o = d->feetpos();
     int basetime = 0;
     if(animoverride) anim = (animoverride<0 ? ANIM_ALL : animoverride)|ANIM_LOOP;
@@ -1156,7 +1162,7 @@ void renderclient(dynent *d, const char *mdlname, modelattach *attachments, int 
     else flags |= MDL_CULL_DIST;
     if(drawtex == DRAWTEX_MODELPREVIEW) flags &= ~(MDL_FULLBRIGHT | MDL_CULL_VFC | MDL_CULL_OCCLUDED | MDL_CULL_QUERY | MDL_CULL_DIST);
     if(d->state == CS_LAGGED) trans = min(trans, 0.3f);
-    rendermodel(mdlname, anim, o, yaw, pitch, d->roll, flags, d, attachments, basetime, 0, scale, trans);
+    rendermodel(mdlname, anim, o, yaw, pitch, roll, flags, d, attachments, basetime, 0, scale, trans);
 }
 
 void setbbfrommodel(physent *d, const char *mdl)
@@ -1169,7 +1175,7 @@ void setbbfrommodel(physent *d, const char *mdl)
     {
         d->collidetype = COLLIDE_OBB;
         //d->collidetype = COLLIDE_AABB;
-        //rotatebb(center, radius, int(d->yaw));
+        //rotatebb(center, radius, int(d->yaw), int(d->pitch));
     }
     d->xradius   = radius.x + fabs(center.x);
     d->yradius   = radius.y + fabs(center.y);
