@@ -1285,7 +1285,6 @@ struct rpgobstacle : rpgent
 
 	///character/AI
 	void givexp(int xp) {}
-	void equip(int i, int u = 0) {}
 	void die(rpgent *killer = NULL) {}
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
 
@@ -1317,7 +1316,6 @@ struct rpgcontainer : rpgent
 
 	///character/AI
 	void givexp(int xp) {}
-	void equip(int i, int u = 0) {}
 	void die(rpgent *killer = NULL) {}
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
 
@@ -1369,7 +1367,6 @@ struct rpgplatform : rpgent
 
 	///character/AI
 	void givexp(int xp) {}
-	void equip(int i, int u = 0) {}
 	void die(rpgent *killer = NULL) {}
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
 
@@ -1403,7 +1400,6 @@ struct rpgtrigger : rpgent
 
 	///character/AI
 	void givexp(int xp) {}
-	void equip(int i, int u = 0) {}
 	void die(rpgent *killer = NULL) {}
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
 
