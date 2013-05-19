@@ -2675,12 +2675,16 @@ ICOMMAND(loopfiles, "rsse", (ident *id, char *dir, char *ext, uint *body),
     identstack stack;
     vector<char *> files;
     listfiles(dir, ext[0] ? ext : NULL, files);
-    loopv(files)
+    loopvrev(files)
     {
         char *file = files[i];
         bool redundant = false;
         loopj(i) if(!strcmp(files[j], file)) { redundant = true; break; }
-        if(redundant) { delete[] file; continue; }
+        if(redundant) delete[] files.remove(i);
+    }
+    loopv(files)
+    {
+        char *file = files[i];
         if(i)
         {
             if(id->valtype == VAL_STR) delete[] id->val.s;
@@ -2808,12 +2812,12 @@ void sortlist(char *list, ident *x, ident *y, uint *body)
 }
 COMMAND(sortlist, "srre");
 
-ICOMMAND(+, "V", (tagval *v, int n), int ret = 0; loopi(n) ret += v[i].getint(); intret(ret));
-ICOMMAND(-, "V", (tagval *v, int n), int ret = n >= 1 ? v->getint() : 0; loopi(n - 1) ret -= v[i + 1].getint(); intret(ret));
-ICOMMAND(+f, "V", (tagval *v, int n), float ret = 0; loopi(n) ret += v[i].getfloat(); floatret(ret));
-ICOMMAND(-f, "V", (tagval *v, int n), float ret = n >= 1 ? v->getfloat() : 0; loopi(n - 1) ret -= v[i + 1].getfloat(); floatret(ret));
-ICOMMAND(*, "ii", (int *a, int *b), intret(*a * *b));
-ICOMMAND(*f, "ff", (float *a, float *b), floatret(*a * *b));
+ICOMMAND(+, "i1V", (tagval *v, int n), int ret = 0; loopi(n) ret += v[i].getint(); intret(ret));
+ICOMMAND(-, "i1V", (tagval *v, int n), int ret = n >= 1 ? v->getint() : 0; loopi(n - 1) ret -= v[i + 1].getint(); intret(ret));
+ICOMMAND(+f, "f1V", (tagval *v, int n), float ret = 0; loopi(n) ret += v[i].getfloat(); floatret(ret));
+ICOMMAND(-f, "f1V", (tagval *v, int n), float ret = n >= 1 ? v->getfloat() : 0; loopi(n - 1) ret -= v[i + 1].getfloat(); floatret(ret));
+ICOMMAND(*, "i1V", (tagval *v, int n), int ret = (n >= 1); loopi(n) ret *= v[i].getint(); intret(ret));
+ICOMMAND(*f, "f1V", (tagval *v, int n), float ret = (n >= 1); loopi(n) ret *= v[i].getfloat(); floatret(ret));
 ICOMMAND(=, "ii", (int *a, int *b), intret((int)(*a == *b)));
 ICOMMAND(!=, "ii", (int *a, int *b), intret((int)(*a != *b)));
 ICOMMAND(<, "ii", (int *a, int *b), intret((int)(*a < *b)));
@@ -2826,14 +2830,14 @@ ICOMMAND(<f, "ff", (float *a, float *b), intret((int)(*a < *b)));
 ICOMMAND(>f, "ff", (float *a, float *b), intret((int)(*a > *b)));
 ICOMMAND(<=f, "ff", (float *a, float *b), intret((int)(*a <= *b)));
 ICOMMAND(>=f, "ff", (float *a, float *b), intret((int)(*a >= *b)));
-ICOMMAND(^, "ii", (int *a, int *b), intret(*a ^ *b));
+ICOMMAND(^, "i1V", (tagval *v, int n), int ret = (n >= 1 ? v->getint() : 0); loopi(n - 1) ret ^= v[i+1].getint(); intret(ret));
 ICOMMAND(!, "t", (tagval *a), intret(!getbool(*a)));
-ICOMMAND(&, "ii", (int *a, int *b), intret(*a & *b));
-ICOMMAND(|, "V", (tagval *v, int n), int ret = 0; loopi(n) ret |= v[i].getint(); intret(ret));
+ICOMMAND(&, "i1V", (tagval *v, int n), int ret = (n >= 1 ? v->getint() : 0); loopi(n - 1) ret &= v[i+1].getint(); intret(ret));
+ICOMMAND(|, "i1V", (tagval *v, int n), int ret = 0; loopi(n) ret |= v[i].getint(); intret(ret));
 ICOMMAND(~, "i", (int *a), intret(~*a));
-ICOMMAND(^~, "ii", (int *a, int *b), intret(*a ^ ~*b));
-ICOMMAND(&~, "ii", (int *a, int *b), intret(*a & ~*b));
-ICOMMAND(|~, "ii", (int *a, int *b), intret(*a | ~*b));
+ICOMMAND(^~, "i1V", (tagval *v, int n), int ret = (n >= 1 ? v->getint() : 0); loopi(n - 1) ret ^= ~v[i+1].getint(); intret(ret));
+ICOMMAND(&~, "i1V", (tagval *v, int n), int ret = (n >= 1 ? v->getint() : 0); loopi(n - 1) ret &= ~v[i+1].getint(); intret(ret));
+ICOMMAND(|~, "i1V", (tagval *v, int n), int ret = (n >= 1 ? v->getint() : 0); loopi(n - 1) ret |= ~v[i+1].getint(); intret(ret));
 ICOMMAND(<<, "ii", (int *a, int *b), intret(*a << *b));
 ICOMMAND(>>, "ii", (int *a, int *b), intret(*a >> *b));
 ICOMMAND(&&, "e1V", (tagval *args, int numargs),
@@ -2857,10 +2861,10 @@ ICOMMAND(||, "e1V", (tagval *args, int numargs),
     }
 });
 
-ICOMMAND(div, "ii", (int *a, int *b), intret(*b ? *a / *b : 0));
-ICOMMAND(mod, "ii", (int *a, int *b), intret(*b ? *a % *b : 0));
-ICOMMAND(divf, "ff", (float *a, float *b), floatret(*b ? *a / *b : 0));
-ICOMMAND(modf, "ff", (float *a, float *b), floatret(*b ? fmod(*a, *b) : 0));
+ICOMMAND(div, "i1V", (tagval *v, int n), int ret = (n >= 1 ? v->getint() : 0); loopi(n - 1) ret /= v[i+1].getint(); intret(ret));
+ICOMMAND(mod, "i1V", (tagval *v, int n), int ret = (n >= 1 ? v->getint() : 0); loopi(n - 1) { int val = v[i+1].getint(); if(!val) ret = 0; else ret %= val;} intret(ret));
+ICOMMAND(divf, "f1V", (tagval *v, int n), float ret = (n >= 1 ? v->getfloat() : 0); loopi(n - 1) ret /= v[i+1].getfloat(); floatret(ret));
+ICOMMAND(modf, "f1V", (tagval *v, int n), float ret = (n >= 1 ? v->getfloat() : 0); loopi(n - 1) { float val = v[i+1].getfloat(); ret = val ? fmod(ret, val) : 0;} floatret(ret));
 ICOMMAND(sin, "f", (float *a), floatret(sin(*a*RAD)));
 ICOMMAND(cos, "f", (float *a), floatret(cos(*a*RAD)));
 ICOMMAND(tan, "f", (float *a), floatret(tan(*a*RAD)));
@@ -2873,25 +2877,25 @@ ICOMMAND(loge, "f", (float *a), floatret(log(*a)));
 ICOMMAND(log2, "f", (float *a), floatret(log(*a)/M_LN2));
 ICOMMAND(log10, "f", (float *a), floatret(log10(*a)));
 ICOMMAND(exp, "f", (float *a), floatret(exp(*a)));
-ICOMMAND(min, "V", (tagval *args, int numargs),
+ICOMMAND(min, "i1V", (tagval *args, int numargs),
 {
     int val = numargs > 0 ? args[numargs - 1].getint() : 0;
     loopi(numargs - 1) val = min(val, args[i].getint());
     intret(val);
 });
-ICOMMAND(max, "V", (tagval *args, int numargs),
+ICOMMAND(max, "i1V", (tagval *args, int numargs),
 {
     int val = numargs > 0 ? args[numargs - 1].getint() : 0;
     loopi(numargs - 1) val = max(val, args[i].getint());
     intret(val);
 });
-ICOMMAND(minf, "V", (tagval *args, int numargs),
+ICOMMAND(minf, "f1V", (tagval *args, int numargs),
 {
     float val = numargs > 0 ? args[numargs - 1].getfloat() : 0.0f;
     loopi(numargs - 1) val = min(val, args[i].getfloat());
     floatret(val);
 });
-ICOMMAND(maxf, "V", (tagval *args, int numargs),
+ICOMMAND(maxf, "f1V", (tagval *args, int numargs),
 {
     float val = numargs > 0 ? args[numargs - 1].getfloat() : 0.0f;
     loopi(numargs - 1) val = max(val, args[i].getfloat());
