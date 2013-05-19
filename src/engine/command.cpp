@@ -2680,7 +2680,7 @@ ICOMMAND(loopfiles, "rsse", (ident *id, char *dir, char *ext, uint *body),
         char *file = files[i];
         bool redundant = false;
         loopj(i) if(!strcmp(files[j], file)) { redundant = true; break; }
-        if(redundant) delete[] files.remove(i);
+        if(redundant) delete[] files.removeunordered(i);
     }
     loopv(files)
     {
