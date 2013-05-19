@@ -12,11 +12,10 @@ endif
 endif
 
 MV=mv
-AR=ar rcus
 
 INCLUDES= -Ishared -Iengine -Ienet/include
 CLIENT_INCLUDES= $(INCLUDES) -I/usr/X11R6/include `sdl2-config --cflags`
-CLIENT_LIBS= -Lenet -lenet -L/usr/X11R6/lib `sdl2-config --libs` -lSDL2_image -lSDL2_mixer -lz -lGL -lX11
+CLIENT_LIBS= -L/usr/X11R6/lib `sdl2-config --libs` -lSDL2_image -lSDL2_mixer -lz -lGL -lX11
 
 
 PLATFORM= $(shell uname -s)
@@ -178,7 +177,7 @@ $(RPGCLIENT_OBJS): $(filter rpggame/%,$(CLIENT_PCH))
 
 
 client: $(ENET_OBJS) $(CLIENT_OBJS) $(RPGCLIENT_OBJS)
-	$(CXX) $(CXXFLAGS) -o lamiae$(MACHINE).$(BIN_SUFFIX) $(CLIENT_OBJS) $(RPGCLIENT_OBJS) $(CLIENT_LIBS)
+	$(CXX) $(CXXFLAGS) -o lamiae$(MACHINE).$(BIN_SUFFIX) $(ENET_OBJS) $(CLIENT_OBJS) $(RPGCLIENT_OBJS) $(CLIENT_LIBS)
 
 install: all
 ifneq (,$(STRIP))
