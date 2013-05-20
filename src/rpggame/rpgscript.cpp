@@ -1902,7 +1902,7 @@ namespace rpgscript
 	//tag, index, number, quantity
 	SPAWNCOMMAND(item, (*attra, ENT_ITEM, attrb, *attrc, max(1, *attrd)))
 	//tag, index, number
-	SPAWNCOMMAND(creature, (*attra, ENT_CHAR, attrb, *attrc, 1))
+	SPAWNCOMMAND(critter, (*attra, ENT_CHAR, attrb, *attrc, 1))
 	//tag, index, number
 	SPAWNCOMMAND(obstacle, (*attra, ENT_OBSTACLE, attrb, *attrc, 1))
 	//tag, index, number
