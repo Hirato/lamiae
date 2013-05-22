@@ -1017,7 +1017,7 @@ void newent(tagval *args, int num)
     int *attrs = new int[numattrs];
 
     loopi(numattrs)
-        attrs[i] = (num - 1 >= i) ? args[i + 1].getint() : 0;
+        attrs[i] = (num - 1 > i) ? args[i + 1].getint() : 0;
 
     if(type != ET_EMPTY)
         newentity(type, attrs);
