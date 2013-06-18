@@ -40,6 +40,9 @@ enum { ENT_PLAYER = 0, ENT_AI, ENT_INANIMATE, ENT_CAMERA, ENT_BOUNCE };
 
 enum { COLLIDE_AABB = 0, COLLIDE_OBB, COLLIDE_ELLIPSE };
 
+#define CROUCHTIME 150
+#define CROUCHHEIGHT 0.75f
+
 struct physent                                  // base entity type, can be affected by physics
 {
     vec o, vel, falling;                        // origin, velocity
@@ -47,14 +50,14 @@ struct physent                                  // base entity type, can be affe
     float yaw, pitch, roll;
     float maxspeed, jumpvel;                    // cubes per second, 100 for player
     int timeinair;
-    float radius, eyeheight, aboveeye;          // bounding box size
+    float radius, eyeheight, maxheight, aboveeye; // bounding box size
     float xradius, yradius, zmargin;
     vec floor;                                  // the normal of floor the dynent is on
 
     int inwater;
     bool jumping, flying;
 
-    char move, strafe, altitude;
+    char move, strafe, altitude, crouching;
 
     uchar physstate;                            // one of PHYS_* above
     uchar state, editstate;                     // one of CS_* above
@@ -64,7 +67,7 @@ struct physent                                  // base entity type, can be affe
     bool blocked;                       // used by physics to signal ai
 
     physent() : o(0, 0, 0), deltapos(0, 0, 0), newpos(0, 0, 0), yaw(0), pitch(0), roll(0), maxspeed(100), jumpvel(200.0f),
-               radius(4.1f), eyeheight(14), aboveeye(1), xradius(4.1f), yradius(4.1f), zmargin(0),
+               radius(4.1f), eyeheight(14), maxheight(14), aboveeye(1), xradius(4.1f), yradius(4.1f), zmargin(0),
                state(CS_ALIVE), editstate(CS_ALIVE), type(ENT_PLAYER),
                collidetype(COLLIDE_ELLIPSE),
                blocked(false)
@@ -78,9 +81,10 @@ struct physent                                  // base entity type, can be affe
 
     void reset()
     {
-    	inwater = 0;
+        inwater = 0;
         timeinair = 0;
-        strafe = move = altitude = 0;
+        eyeheight = maxheight;
+        strafe = move = altitude = crouching = 0;
         physstate = PHYS_FALL;
         vel = falling = vec(0, 0, 0);
         floor = vec(0, 0, 1);
@@ -96,8 +100,10 @@ enum
 {
     ANIM_DEAD = 0, ANIM_DYING, ANIM_IDLE,
     ANIM_FORWARD, ANIM_BACKWARD, ANIM_LEFT, ANIM_RIGHT,
+    ANIM_CROUCH, ANIM_CROUCH_FORWARD, ANIM_CROUCH_BACKWARD, ANIM_CROUCH_LEFT, ANIM_CROUCH_RIGHT,
     ANIM_PAIN,
     ANIM_JUMP, ANIM_SINK, ANIM_SWIM,
+    ANIM_CROUCH_JUMP, ANIM_CROUCH_SINK, ANIM_CROUCH_SWIM,
     ANIM_EDIT, ANIM_LAG,
     ANIM_MAPMODEL, ANIM_TRIGGER,
     ANIM_GAMESPECIFIC
@@ -106,8 +112,10 @@ enum
 #define ANIMNAMES \
     "dead", "dying", "idle", \
     "forward", "backward", "left", "right", \
+    "crouch", "crouch forward", "crouch backward", "crouch left", "crouch right", \
     "pain", \
     "jump", "sink", "swim", \
+    "crouch jump", "crouch sink", "crouch swim", \
     "edit", "lag", \
     "mapmodel", "trigger"
 
@@ -187,7 +195,7 @@ struct dynent : physent                         // animated characters, or chara
     void stopmoving()
     {
         k_left = k_right = k_up = k_down = k_des = k_rise = jumping = false;
-        move = strafe = altitude = 0;
+        move = strafe = altitude = crouching = 0;
     }
 
     void reset()

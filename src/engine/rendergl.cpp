@@ -1200,7 +1200,7 @@ void recomputecamera()
             }
             camera1->reset();
             camera1->type = ENT_CAMERA;
-            camera1->collidetype = COLLIDE_AABB;
+//             camera1->collidetype = COLLIDE_AABB;
             camera1->move = -1;
             camera1->eyeheight = camera1->aboveeye = camera1->radius = camera1->xradius = camera1->yradius = 2;
 
@@ -1671,8 +1671,6 @@ void resetfogcolor()
 {
     setfogcolor(curfogcolor);
 }
-
-FVAR(fogscale, 0, 1.5f, 1e3f);
 
 static void setfog(int fogmat, float below = 0, float blend = 1, int abovemat = MAT_AIR)
 {

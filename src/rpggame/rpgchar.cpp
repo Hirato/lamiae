@@ -487,7 +487,10 @@ void rpgchar::update()
 		if(ragdoll)
 			moveragdoll(this);
 		else
-			moveplayer(this, this == game::player1 ? 8 : 2, false);
+		{
+			crouchplayer(this, this == game::player1 ? 10 : 2, true);
+			moveplayer(this, this == game::player1 ? 10 : 2, false);
+		}
 
 		base.resetdeltas();
 		return;

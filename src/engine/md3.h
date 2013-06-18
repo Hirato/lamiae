@@ -217,7 +217,6 @@ struct md3 : vertmodel, vertloader<md3>
             loading = NULL;
             if(!loaddefaultparts()) return false;
         }
-        scale /= 4;
         translate.y = -translate.y;
         loopv(parts) parts[i]->meshes->shared++;
         return loaded = true;

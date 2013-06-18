@@ -70,6 +70,7 @@ namespace game
     extern float abovegameplayhud(int w, int h);
     extern void gameplayhud(int w, int h);
     extern bool canjump();
+    extern bool cancrouch();
     extern bool allowmove(physent *d);
     extern dynent *iterdynents(int i);
     extern int numdynents();

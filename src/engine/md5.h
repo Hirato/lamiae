@@ -442,7 +442,6 @@ struct md5 : skelmodel, skelloader<md5>
             }
             loading = NULL;
         }
-        scale /= 4;
         loopv(parts)
         {
             skelpart *p = (skelpart *)parts[i];

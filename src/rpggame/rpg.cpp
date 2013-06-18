@@ -717,6 +717,7 @@ namespace game
 		}
 		if(editmode)
 		{
+			crouchplayer(player1, 10, true);
 			moveplayer(player1, 10, false);
 			return;
 		}
@@ -724,7 +725,7 @@ namespace game
 		loopv(curmap->objs)
 		{
 			rpgent *d = curmap->objs[i];
-			float eye = d->eyeheight;
+			float eye = d->maxheight;
 
 			d->resetmdl();
 			d->temp.alpha = 1;
@@ -741,11 +742,11 @@ namespace game
 			}
 			setbbfrommodel(d, d->temp.mdl);
 
-			eye = d->eyeheight - eye;
+			eye = d->maxheight - eye;
 			if(eye)
 			{
 				if(DEBUG_ENT)
-					DEBUGF("ent has new eyeheight of %f, applying positional delta of %f", d->eyeheight, eye);
+					DEBUGF("ent has new maxheight of %f, applying positional delta of %f", d->eyeheight, eye);
 				d->o.z += eye;
 				d->newpos.z += eye;
 			}
@@ -918,6 +919,11 @@ namespace game
 	bool canjump()
 	{
 		respawn();
+		return player1->state!=CS_DEAD;
+	}
+
+	bool cancrouch()
+	{
 		return player1->state!=CS_DEAD;
 	}
 
