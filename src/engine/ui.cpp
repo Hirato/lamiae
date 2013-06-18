@@ -2690,9 +2690,8 @@ namespace UI
     {
         if(cursormode() == 2 || (world->takesinput() && cursormode() >= 1))
         {
-            float scale = 500.0f / cursorsensitivity;
-            cursorx = clamp(cursorx+dx*(screenh/(screenw*scale)), 0.0f, 1.0f);
-            cursory = clamp(cursory+dy/scale, 0.0f, 1.0f);
+            cursorx = clamp( cursorx + dx * cursorsensitivity / screenw, 0.f, 1.f);
+            cursory = clamp( cursory + dy * cursorsensitivity / screenh, 0.f, 1.f);
             if(cursormode() == 2)
             {
                 if(cursorx != 1 && cursorx != 0) dx = 0;
