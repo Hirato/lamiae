@@ -94,7 +94,6 @@
 		<Unit filename="../engine/lightning.h" />
 		<Unit filename="../engine/main.cpp" />
 		<Unit filename="../engine/material.cpp" />
-		<Unit filename="../engine/md2.h" />
 		<Unit filename="../engine/md3.h" />
 		<Unit filename="../engine/md5.h" />
 		<Unit filename="../engine/model.h" />
