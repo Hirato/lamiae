@@ -98,6 +98,7 @@ enum
     SHADER_REFRACT    = 1<<2,
     SHADER_OPTION     = 1<<3,
     SHADER_DYNAMIC    = 1<<4,
+    SHADER_TRIPLANAR  = 1<<5,
 
     SHADER_INVALID    = 1<<8,
     SHADER_DEFERRED   = 1<<9
@@ -527,7 +528,11 @@ struct Texture
     uchar *alphamask;
 
     Texture() : alphamask(NULL) {}
+
+   int swizzle() const { extern bool hasTRG, hasTSW; return hasTRG && !hasTSW ? (bpp==1 ? 0 : (bpp==2 ? 1 : -1)) : -1; }
 };
+
+#define SETSWIZZLE(name, tex) SETVARIANT(name, (tex) ? (tex)->swizzle() : -1, 0)
 
 enum
 {
@@ -535,11 +540,12 @@ enum
     TEX_NORMAL,
     TEX_GLOW,
     TEX_ENVMAP,
-    TEX_DECAL,
 
     TEX_SPEC,
     TEX_DEPTH,
-    TEX_UNKNOWN
+    TEX_UNKNOWN,
+
+    TEX_DECAL = TEX_SPEC
 };
 
 enum
@@ -554,6 +560,7 @@ enum
     VSLOT_COLOR,
     VSLOT_RESERVED, // used by RE
     VSLOT_REFRACT,
+    VSLOT_DECAL,
     VSLOT_NUM
 };
 
@@ -568,7 +575,7 @@ struct VSlot
     int rotation;
     ivec2 offset;
     vec2 scroll;
-    int layer;
+    int layer, decal;
     float alphafront, alphaback;
     vec colorscale;
     vec glowcolor;
@@ -591,7 +598,7 @@ struct VSlot
         rotation = 0;
         offset = ivec2(0, 0);
         scroll = vec2(0, 0);
-        layer = 0;
+        layer = decal = 0;
         alphafront = 0.5f;
         alphaback = 0;
         colorscale = vec(1, 1, 1);
@@ -697,7 +704,7 @@ struct cubemapside
     bool flipx, flipy, swapxy;
 };
 
-extern cubemapside cubemapsides[6];
+extern const cubemapside cubemapsides[6];
 extern Texture *notexture;
 extern Shader *nullshader, *hudshader, *hudnotextureshader, *nocolorshader, *foggedshader, *foggednotextureshader, *ldrshader, *ldrnotextureshader, *stdworldshader, *rsmworldshader;
 extern int maxvsuniforms, maxfsuniforms;

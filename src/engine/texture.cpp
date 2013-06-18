@@ -169,7 +169,42 @@ static void reorients3tc(GLenum format, int blocksize, int w, int h, uchar *src,
     }
 }
 
-#define writetex(t, body) \
+static void reorientrgtc(GLenum format, int blocksize, int w, int h, uchar *src, uchar *dst, bool flipx, bool flipy, bool swapxy)
+{
+    int bx1 = 0, by1 = 0, bx2 = min(w, 4), by2 = min(h, 4), bw = (w+3)/4, bh = (h+3)/4, stridex = blocksize, stridey = blocksize;
+    if(swapxy) stridex *= bw; else stridey *= bh;
+    if(flipx) { dst += (bw-1)*stridex; stridex = -stridex; bx1 += 4-bx2; bx2 = 4; }
+    if(flipy) { dst += (bh-1)*stridey; stridey = -stridey; by1 += 4-by2; by2 = 4; }
+    stridex -= blocksize;
+    loopi(bh)
+    {
+        for(uchar *curdst = dst, *end = &src[bw*blocksize]; src < end; curdst += stridex)
+        {
+            loopj(blocksize/8)
+            {
+                uchar val1 = src[0], val2 = src[1];
+                ullong sval = lilswap(*(ushort *)&src[2]) + ((ullong)lilswap(*(ushort *)&src[4])<<16) + ((ullong)lilswap(*(ushort *)&src[6])<<32), dval = 0;
+                uint xmask = flipx ? 7 : 0, ymask = flipy ? 7 : 0, xshift = 0, yshift = 2;
+                if(swapxy) swap(xshift, yshift);
+                for(int y = by1; y < by2; y++) for(int x = bx1; x < bx2; x++)
+                {
+                    dval |= ((sval&7) << (3*((xmask^x)<<xshift) + ((ymask^y)<<yshift)));
+                    sval >>= 3;
+                }
+                curdst[0] = val1;
+                curdst[1] = val2;
+                *(ushort *)&curdst[2] = lilswap(ushort(dval));
+                *(ushort *)&curdst[4] = lilswap(ushort(dval>>16));
+                *(ushort *)&curdst[6] = lilswap(ushort(dval>>32));
+                src += 8;
+                curdst += 8;
+            }
+        }
+        dst += stridey;
+    }
+}
+
+#define writetex(t, body) do \
     { \
         uchar *dstrow = t.data; \
         loop(y, t.h) \
@@ -180,9 +215,9 @@ static void reorients3tc(GLenum format, int blocksize, int w, int h, uchar *src,
             } \
             dstrow += t.pitch; \
         } \
-    }
+    } while(0)
 
-#define readwritetex(t, s, body) \
+#define readwritetex(t, s, body) do \
     { \
         uchar *dstrow = t.data, *srcrow = s.data; \
         loop(y, t.h) \
@@ -194,9 +229,9 @@ static void reorients3tc(GLenum format, int blocksize, int w, int h, uchar *src,
             dstrow += t.pitch; \
             srcrow += s.pitch; \
         } \
-    }
+    } while(0)
 
-#define read2writetex(t, s1, src1, s2, src2, body) \
+#define read2writetex(t, s1, src1, s2, src2, body) do \
     { \
         uchar *dstrow = t.data, *src1row = s1.data, *src2row = s2.data; \
         loop(y, t.h) \
@@ -209,7 +244,7 @@ static void reorients3tc(GLenum format, int blocksize, int w, int h, uchar *src,
             src1row += s1.pitch; \
             src2row += s2.pitch; \
         } \
-    }
+    } while(0)
 
 void texreorient(ImageData &s, bool flipx, bool flipy, bool swapxy, int type = TEX_DIFFUSE)
 {
@@ -225,6 +260,20 @@ void texreorient(ImageData &s, bool flipx, bool flipy, bool swapxy, int type = T
             loopi(s.levels)
             {
                 reorients3tc(s.compressed, s.bpp, max(s.w>>i, 1), max(s.h>>i, 1), src, dst, flipx, flipy, swapxy, type==TEX_NORMAL);
+                src += s.calclevelsize(i);
+                dst += d.calclevelsize(i);
+            }
+            break;
+        }
+    case GL_COMPRESSED_RED_RGTC1:
+    case GL_COMPRESSED_RG_RGTC2:
+    case GL_COMPRESSED_LUMINANCE_LATC1_EXT:
+    case GL_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT:
+        {
+            uchar *dst = d.data, *src = s.data;
+            loopi(s.levels)
+            {
+                reorientrgtc(s.compressed, s.bpp, max(s.w>>i, 1), max(s.h>>i, 1), src, dst, flipx, flipy, swapxy);
                 src += s.calclevelsize(i);
                 dst += d.calclevelsize(i);
             }
@@ -424,12 +473,16 @@ GLenum compressedformat(GLenum format, int w, int h, int force = 0)
     {
         case GL_RGB5:
         case GL_RGB8:
-        case GL_LUMINANCE:
-        case GL_LUMINANCE8:
         case GL_RGB: return usetexcompress > 1 ? GL_COMPRESSED_RGB_S3TC_DXT1_EXT : GL_COMPRESSED_RGB;
-        case GL_LUMINANCE_ALPHA:
-        case GL_LUMINANCE8_ALPHA8:
         case GL_RGBA: return usetexcompress > 1 ? GL_COMPRESSED_RGBA_S3TC_DXT5_EXT : GL_COMPRESSED_RGBA;
+        case GL_RED:
+        case GL_R8: return hasRGTC ? (usetexcompress > 1 ? GL_COMPRESSED_RED_RGTC1 : GL_COMPRESSED_RED) : (usetexcompress > 1 ? GL_COMPRESSED_RGB_S3TC_DXT1_EXT : GL_COMPRESSED_RGB);
+        case GL_RG:
+        case GL_RG8: return hasRGTC ? (usetexcompress > 1 ? GL_COMPRESSED_RG_RGTC2 : GL_COMPRESSED_RG) : (usetexcompress > 1 ? GL_COMPRESSED_RGBA_S3TC_DXT5_EXT : GL_COMPRESSED_RGBA);
+        case GL_LUMINANCE:
+        case GL_LUMINANCE8: return hasLATC ? (usetexcompress > 1 ? GL_COMPRESSED_LUMINANCE_LATC1_EXT : GL_COMPRESSED_LUMINANCE) : (usetexcompress > 1 ? GL_COMPRESSED_RGB_S3TC_DXT1_EXT : GL_COMPRESSED_RGB);
+        case GL_LUMINANCE_ALPHA:
+        case GL_LUMINANCE8_ALPHA8: return hasLATC ? (usetexcompress > 1 ? GL_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT : GL_COMPRESSED_LUMINANCE_ALPHA) : (usetexcompress > 1 ? GL_COMPRESSED_RGBA_S3TC_DXT5_EXT : GL_COMPRESSED_RGBA);
     }
     return format;
 }
@@ -565,6 +618,20 @@ GLenum uncompressedformat(GLenum format)
 {
     switch(format)
     {
+        case GL_COMPRESSED_ALPHA:
+            return GL_ALPHA;
+        case GL_COMPRESSED_LUMINANCE:
+        case GL_COMPRESSED_LUMINANCE_LATC1_EXT:
+            return GL_LUMINANCE;
+        case GL_COMPRESSED_LUMINANCE_ALPHA:
+        case GL_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT:
+            return GL_LUMINANCE_ALPHA;
+        case GL_COMPRESSED_RED:
+        case GL_COMPRESSED_RED_RGTC1:
+            return GL_RED;
+        case GL_COMPRESSED_RG:
+        case GL_COMPRESSED_RG_RGTC2:
+            return GL_RG;
         case GL_COMPRESSED_RGB:
         case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
             return GL_RGB;
@@ -577,7 +644,19 @@ GLenum uncompressedformat(GLenum format)
     return GL_FALSE;
 }
 
-void setuptexparameters(int tnum, const void *pixels, int clamp, int filter, GLenum format, GLenum target)
+const GLint *swizzlemask(GLenum format)
+{
+    static const GLint luminance[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
+    static const GLint luminancealpha[4] = { GL_RED, GL_RED, GL_RED, GL_GREEN };
+    switch(format)
+    {
+        case GL_RED: return luminance;
+        case GL_RG: return luminancealpha;
+    }
+    return NULL;
+}
+
+void setuptexparameters(int tnum, const void *pixels, int clamp, int filter, GLenum format, GLenum target, bool swizzle)
 {
     glBindTexture(target, tnum);
     glTexParameteri(target, GL_TEXTURE_WRAP_S, clamp&1 ? GL_CLAMP_TO_EDGE : GL_REPEAT);
@@ -591,6 +670,11 @@ void setuptexparameters(int tnum, const void *pixels, int clamp, int filter, GLe
                 (bilinear ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_LINEAR) :
                 (bilinear ? GL_LINEAR_MIPMAP_NEAREST : GL_NEAREST_MIPMAP_NEAREST)) :
             (filter && bilinear ? GL_LINEAR : GL_NEAREST));
+    if(swizzle && hasTRG && hasTSW)
+    {
+        const GLint *mask = swizzlemask(format);
+        if(mask) glTexParameteriv(target, GL_TEXTURE_SWIZZLE_RGBA, mask);
+    }
 }
 
 static GLenum textype(GLenum &component, GLenum &format)
@@ -637,11 +721,15 @@ static GLenum textype(GLenum &component, GLenum &format)
 
         case GL_R8:
         case GL_R16:
+        case GL_COMPRESSED_RED:
+        case GL_COMPRESSED_RED_RGTC1:
             if(!format) format = GL_RED;
             break;
 
         case GL_RG8:
         case GL_RG16:
+        case GL_COMPRESSED_RG:
+        case GL_COMPRESSED_RG_RGTC2:
             if(!format) format = GL_RG;
             break;
 
@@ -666,22 +754,31 @@ static GLenum textype(GLenum &component, GLenum &format)
 
         case GL_LUMINANCE8:
         case GL_LUMINANCE16:
+        case GL_COMPRESSED_LUMINANCE:
+        case GL_COMPRESSED_LUMINANCE_LATC1_EXT:
             if(!format) format = GL_LUMINANCE;
             break;
 
         case GL_LUMINANCE8_ALPHA8:
         case GL_LUMINANCE16_ALPHA16:
+        case GL_COMPRESSED_LUMINANCE_ALPHA:
+        case GL_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT:
             if(!format) format = GL_LUMINANCE_ALPHA;
+            break;
+
+        case GL_ALPHA8:
+        case GL_COMPRESSED_ALPHA:
+            if(!format) format = GL_ALPHA;
             break;
     }
     if(!format) format = component;
     return type;
 }
 
-void createtexture(int tnum, int w, int h, const void *pixels, int clamp, int filter, GLenum component, GLenum subtarget, int pw, int ph, int pitch, bool resize, GLenum format)
+void createtexture(int tnum, int w, int h, const void *pixels, int clamp, int filter, GLenum component, GLenum subtarget, int pw, int ph, int pitch, bool resize, GLenum format, bool swizzle)
 {
     GLenum target = textarget(subtarget), type = textype(component, format);
-    if(tnum) setuptexparameters(tnum, pixels, clamp, filter, format, target);
+    if(tnum) setuptexparameters(tnum, pixels, clamp, filter, format, target, swizzle);
     if(!pw) pw = w;
     if(!ph) ph = h;
     int tw = w, th = h;
@@ -694,17 +791,17 @@ void createtexture(int tnum, int w, int h, const void *pixels, int clamp, int fi
     uploadtexture(subtarget, component, tw, th, format, type, pixels, pw, ph, pitch, mipmap);
 }
 
-void createcompressedtexture(int tnum, int w, int h, const uchar *data, int align, int blocksize, int levels, int clamp, int filter, GLenum format, GLenum subtarget)
+void createcompressedtexture(int tnum, int w, int h, const uchar *data, int align, int blocksize, int levels, int clamp, int filter, GLenum format, GLenum subtarget, bool swizzle = false)
 {
     GLenum target = textarget(subtarget);
-    if(tnum) setuptexparameters(tnum, data, clamp, filter, format, target);
+    if(tnum) setuptexparameters(tnum, data, clamp, filter, format, target, swizzle);
     uploadcompressedtexture(target, subtarget, format, w, h, data, align, blocksize, levels, filter > 1);
 }
 
-void create3dtexture(int tnum, int w, int h, int d, const void *pixels, int clamp, int filter, GLenum component, GLenum target)
+void create3dtexture(int tnum, int w, int h, int d, const void *pixels, int clamp, int filter, GLenum component, GLenum target, bool swizzle)
 {
     GLenum format = GL_FALSE, type = textype(component, format);
-    if(tnum) setuptexparameters(tnum, pixels, clamp, filter, format, target);
+    if(tnum) setuptexparameters(tnum, pixels, clamp, filter, format, target, swizzle);
     glTexImage3D_(target, 0, component, w, h, d, 0, format, type, pixels);
 }
 
@@ -730,6 +827,7 @@ static bool alphaformat(GLenum format)
     {
         case GL_ALPHA:
         case GL_LUMINANCE_ALPHA:
+        case GL_RG:
         case GL_RGBA:
             return true;
         default:
@@ -821,13 +919,13 @@ static Texture *newtexture(Texture *t, const char *rname, ImageData &s, int clam
             if(t->w > 1) t->w /= 2;
             if(t->h > 1) t->h /= 2;
         }
-        createcompressedtexture(t->id, t->w, t->h, data, s.align, s.bpp, levels, clamp, filter, s.compressed, GL_TEXTURE_2D);
+        createcompressedtexture(t->id, t->w, t->h, data, s.align, s.bpp, levels, clamp, filter, s.compressed, GL_TEXTURE_2D, true);
     }
     else
     {
         resizetexture(t->w, t->h, mipit, canreduce, GL_TEXTURE_2D, compress, t->w, t->h);
         GLenum component = compressedformat(format, t->w, t->h, compress);
-        createtexture(t->id, t->w, t->h, s.data, clamp, filter, component, GL_TEXTURE_2D, t->xs, t->ys, s.pitch, false, format);
+        createtexture(t->id, t->w, t->h, s.data, clamp, filter, component, GL_TEXTURE_2D, t->xs, t->ys, s.pitch, false, format, true);
     }
     return t;
 }
@@ -1056,19 +1154,11 @@ void scaleimage(ImageData &s, int w, int h)
 
 #define readwritergbtex(t, s, body) \
     { \
-        if(t.bpp >= 3) { readwritetex(t, s, body); } \
+        if(t.bpp >= 3) readwritetex(t, s, body); \
         else \
         { \
             ImageData rgb(t.w, t.h, 3); \
-            read2writetex(rgb, t, orig, s, src, \
-            { \
-                switch(t.bpp) \
-                { \
-                    case 1: dst[0] = orig[0]; dst[1] = orig[0]; dst[2] = orig[0]; break; \
-                    case 2: dst[0] = orig[0]; dst[1] = orig[1]; dst[2] = orig[1]; break; \
-                } \
-                body; \
-            }); \
+            read2writetex(rgb, t, orig, s, src, { dst[0] = dst[1] = dst[2] = orig[0]; body; }); \
             t.replace(rgb); \
         } \
     }
@@ -1077,13 +1167,7 @@ void forcergbimage(ImageData &s)
 {
     if(s.bpp >= 3) return;
     ImageData d(s.w, s.h, 3);
-    readwritetex(d, s,
-        switch(s.bpp)
-        {
-            case 1: dst[0] = src[0]; dst[1] = src[0]; dst[2] = src[0]; break;
-            case 2: dst[0] = src[0]; dst[1] = src[1]; dst[2] = src[1]; break;
-        }
-    );
+    readwritetex(d, s, { dst[0] = dst[1] = dst[2] = src[0]; });
     s.replace(d);
 }
 
@@ -1093,16 +1177,8 @@ void forcergbimage(ImageData &s)
         else \
         { \
             ImageData rgba(t.w, t.h, 4); \
-            read2writetex(rgba, t, orig, s, src, \
-            { \
-                switch(t.bpp) \
-                { \
-                    case 1: dst[0] = orig[0]; dst[1] = orig[0]; dst[2] = orig[0]; break; \
-                    case 2: dst[0] = orig[0]; dst[1] = orig[1]; dst[2] = orig[1]; break; \
-                    case 3: dst[0] = orig[0]; dst[1] = orig[1]; dst[2] = orig[2]; break; \
-                } \
-                body; \
-            }); \
+            if(t.bpp==3) read2writetex(rgba, t, orig, s, src, { dst[0] = orig[0]; dst[1] = orig[1]; dst[2] = orig[2]; body; }); \
+            else read2writetex(rgba, t, orig, s, src, { dst[0] = dst[1] = dst[2] = orig[0]; body; }); \
             t.replace(rgba); \
         } \
     }
@@ -1111,15 +1187,25 @@ void forcergbaimage(ImageData &s)
 {
     if(s.bpp >= 4) return;
     ImageData d(s.w, s.h, 4);
-    readwritetex(d, s,
-        switch(s.bpp)
-        {
-            case 1: dst[0] = src[0]; dst[1] = src[0]; dst[2] = src[0]; break;
-            case 2: dst[0] = src[0]; dst[1] = src[1]; dst[2] = src[1]; break;
-            case 3: dst[0] = src[0]; dst[1] = src[1]; dst[2] = src[2]; break;
-        }
-    );
+    if(s.bpp==3) readwritetex(d, s, { dst[0] = src[0]; dst[1] = src[1]; dst[2] = src[2]; });
+    else readwritetex(d, s, { dst[0] = dst[1] = dst[2] = src[0]; });
     s.replace(d);
+}
+
+void swizzleimage(ImageData &s)
+{
+    if(s.bpp==2)
+    {
+        ImageData d(s.w, s.h, 4);
+        readwritetex(d, s, { dst[0] = dst[1] = dst[2] = src[0]; dst[3] = src[1]; });
+        s.replace(d);
+    }
+    else if(s.bpp==1)
+    {
+        ImageData d(s.w, s.h, 3);
+        readwritetex(d, s, { dst[0] = dst[1] = dst[2] = src[0]; });
+        s.replace(d);
+    }
 }
 
 bool canloadsurface(const char *name)
@@ -1347,7 +1433,6 @@ const char *textypename(int i)
     switch(i)
     {
         case TEX_DIFFUSE: return "0";
-        case TEX_DECAL: return "d";
         case TEX_NORMAL: return "n";
         case TEX_GLOW: return "g";
         case TEX_SPEC: return "s";
@@ -1561,6 +1646,7 @@ static void propagatevslot(VSlot &dst, const VSlot &src, int diff, bool edit = f
         dst.refractscale = src.refractscale;
         dst.refractcolor = src.refractcolor;
     }
+    if(diff & (1<<VSLOT_DECAL)) dst.decal = src.decal;
 }
 
 static void propagatevslot(VSlot *root, int changed)
@@ -1616,6 +1702,7 @@ static void mergevslot(VSlot &dst, const VSlot &src, int diff, Slot *slot = NULL
         dst.refractscale *= src.refractscale;
         dst.refractcolor.mul(src.refractcolor);
     }
+    if(diff & (1<<VSLOT_DECAL)) dst.decal = src.decal;
 }
 
 void mergevslot(VSlot &dst, const VSlot &src, const VSlot &delta)
@@ -1664,6 +1751,7 @@ static bool comparevslot(const VSlot &dst, const VSlot &src, int diff)
     if(diff & (1<<VSLOT_ALPHA) && (dst.alphafront != src.alphafront || dst.alphaback != src.alphaback)) return false;
     if(diff & (1<<VSLOT_COLOR) && dst.colorscale != src.colorscale) return false;
     if(diff & (1<<VSLOT_REFRACT) && (dst.refractscale != src.refractscale || dst.refractcolor != src.refractcolor)) return false;
+    if(diff & (1<<VSLOT_DECAL) && dst.decal != src.decal) return false;
     return true;
 }
 
@@ -1738,7 +1826,6 @@ const struct slottex
 
     {"c", TEX_DIFFUSE},
     {"u", TEX_UNKNOWN},
-    {"d", TEX_DECAL},
     {"n", TEX_NORMAL},
     {"g", TEX_GLOW},
     {"s", TEX_SPEC},
@@ -1844,6 +1931,15 @@ void texlayer(int *layer)
 }
 COMMAND(texlayer, "i");
 
+void texdecal(int *decal)
+{
+    if(slots.empty()) return;
+    Slot &s = *slots.last();
+    s.variants->decal = *decal < 0 ? max(slots.length()-1+*decal, 0) : *decal;
+    propagatevslot(s.variants, 1<<VSLOT_DECAL);
+}
+COMMAND(texdecal, "i");
+
 void texalpha(float *front, float *back)
 {
     if(slots.empty()) return;
@@ -1906,27 +2002,12 @@ static void addglow(ImageData &c, ImageData &g, const vec &glowcolor)
     }
 }
 
-static void mergespec(ImageData &c, ImageData &s, bool envmap = false)
+static void mergespec(ImageData &c, ImageData &s)
 {
     if(s.bpp < 3)
     {
-        if(envmap)
-        {
-            readwritergbatex(c, s,
-                dst[3] = int(dst[3])*int(src[0])/255;
-            );
-        }
-        else
-        {
-            readwritergbatex(c, s,
-                dst[3] = src[0];
-            );
-        }
-    }
-    else if(envmap)
-    {
         readwritergbatex(c, s,
-            dst[3] = int(dst[3])*(int(src[0]) + int(src[1]) + int(src[2]))/(3*255);
+            dst[3] = src[0];
         );
     }
     else
@@ -1987,7 +2068,6 @@ static void texcombine(Slot &s, int index, Slot::Tex &t, bool forceload = false)
                 if(a.combined!=index) continue;
                 ImageData as;
                 if(!texturedata(as, NULL, &a)) continue;
-                //if(ts.bpp!=4) forcergbaimage(ts);
                 if(as.w!=ts.w || as.h!=ts.h) scaleimage(as, ts.w, ts.h);
                 switch(a.type)
                 {
@@ -1996,7 +2076,7 @@ static void texcombine(Slot &s, int index, Slot::Tex &t, bool forceload = false)
                 }
                 break; // only one combination
             }
-            if(ts.bpp < 3) forcergbimage(ts);
+            if(ts.bpp < 3) swizzleimage(ts);
             break;
     }
     t.t = newtexture(NULL, key.getbuf(), ts, 0, true, true, true, compress);
@@ -2065,6 +2145,20 @@ void linkslotshaders()
     }
 }
 
+static void blitthumbnail(ImageData &d, ImageData &s, int x, int y)
+{
+    forcergbimage(d);
+    forcergbimage(s);
+    uchar *dstrow = &d.data[d.pitch*y + d.bpp*x], *srcrow = s.data;
+    loop(y, s.h)
+    {
+        for(uchar *dst = dstrow, *src = srcrow, *end = &srcrow[s.w*s.bpp]; src < end; dst += d.bpp, src += s.bpp)
+        loopk(3) dst[k] = src[k];
+        dstrow += d.pitch;
+        srcrow += s.pitch;
+    }
+}
+
 Texture *loadthumbnail(Slot &slot)
 {
     if(slot.thumbnail) return slot.thumbnail;
@@ -2099,19 +2193,22 @@ Texture *loadthumbnail(Slot &slot)
         if(layer->colorscale == vec(1, 1, 1)) addname(name, *layer->slot, layer->slot->sts[0], true, "<layer>");
         else
         {
-            defformatstring(prefix)("<layer:%.2f/%.2f/%.2f>", vslot.colorscale.x, vslot.colorscale.y, vslot.colorscale.z);
+            defformatstring(prefix)("<layer:%.2f/%.2f/%.2f>", layer->colorscale.x, layer->colorscale.y, layer->colorscale.z);
             addname(name, *layer->slot, layer->slot->sts[0], true, prefix);
         }
     }
+    VSlot *decal = vslot.decal ? &lookupvslot(vslot.decal, false) : NULL;
+    if(decal) addname(name, *decal->slot, decal->slot->sts[0], true, "<decal>");
     name.add('\0');
     Texture *t = textures.access(path(name.getbuf()));
     if(t) slot.thumbnail = t;
     else
     {
-        ImageData s, g, l;
+        ImageData s, g, l, d;
         texturedata(s, NULL, &slot.sts[0], false);
         if(glow >= 0) texturedata(g, NULL, &slot.sts[glow], false);
         if(layer) texturedata(l, NULL, &layer->slot->sts[0], false);
+        if(decal) texturedata(d, NULL, &decal->slot->sts[0], false);
         if(!s.data) t = slot.thumbnail = notexture;
         else
         {
@@ -2127,17 +2224,15 @@ Texture *loadthumbnail(Slot &slot)
             {
                 if(layer->colorscale != vec(1, 1, 1)) texmad(l, layer->colorscale, vec(0, 0, 0));
                 if(l.w != s.w/2 || l.h != s.h/2) scaleimage(l, s.w/2, s.h/2);
-                forcergbimage(s);
-                forcergbimage(l);
-                uchar *dstrow = &s.data[s.pitch*l.h + s.bpp*l.w], *srcrow = l.data;
-                loop(y, l.h)
-                {
-                    for(uchar *dst = dstrow, *src = srcrow, *end = &srcrow[l.w*l.bpp]; src < end; dst += s.bpp, src += l.bpp)
-                        loopk(3) dst[k] = src[k];
-                    dstrow += s.pitch;
-                    srcrow += l.pitch;
-                }
+                blitthumbnail(s, l, s.w-l.w, s.h-l.h);
             }
+            if(d.data)
+            {
+                if(vslot.colorscale != vec(1, 1, 1)) texmad(d, vslot.colorscale, vec(0, 0, 0));
+                if(d.w != s.w/2 || d.h != s.h/2) scaleimage(d, s.w/2, s.h/2);
+                blitthumbnail(s, d, 0, 0);
+            }
+            if(s.bpp < 3) forcergbimage(s);
             t = newtexture(NULL, name.getbuf(), s, 0, false, false, true);
             t->xs = xs;
             t->ys = ys;
@@ -2170,14 +2265,14 @@ void forcecubemapload(GLuint tex)
     if(depthtest) glEnable(GL_DEPTH_TEST);
 }
 
-cubemapside cubemapsides[6] =
+extern const cubemapside cubemapsides[6] =
 {
-    { GL_TEXTURE_CUBE_MAP_NEGATIVE_X, "lf", true,  true,  true  },
-    { GL_TEXTURE_CUBE_MAP_POSITIVE_X, "rt", false, false, true  },
-    { GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, "ft", true,  false, false },
-    { GL_TEXTURE_CUBE_MAP_POSITIVE_Y, "bk", false, true,  false },
-    { GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, "dn", false, false, true  },
-    { GL_TEXTURE_CUBE_MAP_POSITIVE_Z, "up", false, false, true  },
+    { GL_TEXTURE_CUBE_MAP_NEGATIVE_X, "lf", false, true,  true  },
+    { GL_TEXTURE_CUBE_MAP_POSITIVE_X, "rt", true,  false, true  },
+    { GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, "bk", false, false, false },
+    { GL_TEXTURE_CUBE_MAP_POSITIVE_Y, "ft", true,  true,  false },
+    { GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, "dn", true,  false, true  },
+    { GL_TEXTURE_CUBE_MAP_POSITIVE_Z, "up", true,  false, true  },
 };
 
 VARFP(envmapsize, 4, 7, 10, setupmaterials());
@@ -2243,6 +2338,12 @@ Texture *cubemaploadwildcard(Texture *t, const char *name, bool mipit, bool msg,
     {
         format = texformat(surface[0].bpp);
         t->bpp = surface[0].bpp;
+        if(hasTRG && !hasTSW && swizzlemask(format))
+        {
+            loopi(6) swizzleimage(surface[i]);
+            format = texformat(surface[0].bpp);
+            t->bpp = surface[0].bpp;
+        }
     }
     if(alphaformat(format)) t->type |= Texture::ALPHA;
     t->mipmap = mipit;
@@ -2263,7 +2364,7 @@ Texture *cubemaploadwildcard(Texture *t, const char *name, bool mipit, bool msg,
     loopi(6)
     {
         ImageData &s = surface[i];
-        cubemapside &side = cubemapsides[i];
+        const cubemapside &side = cubemapsides[i];
         texreorient(s, side.flipx, side.flipy, side.swapxy);
         if(s.compressed)
         {
@@ -2276,11 +2377,11 @@ Texture *cubemaploadwildcard(Texture *t, const char *name, bool mipit, bool msg,
                 if(w > 1) w /= 2;
                 if(h > 1) h /= 2;
             }
-            createcompressedtexture(!i ? t->id : 0, w, h, data, s.align, s.bpp, levels, 3, mipit ? 2 : 1, s.compressed, side.target);
+            createcompressedtexture(!i ? t->id : 0, w, h, data, s.align, s.bpp, levels, 3, mipit ? 2 : 1, s.compressed, side.target, true);
         }
         else
         {
-            createtexture(!i ? t->id : 0, t->w, t->h, s.data, 3, mipit ? 2 : 1, component, side.target, s.w, s.h, s.pitch, false, format);
+            createtexture(!i ? t->id : 0, t->w, t->h, s.data, 3, mipit ? 2 : 1, component, side.target, s.w, s.h, s.pitch, false, format, true);
         }
     }
     forcecubemapload(t->id);
@@ -2350,9 +2451,9 @@ GLuint genenvmap(const vec &o, int envmapsize, int blur)
                 yaw = 90; pitch = 0; break;
             case GL_TEXTURE_CUBE_MAP_POSITIVE_X: // rt
                 yaw = 270; pitch = 0; break;
-            case GL_TEXTURE_CUBE_MAP_NEGATIVE_Y: // ft
+            case GL_TEXTURE_CUBE_MAP_NEGATIVE_Y: // bk
                 yaw = 180; pitch = 0; break;
-            case GL_TEXTURE_CUBE_MAP_POSITIVE_Y: // bk
+            case GL_TEXTURE_CUBE_MAP_POSITIVE_Y: // ft
                 yaw = 0; pitch = 0; break;
             case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z: // dn
                 yaw = 270; pitch = -90; break;
@@ -2367,7 +2468,7 @@ GLuint genenvmap(const vec &o, int envmapsize, int blur)
             scaletexture(src, rendersize, rendersize, 3, 3*rendersize, dst, texsize, texsize);
             swap(src, dst);
         }
-        reorienttexture(src, texsize, texsize, 3, 3*texsize, dst, !side.flipx, !side.flipy, side.swapxy);
+        reorienttexture(src, texsize, texsize, 3, 3*texsize, dst, side.flipx, !side.flipy, side.swapxy);
         if(blur > 0)
         {
             swap(src, dst);
@@ -2567,8 +2668,9 @@ enum
     FOURCC_DXT2                = 0x32545844,
     FOURCC_DXT3                = 0x33545844,
     FOURCC_DXT4                = 0x34545844,
-    FOURCC_DXT5                = 0x35545844
-
+    FOURCC_DXT5                = 0x35545844,
+    FOURCC_ATI1                = 0x31495441,
+    FOURCC_ATI2                = 0x32495441
 };
 
 struct DDCOLORKEY { uint dwColorSpaceLowValue, dwColorSpaceHighValue; };
@@ -2612,11 +2714,19 @@ bool loaddds(const char *filename, ImageData &image)
     {
         switch(d.ddpfPixelFormat.dwFourCC)
         {
-            case FOURCC_DXT1: format = d.ddpfPixelFormat.dwFlags & DDPF_ALPHAPIXELS ? GL_COMPRESSED_RGBA_S3TC_DXT1_EXT : GL_COMPRESSED_RGB_S3TC_DXT1_EXT; break;
+            case FOURCC_DXT1: if(hasS3TC) format = d.ddpfPixelFormat.dwFlags & DDPF_ALPHAPIXELS ? GL_COMPRESSED_RGBA_S3TC_DXT1_EXT : GL_COMPRESSED_RGB_S3TC_DXT1_EXT; break;
             case FOURCC_DXT2:
-            case FOURCC_DXT3: format = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT; break;
+            case FOURCC_DXT3: if(hasS3TC) format = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT; break;
             case FOURCC_DXT4:
-            case FOURCC_DXT5: format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT; break;
+            case FOURCC_DXT5: if(hasS3TC) format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT; break;
+            case FOURCC_ATI1:
+                if(hasRGTC) format = GL_COMPRESSED_RED_RGTC1;
+                else if(hasLATC) format = GL_COMPRESSED_LUMINANCE_LATC1_EXT;
+                break;
+            case FOURCC_ATI2:
+                if(hasRGTC) format = GL_COMPRESSED_RG_RGTC2;
+                else if(hasLATC) format = GL_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT;
+                break;
         }
     }
     if(!format) { delete f; return false; }
@@ -2628,6 +2738,11 @@ bool loaddds(const char *filename, ImageData &image)
         case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT: bpp = 8; break;
         case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
         case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT: bpp = 16; break;
+        case GL_COMPRESSED_LUMINANCE_LATC1_EXT:
+        case GL_COMPRESSED_RED_RGTC1: bpp = 8; break;
+        case GL_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT:
+        case GL_COMPRESSED_RG_RGTC2: bpp = 16; break;
+
     }
     image.setdata(NULL, d.dwWidth, d.dwHeight, bpp, d.dwMipMapCount, 4, format);
     int size = image.calcsize();
@@ -2664,6 +2779,10 @@ void gendds(char *infile, char *outfile)
         case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT: fourcc = FOURCC_DXT1; conoutf("compressed as DXT1a"); break;
         case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT: fourcc = FOURCC_DXT3; conoutf("compressed as DXT3"); break;
         case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT: fourcc = FOURCC_DXT5; conoutf("compressed as DXT5"); break;
+        case GL_COMPRESSED_LUMINANCE_LATC1_EXT:
+        case GL_COMPRESSED_RED_RGTC1: fourcc = FOURCC_ATI1; conoutf("compressed as ATI1"); break;
+        case GL_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT:
+        case GL_COMPRESSED_RG_RGTC2: fourcc = FOURCC_ATI2; conoutf("compressed as ATI2"); break;
         default:
             conoutf(CON_ERROR, "failed compressing %s: unknown format: 0x%X", infile, format); break;
             return;
@@ -2702,7 +2821,7 @@ void gendds(char *infile, char *outfile)
     d.dwFlags = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT | DDSD_LINEARSIZE | DDSD_MIPMAPCOUNT;
     d.ddsCaps.dwCaps = DDSCAPS_TEXTURE | DDSCAPS_COMPLEX | DDSCAPS_MIPMAP;
     d.ddpfPixelFormat.dwSize = sizeof(DDPIXELFORMAT);
-    d.ddpfPixelFormat.dwFlags = DDPF_FOURCC | (format!=GL_COMPRESSED_RGB_S3TC_DXT1_EXT ? DDPF_ALPHAPIXELS : 0);
+    d.ddpfPixelFormat.dwFlags = DDPF_FOURCC | (alphaformat(uncompressedformat(format)) ? DDPF_ALPHAPIXELS : 0);
     d.ddpfPixelFormat.dwFourCC = fourcc;
 
     uchar *data = new uchar[csize], *dst = data;

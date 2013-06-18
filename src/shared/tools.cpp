@@ -6,6 +6,24 @@
 #include <unistd.h>
 #endif
 
+////////////////////////// strings ////////////////////////////////////////
+
+static string tmpstr[4];
+static int tmpidx = 0;
+
+char *tempformatstring(const char *fmt, ...)
+{
+    tmpidx = (tmpidx+1)%4;
+    char *buf = tmpstr[tmpidx];    
+
+    va_list v;
+    va_start(v, fmt);
+    vformatstring(buf, fmt, v);
+    va_end(v);
+
+    return buf;
+}
+
 ////////////////////////// rnd numbers ////////////////////////////////////////
 
 #define N (624)

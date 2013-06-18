@@ -1560,7 +1560,7 @@ template<class MDL, class MESH> struct modelcommands
         );
     }
 
-    static void setspec(char *meshname, int *percent)
+    static void setspec(char *meshname, float *percent)
     {
         float spec = 1.0f;
         if(*percent>0) spec = *percent/100.0f;
@@ -1568,7 +1568,7 @@ template<class MDL, class MESH> struct modelcommands
         loopskins(meshname, s, s.spec = spec);
     }
 
-    static void setambient(char *meshname, int *percent)
+    static void setambient(char *meshname, float *percent)
     {
         float ambient = 0.3f;
         if(*percent>0) ambient = *percent/100.0f;
@@ -1576,7 +1576,7 @@ template<class MDL, class MESH> struct modelcommands
         loopskins(meshname, s, s.ambient = ambient);
     }
 
-    static void setglow(char *meshname, int *percent, int *delta, float *pulse)
+    static void setglow(char *meshname, float *percent, float *delta, float *pulse)
     {
         float glow = 3.0f, glowdelta = *delta/100.0f, glowpulse = *pulse > 0 ? *pulse/1000.0f : 0;
         if(*percent>0) glow = *percent/100.0f;
@@ -1653,9 +1653,9 @@ template<class MDL, class MESH> struct modelcommands
         if(MDL::multimeshed())
         {
             modelcommand(setskin, "skin", "sssff");
-            modelcommand(setspec, "spec", "si");
-            modelcommand(setambient, "ambient", "si");
-            modelcommand(setglow, "glow", "siif");
+            modelcommand(setspec, "spec", "sf");
+            modelcommand(setambient, "ambient", "sf");
+            modelcommand(setglow, "glow", "sfff");
             modelcommand(setalphatest, "alphatest", "sf");
             modelcommand(setcullface, "cullface", "si");
             modelcommand(setenvmap, "envmap", "ss");

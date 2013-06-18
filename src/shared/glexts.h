@@ -227,6 +227,23 @@ extern PFNGLTEXTUREIMAGE3DMULTISAMPLECOVERAGENVPROC glTextureImage3DMultisampleC
 #define GL_RG32F                          0x8230
 #endif
 
+#ifndef GL_EXT_texture_compression_latc
+#define GL_EXT_texture_compression_latc
+#define GL_COMPRESSED_LUMINANCE_LATC1_EXT              0x8C70
+#define GL_COMPRESSED_SIGNED_LUMINANCE_LATC1_EXT       0x8C71
+#define GL_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT        0x8C72
+#define GL_COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2_EXT 0x8C73
+#endif
+
+// GL_ARB_texture_compression_rgtc
+#ifndef GL_ARB_texture_compression_rgtc
+#define GL_ARB_texture_compression_rgtc
+#define GL_COMPRESSED_RED_RGTC1           0x8DBB
+#define GL_COMPRESSED_SIGNED_RED_RGTC1    0x8DBC
+#define GL_COMPRESSED_RG_RGTC2            0x8DBD
+#define GL_COMPRESSED_SIGNED_RG_RGTC2     0x8DBE
+#endif
+
 // GL_EXT_depth_bounds_test
 extern PFNGLDEPTHBOUNDSEXTPROC glDepthBounds_;
 
@@ -587,6 +604,8 @@ typedef void (APIENTRYP PFNGLUNIFORMBLOCKBINDINGPROC) (GLuint program, GLuint un
 #define GL_CLAMP_READ_COLOR               0x891C
 #define GL_FIXED_ONLY                     0x891D
 #define GL_R11F_G11F_B10F                 0x8C3A
+#define GL_COMPRESSED_RED                 0x8225
+#define GL_COMPRESSED_RG                  0x8226
 typedef void (APIENTRYP PFNGLBINDBUFFERRANGEPROC) (GLenum target, GLuint index, GLuint buffer, GLintptr offset, GLsizeiptr size);
 typedef void (APIENTRYP PFNGLBINDBUFFERBASEPROC) (GLenum target, GLuint index, GLuint buffer);
 typedef void (APIENTRYP PFNGLBINDFRAGDATALOCATIONPROC) (GLuint program, GLuint color, const GLchar *name);

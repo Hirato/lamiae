@@ -137,7 +137,6 @@ struct flarerenderer : partrenderer
     void render()
     {
         glDisable(GL_DEPTH_TEST);
-        if(!tex) tex = textureload(texname);
         glBindTexture(GL_TEXTURE_2D, tex->id);
         gle::defattrib(gle::ATTRIB_VERTEX, 3, GL_FLOAT);
         gle::defattrib(gle::ATTRIB_TEXCOORD0, 2, GL_FLOAT);
@@ -187,5 +186,5 @@ struct flarerenderer : partrenderer
     //square per round hole - use addflare(..) instead
     particle *addpart(const vec &o, const vec &d, int fade, int color, float size, int gravity = 0) { return NULL; }
 };
-static flarerenderer flares("<grey>media/particles/lensflares", 64, PT_GREY);
+static flarerenderer flares("<grey>media/particles/lensflares", 64);
 

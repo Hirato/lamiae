@@ -397,21 +397,28 @@ void saveslotconfig(stream *h, Slot &s, int index)
     }
     if(index >= 0)
     {
-        if(vs.rotation)
-            h->printf("texrotate %d\n", vs.rotation);
-        if(vs.offset.x || vs.offset.y)
-            h->printf("texoffset %d %d\n", vs.offset.x, vs.offset.y);
-        if(vs.scale != 1)
-            h->printf("texscale %g\n", vs.scale);
+        if(s.autograss) h->printf("autograss \"%s\"\n", s.autograss);
+        //if(s.smooth >= 0)
+
+
         if(vs.scroll.x != 0.f || vs.scroll.y != 0.f)
             h->printf("texscroll %g %g\n", vs.scroll.x * 1000.0f, vs.scroll.y * 1000.0f);
+        if(vs.offset.x || vs.offset.y)
+            h->printf("texoffset %d %d\n", vs.offset.x, vs.offset.y);
+        if(vs.rotation)
+            h->printf("texrotate %d\n", vs.rotation);
+        if(vs.scale != 1)
+            h->printf("texscale %g\n", vs.scale);
         if(vs.layer != 0)
             h->printf("texlayer %d\n", vs.layer);
+        if(vs.decal != 0)
+            h->printf("texdecal %d\n", vs.decal);
         if(vs.alphafront != 0.5f || vs.alphaback != 0)
             h->printf("texalpha %g %g\n", vs.alphafront, vs.alphaback);
         if(vs.colorscale != vec(1, 1, 1))
             h->printf("texcolor %g %g %g\n", vs.colorscale.x, vs.colorscale.y, vs.colorscale.z);
-        if(s.autograss) h->printf("autograss \"%s\"\n", s.autograss);
+        if(vs.refractscale > 0)
+            h->printf("texrefract %g %g %g %g", vs.refractscale, vs.refractcolor.x,  vs.refractcolor.y, vs.refractcolor.z);
     }
     h->printf("\n");
 }
@@ -515,6 +522,7 @@ void savevslot(stream *f, VSlot &vs, int prev)
         f->putlil<float>(vs.refractscale);
         loopk(3) f->putlil<float>(vs.refractcolor[k]);
     }
+    if(vs.changed & (1<<VSLOT_DECAL)) f->putlil<int>(vs.decal);
 }
 
 void savevslots(stream *f, int numvslots)
@@ -591,6 +599,7 @@ void loadvslot(stream *f, VSlot &vs, int changed)
         vs.refractscale = f->getlil<float>();
         loopk(3) vs.refractcolor[k] = f->getlil<float>();
     }
+    if(vs.changed & (1<<VSLOT_DECAL)) vs.decal = f->getlil<int>();
 }
 
 void loadvslots(stream *f, int numvslots)

@@ -1538,11 +1538,6 @@ namespace UI
         return false;
     }
 
-    static inline void setshadervariant(Shader *shader, Texture *tex)
-    {
-        shader->setvariant(hasTRG ? (tex->bpp==1 ? 0 : (tex->bpp==2 ? 1 : -1)) : -1, 0);
-    }
-
     struct Rectangle : Filler
     {
         enum { SOLID = 0, MODULATE };
@@ -1567,6 +1562,7 @@ namespace UI
             gle::attribf(sx + w, sy + h);
             gle::end();
 
+            hudshader->set();
             gle::colorf(1, 1, 1);
             gle::defvertex(2);
             gle::deftexcoord0();
@@ -1594,7 +1590,6 @@ namespace UI
 
         void draw(float sx, float sy)
         {
-            setshadervariant(hudshader, tex);
             glBindTexture(GL_TEXTURE_2D, tex->id);
             gle::begin(GL_TRIANGLE_STRIP);
             quadtri(sx, sy, w, h);
@@ -1672,8 +1667,8 @@ namespace UI
 
         void drawslot(Slot &slot, VSlot &vslot, float sx, float sy)
         {
-            Texture *tex = notexture, *glowtex = NULL, *layertex = NULL;
-            VSlot *layer = NULL;
+            VSlot *layer = NULL, *decal = NULL;
+            Texture *tex = notexture, *glowtex = NULL, *layertex = NULL, *decaltex = NULL;
             if(slot.loaded)
             {
                 tex = slot.sts[0].t;
@@ -1686,6 +1681,11 @@ namespace UI
                     layer = &lookupvslot(vslot.layer);
                     if(!layer->slot->sts.empty())
                         layertex = layer->slot->sts[0].t;
+                }
+                if(vslot.decal)
+                {
+                    decal = &lookupvslot(vslot.decal);
+                    if(!decal->slot->sts.empty()) decaltex = decal->slot->sts[0].t;
                 }
             }
             else if(slot.thumbnail) tex = slot.thumbnail;
@@ -1703,8 +1703,7 @@ namespace UI
             }
             loopk(4) { tc[k][0] = tc[k][0]/xt - float(xoff)/tex->xs; tc[k][1] = tc[k][1]/yt - float(yoff)/tex->ys; }
 
-            if (slot.loaded) SETSHADER(hudrgb);
-            else setshadervariant(hudshader, tex);
+            SETSHADER(hudrgb);
 
             glBindTexture(GL_TEXTURE_2D, tex->id);
 
@@ -1716,6 +1715,17 @@ namespace UI
             gle::attribf(sx  , sy+h); gle::attrib(tc[2]);
             gle::attribf(sx+w, sy+h); gle::attrib(tc[3]);
             gle::end();
+
+            if(decaltex)
+            {
+                glBindTexture(GL_TEXTURE_2D, decaltex->id);
+                gle::begin(GL_TRIANGLE_STRIP);
+                gle::attribf(sx,      sy);      gle::attrib(tc[0]);
+                gle::attribf(sx+w/2, sy);      gle::attrib(tc[1]);
+                gle::attribf(sx,      sy+h/2); gle::attrib(tc[3]);
+                gle::attribf(sx+w/2, sy+h/2); gle::attrib(tc[2]);
+                gle::end();
+            }
 
             if(glowtex)
             {
@@ -1736,13 +1746,14 @@ namespace UI
                 glBindTexture(GL_TEXTURE_2D, layertex->id);
                 gle::color(layer->colorscale);
                 gle::begin(GL_TRIANGLE_STRIP);
-                gle::attribf(sx  , sy  ); gle::attrib(tc[0]);
-                gle::attribf(sx+w, sy  ); gle::attrib(tc[1]);
-                gle::attribf(sx  , sy+h); gle::attrib(tc[2]);
-                gle::attribf(sx+w, sy+h); gle::attrib(tc[3]);
+                gle::attribf(sx+w/2, sy+h/2); gle::attrib(tc[0]);
+                gle::attribf(sx+w,   sy+h/2); gle::attrib(tc[1]);
+                gle::attribf(sx+w/2, sy+h  ); gle::attrib(tc[2]);
+                gle::attribf(sx+w,   sy+h  ); gle::attrib(tc[3]);
                 gle::end();
             }
             gle::colorf(1, 1, 1);
+            hudshader->set();
         }
 
         void draw(float sx, float sy)
@@ -1783,7 +1794,6 @@ namespace UI
 
         void draw(float sx, float sy)
         {
-            setshadervariant(hudshader, tex);
             glBindTexture(GL_TEXTURE_2D, tex->id);
             gle::begin(GL_TRIANGLE_STRIP);
             quadtri(sx, sy, w, h, cropx, cropy, cropw, croph);
@@ -1818,7 +1828,6 @@ namespace UI
 
         void draw(float sx, float sy)
         {
-            setshadervariant(hudshader, tex);
             glBindTexture(GL_TEXTURE_2D, tex->id);
             gle::begin(GL_QUADS);
             float splitw = (minw ? min(minw, w) : w) / 2,
@@ -1891,7 +1900,6 @@ namespace UI
 
         void draw(float sx, float sy)
         {
-            setshadervariant(hudshader, tex);
             glBindTexture(GL_TEXTURE_2D, tex->id);
             gle::begin(GL_QUADS);
             float vy = sy, ty = 0;
@@ -1947,7 +1955,6 @@ namespace UI
 
         void draw(float sx, float sy)
         {
-            setshadervariant(hudshader, tex);
             glBindTexture(GL_TEXTURE_2D, tex->id);
 
             //we cannot use the built in OpenGL texture repeat with clamped textures.

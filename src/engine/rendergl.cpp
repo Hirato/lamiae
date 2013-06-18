@@ -2,7 +2,7 @@
 
 #include "engine.h"
 
-bool hasVAO = false, hasTR = false, hasTSW = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasS3TC = false, hasFXT1 = false, hasAF = false, hasFBB = false, hasFBMS = false, hasTMS = false, hasMSS = false, hasFBMSBS = false, hasNVFBMSC = false, hasNVTMS = false, hasUBO = false, hasMBR = false, hasDB = false, hasTG = false, hasT4 = false, hasTQ = false, hasPF = false, hasTRG = false, hasDBT = false, hasDC = false, hasDBGO = false, hasGPU4 = false, hasGPU5 = false, hasEAL = false;
+bool hasVAO = false, hasTR = false, hasTSW = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasS3TC = false, hasFXT1 = false, hasLATC = false, hasRGTC = false, hasAF = false, hasFBB = false, hasFBMS = false, hasTMS = false, hasMSS = false, hasFBMSBS = false, hasNVFBMSC = false, hasNVTMS = false, hasUBO = false, hasMBR = false, hasDB = false, hasTG = false, hasT4 = false, hasTQ = false, hasPF = false, hasTRG = false, hasDBT = false, hasDC = false, hasDBGO = false, hasGPU4 = false, hasGPU5 = false, hasEAL = false;
 bool mesa = false, intel = false, ati = false, nvidia = false;
 
 int hasstencil = 0;
@@ -500,7 +500,7 @@ void gl_checkextensions()
 
     if(glversion >= 300)
     {
-        hasTF = hasTRG = hasPF = hasGPU4 = true;
+        hasTF = hasTRG = hasRGTC = hasPF = hasGPU4 = true;
 
         glClampColor_ = (PFNGLCLAMPCOLORPROC)getprocaddress("glClampColor");
         hasCBF = true;
@@ -516,6 +516,11 @@ void gl_checkextensions()
         {
             hasTRG = true;
             if(dbgexts) conoutf(CON_INIT, "Using GL_ARB_texture_rg extension.");
+        }
+        if(hasext("GL_ARB_texture_compression_rgtc") || hasext("GL_EXT_texture_compression_rgtc"))
+        {
+            hasRGTC = true;
+            if(dbgexts) conoutf(CON_INIT, "Using GL_ARB_texture_compression_rgtc extension.");
         }
         if(hasext("GL_EXT_packed_float"))
         {
@@ -700,6 +705,11 @@ void gl_checkextensions()
         if(mesa) usetexcompress = max(usetexcompress, 1);
         if(dbgexts) conoutf(CON_INIT, "Using GL_3DFX_texture_compression_FXT1.");
     }
+    if(hasext("GL_EXT_texture_compression_latc"))
+    {
+        hasLATC = true;
+        if(dbgexts) conoutf(CON_INIT, "Using GL_EXT_texture_compression_latc extension.");
+    }
 
     if(hasext("GL_EXT_texture_filter_anisotropic"))
     {
@@ -717,6 +727,7 @@ void gl_checkextensions()
     }
     else if(hasext("GL_AMD_texture_texture4"))
     {
+        hasT4 = true;
         if(dbgexts) conoutf(CON_INIT, "Using GL_AMD_texture_texture4 extension.");
     }
     if(hasTG || hasT4) usetexgather = 1;
@@ -1204,12 +1215,12 @@ void recomputecamera()
             camera1->move = -1;
             camera1->eyeheight = camera1->aboveeye = camera1->radius = camera1->xradius = camera1->yradius = 2;
 
-        matrix3x3 orient;
-        orient.identity();
-        orient.rotate_around_y(camera1->roll*RAD);
-        orient.rotate_around_x(camera1->pitch*-RAD);
-        orient.rotate_around_z(camera1->yaw*-RAD);
-        vec dir = vec(orient.b).neg(), side = vec(orient.a).neg(), up = orient.c;
+            matrix3x3 orient;
+            orient.identity();
+            orient.rotate_around_y(camera1->roll*RAD);
+            orient.rotate_around_x(camera1->pitch*-RAD);
+            orient.rotate_around_z(camera1->yaw*-RAD);
+            vec dir = vec(orient.b).neg(), side = vec(orient.a).neg(), up = orient.c;
 
             if(game::collidecamera())
             {
@@ -2092,7 +2103,7 @@ void gl_drawframe(int w, int h)
     float fogbelow = 0;
     if(isliquid(fogmat&MATF_VOLUME))
     {
-       float z = findsurface(fogmat, vec(camera1->o.x, camera1->o.y, camera1->o.z - fogmargin), abovemat) - WATER_OFFSET;
+        float z = findsurface(fogmat, vec(camera1->o.x, camera1->o.y, camera1->o.z - fogmargin), abovemat) - WATER_OFFSET;
         if(camera1->o.z < z + fogmargin)
         {
             fogbelow = z - camera1->o.z;

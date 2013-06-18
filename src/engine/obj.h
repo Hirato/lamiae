@@ -37,7 +37,7 @@ struct obj : vertmodel, vertloader<obj>
             vector<vec> attrib[3];
             char buf[512];
 
-            hashtable<ivec, int> verthash;
+            hashtable<ivec, int> verthash(1<<11);
             vector<vert> verts;
             vector<tcvert> tcverts;
             vector<tri> tris;

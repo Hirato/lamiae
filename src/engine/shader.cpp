@@ -220,7 +220,8 @@ static void bindworldtexlocs(Shader &s)
     UNIFORMTEX("normalmap", TEX_NORMAL);
     UNIFORMTEX("glowmap", TEX_GLOW);
     UNIFORMTEX("envmap", TEX_ENVMAP);
-    UNIFORMTEX("decal", TEX_DECAL);
+    UNIFORMTEX("decaldiffusemap", TEX_DECAL+TEX_DIFFUSE);
+    UNIFORMTEX("decalnormalmap", TEX_DECAL+TEX_NORMAL);
     UNIFORMTEX("blendmap", 7);
     UNIFORMTEX("refractmask", 7);
     UNIFORMTEX("refractlight", 8);
@@ -679,6 +680,7 @@ static void gengenericvariant(Shader &s, const char *sname, const char *vs, cons
 
 static void genswizzle(Shader &s, const char *sname, const char *ps, int row = 0)
 {
+    if(!hasTRG || hasTSW) return;
     static const int pragmalen = strlen("#pragma CUBE2_swizzle");
     const char *pspragma = strstr(ps, "#pragma CUBE2_swizzle");
     if(!pspragma) return;
@@ -1172,9 +1174,9 @@ void addslotparam(const char *name, float x, float y, float z, float w)
     slotparams.add(param);
 }
 
-ICOMMAND(setuniformparam, "sffff", (char *name, float *x, float *y, float *z, float *w), addslotparam(name, *x, *y, *z, *w));
-ICOMMAND(setshaderparam, "sffff", (char *name, float *x, float *y, float *z, float *w), addslotparam(name, *x, *y, *z, *w));
-ICOMMAND(defuniformparam, "sffff", (char *name, float *x, float *y, float *z, float *w), addslotparam(name, *x, *y, *z, *w));
+ICOMMAND(setuniformparam, "sfFFf", (char *name, float *x, float *y, float *z, float *w), addslotparam(name, *x, *y, *z, *w));
+ICOMMAND(setshaderparam, "sfFFf", (char *name, float *x, float *y, float *z, float *w), addslotparam(name, *x, *y, *z, *w));
+ICOMMAND(defuniformparam, "sfFFf", (char *name, float *x, float *y, float *z, float *w), addslotparam(name, *x, *y, *z, *w));
 
 #define NUMPOSTFXBINDS 10
 

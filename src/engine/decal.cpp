@@ -22,9 +22,7 @@ enum
     DF_INVMOD     = 1<<2,
     DF_OVERBRIGHT = 1<<3,
     DF_ADD        = 1<<4,
-    DF_SATURATE   = 1<<5,
-    DF_GREY       = 1<<6,
-    DF_GREYALPHA  = 1<<7
+    DF_SATURATE   = 1<<5
 };
 
 VARFP(maxdecaltris, 1, 1024, 16384, initdecals());
@@ -244,7 +242,7 @@ struct decalrenderer
         if(flags&DF_OVERBRIGHT)
         {
             glBlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
-            SETVARIANT(overbrightdecal, hasTRG ? (flags&DF_GREY ? 0 : (flags&DF_GREYALPHA ? 1 : -1)) : -1, 0);
+            SETSWIZZLE(overbrightdecal, tex);
         }
         else
         {
@@ -252,7 +250,7 @@ struct decalrenderer
             else if(flags&DF_ADD) glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_COLOR);
             else glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-            SETVARIANT(decal, hasTRG ? (flags&DF_GREY ? 0 : (flags&DF_GREYALPHA ? 1 : -1)) : -1, 0);
+            SETSWIZZLE(decal, tex);
             float colorscale = flags&DF_SATURATE ? 2 : 1;
             LOCALPARAMF(colorscale, (colorscale, colorscale, colorscale, 1));
         }
@@ -313,9 +311,9 @@ struct decalrenderer
         decaltangent.orthogonal(dir);
 #else
         decaltangent = vec(dir.z, -dir.x, dir.y);
-        decaltangent.sub(vec(dir).mul(decaltangent.dot(dir)));
+        decaltangent.project(dir);
 #endif
-        if(flags&DF_ROTATE) decaltangent.rotate(rnd(360)*RAD, dir);
+        if(flags&DF_ROTATE) decaltangent.rotate(sincos360[rnd(360)], dir);
         decaltangent.normalize();
         decalbitangent.cross(decaltangent, dir);
         if(flags&DF_RND4)
@@ -447,9 +445,7 @@ struct decalrenderer
             ft.normalize();
             fb.cross(ft, n);
             vec pt = vec(ft).mul(ft.dot(decaltangent)).add(vec(fb).mul(fb.dot(decaltangent))).normalize(),
-                pb = vec(ft).mul(ft.dot(decalbitangent)).add(vec(fb).mul(fb.dot(decalbitangent))).normalize();
-            // orthonormalize projected bitangent to prevent streaking
-            pb.sub(vec(pt).mul(pt.dot(pb))).normalize();
+                pb = vec(ft).mul(ft.dot(decalbitangent)).add(vec(fb).mul(fb.dot(decalbitangent))).project(pt).normalize();
             vec v1[MAXFACEVERTS+4], v2[MAXFACEVERTS+4];
             float ptc = pt.dot(pcenter), pbc = pb.dot(pcenter);
             int numv;

@@ -762,6 +762,7 @@ static bool fuzzycolliderect(physent *d, const vec &dir, float cutoff, const vec
         float dist;
         switch(i)
         {
+            default:
             case 0: w = vec(mdlvol.orient.a).neg(); dist = -radius.x; break;
             case 1: w = mdlvol.orient.a; dist = -radius.x; break;
             case 2: w = vec(mdlvol.orient.b).neg(); dist = -radius.y; break;
@@ -797,9 +798,15 @@ static bool fuzzycolliderect(physent *d, const vec &dir, float cutoff, const vec
 template<class E>
 static bool fuzzycollideellipse(physent *d, const vec &dir, float cutoff, const vec &o, const vec &center, const vec &radius, int yaw, int pitch, int roll)
 {
-    E entvol(d);
     mpr::ModelEllipse mdlvol(o, center, radius, yaw, pitch, roll);
-    if(!mpr::collide(entvol, mdlvol)) return true;
+
+    vec bbradius = mdlvol.orient.abstransposedtransform(radius);
+
+    if(fabs(d->o.x - mdlvol.o.x) > bbradius.x + d->radius || fabs(d->o.y - mdlvol.o.y) > bbradius.y + d->radius ||
+       d->o.z + d->aboveeye < mdlvol.o.z - bbradius.z || d->o.z - d->eyeheight > mdlvol.o.z + bbradius.z)
+        return true;
+
+    E entvol(d);
 
     wall = vec(0, 0, 0);
     float bestdist = -1e10f;
@@ -809,6 +816,7 @@ static bool fuzzycollideellipse(physent *d, const vec &dir, float cutoff, const 
         float dist;
         switch(i)
         {
+            default:
             case 0: w = mdlvol.orient.c; dist = -radius.z; break;
             case 1: w = vec(mdlvol.orient.c).neg(); dist = -radius.z; break;
             case 2:
@@ -824,6 +832,7 @@ static bool fuzzycollideellipse(physent *d, const vec &dir, float cutoff, const 
         }
         vec pw = entvol.supportpoint(vec(w).neg());
         dist += w.dot(vec(pw).sub(mdlvol.o));
+        if(dist >= 0) return true;
         if(dist <= bestdist) continue;
         wall = vec(0, 0, 0);
         bestdist = dist;

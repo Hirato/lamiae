@@ -191,7 +191,7 @@ Mix_Music *loadmusic(const char *name)
         if(!musicrw) musicrw = musicstream->rwops();
         if(!musicrw) DELETEP(musicstream);
     }
-    if(musicrw) music = Mix_LoadMUS_RW(musicrw, 0);
+    if(musicrw) music = Mix_LoadMUSType_RW(musicrw, MUS_NONE, 0);
     else music = Mix_LoadMUS(findfile(name, "rb"));
     if(!music)
     {

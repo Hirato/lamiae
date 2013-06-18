@@ -158,6 +158,8 @@ struct stringformatter
     }
 };
 
+extern char *tempformatstring(const char *fmt, ...) PRINTFARGS(1, 2);
+
 #define formatstring(d) stringformatter((char *)d)
 #define defformatstring(d) string d; formatstring(d)
 #define defvformatstring(d,last,fmt) string d; { va_list ap; va_start(ap, last); vformatstring(d, fmt, ap); va_end(ap); }

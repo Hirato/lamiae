@@ -180,9 +180,8 @@ struct vec
 
     void orthonormalize(vec &s, vec &t) const
     {
-        s.sub(vec(*this).mul(dot(s)));
-        t.sub(vec(*this).mul(dot(t)))
-         .sub(vec(s).mul(s.dot(t)));
+        s.project(*this);
+        t.project(*this).project(s);
     }
 
     template<class T> float dist_to_bb(const T &min, const T &max) const
