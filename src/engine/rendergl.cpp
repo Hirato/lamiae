@@ -2298,7 +2298,7 @@ void drawdamagescreen(int w, int h)
     hudshader->set();
 
     static Texture *damagetex = NULL;
-    if(!damagetex) damagetex = textureload("data/fps/hud/damage.png", 3);
+    if(!damagetex) damagetex = textureload("media/interface/damage", 3);
 
     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glBindTexture(GL_TEXTURE_2D, damagetex->id);
@@ -2336,7 +2336,7 @@ void loadcrosshair(const char *name, int i)
 
     crosshairs[i] = name ? textureload(name, 3, true) : notexture;
     if(crosshairs[i] == notexture)
-        crosshairs[i] = textureload(game::defaultcrosshair(i) ? game::defaultcrosshair(i) : "packages/crosshairs/default", 3, true);
+        crosshairs[i] = textureload(game::defaultcrosshair(i) ? game::defaultcrosshair(i) : "media/crosshairs/default", 3, true);
 }
 
 void loadcrosshair_(const char *name, int *i)
@@ -2344,16 +2344,16 @@ void loadcrosshair_(const char *name, int *i)
     loadcrosshair(name, *i);
 }
 
-SVARP(guicursortex, "interface/cursor");
+SVARP(guicursortex, "media/interface/cursor");
 
 COMMANDN(loadcrosshair, loadcrosshair_, "si");
 
 ICOMMAND(getcrosshair, "i", (int *i),
-    const char *name = "packages/crosshairs/default.png";
+    const char *name = "media/crosshairs/default.png";
     if(crosshairs.inrange(*i))
     {
         name = crosshairs[*i] ? crosshairs[*i]->name : game::defaultcrosshair(*i);
-        if(!name) name = "packages/crosshairs/default.png";
+        if(!name) name = "media/crosshairs/default.png";
     }
     result(name);
 )
@@ -2382,9 +2382,8 @@ void drawcrosshair(int w, int h)
 
     if(windowhit)
     {
-        defformatstring(tname)("data/%s", guicursortex);
         static Texture *cursor = NULL;
-        cursor = textureload(tname, 3, true);
+        cursor = textureload(guicursortex, 3, true);
         crosshair = cursor;
         chsize = cursorsize*w/900.0f;
     }

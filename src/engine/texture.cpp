@@ -1183,13 +1183,13 @@ static bool texturedata(ImageData &d, const char *tname, Slot::Tex *tex = NULL, 
         {
             cmds = tex->name;
             file = strrchr(tex->name, '>');
-            if(!file) { if(msg) conoutf(CON_ERROR, "could not load texture packages/%s", tex->name); return false; }
+            if(!file) { if(msg) conoutf(CON_ERROR, "could not load texture media//%s", tex->name); return false; }
             file++;
         }
         else file = tex->name;
 
         static string pname;
-        formatstring(pname)("packages/%s", file);
+        formatstring(pname)("media//%s", file);
         file = path(pname);
     }
     else if(tname[0]=='<')
@@ -1794,7 +1794,7 @@ void autograss(char *name)
     DELETEA(s.autograss);
 
     s.autograss = name[0] ? newstring(
-        makerelpath(strstr(name, "packages") ? NULL : "packages", name)
+        makerelpath(strstr(name, "media/") ? NULL : "media/", name)
     ) : NULL;
 }
 COMMAND(autograss, "s");
@@ -1948,7 +1948,7 @@ static void addname(vector<char> &key, Slot &slot, Slot::Tex &t, bool combined =
 {
     if(combined) key.add('&');
     if(prefix) { while(*prefix) key.add(*prefix++); }
-    defformatstring(tname)("packages/%s", t.name);
+    defformatstring(tname)("media//%s", t.name);
     for(const char *s = path(tname); *s; key.add(*s++));
 }
 
@@ -2290,7 +2290,7 @@ Texture *cubemaploadwildcard(Texture *t, const char *name, bool mipit, bool msg,
 Texture *cubemapload(const char *name, bool mipit, bool msg, bool transient)
 {
     string pname;
-    copystring(pname, makerelpath("packages", name));
+    copystring(pname, makerelpath("media/", name));
     path(pname);
     Texture *t = NULL;
     if(!strchr(pname, '*'))

@@ -409,7 +409,7 @@ model *loadmodel(const char *name, int i, bool msg)
         if(loadingmodel) return NULL;
         if(msg)
         {
-            defformatstring(filename)("packages/models/%s", name);
+            defformatstring(filename)("media/models/%s", name);
             renderprogress(loadprogress, filename);
         }
         loopi(NUMMODELTYPES)
@@ -423,7 +423,7 @@ model *loadmodel(const char *name, int i, bool msg)
         loadingmodel = NULL;
         if(!m)
         {
-            conoutf(CON_WARN, "unable to load model: packages/models/%s", name);
+            conoutf(CON_WARN, "unable to load model: media/models/%s", name);
             return NULL;
         }
         mdllookup.access(m->name(), m);
@@ -1089,8 +1089,8 @@ void loadskin(const char *dir, const char *altdir, Texture *&skin, Texture *&mas
         ifnoload(tex, makerelpath(maltdir, name "", prefix, cmd)) return; \
     }
 
-    defformatstring(mdir)("packages/models/%s", dir);
-    defformatstring(maltdir)("packages/models/%s", altdir);
+    defformatstring(mdir)("media/models/%s", dir);
+    defformatstring(maltdir)("media/models/%s", altdir);
     masks = notexture;
     tryload(skin, NULL, NULL, "skin");
     tryload(masks, NULL, NULL, "masks");

@@ -380,8 +380,8 @@ const char *addpackagedir(const char *dir)
     char *filter = pdir;
     for(;;)
     {
-        static int len = strlen("packages");
-        filter = strstr(filter, "packages");
+        static int len = strlen("media");
+        filter = strstr(filter, "media");
         if(!filter) break;
         if(filter > pdir && filter[-1] == PATHDIV && filter[len] == PATHDIV) break;
         filter += len;

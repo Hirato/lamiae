@@ -9,7 +9,7 @@ void loadsky(const char *basename, Texture *texs[6])
     {
         const char *side = cubemapsides[i].name;
         string name;
-        copystring(name, makerelpath("packages", basename));
+        copystring(name, makerelpath("media", basename));
         if(wildcard)
         {
             char *chop = strchr(name, '*');
@@ -31,7 +31,7 @@ Texture *cloudoverlay = NULL;
 Texture *loadskyoverlay(const char *basename)
 {
     string name;
-    copystring(name, makerelpath("packages", basename));
+    copystring(name, makerelpath("media", basename));
     Texture *t = notexture;
     t = textureload(name, 0, true, false);
     if(t==notexture) conoutf(CON_ERROR, "could not load sky overlay texture %s", basename);

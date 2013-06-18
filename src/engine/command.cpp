@@ -2132,7 +2132,7 @@ bool executebool(const char *p)
 
 bool execfile(const char *cfgfile, bool msg)
 {
-	/*const char *paths[] = {"", "data/"};
+	/*const char *paths[] = {"", "config/"};
 	string s;
 	loopi(sizeof(paths)/sizeof(paths[0]))
 	{
@@ -2232,7 +2232,7 @@ void writecfg(const char *name)
     stream *f = openutf8file(path((name && name[0]) ? name : confname, true), "w");
 
     if(!f) return;
-    f->printf("// automatically written on exit, DO NOT MODIFY\n// delete this file to have data/defaults.cfg and data/%s/defaults.cfg overwrite these settings\n// modify settings in game, or put settings in %s to override anything\n\n", game::gameident(), game::autoexec());
+    f->printf("// automatically written on exit, DO NOT MODIFY\n// delete this file to have config/defaults.cfg and config/%s/defaults.cfg overwrite these settings\n// modify settings in game, or put settings in %s to override anything\n\n", game::gameident(), game::autoexec());
     f->printf("if (&& (! $ignoreconfver) (!= $confver %i)) [\n\tsleep 500 [showgui keepconf]; setdefaults\n] [\n\n", confver);
 
     writecrosshairs(f);

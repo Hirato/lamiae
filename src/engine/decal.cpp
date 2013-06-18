@@ -48,7 +48,7 @@ struct decalrenderer
           tex(NULL),
           decals(NULL), maxdecals(0), startdecal(0), enddecal(0),
           verts(NULL), maxverts(0), startvert(0), endvert(0), availverts(0),
-          vbo(0), 
+          vbo(0),
           decalu(0), decalv(0)
     {
     }
@@ -253,7 +253,7 @@ struct decalrenderer
             else glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
             SETVARIANT(decal, hasTRG ? (flags&DF_GREY ? 0 : (flags&DF_GREYALPHA ? 1 : -1)) : -1, 0);
-            float colorscale = flags&DF_SATURATE ? 2 : 1; 
+            float colorscale = flags&DF_SATURATE ? 2 : 1;
             LOCALPARAMF(colorscale, (colorscale, colorscale, colorscale, 1));
         }
 
@@ -574,11 +574,11 @@ struct decalrenderer
 
 decalrenderer decals[] =
 {
-    decalrenderer("packages/particles/burn"), //improve collision detection first
-    decalrenderer("packages/particles/blood", DF_RND4|DF_ROTATE|DF_INVMOD),
-    decalrenderer("packages/particles/stain", 0, 10, 2000, 20),
-    decalrenderer("packages/particles/ripple", 0, 10, 750, 20),
-    decalrenderer("packages/particles/leaves", DF_RND4|DF_ROTATE),
+    decalrenderer("media/particles/burn"), //improve collision detection first
+    decalrenderer("media/particles/blood", DF_RND4|DF_ROTATE|DF_INVMOD),
+    decalrenderer("media/particles/stain", 0, 10, 2000, 20),
+    decalrenderer("media/particles/ripple", 0, 10, 750, 20),
+    decalrenderer("media/particles/leaves", DF_RND4|DF_ROTATE),
 };
 
 void initdecals()

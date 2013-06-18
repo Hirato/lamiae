@@ -80,7 +80,7 @@ namespace hemisphere
         xtraverts += numindices;
         glde++;
     }
-    
+
     void disable()
     {
         gle::disablevertex();
@@ -367,5 +367,5 @@ struct fireballrenderer : listrenderer
         drawexplosion(inside, p->color.r*ldrscaleb, p->color.g*ldrscaleb, p->color.b*ldrscaleb, blend/255.0f);
     }
 };
-static fireballrenderer fireballs("packages/particles/explosion"), bluefireballs("<mad:.6,.8,1>packages/particles/explosion");
+static fireballrenderer fireballs("media/particles/explosion"), bluefireballs("<mad:.6,.8,1>media/particles/explosion");
 

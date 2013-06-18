@@ -450,7 +450,7 @@ namespace game
 
 	ICOMMAND(r_rehash, "", (),
 		if(!mapdata) return;
-		conoutf("Reloading configuration files in data/rpg/games/%s", data);
+		conoutf("Reloading configuration files in /games/%s", data);
 		loadassets(datapath(), true, false);
 		if(abort)
 		{

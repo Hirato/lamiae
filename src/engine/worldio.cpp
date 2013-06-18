@@ -8,11 +8,11 @@ void cutogz(char *s)
     if(ogzp) *ogzp = '\0';
 }
 
-string mapdir = "packages/maps/";
+string mapdir = "media/maps/";
 
 void setmapdir(const char *pth)
 {
-    if(!pth) pth = "packages/maps";
+    if(!pth) pth = "media/maps";
     copystring(mapdir, pth);
     concatstring(mapdir, "/");
 }
@@ -424,8 +424,8 @@ void writemapcfg()
     if (savebak)
     {
         string bak;
-        if(savebak == 1) formatstring(bak)("packages/%s%s.cfg.BAK", mpath, mname);
-        else formatstring(bak)("packages/%s%s_%d.cfg.BAK", mpath, mname, totalmillis);
+        if(savebak == 1) formatstring(bak)("%s%s.cfg.BAK", mpath, mname);
+        else formatstring(bak)("%s%s_%d.cfg.BAK", mpath, mname, totalmillis);
         backup(acfname, bak);
     }
     stream *f = openutf8file(path(acfname, true), "w");
@@ -1324,7 +1324,7 @@ bool load_world(const char *mname, const char *cname)
 
         identflags |= IDF_OVERRIDDEN;
 
-        execfile("data/default_map_settings.cfg", false);
+        execfile("config/default_map_settings.cfg", false);
         execfile(acfname, false);
         execfile(mcfname, false);
 
@@ -1449,7 +1449,7 @@ void writeobj(char *name)
     {
         VSlot &vslot = lookupvslot(usedmtl[i], false);
         f->printf("newmtl slot%d\n", usedmtl[i]);
-        f->printf("map_Kd %s\n", vslot.slot->sts.empty() ? notexture->name : path(makerelpath("packages", vslot.slot->sts[0].name)));
+        f->printf("map_Kd %s\n", vslot.slot->sts.empty() ? notexture->name : path(makerelpath("media", vslot.slot->sts[0].name)));
         f->printf("\n");
     }
     delete f;

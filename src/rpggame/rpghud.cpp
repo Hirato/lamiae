@@ -30,9 +30,9 @@ namespace game
 	{
 		switch(index)
 		{
-			case 2: return "packages/crosshairs/empty";
-			case 1: return "packages/crosshairs/edit";
-			default: return "packages/crosshairs/default";
+			case 2: return "media/crosshairs/empty";
+			case 1: return "media/crosshairs/edit";
+			default: return "media/crosshairs/default";
 		}
 	}
 
@@ -82,7 +82,7 @@ namespace game
 			gle::defvertex(2);
 			gle::deftexcoord0();
 
-			settexture("data/rpg/hud/player", 3);
+			settexture("media/icons/player", 3);
 			gle::begin(GL_TRIANGLE_FAN);
 			loopi(4)
 			{
@@ -112,7 +112,7 @@ namespace game
 			gle::deftexcoord0();
 			gle::defcolor(4);
 
-			settexture("data/rpg/hud/player", 3);
+			settexture("media/icons/player", 3);
 			gle::begin(GL_QUADS);
 			loopv(curmap->objs)
 			{
@@ -132,7 +132,7 @@ namespace game
 			}
 			gle::end();
 
-			settexture("data/rpg/hud/blip", 3);
+			settexture("media/icons/blip", 3);
 			gle::begin(GL_QUADS);
 			loopv(curmap->projs)
 			{
@@ -167,7 +167,7 @@ namespace game
 
 		gle::colorf(1, 1, 1);
 
-		settexture("data/rpg/hud/compass", 3);
+		settexture("media/icons/compass", 3);
 		quad(-dx / 2 - 2, -dy / 2 - 2, dx + 4, dy + 4);
 
 		pophudmatrix();
@@ -181,7 +181,7 @@ namespace game
 
 	void drawhorizbar(const char *img, float x, float y, float dx, float dy, float progress, int colour)
 	{
-		settexture(*img ? img : "data/rpg/hud/hbar", 3);
+		settexture(*img ? img : "media/icons/hbar", 3);
 		gle::colorub((colour >> 16) & 255, (colour >> 8) & 255, colour & 255);
 
 		gle::begin(GL_TRIANGLE_FAN);
@@ -197,7 +197,7 @@ namespace game
 
 	void drawvertbar(const char *img, float x, float y, float dx, float dy, float progress, int colour)
 	{
-		settexture(*img ? img : "data/rpg/hud/vbar", 3);
+		settexture(*img ? img : "media/icons/vbar", 3);
 		gle::colorub((colour >> 16) & 255, (colour >> 8) & 255, colour & 255);
 
 		gle::begin(GL_TRIANGLE_FAN);

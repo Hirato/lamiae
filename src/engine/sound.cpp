@@ -210,7 +210,7 @@ void startmusic(char *name, char *cmd)
     if(nosound || !musicvol || !soundvol) { if(dbgmusic) conoutf("aborting, sound disabled"); return;}
     stopmusic();
 
-    const char *paths[] = { "packages/", "", "packages/music/" };
+    const char *paths[] = { "media/", "", "media/music/" };
     string sn;
 
     if(*name)
@@ -486,14 +486,14 @@ static bool loadsoundslot(soundslot &slot, bool msg = false)
     string filename;
     loopi(sizeof(exts)/sizeof(exts[0]))
     {
-        formatstring(filename)("packages/sounds/%s%s", slot.sample->name, exts[i]);
+        formatstring(filename)("media/sounds/%s%s", slot.sample->name, exts[i]);
         if(msg && !i) renderprogress(0, filename);
         path(filename);
         slot.sample->chunk = loadwav(filename);
         if(slot.sample->chunk) return true;
     }
 
-    conoutf(CON_ERROR, "failed to load sample: packages/sounds/%s", slot.sample->name);
+    conoutf(CON_ERROR, "failed to load sample: media/sounds/%s", slot.sample->name);
     return false;
 }
 

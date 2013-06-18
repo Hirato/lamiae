@@ -971,7 +971,7 @@ void savebrush(char *name)
     if(b->copy) freeblock(b->copy);
     protectsel(b->copy = blockcopy(block3(sel), sel.grid));
     changed(sel);
-    defformatstring(filename)(strpbrk(name, "/\\") ? "packages/%s.obr" : "packages/brush/%s.obr", name);
+    defformatstring(filename)(strpbrk(name, "/\\") ? "media/%s.obr" : "media/brush/%s.obr", name);
     path(filename);
     stream *f = opengzfile(filename, "wb");
     if(!f) { conoutf(CON_ERROR, "could not write brush to %s", filename); return; }
@@ -1003,7 +1003,7 @@ void pastebrush(char *name)
     octabrush *b = octabrushes.access(name);
     if(!b)
     {
-        defformatstring(filename)(strpbrk(name, "/\\") ? "packages/%s.obr" : "packages/brush/%s.obr", name);
+        defformatstring(filename)(strpbrk(name, "/\\") ? "media/%s.obr" : "media/brush/%s.obr", name);
         path(filename);
         stream *f = opengzfile(filename, "rb");
         if(!f) { conoutf(CON_ERROR, "could not read brush %s", filename); return; }

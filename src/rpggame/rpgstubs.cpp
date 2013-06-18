@@ -12,7 +12,6 @@ namespace game
 	bool allowmove (physent *d) {return true;}
 	bool collidecamera() {return !editmode;}
 	void setupcamera(){}
-	void lighteffects(dynent *d, vec &color, vec &dir) {}
 	void particletrack(physent *owner, vec &o, vec &d) {}
 	void dynlighttrack(physent *owner, vec &o, vec &hud) {}
 	void vartrigger(ident *id) {}

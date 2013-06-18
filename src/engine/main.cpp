@@ -2,7 +2,7 @@
 #include "engine.h"
 
 SVARO(version, "0.1.0");
-string imagelogo = "<premul>data/lamiae";
+string imagelogo = "<premul>media/interface/lamiae";
 
 extern void cleargamma();
 
@@ -228,7 +228,7 @@ void renderbackground(const char *caption, Texture *mapshot, const char *mapname
               bx = 0.1f * bw,
               by = h - 1.1f * bh;
 
-        settexture("<premul>data/cube2badge", 3);
+        settexture("<premul>media/interface/cube2badge", 3);
         bgquad(bx, by, bw, bh);
 
         hudnotextureshader->set();
@@ -320,7 +320,7 @@ void renderbackground(const char *caption, Texture *mapshot, const char *mapname
                 pophudmatrix();
             }
 
-            settexture("data/mapshot_frame", 3);
+            settexture("media/interface/mapshot_frame", 3);
             bgquad(x, y, sz, sz);
 
             if(mapname)
@@ -481,7 +481,7 @@ void renderprogress(float bar, const char *text, GLuint tex, bool background)   
         glBindTexture(GL_TEXTURE_2D, tex);
         bgquad(x, y, sz, sz);
 
-        settexture("data/mapshot_frame", 3);
+        settexture("media/interface/mapshot_frame", 3);
         bgquad(x, y, sz, sz);
     }
 
@@ -713,8 +713,8 @@ void setupscreen()
 bool resettextures()
 {
     if(
-        reloadtexture("<premul>data/cube2badge") &&
-        reloadtexture("data/mapshot_frame") &&
+        reloadtexture("<premul>media/interface/cube2badge") &&
+        reloadtexture("media/interface/mapshot_frame") &&
         reloadtexture(imagelogo)
     ) return true;
     return false;
@@ -1121,8 +1121,8 @@ VARFP(clockfix, 0, 0, 1, clockreset());
 
 void setdefaults()
 {
-    execfile("data/defaults.cfg");
-    defformatstring(game)("data/%s/defaults.cfg", game::gameident());
+    execfile("config/defaults.cfg");
+    defformatstring(game)("config/%s/defaults.cfg", game::gameident());
     execfile(game, false);
 }
 COMMAND(setdefaults, "");
@@ -1192,7 +1192,7 @@ int main(int argc, char **argv)
             case 'f': /* compat, ignore */ break;
             case 'l':
             {
-                char pkgdir[] = "packages/";
+                char pkgdir[] = "media/";
                 load = strstr(path(&argv[i][2]), path(pkgdir));
                 if(load) load += sizeof(pkgdir)-1;
                 else load = &argv[i][2];
@@ -1240,13 +1240,13 @@ int main(int argc, char **argv)
     logoutf("init: gl");
     gl_checkextensions();
     gl_init(scr_w, scr_h);
-    notexture = textureload("data/notexture");
+    notexture = textureload("media/textures/notexture");
     if(!notexture) fatal("could not find core textures");
     UI::setup();
 
     logoutf("init: console");
-    if(!execfile("data/stdlib.cfg", false)) fatal("cannot find data files (you are running from the wrong folder, try .bat file in the main folder)");   // this is the first file we load.
-    if(!execfile("data/font.cfg", false)) fatal("cannot find font definitions");
+    if(!execfile("config/stdlib.cfg", false)) fatal("cannot find data files (you are running from the wrong folder, try .bat file in the main folder)");   // this is the first file we load.
+    if(!execfile("config/font.cfg", false)) fatal("cannot find font definitions");
     if(!setfont("default")) fatal("no default font specified");
 
     inbetweenframes = true;
@@ -1260,20 +1260,20 @@ int main(int argc, char **argv)
     initsound();
 
     logoutf("init: cfg");
-    execfile("data/keymap.cfg");
-    execfile("data/stdedit.cfg");
-    defformatstring(confname)("data/%s/std.cfg", game::gameident());
+    execfile("config/keymap.cfg");
+    execfile("config/stdedit.cfg");
+    defformatstring(confname)("config/%s/std.cfg", game::gameident());
     execfile(confname, false);
 
-    formatstring(confname)("data/%s/sounds.cfg", game::gameident());
+    formatstring(confname)("config/%s/sounds.cfg", game::gameident());
     if(!execfile(confname, false))
-        execfile("data/sounds.cfg");
+        execfile("config/sounds.cfg");
 
-    execfile("data/brush.cfg");
+    execfile("config/brush.cfg");
     execfile("mybrushes.cfg", false);
 
-    execfile("data/ui.cfg");
-    formatstring(confname)("data/%s/ui.cfg", game::gameident());
+    execfile("config/ui.cfg");
+    formatstring(confname)("config/%s/ui.cfg", game::gameident());
     execfile(confname, false);
 
     if(game::savedservers()) execfile(game::savedservers(), false);
@@ -1291,7 +1291,7 @@ int main(int argc, char **argv)
     identflags &= ~IDF_PERSIST;
     initing = INIT_GAME;
 
-    formatstring(confname)("data/%s/game.cfg", game::gameident());
+    formatstring(confname)("config/%s/game.cfg", game::gameident());
     execfile(confname, false);
 
     initing = NOT_INITING;

@@ -21,7 +21,7 @@ VAR(dbgshader, 0, 1, 2);
 void loadshaders()
 {
     standardshader = true;
-    execfile("data/glsl.cfg");
+    execfile("config/glsl.cfg");
     standardshader = false;
 
     nullshader = lookupshaderbyname("null");
@@ -84,14 +84,14 @@ static void showglslinfo(GLenum type, GLuint obj, const char *name, const char *
             int numlines = 0;
             loopi(numparts)
             {
-                const char *part = parts[i]; 
+                const char *part = parts[i];
                 while(numlines < 1000)
                 {
                     if(!*part) break;
                     const char *next = strchr(part, '\n');
                     numlines++;
                     fprintf(l, "%d: ", numlines);
-                    fwrite(part, 1, next ? next - part + 1 : strlen(part), l); 
+                    fwrite(part, 1, next ? next - part + 1 : strlen(part), l);
                     if(!next) { fputc('\n', l); break; }
                     part = next + 1;
                 }
@@ -101,13 +101,13 @@ static void showglslinfo(GLenum type, GLuint obj, const char *name, const char *
     }
 }
 
-static void compileglslshader(Shader &s, GLenum type, GLuint &obj, const char *def, const char *name, bool msg = true) 
+static void compileglslshader(Shader &s, GLenum type, GLuint &obj, const char *def, const char *name, bool msg = true)
 {
-    const char *source = def + strspn(def, " \t\r\n"); 
+    const char *source = def + strspn(def, " \t\r\n");
     const char *parts[16];
     int numparts = 0;
-    parts[numparts++] = 
-        glslversion >= 330 ? 
+    parts[numparts++] =
+        glslversion >= 330 ?
             "#version 330\n" :
             (glslversion >= 150 ?
                 "#version 150\n" :
@@ -126,10 +126,10 @@ static void compileglslshader(Shader &s, GLenum type, GLuint &obj, const char *d
         parts[numparts++] = "#extension GL_ARB_texture_multisample : enable\n";
     if(glslversion >= 130)
     {
-        if(type == GL_VERTEX_SHADER) parts[numparts++] = 
+        if(type == GL_VERTEX_SHADER) parts[numparts++] =
             "#define attribute in\n"
             "#define varying out\n";
-        else if(type == GL_FRAGMENT_SHADER) 
+        else if(type == GL_FRAGMENT_SHADER)
         {
             parts[numparts++] = "#define varying in\n";
             parts[numparts++] = glslversion >= 330 || (glslversion >= 150 && hasEAL) ?
@@ -142,17 +142,17 @@ static void compileglslshader(Shader &s, GLenum type, GLuint &obj, const char *d
             "#define texture2DProj(sampler, coords) texture(sampler, coords)\n"
             "#define texture3D(sampler, coords) texture(sampler, coords)\n"
             "#define textureCube(sampler, coords) texture(sampler, coords)\n";
-        if(glslversion >= 140) parts[numparts++] = 
+        if(glslversion >= 140) parts[numparts++] =
             "#define texture2DRect(sampler, coords) texture(sampler, coords)\n"
             "#define texture2DRectProj(sampler, coords) textureProj(sampler, coords)\n"
             "#define shadow2DRect(sampler, coords) texture(sampler, coords)\n";
     }
-    else if(type == GL_FRAGMENT_SHADER) 
+    else if(type == GL_FRAGMENT_SHADER)
     {
         parts[numparts++] = "#define fragdata(loc, name, type)\n";
         loopv(s.fragdatalocs)
         {
-            FragDataLoc &d = s.fragdatalocs[i]; 
+            FragDataLoc &d = s.fragdatalocs[i];
             if(i >= 4) break;
             static string defs[4];
             const char *swizzle = "";
@@ -164,9 +164,9 @@ static void compileglslshader(Shader &s, GLenum type, GLuint &obj, const char *d
             }
             formatstring(defs[i])("#define %s gl_FragData[%d]%s\n", d.name, d.loc, swizzle);
             parts[numparts++] = defs[i];
-        }  
+        }
     }
-    parts[numparts++] = source; 
+    parts[numparts++] = source;
 
     obj = glCreateShader_(type);
     glShaderSource_(obj, numparts, (const GLchar **)parts, NULL);
@@ -242,7 +242,7 @@ static void linkglslprogram(Shader &s, bool msg = true)
             attribs |= 1<<a.loc;
         }
         loopi(gle::MAXATTRIBS) if(!(attribs&(1<<i))) glBindAttribLocation_(s.program, i, gle::attribnames[i]);
-        if(glslversion >= 130 && glslversion < 330 && (glslversion < 150 || !hasEAL) && glversion >= 300) loopv(s.fragdatalocs) 
+        if(glslversion >= 130 && glslversion < 330 && (glslversion < 150 || !hasEAL) && glversion >= 300) loopv(s.fragdatalocs)
         {
             FragDataLoc &d = s.fragdatalocs[i];
             glBindFragDataLocation_(s.program, d.loc, d.name);

@@ -826,30 +826,30 @@ struct softquadrenderer : quadrenderer
 
 static partrenderer *parts[] =
 {
-    new quadrenderer("<grey>packages/particles/blood", PT_GREY|PT_PART|PT_FLIP|PT_MOD|PT_RND4, DECAL_BLOOD),              // blood spats (note: rgb is inverted)
-    new trailrenderer("<grey>packages/particles/base", PT_GREYALPHA|PT_TRAIL|PT_LERP, DECAL_RIPPLE),                 // water, entity
-    new quadrenderer("<grey>packages/particles/smoke", PT_GREYALPHA|PT_PART|PT_FLIP|PT_LERP),                        // smoke
-    new quadrenderer("<grey>packages/particles/steam", PT_GREYALPHA|PT_PART|PT_FLIP),                                // steam
-    new quadrenderer("<grey>packages/particles/flames", PT_GREY|PT_PART|PT_HFLIP|PT_RND4|PT_BRIGHT),             // flames
-    new quadrenderer("<grey>packages/particles/ball1", PT_GREY|PT_PART|PT_BRIGHT),                               // fireball1
-    new quadrenderer("<grey>packages/particles/ball2", PT_GREY|PT_PART|PT_BRIGHT),                               // fireball2
-    new quadrenderer("<grey>packages/particles/ball3", PT_GREY|PT_PART|PT_BRIGHT),                               // fireball3
-    new taperenderer("<grey>packages/particles/flare", PT_GREY|PT_TAPE|PT_BRIGHT),                               // streak
+    new quadrenderer("<grey>media/particles/blood", PT_GREY|PT_PART|PT_FLIP|PT_MOD|PT_RND4, DECAL_BLOOD),              // blood spats (note: rgb is inverted)
+    new trailrenderer("<grey>media/particles/base", PT_GREYALPHA|PT_TRAIL|PT_LERP, DECAL_RIPPLE),                 // water, entity
+    new quadrenderer("<grey>media/particles/smoke", PT_GREYALPHA|PT_PART|PT_FLIP|PT_LERP),                        // smoke
+    new quadrenderer("<grey>media/particles/steam", PT_GREYALPHA|PT_PART|PT_FLIP),                                // steam
+    new quadrenderer("<grey>media/particles/flames", PT_GREY|PT_PART|PT_HFLIP|PT_RND4|PT_BRIGHT),             // flames
+    new quadrenderer("<grey>media/particles/ball1", PT_GREY|PT_PART|PT_BRIGHT),                               // fireball1
+    new quadrenderer("<grey>media/particles/ball2", PT_GREY|PT_PART|PT_BRIGHT),                               // fireball2
+    new quadrenderer("<grey>media/particles/ball3", PT_GREY|PT_PART|PT_BRIGHT),                               // fireball3
+    new taperenderer("<grey>media/particles/flare", PT_GREY|PT_TAPE|PT_BRIGHT),                               // streak
     &lightnings,                                                                                  // lightning
     &fireballs,                                                                                   // explosion fireball
     &bluefireballs,                                                                               // bluish explosion fireball
-    new quadrenderer("<grey>packages/particles/spark", PT_GREY|PT_PART|PT_FLIP|PT_BRIGHT),                       // sparks
-    new quadrenderer("<grey>packages/particles/base",  PT_GREYALPHA|PT_PART|PT_FLIP|PT_BRIGHT),                       // edit mode entities
-    new quadrenderer("<grey>packages/particles/muzzleflash1", PT_GREY|PT_PART|PT_FLIP|PT_BRIGHT|PT_TRACK),       // muzzle flash
-    new quadrenderer("<grey>packages/particles/muzzleflash2", PT_GREY|PT_PART|PT_FLIP|PT_BRIGHT|PT_TRACK),       // muzzle flash
-    new quadrenderer("<grey>packages/particles/muzzleflash3", PT_GREY|PT_PART|PT_FLIP|PT_BRIGHT|PT_TRACK),       // muzzle flash
-    new quadrenderer("data/items.png", PT_PART|PT_ICON),                                          // hud icon
-    new quadrenderer("<colorify:1/1/1>data/items.png", PT_GREY|PT_PART|PT_ICON),                               // grey hud icon
+    new quadrenderer("<grey>media/particles/spark", PT_GREY|PT_PART|PT_FLIP|PT_BRIGHT),                       // sparks
+    new quadrenderer("<grey>media/particles/base",  PT_GREYALPHA|PT_PART|PT_FLIP|PT_BRIGHT),                       // edit mode entities
+    new quadrenderer("<grey>media/particles/muzzleflash1", PT_GREY|PT_PART|PT_FLIP|PT_BRIGHT|PT_TRACK),       // muzzle flash
+    new quadrenderer("<grey>media/particles/muzzleflash2", PT_GREY|PT_PART|PT_FLIP|PT_BRIGHT|PT_TRACK),       // muzzle flash
+    new quadrenderer("<grey>media/particles/muzzleflash3", PT_GREY|PT_PART|PT_FLIP|PT_BRIGHT|PT_TRACK),       // muzzle flash
+    new quadrenderer("media/textures/notexture", PT_PART|PT_ICON),                                          // hud icon
+    new quadrenderer("<colorify:1/1/1>media/textures/notexture", PT_GREY|PT_PART|PT_ICON),                               // grey hud icon
     &texts,                                                                                       // text
     &meters,                                                                                      // meter
     &metervs,                                                                                     // meter vs
-    new quadrenderer("packages/particles/snow", PT_PART|PT_BRIGHT|PT_RND4|PT_FLIP, DECAL_STAIN),   // snow
-    new quadrenderer("<grey>packages/particles/leaves", PT_GREYALPHA|PT_PART|PT_RND4|PT_FLIP|PT_LERP, DECAL_LEAVES), //leaves
+    new quadrenderer("media/particles/snow", PT_PART|PT_BRIGHT|PT_RND4|PT_FLIP, DECAL_STAIN),   // snow
+    new quadrenderer("<grey>media/particles/leaves", PT_GREYALPHA|PT_PART|PT_RND4|PT_FLIP|PT_LERP, DECAL_LEAVES), //leaves
     &flares // must be done last
 };
 
