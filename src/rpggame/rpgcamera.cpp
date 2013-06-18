@@ -104,7 +104,7 @@ namespace camera
 	void cleanup(bool clear)
 	{
 		if(!clear && post)
-			execute(post);
+			rpgexecute(post);
 
 		cutscene = false;
         cancel = false;
@@ -132,7 +132,7 @@ namespace camera
 				{
 					float (*ib)(int, int, bool) = interpfunc;
 					interpfunc = interp;
-					execute(successors);
+					rpgexecute(successors);
 					interpfunc = ib;
 				}
 				return false;
@@ -171,7 +171,7 @@ namespace camera
 				{
 					float (*ib)(int, int, bool) = interpfunc;
 					interpfunc = interp;
-					execute(successors);
+					rpgexecute(successors);
 					interpfunc = ib;
 				}
 			}
@@ -404,7 +404,7 @@ namespace camera
 			actionvec = &pending;
 			interpfunc = interp;
 
-			execute(c);
+			rpgexecute(c);
 
 			interpfunc = fbak;
 			actionvec = vbak;
@@ -431,7 +431,7 @@ namespace camera
 				{
 					float (*ib)(int, int, bool) = interpfunc;
 					interpfunc = interp;
-					execute(successors);
+					rpgexecute(successors);
 					interpfunc = ib;
 				}
 				return false;
@@ -718,7 +718,7 @@ namespace camera
 			 \
 			float (*ib)(int, int, bool) = interpfunc; \
 			interpfunc = func; \
-			execute(body); \
+			rpgexecute(body); \
 			interpfunc = ib; \
 		)
 
@@ -750,7 +750,7 @@ namespace camera
 		//reuse camera state
 		if(cutscene)
 		{
-			if(post) execute(post);
+			if(post) rpgexecute(post);
 			freecode(post);
 			post = NULL;
 		}
@@ -763,7 +763,7 @@ namespace camera
 		formatstring(file)("%s/%s.cfg", game::datapath("cutscenes"), s);
 		cutscene = true;
 		cancel = false;
-		execfile(file);
+		rpgexecfile(file);
 	)
 
 	//ICOMMAND(cs_interrupt, "D", (int *down),

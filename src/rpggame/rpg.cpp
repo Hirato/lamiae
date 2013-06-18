@@ -138,7 +138,7 @@ namespace game
 	ICOMMAND(include, "s", (const char *pth),
 		static string file;
 		formatstring(file)("%s/%s.cfg", datapath(), pth);
-		execfile(file);
+		rpgexecfile(file);
 	)
 
 	struct collision
@@ -297,7 +297,7 @@ namespace game
 			if(!var) var = &objects[hash];
 			var->key = hash;
 			formatstring(file)("%s/%s.cfg", dir, files[i]);
-			execfile(file);
+			rpgexecfile(file);
 		}
 
 		files.deletearrays();
@@ -355,7 +355,7 @@ namespace game
 			if(DEBUG_WORLD)
 				DEBUGF("initialising hash %s from \"%s\"", hash, file);
 
-			execfile(file);
+			rpgexecfile(file);
 		}
 
 		files.deletearrays();
@@ -371,10 +371,10 @@ namespace game
 		{
 			if(DEBUG_WORLD) DEBUGF("loading variables");
 			formatstring(pth)("%s/variables.cfg", dir);
-			execfile(pth);
+			rpgexecfile(pth);
 			if(DEBUG_WORLD) DEBUGF("loading tips");
 			formatstring(pth)("%s/tips.cfg", dir);
-			execfile(pth);
+			rpgexecfile(pth);
 		}
 
 		//Note that items, characters, triggers, obstacles, containers and platforms are not initialised here.
@@ -391,7 +391,7 @@ namespace game
 		if(DEBUG_WORLD) DEBUGF("loading categories");
 		categories.deletearrays();
 		formatstring(pth)("%s/categories.cfg", dir);
-		execfile(pth);
+		rpgexecfile(pth);
 		RANGECHECK(categories);
 
 		if(DEBUG_WORLD) DEBUGF("loading merchants");
@@ -436,7 +436,7 @@ namespace game
 			if(DEBUG_WORLD) DEBUGF("loading player");
 			loadingrpgchar = player1;
 			formatstring(pth)("%s/player.cfg", dir);
-			execfile(pth);
+			rpgexecfile(pth);
 			loadingrpgchar = NULL;
 
 			if(!player1->validate())
@@ -499,7 +499,7 @@ namespace game
 		}
 		emptymap(0, true, NULL, false);
 		concatstring(dir, ".cfg");
-		if(!execfile(dir))
+		if(!rpgexecfile(dir))
 			WARNINGF("game properties not defined");
 		else if(DEBUG_WORLD)
 			DEBUGF("Loaded game properties");

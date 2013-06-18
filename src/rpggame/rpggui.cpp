@@ -255,13 +255,13 @@ namespace rpggui
 			{
 				buystack = new tradestack(trader->getent(0));
 				sellstack = new tradestack(player1);
-				execute("showtrade");
-				execute("refreshtrade");
+				rpgexecute("showtrade");
+				rpgexecute("refreshtrade");
 			}
 		}
 
 		if(talker->getent(0) && !UI::activeui("chat"))
-			execute("showchat");
+			rpgexecute("showchat");
 		if(trader->getent(0) && !UI::activeui("trade"))
 			trader->setnull(true);
 	}
@@ -269,9 +269,9 @@ namespace rpggui
 	void refreshgui()
 	{
 		if(UI::activeui("chat"))
-			execute("refreshchat");
+			rpgexecute("refreshchat");
 		else if(UI::activeui("trade"))
-			execute("refreshtrade");
+			rpgexecute("refreshtrade");
 	}
 
 	ICOMMAND(r_get_dialogue, "", (),
@@ -315,7 +315,7 @@ namespace rpggui
 
 			uint *code = cur->choices[n]->script;
 			keepcode(code);
-			execute(code);
+			rpgexecute(code);
 			freecode(code);
 
 			cur->close();

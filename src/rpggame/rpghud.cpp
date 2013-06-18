@@ -314,7 +314,7 @@ namespace game
 
 		if(rpggui::open()) {}
 		else if(camera::cutscene) camera::render(ceil(hud_right), ceil(hud_bottom));
-		else if(hud) execute(hud);
+		else if(hud) rpgexecute(hud);
 
 		if(lines.length())
 		{

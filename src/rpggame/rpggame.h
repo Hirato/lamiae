@@ -211,8 +211,70 @@ namespace game
 	extern int compatversion;
 }
 
+static inline bool rpgexecfile(const char *cfgfile, bool msg = true)
+{
+	int lastflags = identflags;
+	identflags &= ~IDF_PERSIST;
+	bool ret = execfile(cfgfile, msg);
+	identflags = lastflags;
+	return ret;
+}
+
+static inline void rpgexecuteret(const uint *code, tagval &result)
+{
+	int lastflags = identflags;
+	identflags &= ~IDF_PERSIST;
+	::executeret(code, result);
+	identflags = lastflags;
+}
+
+static inline void rpgexecuteret(const char *p, tagval &result)
+{
+	int lastflags = identflags;
+	identflags &= ~IDF_PERSIST;
+	::executeret(p, result);
+	identflags = lastflags;
+}
+
+static inline char *rpgexecutestr(const uint *code)
+{
+	int lastflags = identflags;
+	identflags &= ~IDF_PERSIST;
+	char *ret = ::executestr(code);
+	identflags = lastflags;
+	return ret;
+}
+
+static inline char *rpgexecutestr(const char *p)
+{
+	int lastflags = identflags;
+	identflags &= ~IDF_PERSIST;
+	char *ret = ::executestr(p);
+	identflags = lastflags;
+	return ret;
+}
+
+static inline int rpgexecute(const uint *code)
+{
+	int lastflags = identflags;
+	identflags &= ~IDF_PERSIST;
+	int ret = ::execute(code);
+	identflags = lastflags;
+	return ret;
+}
+
+static inline int rpgexecute(const char *p)
+{
+	int lastflags = identflags;
+	identflags &= ~IDF_PERSIST;
+	int ret = ::execute(p);
+	identflags = lastflags;
+	return ret;
+}
+
 namespace rpgscript
 {
+
 	extern reference *hover, *talker, *looter, *trader, *config;
 	extern vector<rpgent *> obits;
 	extern void parseref(const char *name, int &idx);

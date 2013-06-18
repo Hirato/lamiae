@@ -58,7 +58,7 @@ namespace game
 			if(loading ## x) \
 			{\
 				rpgscript::config->setref(loading ## x, true); \
-				execute(contents); \
+				rpgexecute(contents); \
 				rpgscript::config->setnull(true); \
 			} \
 			else \
@@ -117,7 +117,7 @@ namespace game
 				DEBUGF("successfully selected [rpgent] from reference %s", ref);
 		}
 		if(loadingrpgent)
-			execute(body);
+			rpgexecute(body);
 		else
 			ERRORF("unable to select reference %s as type [rpgent]", ref);
 		loadingrpgent = old;
@@ -147,7 +147,7 @@ namespace game
 					DEBUGF("successfully selected \"" #c "\" from reference %s", ref); \
 			} \
 			if(loading ## x) \
-				execute(body); \
+				rpgexecute(body); \
 			else \
 				ERRORF("unable to select reference %s as type " #c, ref); \
 			loading ## x = old; \
@@ -203,7 +203,7 @@ namespace game
 			}
 		}
 
-		if(loadinguse) execute(contents);
+		if(loadinguse) rpgexecute(contents);
 		else ERRORF("unable to select reference %s as type use", ref);
 		loadinguse = old;
 	)

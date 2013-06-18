@@ -1,4 +1,5 @@
 #include "rpggame.h"
+
 void rpgobstacle::update()
 {
 	if(!(flags&F_STATIONARY))
@@ -41,7 +42,7 @@ void rpgobstacle::init(const char *base)
 	rpgscript::config->setref(this, true);
 
 	defformatstring(file)("%s/%s.cfg", game::datapath("obstacles"), base);
-	execfile(file);
+	rpgexecfile(file);
 
 	game::loadingrpgobstacle = NULL;
 	rpgscript::config->setnull(true);

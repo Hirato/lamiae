@@ -267,7 +267,7 @@ bool delayscript::update()
 		return true;
 
 	rpgscript::stack.add(&refs);
-	execute(script);
+	rpgexecute(script);
 	rpgscript::stack.pop();
 
 	return false;
@@ -322,7 +322,7 @@ namespace rpgscript
 	ICOMMAND(r_stack, "e", (uint *body),
 		if(!stack.length()) return; //assume no game in progress
 		pushstack();
-		execute(body);
+		rpgexecute(body);
 		popstack();
 	)
 
@@ -567,7 +567,7 @@ namespace rpgscript
 		registertemp("self", invokee)->immutable = true;
 		registertemp("actor", invoker)->immutable = true;
 
-		execute(code);
+		rpgexecute(code);
 		popstack();
 	}
 
@@ -582,7 +582,7 @@ namespace rpgscript
 		registertemp("self", invokee)->immutable = true;
 		registertemp("actor", invoker)->immutable = true;
 
-		execute(code);
+		rpgexecute(code);
 		popstack();
 	}
 
@@ -597,7 +597,7 @@ namespace rpgscript
 		registertemp("self", invokee)->immutable = true;
 		registertemp("actor", invoker)->immutable = true;
 
-		execute(code);
+		rpgexecute(code);
 		popstack();
 	}
 
@@ -1201,7 +1201,7 @@ namespace rpgscript
 
 		enumerate(*mapdata, mapinfo, map,
 			cur->setref(&map, true);
-			execute(body);
+			rpgexecute(body);
 		)
 
 		popstack();
@@ -1218,7 +1218,7 @@ namespace rpgscript
 		loopv(map->getmap(mapidx)->objs)
 		{
 			cur->setref(map->getmap(mapidx)->objs[i], true);
-			execute(body);
+			rpgexecute(body);
 		}
 
 		popstack();
@@ -1260,7 +1260,7 @@ namespace rpgscript
 			if(victim && victim->o.dist(ae->o) > ae->radius && victim->feetpos().dist(ae->o) > ae->radius) continue;
 
 			cur->setref(ae, true);
-			execute(body);
+			rpgexecute(body);
 		}
 
 		popstack();
@@ -1276,11 +1276,11 @@ namespace rpgscript
 
 		if(ent->getchar(entidx)) enumerate(ent->getchar(entidx)->inventory, vector<item *>, stack,
 			it->setref(&stack, true);
-			execute(body);
+			rpgexecute(body);
 		)
 		else enumerate(ent->getcontainer(entidx)->inventory, vector<item *>, stack,
 			it->setref(&stack, true);
-			execute(body);
+			rpgexecute(body);
 		)
 
 		popstack();
@@ -1352,7 +1352,7 @@ namespace rpgscript
 		loopv(seffects)
 		{
 			effect->setref(seffects[i], true);
-			execute(body);
+			rpgexecute(body);
 		}
 
 		popstack();
@@ -1868,7 +1868,7 @@ namespace rpgscript
 	ICOMMAND(r_loot, "s", (const char *str),
 		getreference(str, cont, cont->getchar(contidx) || cont->getcontainer(contidx), , r_loot)
 		looter->setref(cont->getent(contidx), true);
-		execute("showloot");
+		rpgexecute("showloot");
 	)
 
 	// World Commands
@@ -2089,7 +2089,7 @@ namespace rpgscript
 				pusharg(*id, t, stack);
 				id->flags &= ~IDF_UNKNOWN;
 			}
-			execute(body);
+			rpgexecute(body);
 		}
 		if(n) poparg(*id);
 	)
@@ -2119,7 +2119,7 @@ namespace rpgscript
 				pusharg(*id, t, stack);
 				id->flags &= ~IDF_UNKNOWN;
 			}
-			execute(body);
+			rpgexecute(body);
 		}
 		if(n) poparg(*id);
 	)

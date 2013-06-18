@@ -109,6 +109,8 @@ extern void mpdelcube(selinfo &sel, bool local);
 extern void mpremip(bool local);
 
 // command
+extern int identflags;
+
 extern void cleancode(ident &id);
 extern void pusharg(ident &id, const tagval &v, identstack &stack);
 extern void poparg(ident &id);

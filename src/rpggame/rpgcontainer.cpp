@@ -138,7 +138,7 @@ void rpgcontainer::init(const char *base)
 	rpgscript::config->setref(this, true);
 
 	defformatstring(file)("%s/%s.cfg", game::datapath("containers"), base);
-	execfile(file);
+	rpgexecfile(file);
 
 	game::loadingrpgcontainer = NULL;
 	rpgscript::config->setnull(true);
