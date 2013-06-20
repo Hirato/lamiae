@@ -314,7 +314,6 @@ inline void ident::getcval(tagval &v) const
 #define VARF(name, min, cur, max, body) _VARF(name, name, min, cur, max, body, 0)
 #define VARFP(name, min, cur, max, body) _VARF(name, name, min, cur, max, body, IDF_PERSIST)
 #define VARFR(name, min, cur, max, body) _VARF(name, name, min, cur, max, body, IDF_OVERRIDE)
-#define VARFW(name, min, cur, max, body) _VARF(name, name, min, cur, max, body, IDF_OVERRIDE|IDF_WORLD)
 
 #define _HVAR(name, global, min, cur, max, persist)  int global = variable(#name, min, cur, max, &global, NULL, persist | IDF_HEX)
 #define HVARN(name, global, min, cur, max) _HVAR(name, global, min, cur, max, 0)
@@ -365,27 +364,3 @@ inline void ident::getcval(tagval &v) const
 #define ICOMMANDSNAME _icmds_
 #define ICOMMANDS(name, nargs, proto, b) ICOMMANDNS(name, ICOMMANDSNAME, nargs, proto, b)
 
-#define _IFVAR(n, m, c, x, b, p) \
-    struct var_##n : ident \
-    { \
-        var_##n() : ident(ID_FVAR, #n, m, c, x, &val.f, NULL, p) \
-        { \
-            addident(name, this); \
-        } \
-	float operator()() { return val.f; } \
-        b \
-    } n
-
-#define IVAR(n, m, c, x)  _IVAR(n, m, c, x, , 0)
-#define IVARF(n, m, c, x, b) _IVAR(n, m, c, x, void changed() { b; }, 0,)
-#define IVARP(n, m, c, x)  _IVAR(n, m, c, x, , IDF_PERSIST)
-#define IVARR(n, m, c, x)  _IVAR(n, m, c, x, , IDF_OVERRIDE)
-#define IVARFP(n, m, c, x, b) _IVAR(n, m, c, x, void changed() { b; }, IDF_PERSIST)
-#define IVARFR(n, m, c, x, b) _IVAR(n, m, c, x, void changed() { b; }, IDF_OVERRIDE)
-
-#define IFVAR(n, m, c, x)  _IFVAR(n, m, c, x, , 0)
-#define IFVARF(n, m, c, x, b) _IFVAR(n, m, c, x, void changed() { b; }, 0)
-#define IFVARP(n, m, c, x)  _IFVAR(n, m, c, x, , IDF_PERSIST)
-#define IFVARR(n, m, c, x)  _IFVAR(n, m, c, x, , IDF_OVERRIDE)
-#define IFVARFP(n, m, c, x, b) _IFVAR(n, m, c, x, void changed() { b; }, IDF_PERSIST)
-#define IFVARFR(n, m, c, x, b) _IFVAR(n, m, c, x, void changed() { b; }, IDF_OVERRIDE)
