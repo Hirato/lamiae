@@ -2,7 +2,6 @@ VARP(gpuskel, 0, 1, 1);
 VARP(matskel, 0, 0, 1);
 
 VAR(maxskelanimdata, 1, 192, 0);
-VAR(testtags, 0, 0, 1);
 
 #define BONEMASK_NOT  0x8000
 #define BONEMASK_END  0xFFFF
@@ -247,6 +246,16 @@ struct skelmodel : animmodel
                 t.tc[3] = bv.v;
                 t.tc[4] = cv.u;
                 t.tc[5] = cv.v;
+            }
+        }
+
+        void genshadowmesh(vector<vec> &out, const matrix3x4 &m)
+        {
+            loopj(numtris)
+            {
+                out.add(m.transform(verts[tris[j].vert[0]].pos));
+                out.add(m.transform(verts[tris[j].vert[1]].pos));
+                out.add(m.transform(verts[tris[j].vert[2]].pos));
             }
         }
 

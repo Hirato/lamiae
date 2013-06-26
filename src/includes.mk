@@ -26,6 +26,10 @@ ifeq ($(PLATFORM),Linux)
 	CLIENT_LIBS+= -lrt
 	PLATFORM_PATH=bin_unix
 	PLATFORM_TYPE=unix
+else
+	ifneq (,$(findstring GNU,$(PLATFORM)))
+		CLIENT_LIBS+= -lrt
+	endif
 endif
 
 ifeq ($(PLATFORM),SunOS)

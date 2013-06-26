@@ -207,6 +207,14 @@ void mdlshadow(int *shadow)
 
 COMMAND(mdlshadow, "i");
 
+void mdlalphashadow(int *alphashadow)
+{
+    checkmdl;
+    loadingmodel->alphashadow = *alphashadow!=0;
+}
+
+COMMAND(mdlalphashadow, "i");
+
 void mdlbb(float *rad, float *h, float *eyeheight)
 {
     checkmdl;
@@ -329,7 +337,7 @@ void mapmodelreset(int *n)
     mapmodels.shrink(clamp(*n, 0, mapmodels.length()));
 }
 
-mapmodelinfo *getmminfo(int i) { return mapmodels.inrange(i) ? &mapmodels[i] : 0; }
+mapmodelinfo *getmminfo(int i) { return mapmodels.inrange(i) ? &mapmodels[i] : NULL; }
 const char *mapmodelname(int i) { return mapmodels.inrange(i) ? mapmodels[i].name : NULL; }
 
 COMMAND(mmodel, "s");

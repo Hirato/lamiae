@@ -16,10 +16,11 @@ struct extentity : entity                       // part of the entity that doesn
 {
     enum
     {
-        F_NOVIS     = 1<<0,
-        F_NOSHADOW  = 1<<1,
-        F_NOCOLLIDE = 1<<2,
-        F_ANIM      = 1<<3
+        F_NOVIS      = 1<<0,
+        F_NOSHADOW   = 1<<1,
+        F_NOCOLLIDE  = 1<<2,
+        F_ANIM       = 1<<3,
+        F_SHADOWMESH = 1<<4
     };
 
     uchar spawned, inoctanode, visible, flags;  // the only dynamic state of a map entity

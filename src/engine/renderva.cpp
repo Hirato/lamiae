@@ -989,14 +989,16 @@ void findshadowmms()
     }
 }
 
-void batchshadowmapmodels()
+void batchshadowmapmodels(bool skipmesh)
 {
     if(!shadowmms) return;
+    int nflags = extentity::F_NOVIS|extentity::F_NOSHADOW;
+    if(skipmesh) nflags |= extentity::F_SHADOWMESH;
     const vector<extentity *> &ents = entities::getents();
     for(octaentities *oe = shadowmms; oe; oe = oe->rnext) loopvk(oe->mapmodels)
     {
         extentity &e = *ents[oe->mapmodels[k]];
-        if(e.flags&(extentity::F_NOVIS|extentity::F_NOSHADOW)) continue;
+        if(e.flags&nflags) continue;
         e.visible = true;
     }
     for(octaentities *oe = shadowmms; oe; oe = oe->rnext) loopvj(oe->mapmodels)
@@ -2061,37 +2063,75 @@ static void flushshadowmeshdraws(shadowmesh &m, int sides, shadowdrawinfo draws[
     shadowvbos.add(vbuf);
 }
 
-static void genshadowmeshtris(shadowmesh &m, int sides, shadowdrawinfo draws[6], ushort *edata, int numtris, vertex *vdata)
+static inline void addshadowmeshtri(shadowmesh &m, int sides, shadowdrawinfo draws[6], const vec &v0, const vec &v1, const vec &v2)
 {
     extern int smcullside;
-    loopj(numtris)
+    vec l0 = vec(v0).sub(shadoworigin);
+    float side = l0.scalartriple(vec(v1).sub(v0), vec(v2).sub(v0));
+    if(smcullside ? side > 0 : side < 0) return;
+    vec l1 = vec(v1).sub(shadoworigin), l2 = vec(v2).sub(shadoworigin);
+    if(l0.squaredlen() > shadowradius*shadowradius && l1.squaredlen() > shadowradius*shadowradius && l2.squaredlen() > shadowradius*shadowradius)
+        return;
+    int sidemask = 0;
+    switch(m.type)
     {
-        const vec &v0 = vdata[edata[3*j]].pos, &v1 = vdata[edata[3*j+1]].pos, &v2 = vdata[edata[3*j+2]].pos;
-        vec l0 = vec(v0).sub(shadoworigin);
-        float side = l0.scalartriple(vec(v1).sub(v0), vec(v2).sub(v0));
-        if(smcullside ? side > 0 : side < 0) continue;
-        vec l1 = vec(v1).sub(shadoworigin), l2 = vec(v2).sub(shadoworigin);
-        if(l0.squaredlen() > shadowradius*shadowradius && l1.squaredlen() > shadowradius*shadowradius && l2.squaredlen() > shadowradius*shadowradius)
-            continue;
-        int sidemask = 0;
-        switch(m.type)
-        {
-            case SM_SPOT: sidemask = bbinsidespot(shadoworigin, shadowdir, shadowspot, vec(v0).min(v1).min(v2), vec(v0).max(v1).max(v2).add(1)) ? 1 : 0; break;
-            case SM_CUBEMAP: sidemask = calctrisidemask(l0.div(shadowradius), l1.div(shadowradius), l2.div(shadowradius), shadowbias); break;
-        }
-        if(!sidemask) continue;
-        if(shadowverts.verts.length() + 3 >= USHRT_MAX) flushshadowmeshdraws(m, sides, draws);
-        int i0 = shadowverts.add(v0), i1 = shadowverts.add(v1), i2 = shadowverts.add(v2);
-        ushort minvert = min(i0, min(i1, i2)), maxvert = max(i0, max(i1, i2));
-        loopk(sides) if(sidemask&(1<<k))
-        {
-            shadowdrawinfo &d = draws[k];
-            d.minvert = min(d.minvert, minvert);
-            d.maxvert = max(d.maxvert, maxvert);
-            shadowtris[k].add(i0);
-            shadowtris[k].add(i1);
-            shadowtris[k].add(i2);
-        }
+        case SM_SPOT: sidemask = bbinsidespot(shadoworigin, shadowdir, shadowspot, vec(v0).min(v1).min(v2), vec(v0).max(v1).max(v2).add(1)) ? 1 : 0; break;
+        case SM_CUBEMAP: sidemask = calctrisidemask(l0.div(shadowradius), l1.div(shadowradius), l2.div(shadowradius), shadowbias); break;
+    }
+    if(!sidemask) return;
+    if(shadowverts.verts.length() + 3 >= USHRT_MAX) flushshadowmeshdraws(m, sides, draws);
+    int i0 = shadowverts.add(v0), i1 = shadowverts.add(v1), i2 = shadowverts.add(v2);
+    ushort minvert = min(i0, min(i1, i2)), maxvert = max(i0, max(i1, i2));
+    loopk(sides) if(sidemask&(1<<k))
+    {
+        shadowdrawinfo &d = draws[k];
+        d.minvert = min(d.minvert, minvert);
+        d.maxvert = max(d.maxvert, maxvert);
+        shadowtris[k].add(i0);
+        shadowtris[k].add(i1);
+        shadowtris[k].add(i2);
+    }
+}
+
+static void genshadowmeshtris(shadowmesh &m, int sides, shadowdrawinfo draws[6], ushort *edata, int numtris, vertex *vdata)
+{
+    for(int j = 0; j < 3*numtris; j += 3) addshadowmeshtri(m, sides, draws, vdata[edata[j]].pos, vdata[edata[j+1]].pos, vdata[edata[j+2]].pos);
+}
+
+static void genshadowmeshmapmodels(shadowmesh &m, int sides, shadowdrawinfo draws[6])
+{
+    const vector<extentity *> &ents = entities::getents();
+    for(octaentities *oe = shadowmms; oe; oe = oe->rnext) loopvk(oe->mapmodels)
+    {
+        extentity &e = *ents[oe->mapmodels[k]];
+        if(e.flags&(extentity::F_NOVIS|extentity::F_NOSHADOW)) continue;
+        e.visible = true;
+    }
+    vector<vec> verts;
+    for(octaentities *oe = shadowmms; oe; oe = oe->rnext) loopvj(oe->mapmodels)
+    {
+        extentity &e = *ents[oe->mapmodels[j]];
+        if(!e.visible) continue;
+        e.visible = false;
+
+        mapmodelinfo *mmi = getmminfo(e.attr[0]);
+        if(!mmi) continue;
+        model *mm = mmi->m ? mmi->m : loadmodel(mmi->name);
+        if(!mm || !mm->shadow || mm->animated() || (mm->alphashadow && mm->alphatested())) continue;
+
+        matrix3x4 orient;
+        orient.identity();
+        if(e.attr[1]) orient.rotate_around_z(sincosmod360(e.attr[1]));
+        if(e.attr[2]) orient.rotate_around_x(sincosmod360(e.attr[2]));
+        if(e.attr[3]) orient.rotate_around_y(sincosmod360(-e.attr[3]));
+        if(e.attr[4] > 0) orient.scale(e.attr[4]/100.0f);
+        orient.settranslation(e.o);
+        verts.setsize(0);
+        mm->genshadowmesh(verts, orient);
+
+        for(int j = 0; j < verts.length(); j += 3) addshadowmeshtri(m, sides, draws, verts[j], verts[j+1], verts[j+2]);
+
+        e.flags |= extentity::F_SHADOWMESH;
     }
 }
 
@@ -2109,6 +2149,7 @@ static void genshadowmesh(int idx, extentity &e)
     shadowspot = m.spotangle;
 
     findshadowvas();
+    findshadowmms();
 
     int sides = m.type == SM_SPOT ? 1 : 6;
     shadowdrawinfo draws[6];
@@ -2117,6 +2158,7 @@ static void genshadowmesh(int idx, extentity &e)
         if(va->tris) genshadowmeshtris(m, sides, draws, va->edata + va->eoffset, va->tris, va->vdata);
         if(skyshadow && va->sky) genshadowmeshtris(m, sides, draws, va->skydata + va->skyoffset, va->sky/3, va->vdata);
     }
+    if(shadowmms) genshadowmeshmapmodels(m, sides, draws);
     flushshadowmeshdraws(m, sides, draws);
 
     shadowmeshes[idx] = m;
@@ -2127,6 +2169,15 @@ static void genshadowmesh(int idx, extentity &e)
 void clearshadowmeshes()
 {
     if(shadowvbos.length()) { glDeleteBuffers_(shadowvbos.length(), shadowvbos.getbuf()); shadowvbos.setsize(0); }
+    if(shadowmeshes.numelems)
+    {
+        vector<extentity *> &ents = entities::getents();
+        loopv(ents)
+        {
+            extentity &e = *ents[i];
+            if(e.flags&extentity::F_SHADOWMESH) e.flags &= ~extentity::F_SHADOWMESH;
+        }
+    }
     shadowmeshes.clear();
     shadowdraws.setsize(0);
 }

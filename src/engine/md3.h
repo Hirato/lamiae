@@ -137,7 +137,7 @@ struct md3 : vertmodel, vertloader<md3>
                     f->read(&tag, sizeof(md3tag));
                     lilswap(&tag.pos.x, 12);
                     if(tag.name[0] && i<header.numtags) tags[i].name = newstring(tag.name);
-                    matrix3x4 &m = tags[i].transform;
+                    matrix3x4 &m = tags[i].matrix;
                     tag.pos.y *= -1;
                     // undo the -y
                     loopj(3) tag.rotation[1][j] *= -1;

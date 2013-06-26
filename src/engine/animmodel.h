@@ -3,6 +3,7 @@ VARP(envmapmodels, 0, 1, 1);
 VARP(glowmodels, 0, 1, 1);
 VARP(bumpmodels, 0, 1, 1);
 VARP(fullbrightmodels, 0, 0, 200);
+VAR(testtags, 0, 0, 1);
 
 struct animmodel : model
 {
@@ -79,11 +80,11 @@ struct animmodel : model
 
         skin() : owner(0), tex(notexture), decal(NULL), masks(notexture), envmap(NULL), normalmap(NULL), shader(NULL), spec(1.0f), ambient(0.3f), glow(3.0f), glowdelta(0), glowpulse(0), fullbright(0), envmapmin(0), envmapmax(0), scrollu(0), scrollv(0), alphatest(0.9f), cullface(true) {}
 
-        bool envmapped() { return envmapmax>0 && envmapmodels; }
-        bool bumpmapped() { return normalmap && bumpmodels; }
-        bool normals() { return true; }
-        bool tangents() { return bumpmapped(); }
-        bool alphatested() { return alphatest > 0 && tex->type&Texture::ALPHA; }
+        bool envmapped() const { return envmapmax>0 && envmapmodels; }
+        bool bumpmapped() const { return normalmap && bumpmodels; }
+        bool normals() const { return true; }
+        bool tangents() const { return bumpmapped(); }
+        bool alphatested() const { return alphatest > 0 && tex->type&Texture::ALPHA; }
 
         void setshaderparams(mesh *m, const animstate *as, bool masked, bool alphatested = false, bool skinned = true)
         {
@@ -165,7 +166,7 @@ struct animmodel : model
 
             if(as->cur.anim&ANIM_NOSKIN)
             {
-                if(alphatest > 0 && s->type&Texture::ALPHA)
+                if(alphatest > 0 && s->type&Texture::ALPHA && owner->model->alphashadow)
                 {
                     if(s!=lasttex)
                     {
@@ -250,6 +251,7 @@ struct animmodel : model
 
         virtual void calcbb(vec &bbmin, vec &bbmax, const matrix3x4 &m) {}
         virtual void gentris(Texture *tex, vector<BIH::tri> *out, const matrix3x4 &m) {}
+        virtual void genshadowmesh(vector<vec> &tris, const matrix3x4 &m) {}
 
         virtual void setshader(Shader *s)
         {
@@ -401,6 +403,11 @@ struct animmodel : model
         void gentris(vector<skin> &skins, vector<BIH::tri> *tris, const matrix3x4 &m)
         {
             loopv(meshes) meshes[i]->gentris(skins[i].tex && skins[i].tex->type&Texture::ALPHA ? skins[i].tex : NULL, tris, m);
+        }
+
+        void genshadowmesh(vector<vec> &tris, const matrix3x4 &m)
+        {
+            loopv(meshes) meshes[i]->genshadowmesh(tris, m);
         }
 
         virtual void *animkey() { return this; }
@@ -570,6 +577,20 @@ struct animmodel : model
             }
         }
 
+        void genshadowmesh(vector<vec> &tris, const matrix3x4 &m)
+        {
+            matrix3x4 t = m;
+            t.scale(model->scale);
+            meshes->genshadowmesh(tris, t);
+            loopv(links)
+            {
+                matrix3x4 n;
+                meshes->concattagtransform(this, links[i].tag, m, n);
+                n.translate(links[i].translate, model->scale);
+                links[i].p->genshadowmesh(tris, n);
+            }
+        }
+
         bool link(part *p, const char *tag, const vec &translate = vec(0, 0, 0), int anim = -1, int basetime = 0, vec *pos = NULL)
         {
             int i = meshes ? meshes->findtag(tag) : -1;
@@ -611,19 +632,19 @@ struct animmodel : model
             }
         }
 
-        bool hasnormals()
+        bool hasnormals() const
         {
             loopv(skins) if(skins[i].normals()) return true;
             return false;
         }
 
-        bool hastangents()
+        bool hastangents() const
         {
             loopv(skins) if(skins[i].tangents()) return true;
             return false;
         }
 
-        bool alphatested()
+        bool alphatested() const
         {
             loopv(skins) if(skins[i].alphatested()) return true;
             return false;
@@ -1282,7 +1303,26 @@ struct animmodel : model
                     break;
             }
         }
+    }
 
+    void genshadowmesh(vector<vec> &tris, const matrix3x4 &orient)
+    {
+        if(parts.empty()) return;
+        matrix3x4 m;
+        initmatrix(m);
+        m.mul(orient, matrix3x4(m));
+        parts[0]->genshadowmesh(tris, m);
+        for(int i = 1; i < parts.length(); i++)
+        {
+            part *p = parts[i];
+            switch(linktype(this, p))
+            {
+                case LINK_COOP:
+                case LINK_REUSE:
+                    p->genshadowmesh(tris, m);
+                    break;
+            }
+        }
     }
 
     void preloadBIH()
@@ -1312,7 +1352,7 @@ struct animmodel : model
         return parts[0]->unlink(p);
     }
 
-    bool envmapped()
+    bool envmapped() const
     {
         loopv(parts) loopvj(parts[i]->skins) if(parts[i]->skins[j].envmapped()) return true;
         return false;
@@ -1328,6 +1368,12 @@ struct animmodel : model
     bool pitched() const
     {
         return parts[0]->pitchscale != 0;
+    }
+
+    bool alphatested() const
+    {
+        loopv(parts) if(parts[i]->alphatested()) return true;
+        return false;
     }
 
     virtual bool loaddefaultparts()

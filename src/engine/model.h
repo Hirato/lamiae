@@ -3,7 +3,7 @@ enum { MDL_MD3 = 0, MDL_MD5, MDL_OBJ, MDL_SMD, MDL_IQM, NUMMODELTYPES };
 struct model
 {
     float spinyaw, spinpitch, spinroll, offsetyaw, offsetpitch, offsetroll;
-    bool collide, ellipsecollide, shadow, depthoffset;
+    bool collide, ellipsecollide, shadow, alphashadow, depthoffset;
     float scale;
     vec translate;
     BIH *bih;
@@ -11,7 +11,7 @@ struct model
     float eyeheight, collideradius, collideheight;
     int batch;
 
-    model() : spinyaw(0), spinpitch(0), spinroll(0), offsetyaw(0), offsetpitch(0), offsetroll(0), collide(true), ellipsecollide(false), shadow(true), depthoffset(false), scale(1.0f), translate(0, 0, 0), bih(0), bbcenter(0, 0, 0), bbradius(-1, -1, -1), bbextend(0, 0, 0), eyeheight(0.9f), collideradius(0), collideheight(0), batch(-1) {}
+    model() : spinyaw(0), spinpitch(0), spinroll(0), offsetyaw(0), offsetpitch(0), offsetroll(0), collide(true), ellipsecollide(false), shadow(true), alphashadow(true), depthoffset(false), scale(1.0f), translate(0, 0, 0), bih(0), bbcenter(0, 0, 0), bbradius(-1, -1, -1), bbextend(0, 0, 0), eyeheight(0.9f), collideradius(0), collideheight(0), batch(-1) {}
 
     virtual ~model() { DELETEP(bih); }
     virtual void calcbb(vec &center, vec &radius) = 0;
@@ -21,10 +21,11 @@ struct model
     virtual const char *name() const = 0;
     virtual int type() const = 0;
     virtual BIH *setBIH() { return 0; }
-    virtual bool envmapped() { return false; }
+    virtual bool envmapped() const { return false; }
     virtual bool skeletal() const { return false; }
     virtual bool animated() const { return false; }
     virtual bool pitched() const { return true; }
+    virtual bool alphatested() const { return false; }
 
     virtual void setshader(Shader *shader) {}
     virtual void setenvmap(float envmapmin, float envmapmax, Texture *envmap) {}
@@ -36,6 +37,7 @@ struct model
     virtual void setfullbright(float fullbright) {}
     virtual void setcullface(bool cullface) {}
 
+    virtual void genshadowmesh(vector<vec> &tris, const matrix3x4 &orient) {}
     virtual void preloadBIH() { if(!bih) setBIH(); }
     virtual void preloadshaders() {}
     virtual void preloadmeshes() {}
