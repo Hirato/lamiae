@@ -1585,8 +1585,6 @@ void cleanupgeom(renderstate &cur)
 
 VAR(oqgeom, 0, 1, 1);
 
-extern void renderradiancehints();
-
 void rendergeom()
 {
     bool doOQ = oqfrags && oqgeom && !drawtex, multipassing = false;

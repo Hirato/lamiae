@@ -58,32 +58,11 @@ extern void setsurfaces(cube &c, const surfaceinfo *surfs, const vertinfo *verts
 extern void setsurface(cube &c, int orient, const surfaceinfo &surf, const vertinfo *verts, int numverts);
 extern void previewblends(const ivec &bo, const ivec &bs);
 
-struct lerpvert
-{
-    vec normal;
-    float u, v;
-
-    bool operator==(const lerpvert &l) const { return u == l.u && v == l.v; }
-    bool operator!=(const lerpvert &l) const { return u != l.u || v != l.v; }
-};
-
-struct lerpbounds
-{
-    const lerpvert *min;
-    const lerpvert *max;
-    float u, ustep;
-    vec normal, nstep;
-    int winding;
-};
-
 extern void calcnormals(bool lerptjoints = false);
 extern void clearnormals();
 extern void resetsmoothgroups();
 extern int smoothangle(int id, int angle);
 extern void findnormal(const vec &key, int smooth, const vec &surface, vec &v);
-extern void calclerpverts(const vec2 *c, const vec *n, lerpvert *lv, int &numv);
-extern void initlerpbounds(float u, float v, const lerpvert *lv, int numv, lerpbounds &start, lerpbounds &end);
-extern void lerpnormal(float u, float v, const lerpvert *lv, int numv, lerpbounds &start, lerpbounds &end, vec &normal, vec &nstep);
 
 #define CHECK_CALCLIGHT_PROGRESS_LOCKED(exit, show_calclight_progress, before, after) \
     if(check_calclight_progress) \

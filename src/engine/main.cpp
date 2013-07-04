@@ -1299,7 +1299,7 @@ int main(int argc, char **argv)
     logoutf("init: shaders");
     initgbuffer();
     loadshaders();
-    particleinit();
+    initparticles();
     initdecals();
 
     identflags |= IDF_PERSIST;

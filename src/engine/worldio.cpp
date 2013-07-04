@@ -93,7 +93,7 @@ void backup(char *name, char *backupname)
     rename(findfile(name, "wb"), backupfile);
 }
 
-enum { OCTSAV_CHILDREN = 0, OCTSAV_EMPTY, OCTSAV_SOLID, OCTSAV_NORMAL, OCTSAV_LODCUBE };
+enum { OCTSAV_CHILDREN = 0, OCTSAV_EMPTY, OCTSAV_SOLID, OCTSAV_NORMAL };
 
 #define LM_PACKW 512
 #define LM_PACKH 512
@@ -137,8 +137,7 @@ void savec(cube *c, const ivec &o, int size, stream *f, bool nolms)
                 }
             }
 
-            if(c[i].children) f->putchar(oflags | OCTSAV_LODCUBE);
-            else if(isempty(c[i])) f->putchar(oflags | OCTSAV_EMPTY);
+            if(isempty(c[i])) f->putchar(oflags | OCTSAV_EMPTY);
             else if(isentirelysolid(c[i])) f->putchar(oflags | OCTSAV_SOLID);
             else
             {
@@ -225,8 +224,6 @@ void savec(cube *c, const ivec &o, int size, stream *f, bool nolms)
                     }
                 }
             }
-
-            if(c[i].children) savec(c[i].children, co, size>>1, f, nolms);
         }
     }
 }
@@ -240,7 +237,6 @@ static inline int convertoldmaterial(int mat)
 
 void loadc(stream *f, cube &c, const ivec &co, int size, bool &failed)
 {
-    bool haschildren = false;
     int octsav = f->getchar();
     switch(octsav&0x7)
     {
@@ -248,10 +244,9 @@ void loadc(stream *f, cube &c, const ivec &co, int size, bool &failed)
             c.children = loadchildren(f, co, size>>1, failed);
             return;
 
-        case OCTSAV_LODCUBE: haschildren = true;    break;
-        case OCTSAV_EMPTY:  emptyfaces(c);          break;
-        case OCTSAV_SOLID:  solidfaces(c);          break;
-        case OCTSAV_NORMAL: f->read(c.edges, 12);   break;
+        case OCTSAV_EMPTY:  emptyfaces(c);        break;
+        case OCTSAV_SOLID:  solidfaces(c);        break;
+        case OCTSAV_NORMAL: f->read(c.edges, 12); break;
         default: failed = true; return;
     }
     loopi(6) c.texture[i] =  f->getlil<ushort>();
@@ -355,8 +350,6 @@ void loadc(stream *f, cube &c, const ivec &co, int size, bool &failed)
             }
         }
     }
-
-    c.children = (haschildren ? loadchildren(f, co, size>>1, failed) : NULL);
 }
 
 cube *loadchildren(stream *f, const ivec &co, int size, bool &failed)

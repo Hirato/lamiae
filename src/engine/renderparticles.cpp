@@ -10,13 +10,13 @@ VARP(particlesize, 20, 100, 500);
 VARP(softparticles, 0, 1, 1);
 VARP(softparticleblend, 1, 8, 64);
 
-// Check emit_particles() to limit the rate that paricles can be emitted for models/sparklies
+// Check canemitparticles() to limit the rate that paricles can be emitted for models/sparklies
 // Automatically stops particles being emitted when paused or in reflective drawing
 VARP(emitmillis, 1, 17, 1000);
 static int lastemitframe = 0, emitoffset = 0;
 static bool canemit = false, regenemitters = false;
 
-static bool emit_particles()
+static bool canemitparticles()
 {
     return canemit || emitoffset;
 }
@@ -130,7 +130,7 @@ struct particle
     float size;
     union
     {
-        const char *text;         // will call delete[] on this only if it starts with an @
+        const char *text;
         float val;
         physent *owner;
         struct
@@ -770,7 +770,7 @@ struct varenderer : partrenderer
         }
     }
 
-    void update()
+    void genvbo()
     {
         if(lastmillis == lastupdate && vbo) return;
         lastupdate = lastmillis;
@@ -786,6 +786,8 @@ struct varenderer : partrenderer
 
     void render()
     {
+        genvbo();
+
         glBindTexture(GL_TEXTURE_2D, tex->id);
 
         glBindBuffer_(GL_ARRAY_BUFFER, vbo);
@@ -825,36 +827,36 @@ struct softquadrenderer : quadrenderer
 
 static partrenderer *parts[] =
 {
-    new quadrenderer("<grey>media/particles/blood", PT_PART|PT_FLIP|PT_MOD|PT_RND4, DECAL_BLOOD),              // blood spats (note: rgb is inverted)
+    new quadrenderer("<grey>media/particles/blood", PT_PART|PT_FLIP|PT_MOD|PT_RND4, DECAL_BLOOD),    // blood spats (note: rgb is inverted)
     new trailrenderer("<grey>media/particles/base", PT_TRAIL|PT_LERP, DECAL_RIPPLE),                 // water, entity
     new quadrenderer("<grey>media/particles/smoke", PT_PART|PT_FLIP|PT_LERP),                        // smoke
     new quadrenderer("<grey>media/particles/steam", PT_PART|PT_FLIP),                                // steam
-    new quadrenderer("<grey>media/particles/flames", PT_PART|PT_HFLIP|PT_RND4|PT_BRIGHT),             // flames
-    new quadrenderer("<grey>media/particles/ball1", PT_PART|PT_BRIGHT),                               // fireball1
-    new quadrenderer("<grey>media/particles/ball2", PT_PART|PT_BRIGHT),                               // fireball2
-    new quadrenderer("<grey>media/particles/ball3", PT_PART|PT_BRIGHT),                               // fireball3
-    new taperenderer("<grey>media/particles/flare", PT_TAPE|PT_BRIGHT),                               // streak
-    &lightnings,                                                                                  // lightning
-    &fireballs,                                                                                   // explosion fireball
-    &bluefireballs,                                                                               // bluish explosion fireball
-    new quadrenderer("<grey>media/particles/spark", PT_PART|PT_FLIP|PT_BRIGHT),                       // sparks
-    new quadrenderer("<grey>media/particles/base",  PT_PART|PT_FLIP|PT_BRIGHT),                       // edit mode entities
-    new quadrenderer("<grey>media/particles/muzzleflash1", PT_PART|PT_FLIP|PT_BRIGHT|PT_TRACK),       // muzzle flash
-    new quadrenderer("<grey>media/particles/muzzleflash2", PT_PART|PT_FLIP|PT_BRIGHT|PT_TRACK),       // muzzle flash
-    new quadrenderer("<grey>media/particles/muzzleflash3", PT_PART|PT_FLIP|PT_BRIGHT|PT_TRACK),       // muzzle flash
-    new quadrenderer("media/textures/notexture", PT_PART|PT_ICON),                                          // hud icon
-    new quadrenderer("<colorify:1/1/1>media/textures/notexture", PT_PART|PT_ICON),                               // grey hud icon
-    &texts,                                                                                       // text
-    &meters,                                                                                      // meter
-    &metervs,                                                                                     // meter vs
-    new quadrenderer("media/particles/snow", PT_PART|PT_BRIGHT|PT_RND4|PT_FLIP, DECAL_STAIN),   // snow
+    new quadrenderer("<grey>media/particles/flames", PT_PART|PT_HFLIP|PT_RND4|PT_BRIGHT),            // flames
+    new quadrenderer("<grey>media/particles/ball1", PT_PART|PT_BRIGHT),                              // fireball1
+    new quadrenderer("<grey>media/particles/ball2", PT_PART|PT_BRIGHT),                              // fireball2
+    new quadrenderer("<grey>media/particles/ball3", PT_PART|PT_BRIGHT),                              // fireball3
+    new taperenderer("<grey>media/particles/flare", PT_TAPE|PT_BRIGHT),                              // streak
+    &lightnings,                                                                                     // lightning
+    &fireballs,                                                                                      // explosion fireball
+    &bluefireballs,                                                                                  // bluish explosion fireball
+    new quadrenderer("<grey>media/particles/spark", PT_PART|PT_FLIP|PT_BRIGHT),                      // sparks
+    new quadrenderer("<grey>media/particles/base",  PT_PART|PT_FLIP|PT_BRIGHT),                      // edit mode entities
+    new quadrenderer("<grey>media/particles/muzzleflash1", PT_PART|PT_FLIP|PT_BRIGHT|PT_TRACK),      // muzzle flash
+    new quadrenderer("<grey>media/particles/muzzleflash2", PT_PART|PT_FLIP|PT_BRIGHT|PT_TRACK),      // muzzle flash
+    new quadrenderer("<grey>media/particles/muzzleflash3", PT_PART|PT_FLIP|PT_BRIGHT|PT_TRACK),      // muzzle flash
+    new quadrenderer("media/textures/notexture", PT_PART|PT_ICON),                                   // hud icon
+    new quadrenderer("<colorify:1/1/1>media/textures/notexture", PT_PART|PT_ICON),                   // grey hud icon
+    &texts,                                                                                          // text
+    &meters,                                                                                         // meter
+    &metervs,                                                                                        // meter vs
+    new quadrenderer("media/particles/snow", PT_PART|PT_BRIGHT|PT_RND4|PT_FLIP, DECAL_STAIN),        // snow
     new quadrenderer("<grey>media/particles/leaves", PT_PART|PT_RND4|PT_FLIP|PT_LERP, DECAL_LEAVES), //leaves
     &flares // must be done last
 };
 
-VARFP(maxparticles, 10, 8000, 20000, particleinit());
+VARFP(maxparticles, 10, 8000, 20000, initparticles());
 
-void particleinit()
+void initparticles()
 {
     if(initing) return;
     if(!particleshader) particleshader = lookupshaderbyname("particle");
@@ -862,6 +864,12 @@ void particleinit()
     if(!particlesoftshader) particlesoftshader = lookupshaderbyname("particlesoft");
     if(!particletextshader) particletextshader = lookupshaderbyname("particletext");
     loopi(sizeof(parts)/sizeof(parts[0])) parts[i]->init(maxparticles);
+    loopi(sizeof(parts)/sizeof(parts[0]))
+    {
+        loadprogress = float(i+1)/(sizeof(parts)/sizeof(parts[0]));
+        parts[i]->preload();
+    }
+    loadprogress = 0;
 }
 
 void clearparticles()
@@ -913,11 +921,6 @@ void renderparticles()
         glEnable(GL_DEPTH_TEST);
     }
 
-    loopi(sizeof(parts)/sizeof(parts[0]))
-    {
-        parts[i]->update();
-    }
-
     bool rendered = false;
     uint lastflags = PT_LERP|PT_SHADER, flagmask = PT_LERP|PT_MOD|PT_BRIGHT|PT_NOTEX|PT_SOFT|PT_SHADER;
     int lastswizzle = -1;
@@ -939,8 +942,6 @@ void renderparticles()
             else glBindTexture(GL_TEXTURE_RECTANGLE, gdepthtex);
             glActiveTexture_(GL_TEXTURE0);
         }
-
-        p->preload();
 
         uint flags = p->type & flagmask, changedbits = flags ^ lastflags;
         int swizzle = p->tex ? p->tex->swizzle() : -1;
@@ -1029,13 +1030,13 @@ static void splash(int type, int color, int radius, int num, int fade, const vec
 
 static void regularsplash(int type, int color, int radius, int num, int fade, const vec &p, float size, int gravity, int delay = 0)
 {
-    if(!emit_particles() || (delay > 0 && rnd(delay) != 0)) return;
+    if(!canemitparticles() || (delay > 0 && rnd(delay) != 0)) return;
     splash(type, color, radius, num, fade, p, size, gravity);
 }
 
 bool canaddparticles()
 {
-    return true;
+    return !minimized;
 }
 
 void regular_particle_splash(int type, int num, int fade, const vec &p, int color, float size, int radius, int gravity, int delay)
@@ -1140,7 +1141,7 @@ static inline vec offsetvec(vec o, int dir, int dist)
  */
 void regularshape(int type, int radius, int color, int dir, int num, int fade, const vec &p, float size, float vel, int gravity)
 {
-    if(!emit_particles()) return;
+    if(!canemitparticles()) return;
 
     int basetype = parts[type]->type&0xFF;
     bool flare = (basetype == PT_TAPE) || (basetype == PT_LIGHTNING),
@@ -1238,7 +1239,7 @@ void regularshape(int type, int radius, int color, int dir, int num, int fade, c
 
 static void regularflame(int type, const vec &p, float radius, float height, int color, int density = 3, float scale = 2.0f, float speed = 200.0f, float fade = 600.0f, int gravity = -15)
 {
-    if(!emit_particles()) return;
+    if(!canemitparticles()) return;
 
     float size = scale * min(radius, height);
     vec v(0, 0, min(1.0f, height)*speed);
@@ -1721,6 +1722,8 @@ void updateparticles()
 {
     if(regenemitters) addparticleemitters();
 
+    if(minimized) { canemit = false; return; }
+
     if(lastmillis - lastemitframe >= emitmillis)
     {
         canemit = true;
@@ -1728,7 +1731,10 @@ void updateparticles()
     }
     else canemit = false;
 
-    flares.makelightflares();
+    loopi(sizeof(parts)/sizeof(parts[0]))
+    {
+        parts[i]->update();
+    }
 
     if(!editmode || editingparticles)
     {

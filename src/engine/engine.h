@@ -613,11 +613,6 @@ extern bool pointincube(const clipplanes &p, const vec &v);
 extern bool overlapsdynent(const vec &o, float radius);
 extern void rotatebb(vec &center, vec &radius, int yaw, int pitch, int roll = 0);
 extern float shadowray(const vec &o, const vec &ray, float radius, int mode, extentity *t = NULL);
-struct ShadowRayCache;
-extern ShadowRayCache *newshadowraycache();
-extern void freeshadowraycache(ShadowRayCache *&cache);
-extern void resetshadowraycache(ShadowRayCache *cache);
-extern float shadowray(ShadowRayCache *cache, const vec &o, const vec &ray, float radius, int mode, extentity *t = NULL);
 
 // world
 
@@ -658,7 +653,7 @@ extern int batcheddynamicmodelbounds(int mask, vec &bbmin, vec &bbmax);
 extern void cleanupmodels();
 
 // renderparticles
-extern void particleinit();
+extern void initparticles();
 extern void clearparticles();
 extern void clearparticleemitters();
 extern void seedparticles();

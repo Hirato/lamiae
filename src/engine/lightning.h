@@ -87,6 +87,8 @@ struct lightningrenderer : listrenderer
 
     void startrender()
     {
+        setuplightning();
+
         glDisable(GL_CULL_FACE);
         gle::defattrib(gle::ATTRIB_VERTEX, 3, GL_FLOAT);
         gle::defattrib(gle::ATTRIB_TEXCOORD0, 2, GL_FLOAT);
@@ -96,11 +98,6 @@ struct lightningrenderer : listrenderer
     {
         gle::disable();
         glEnable(GL_CULL_FACE);
-    }
-
-    void update()
-    {
-        setuplightning();
     }
 
     void seedemitter(particleemitter &pe, const vec &o, const vec &d, int fade, float size, int gravity)

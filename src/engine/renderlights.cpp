@@ -1284,7 +1284,7 @@ void viewrefract()
 GLuint rhtex[8] = { 0, 0, 0, 0, 0, 0, 0, 0 }, rhfbo = 0;
 GLuint rsmdepthtex = 0, rsmcolortex = 0, rsmnormaltex = 0, rsmfbo = 0;
 
-extern int rhgrid, rhsplits, rhborder, rhprec, rhtaps, rhcache, rsmprec, rsmsize;
+extern int rhgrid, rhsplits, rhborder, rhprec, rhtaps, rhcache, rsmprec, rsmdepthprec, rsmsize;
 
 static Shader *radiancehintsshader = NULL;
 
@@ -1346,7 +1346,7 @@ void setupradiancehints()
 
     GLenum rsmformat = gethdrformat(rsmprec, GL_RGBA8);
 
-    createtexture(rsmdepthtex, rsmsize, rsmsize, NULL, 3, 0, GL_DEPTH_COMPONENT16, GL_TEXTURE_RECTANGLE);
+    createtexture(rsmdepthtex, rsmsize, rsmsize, NULL, 3, 0, rsmdepthprec > 1 ? GL_DEPTH_COMPONENT32 : (rsmdepthprec ? GL_DEPTH_COMPONENT24 : GL_DEPTH_COMPONENT16), GL_TEXTURE_RECTANGLE);
     createtexture(rsmcolortex, rsmsize, rsmsize, NULL, 3, 0, rsmformat, GL_TEXTURE_RECTANGLE);
     createtexture(rsmnormaltex, rsmsize, rsmsize, NULL, 3, 0, rsmformat, GL_TEXTURE_RECTANGLE);
 
@@ -1389,6 +1389,7 @@ FVARF(rsmdepthrange, 0, 1024, 1e6f, clearradiancehintscache());
 FVARF(rsmdepthmargin, 0, 0.1f, 1e3f, clearradiancehintscache());
 VARF(rhprec, 0, 0, 1, cleanupradiancehints());
 VARF(rsmprec, 0, 0, 3, cleanupradiancehints());
+VARF(rsmdepthprec, 0, 0, 2, cleanupradiancehints());
 FVAR(rhnudge, 0, 0.5f, 4);
 FVARF(rhsplitweight, 0.20f, 0.6f, 0.95f, clearradiancehintscache());
 VARF(rhgrid, 3, 27, 128, cleanupradiancehints());
@@ -1560,7 +1561,7 @@ void viewshadowatlas()
 }
 VAR(debugshadowatlas, 0, 0, 1);
 
-extern int smsize;
+extern int smdepthprec, smsize;
 
 void setupshadowatlas()
 {
@@ -1570,7 +1571,7 @@ void setupshadowatlas()
     if(!shadowatlastex) glGenTextures(1, &shadowatlastex);
 
     shadowatlastarget = usegatherforsm() ? GL_TEXTURE_2D : GL_TEXTURE_RECTANGLE;
-    createtexture(shadowatlastex, shadowatlaspacker.w, shadowatlaspacker.h, NULL, 3, 1, GL_DEPTH_COMPONENT16, shadowatlastarget);
+    createtexture(shadowatlastex, shadowatlaspacker.w, shadowatlaspacker.h, NULL, 3, 1, smdepthprec > 1 ? GL_DEPTH_COMPONENT32 : (smdepthprec ? GL_DEPTH_COMPONENT24 : GL_DEPTH_COMPONENT16), shadowatlastarget);
     glTexParameteri(shadowatlastarget, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
     glTexParameteri(shadowatlastarget, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 
@@ -1618,6 +1619,7 @@ FVAR(smcubeprec, 1e-3f, 1, 1e3f);
 FVAR(smspotprec, 1e-3f, 1, 1e3f);
 
 VARFP(smsize, 10, 12, 14, cleanupshadowatlas());
+VARF(smdepthprec, 0, 0, 2, cleanupshadowatlas());
 VAR(smsidecull, 0, 1, 1);
 VAR(smviscull, 0, 1, 1);
 VAR(smborder, 0, 3, 16);
@@ -1670,7 +1672,7 @@ static shadowmapinfo *addshadowmap(ushort x, ushort y, int size, int &idx)
 VARF(csmmaxsize, 256, 768, 2048, clearshadowcache());
 VARF(csmsplits, 1, 3, CSM_MAXSPLITS, { cleardeferredlightshaders(); clearshadowcache(); });
 FVAR(csmsplitweight, 0.20f, 0.75f, 0.95f);
-VARF(csmshadowmap, 0, 1, 1, cleardeferredlightshaders());
+VARF(csmshadowmap, 0, 1, 1, { cleardeferredlightshaders(); clearshadowcache(); });
 
 // cascaded shadow maps
 struct cascadedshadowmap
@@ -2726,11 +2728,8 @@ void viewlightscissor()
 static inline bool calclightscissor(lightinfo &l)
 {
     float sx1 = -1, sy1 = -1, sx2 = 1, sy2 = 1, sz1 = -1, sz2 = 1;
-    if(l.radius > 0)
-    {
-        if(l.spot > 0) calcspotscissor(l.o, l.radius, l.dir, l.spot, l.spotx, l.spoty, sx1, sy1, sx2, sy2, sz1, sz2);
-        else calcspherescissor(l.o, l.radius, sx1, sy1, sx2, sy2, sz1, sz2);
-    }
+    if(l.spot > 0) calcspotscissor(l.o, l.radius, l.dir, l.spot, l.spotx, l.spoty, sx1, sy1, sx2, sy2, sz1, sz2);
+    else calcspherescissor(l.o, l.radius, sx1, sy1, sx2, sy2, sz1, sz2);
     l.sx1 = sx1;
     l.sx2 = sx2;
     l.sy1 = sy1;
@@ -2755,7 +2754,7 @@ void collectlights()
         getlightprops(*e, radius, red, green, blue);
 
         if(radius <= 0) continue;
-        if(radius > 0 && smviscull)
+        if(smviscull)
         {
             if(isfoggedsphere(radius, e->o)) continue;
             if(pvsoccludedsphere(e->o, radius)) continue;
@@ -3301,7 +3300,7 @@ int calcshadowinfo(const extentity &e, vec &origin, float &radius, vec &spotloc,
     int rad, red, green, blue;
     getlightprops(e, rad, red, green, blue);
 
-    if(e.attr[4] & L_NOSHADOW || (radius <= smminradius)) return SM_NONE;
+    if(e.attr[4] & L_NOSHADOW || radius <= smminradius) return SM_NONE;
 
     origin = e.o;
     radius = rad;
