@@ -1190,16 +1190,19 @@ void setbbfrommodel(physent *d, const char *mdl)
     if(!m) return;
     vec center, radius;
     m->collisionbox(center, radius);
-    if(!m->ellipsecollide)
-    {
-        d->collidetype = COLLIDE_OBB;
-        //d->collidetype = COLLIDE_AABB;
-        //rotatebb(center, radius, int(d->yaw), int(d->pitch));
-    }
+    d->collidetype = m->ellipsecollide ? COLLIDE_ELLIPSE : COLLIDE_OBB;
+//     if(!m->ellipsecollide)
+//     {
+//         d->collidetype = COLLIDE_OBB;
+//         //d->collidetype = COLLIDE_AABB;
+//         //rotatebb(center, radius, int(d->yaw), int(d->pitch));
+//     }
     d->xradius   = radius.x + fabs(center.x);
     d->yradius   = radius.y + fabs(center.y);
     d->radius    = d->collidetype==COLLIDE_OBB ? sqrtf(d->xradius*d->xradius + d->yradius*d->yradius) : max(d->xradius, d->yradius);
-    d->eyeheight = (center.z-radius.z) + radius.z*2*m->eyeheight;
+    d->eyeheight -= d->maxheight;
+    d->maxheight = (center.z-radius.z) + radius.z*2*m->eyeheight;
+    d->eyeheight += d->maxheight;
     d->aboveeye  = radius.z*2*(1.0f-m->eyeheight);
 }
 

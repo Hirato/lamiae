@@ -546,7 +546,8 @@ void rpgchar::update()
 		move = strafe = jumping = 0;
 	}
 
-	moveplayer(this, this == game::player1 ? 8 : 2, true);
+	crouchplayer(this, this == game::player1 ? 10 : 2, true);
+	moveplayer(this, this == game::player1 ? 10 : 2, true);
 	entities::touchents(this);
 
 	if(lastmillis >= lastaction)

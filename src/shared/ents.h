@@ -42,7 +42,7 @@ enum { ENT_PLAYER = 0, ENT_AI, ENT_INANIMATE, ENT_CAMERA, ENT_BOUNCE };
 enum { COLLIDE_AABB = 0, COLLIDE_OBB, COLLIDE_ELLIPSE };
 
 #define CROUCHTIME 150
-#define CROUCHHEIGHT 0.75f
+#define CROUCHHEIGHT 0.7f
 
 struct physent                                  // base entity type, can be affected by physics
 {
