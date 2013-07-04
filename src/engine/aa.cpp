@@ -79,7 +79,7 @@ void setaavelocityparams(GLenum tmu)
     if(tqaaframe) reproject.jitter(jitter.x, jitter.y);
     LOCALPARAM(reprojectmatrix, reproject);
     float maxvel = sqrtf(vieww*vieww + viewh*viewh)/tqaareproject;
-    LOCALPARAMF(maxvelocity, (maxvel, 1/maxvel, tqaareprojectscale));
+    LOCALPARAMF(maxvelocity, maxvel, 1/maxvel, tqaareprojectscale);
     if(tmu!=GL_TEXTURE0) glActiveTexture_(GL_TEXTURE0);
 }
 
@@ -128,7 +128,7 @@ void resolvetqaa(GLuint outfbo)
     if(tqaamovemask)
     {
         SETSHADER(tqaaresolvemasked);
-        LOCALPARAMF(movemaskscale, (1/float(1<<tqaamovemaskreduce)));
+        LOCALPARAMF(movemaskscale, 1/float(1<<tqaamovemaskreduce));
     }
     else SETSHADER(tqaaresolve);
     glBindTexture(GL_TEXTURE_RECTANGLE, tqaacurtex);
@@ -741,7 +741,7 @@ void setaamask(bool on)
     if(aamask) aamaskmatrix.mul(nojittermatrix, cammatrix);
     else aamaskmatrix = camprojmatrix;
 
-    GLOBALPARAMF(aamask, (aamask ? 1.0f : 0.0f));
+    GLOBALPARAMF(aamask, aamask ? 1.0f : 0.0f);
 }
 
 bool multisampledaa()

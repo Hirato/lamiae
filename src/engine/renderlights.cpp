@@ -116,7 +116,7 @@ void setbilateralshader(int radius, int pass, float sigma, float depth)
     bilateralshader[pass]->set();
     sigma *= 2*radius;
     float step = pass ? float(viewh)/aoh : float(vieww)/aow;
-    LOCALPARAMF(bilateralparams, (1.0f/(2*sigma*sigma), 1.0f/(depth*depth), step));
+    LOCALPARAMF(bilateralparams, 1.0f/(2*sigma*sigma), 1.0f/(depth*depth), step);
 }
 
 static Shader *ambientobscuranceshader = NULL;
@@ -291,10 +291,10 @@ void renderao()
     glBindTexture(GL_TEXTURE_2D, aonoisetex);
     glActiveTexture_(GL_TEXTURE0);
 
-    LOCALPARAMF(tapparams, (aoradius*eyematrix.d.z/xscale, aoradius*eyematrix.d.z/yscale, aoradius*aoradius*aocutoff*aocutoff));
-    LOCALPARAMF(contrastparams, ((2.0f*aodark)/aotaps, aosharp));
-    LOCALPARAMF(offsetscale, (xscale/eyematrix.d.z, yscale/eyematrix.d.z, eyematrix.d.x/eyematrix.d.z, eyematrix.d.y/eyematrix.d.z));
-    LOCALPARAMF(prefilterdepth, (aoprefilterdepth));
+    LOCALPARAMF(tapparams, aoradius*eyematrix.d.z/xscale, aoradius*eyematrix.d.z/yscale, aoradius*aoradius*aocutoff*aocutoff);
+    LOCALPARAMF(contrastparams, (2.0f*aodark)/aotaps, aosharp);
+    LOCALPARAMF(offsetscale, xscale/eyematrix.d.z, yscale/eyematrix.d.z, eyematrix.d.x/eyematrix.d.z, eyematrix.d.y/eyematrix.d.z);
+    LOCALPARAMF(prefilterdepth, aoprefilterdepth);
     screenquad(vieww, viewh, aow/float(1<<aonoise), aoh/float(1<<aonoise));
 
     if(aobilateral)
@@ -972,8 +972,8 @@ void processhdr(GLuint outfbo, int aa)
 
     timer *hdrtimer = begintimer("hdr processing");
 
-    GLOBALPARAMF(hdrparams, (hdrbright, hdrsaturate, bloomthreshold, bloomscale));
-    GLOBALPARAMF(hdrgamma, (hdrgamma, 1.0f/hdrgamma));
+    GLOBALPARAMF(hdrparams, hdrbright, hdrsaturate, bloomthreshold, bloomscale);
+    GLOBALPARAMF(hdrgamma, hdrgamma, 1.0f/hdrgamma);
 
     GLuint b0fbo = bloomfbo[1], b0tex = bloomtex[1], b1fbo =  bloomfbo[0], b1tex = bloomtex[0], ptex = hdrtex;
     int b0w = max(vieww/4, bloomw), b0h = max(viewh/4, bloomh), b1w = max(vieww/2, bloomw), b1h = max(viewh/2, bloomh),
@@ -1092,7 +1092,7 @@ void processhdr(GLuint outfbo, int aa)
         glBlendFunc(GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA);
         SETSHADER(hdraccum);
         glBindTexture(GL_TEXTURE_RECTANGLE, b0tex);
-        LOCALPARAMF(accumscale, (lasthdraccum ? pow(hdraccumscale, float(lastmillis - lasthdraccum)/hdraccummillis) : 0));
+        LOCALPARAMF(accumscale, lasthdraccum ? pow(hdraccumscale, float(lastmillis - lasthdraccum)/hdraccummillis) : 0);
         screenquad(2, 2);
         glDisable(GL_BLEND);
 
@@ -2084,7 +2084,7 @@ void radiancehints::bindparams()
         rhoffsetv[i] = split.offset;
     }
     float step = 2*splits[0].bounds/rhgrid;
-    GLOBALPARAMF(rhnudge, (rhnudge*step));
+    GLOBALPARAMF(rhnudge, rhnudge*step);
 }
 
 static Shader *deferredlightshader = NULL, *deferredminimapshader = NULL, *deferredmsaapixelshader = NULL, *deferredmsaasampleshader = NULL;
@@ -2334,25 +2334,25 @@ void renderlights(float bsx1 = -1, float bsy1 = -1, float bsx2 = 1, float bsy2 =
 
     GLOBALPARAM(worldmatrix, worldmatrix);
     GLOBALPARAM(fogdir, cammatrix.getrow(2));
-    GLOBALPARAMF(shadowatlasscale, (1.0f/shadowatlaspacker.w, 1.0f/shadowatlaspacker.h));
+    GLOBALPARAMF(shadowatlasscale, 1.0f/shadowatlaspacker.w, 1.0f/shadowatlaspacker.h);
     if(ao)
     {
         if(tilemask || (editmode && fullbright) || drawtex)
         {
-            GLOBALPARAMF(aoscale, (0.0f, 0.0f));
-            GLOBALPARAMF(aoparams, (1.0f, 0.0f, 1.0f, 0.0f));
+            GLOBALPARAMF(aoscale, 0.0f, 0.0f);
+            GLOBALPARAMF(aoparams, 1.0f, 0.0f, 1.0f, 0.0f);
         }
         else
         {
             GLOBALPARAM(aoscale, aotex[2] ? vec2(1, 1) : vec2(float(aow)/vieww, float(aoh)/viewh));
-            GLOBALPARAMF(aoparams, (aomin, 1.0f-aomin, aosunmin, 1.0f-aosunmin));
+            GLOBALPARAMF(aoparams, aomin, 1.0f-aomin, aosunmin, 1.0f-aosunmin);
         }
     }
     float lightscale = 2.0f*ldrscaleb;
     if(editmode && fullbright)
-        GLOBALPARAMF(lightscale, (fullbrightlevel*lightscale, fullbrightlevel*lightscale, fullbrightlevel*lightscale, 255*lightscale));
+        GLOBALPARAMF(lightscale, fullbrightlevel*lightscale, fullbrightlevel*lightscale, fullbrightlevel*lightscale, 255*lightscale);
     else
-        GLOBALPARAMF(lightscale, (ambientcolor.x*lightscale*ambientscale, ambientcolor.y*lightscale*ambientscale, ambientcolor.z*lightscale*ambientscale, 255*lightscale));
+        GLOBALPARAMF(lightscale, ambientcolor.x*lightscale*ambientscale, ambientcolor.y*lightscale*ambientscale, ambientcolor.z*lightscale*ambientscale, 255*lightscale);
 
     bool sunpass = !lighttilebatch;
     if(sunlight && csmshadowmap)
@@ -2361,17 +2361,17 @@ void renderlights(float bsx1 = -1, float bsy1 = -1, float bsx2 = 1, float bsy2 =
         rh.bindparams();
         if(editmode && fullbright)
         {
-            GLOBALPARAMF(sunlightdir, (0, 0, 0));
-            GLOBALPARAMF(sunlightcolor, (0, 0, 0));
-            GLOBALPARAMF(giscale, (0));
-            GLOBALPARAMF(skylightcolor, (0, 0, 0));
+            GLOBALPARAMF(sunlightdir, 0, 0, 0);
+            GLOBALPARAMF(sunlightcolor, 0, 0, 0);
+            GLOBALPARAMF(giscale, 0);
+            GLOBALPARAMF(skylightcolor, 0, 0, 0);
         }
         else
         {
             GLOBALPARAM(sunlightdir, sunlightdir);
-            GLOBALPARAMF(sunlightcolor, (sunlightcolor.x*lightscale*sunlightscale, sunlightcolor.y*lightscale*sunlightscale, sunlightcolor.z*lightscale*sunlightscale));
-            GLOBALPARAMF(giscale, (2*giscale));
-            GLOBALPARAMF(skylightcolor, (2*giaoscale*skylightcolor.x*lightscale*skylightscale, 2*giaoscale*skylightcolor.y*lightscale*skylightscale, 2*giaoscale*skylightcolor.z*lightscale*skylightscale));
+            GLOBALPARAMF(sunlightcolor, sunlightcolor.x*lightscale*sunlightscale, sunlightcolor.y*lightscale*sunlightscale, sunlightcolor.z*lightscale*sunlightscale);
+            GLOBALPARAMF(giscale, 2*giscale);
+            GLOBALPARAMF(skylightcolor, 2*giaoscale*skylightcolor.x*lightscale*skylightscale, 2*giaoscale*skylightcolor.y*lightscale*skylightscale, 2*giaoscale*skylightcolor.z*lightscale*skylightscale);
         }
         if(!batchsunlight) sunpass = true;
     }
@@ -2980,11 +2980,11 @@ void radiancehints::renderslices()
     glBindFramebuffer_(GL_FRAMEBUFFER, rhfbo);
     glViewport(0, 0, rhgrid+2*rhborder, rhgrid+2*rhborder);
 
-    GLOBALPARAMF(rhatten, (1.0f/(gidist*gidist)));
-    GLOBALPARAMF(rsmspread, (gidist*rsmspread*rsm.scale.x, gidist*rsmspread*rsm.scale.y));
-    GLOBALPARAMF(rhaothreshold, (splits[0].bounds/rhgrid));
-    GLOBALPARAMF(rhaoatten, (1.0f/(gidist*rsmspread)));
-    GLOBALPARAMF(rhaoheight, (gidist*rsmspread));
+    GLOBALPARAMF(rhatten, 1.0f/(gidist*gidist));
+    GLOBALPARAMF(rsmspread, gidist*rsmspread*rsm.scale.x, gidist*rsmspread*rsm.scale.y);
+    GLOBALPARAMF(rhaothreshold, splits[0].bounds/rhgrid);
+    GLOBALPARAMF(rhaoatten, 1.0f/(gidist*rsmspread));
+    GLOBALPARAMF(rhaoheight, gidist*rsmspread);
 
     glmatrix rsmtcmatrix;
     rsmtcmatrix.identity();
@@ -3019,7 +3019,7 @@ void radiancehints::renderslices()
         splitinfo &split = splits[i];
 
         float cellradius = split.bounds/rhgrid, step = 2*cellradius;
-        GLOBALPARAMF(rhspread, (cellradius));
+        GLOBALPARAMF(rhspread, cellradius);
 
         vec cmin, cmax, bmin(1e16f, 1e16f, 1e16f), bmax(-1e16f, -1e16f, -1e16f), dmin(1e16f, 1e16f, 1e16f), dmax(-1e16f, -1e16f, -1e16f);
         loopk(3)
@@ -3040,9 +3040,9 @@ void radiancehints::renderslices()
 
         if(rhborder && i + 1 < rhsplits)
         {
-            GLOBALPARAMF(bordercenter, (0.5f, 0.5f, float(i+1 + 0.5f)/rhsplits));
-            GLOBALPARAMF(borderrange, (0.5f - 0.5f/(rhgrid+2), 0.5f - 0.5f/(rhgrid+2), (0.5f - 0.5f/(rhgrid+2))/rhsplits));
-            GLOBALPARAMF(borderscale, (rhgrid+2, rhgrid+2, (rhgrid+2)*rhsplits));
+            GLOBALPARAMF(bordercenter, 0.5f, 0.5f, float(i+1 + 0.5f)/rhsplits);
+            GLOBALPARAMF(borderrange, 0.5f - 0.5f/(rhgrid+2), 0.5f - 0.5f/(rhgrid+2), (0.5f - 0.5f/(rhgrid+2))/rhsplits);
+            GLOBALPARAMF(borderscale, rhgrid+2, rhgrid+2, (rhgrid+2)*rhsplits);
             splitinfo &next = splits[i+1];
             loopk(3)
             {
@@ -3230,7 +3230,7 @@ void renderradiancehints()
 
         shadowmatrix.mul(rsm.proj, rsm.model);
         GLOBALPARAM(rsmmatrix, shadowmatrix);
-        GLOBALPARAMF(rsmdir, (-rsm.lightview.x, -rsm.lightview.y, -rsm.lightview.z));
+        GLOBALPARAMF(rsmdir, -rsm.lightview.x, -rsm.lightview.y, -rsm.lightview.z);
 
         glViewport(0, 0, rsmsize, rsmsize);
         glClearColor(0, 0, 0, 0);
@@ -3536,7 +3536,7 @@ void rendertransparent()
         glClearColor(0, 0, 0, 0);
         glClear(GL_COLOR_BUFFER_BIT);
         if(scissor) glDisable(GL_SCISSOR_TEST);
-        GLOBALPARAMF(refractdepth, (1.0f/refractdepth));
+        GLOBALPARAMF(refractdepth, 1.0f/refractdepth);
         SETSHADER(refractmask);
         if(hasalphavas&4) renderrefractmask();
         if(hasmats&4) rendermaterialmask();
@@ -3731,10 +3731,10 @@ void preparegbuffer(bool depthclear)
     screenmatrix.setscale(0.5f*vieww, 0.5f*viewh, 0.5f);
     screenmatrix.mul(camprojmatrix);
 
-    GLOBALPARAMF(viewsize, (vieww, viewh, 1.0f/vieww, 1.0f/viewh));
-    GLOBALPARAMF(gdepthscale, (eyematrix.d.z, eyematrix.c.w, eyematrix.d.w));
-    GLOBALPARAMF(gdepthpackparams, (-1.0f/farplane, -255.0f/farplane, -(255.0f*255.0f)/farplane));
-    GLOBALPARAMF(gdepthunpackparams, (-farplane, -farplane/255.0f, -farplane/(255.0f*255.0f)));
+    GLOBALPARAMF(viewsize, vieww, viewh, 1.0f/vieww, 1.0f/viewh);
+    GLOBALPARAMF(gdepthscale, eyematrix.d.z, eyematrix.c.w, eyematrix.d.w);
+    GLOBALPARAMF(gdepthpackparams, -1.0f/farplane, -255.0f/farplane, -(255.0f*255.0f)/farplane);
+    GLOBALPARAMF(gdepthunpackparams, -farplane, -farplane/255.0f, -farplane/(255.0f*255.0f));
 
     GLERROR;
 }
@@ -3819,9 +3819,9 @@ void shademodelpreview(int x, int y, int w, int h, bool background, bool scissor
     GLOBALPARAM(worldmatrix, worldmatrix);
 
     float lightscale = 2.0f*ldrscale;
-    GLOBALPARAMF(lightscale, (0.1f*lightscale, 0.1f*lightscale, 0.1f*lightscale, lightscale));
+    GLOBALPARAMF(lightscale, 0.1f*lightscale, 0.1f*lightscale, 0.1f*lightscale, lightscale);
     GLOBALPARAM(sunlightdir, vec(0, -1, 2).normalize());
-    GLOBALPARAMF(sunlightcolor, (0.6f*lightscale, 0.6f*lightscale, 0.6f*lightscale));
+    GLOBALPARAMF(sunlightcolor, 0.6f*lightscale, 0.6f*lightscale, 0.6f*lightscale);
 
     SETSHADER(modelpreview);
 

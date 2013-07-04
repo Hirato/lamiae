@@ -271,11 +271,11 @@ void rendergrass()
     gle::enablecolor();
     gle::enabletexcoord0();
     gle::enablequads();
- 
+
     static Shader *grassshader = NULL;
     if(!grassshader) grassshader = lookupshaderbyname("grass");
 
-    GLOBALPARAMF(grasstest, (grasstest));
+    GLOBALPARAMF(grasstest, grasstest);
 
     int texid = -1, blend = -1;
     loopv(grassgroups)

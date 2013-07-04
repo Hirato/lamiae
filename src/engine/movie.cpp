@@ -942,7 +942,7 @@ namespace recorder
         videolock = SDL_CreateMutex();
         shouldencode = SDL_CreateCond();
         shouldread = SDL_CreateCond();
-        thread = SDL_CreateThread(videoencoder, "video encoder", NULL); 
+        thread = SDL_CreateThread(videoencoder, "video encoder", NULL);
         if(file->soundfrequency > 0) Mix_SetPostMix(soundencoder, NULL);
     }
 
@@ -981,7 +981,7 @@ namespace recorder
         shouldencode = shouldread = NULL;
         thread = NULL;
 
-        static const char *mesgs[] = { "ok", "stopped", "computer too slow", "file error"};
+        static const char * const mesgs[] = { "ok", "stopped", "computer too slow", "file error"};
         conoutf("movie recording halted: %s, %d frames", mesgs[state], file->videoframes);
 
         DELETEP(file);
@@ -1059,8 +1059,8 @@ namespace recorder
             }
             if(accelyuv)
             {
-                glBindFramebuffer_(GL_FRAMEBUFFER, encodefb); 
-                glBindTexture(GL_TEXTURE_RECTANGLE, scaletex[0]); 
+                glBindFramebuffer_(GL_FRAMEBUFFER, encodefb);
+                glBindTexture(GL_TEXTURE_RECTANGLE, scaletex[0]);
                 glViewport(0, 0, m.w/4, m.h); SETSHADER(moviey); screenquadflipped(m.w, m.h);
                 glViewport(m.w/4, 0, m.w/8, m.h/2); SETSHADER(movieu); screenquadflipped(m.w, m.h);
                 glViewport(m.w/4, m.h/2, m.w/8, m.h/2); SETSHADER(moviev); screenquadflipped(m.w, m.h);

@@ -432,9 +432,18 @@ static inline bool htcmp(const char *x, const char *y)
 struct stringslice
 {
     const char *str;
-    size_t len;
-    stringslice(const char *str, size_t len) : str(str), len(len) {}
+    int len;
+    stringslice() {}
+    stringslice(const char *str, int len) : str(str), len(len) {}
+    stringslice(const char *str, const char *end) : str(str), len(int(end-str)) {}
+
+    const char *end() const { return &str[len]; }
 };
+
+inline const char *stringptr(const char *s) { return s; }
+inline const char *stringptr(const stringslice &s) { return s.str; }
+inline int stringlen(const char *s) { return int(strlen(s)); }
+inline int stringlen(const stringslice &s) { return s.len; }
 
 static inline uint hthash(const stringslice &s)
 {
@@ -445,7 +454,7 @@ static inline uint hthash(const stringslice &s)
 
 static inline bool htcmp(const stringslice &x, const char *y)
 {
-    return x.len == strlen(y) && !memcmp(x.str, y, x.len);
+    return x.len == (int)strlen(y) && !memcmp(x.str, y, x.len);
 }
 
 static inline uint hthash(int key)
@@ -576,7 +585,7 @@ template <class T> struct vector
         uchar *newbuf = new uchar[alen*sizeof(T)];
         if(olen > 0)
         {
-            memcpy(newbuf, (void *)buf, olen*sizeof(T));
+            if(ulen > 0) memcpy(newbuf, (void *)buf, ulen*sizeof(T));
             delete[] (uchar *)buf;
         }
         buf = (T *)newbuf;
@@ -1230,8 +1239,9 @@ template <class T, int SIZE> struct queue
 
 inline char *newstring(size_t l)                { return new char[l+1]; }
 inline char *newstring(const char *s, size_t l) { return copystring(newstring(l), s, l+1); }
-inline char *newstring(const char *s)           { return newstring(s, strlen(s));          }
-inline char *newstringbuf(const char *s)        { return newstring(s, MAXSTRLEN-1);       }
+inline char *newstring(const char *s)           { return newstring(s, strlen(s)); }
+inline char *newstringbuf(const char *s)        { return newstring(s, MAXSTRLEN-1); }
+inline char *newstring(const stringslice &s)    { return newstring(s.str, s.len); }
 
 const int islittleendian = 1;
 #ifdef SDL_BYTEORDER

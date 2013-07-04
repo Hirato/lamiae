@@ -962,7 +962,7 @@ void renderparticles()
                     if(flags&PT_SOFT && softparticles)
                     {
                         particlesoftshader->setvariant(swizzle, 0);
-                        LOCALPARAMF(softparams, (-1.0f/softparticleblend, 0, 0));
+                        LOCALPARAMF(softparams, -1.0f/softparticleblend, 0, 0);
                     }
                     else if(flags&PT_NOTEX) particlenotextureshader->set();
                     else particleshader->setvariant(swizzle, 0);
@@ -971,7 +971,7 @@ void renderparticles()
                 {
                     float colorscale = ldrscale;
                     if(flags&PT_BRIGHT) colorscale *= particlebright;
-                    LOCALPARAMF(colorscale, (colorscale, colorscale, colorscale, 1));
+                    LOCALPARAMF(colorscale, colorscale, colorscale, colorscale, 1);
                 }
             }
             lastflags = flags;

@@ -178,10 +178,7 @@ struct md3 : vertmodel, vertloader<md3>
     bool loaddefaultparts()
     {
         const char *pname = parentdir(loadname);
-        part &mdl = *new part;
-        parts.add(&mdl);
-        mdl.model = this;
-        mdl.index = 0;
+        part &mdl = addpart();
         defformatstring(name1, "media/models/%s/tris.md3", loadname);
         mdl.meshes = sharemeshes(path(name1));
         if(!mdl.meshes)

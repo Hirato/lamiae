@@ -1,6 +1,6 @@
 // script binding functionality
 
-enum { VAL_NULL = 0, VAL_INT, VAL_FLOAT, VAL_STR, VAL_ANY, VAL_CODE, VAL_MACRO, VAL_IDENT, VAL_CSTR, VAL_CANY };
+enum { VAL_NULL = 0, VAL_INT, VAL_FLOAT, VAL_STR, VAL_ANY, VAL_CODE, VAL_MACRO, VAL_IDENT, VAL_CSTR, VAL_CANY, VAL_WORD };
 
 enum
 {
@@ -191,7 +191,8 @@ struct ident
     void getcval(tagval &v) const;
 };
 
-static inline bool htcmp(const char *key, const ident &id) { return !strcmp(key, id.name); }
+static inline bool htcmp(const char *key, const ident &id) { return htcmp(key, id.name); }
+static inline bool htcmp(const stringslice &key, const ident &id) { return htcmp(key, id.name); }
 
 extern void addident(ident *id);
 

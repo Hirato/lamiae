@@ -88,15 +88,15 @@ struct animmodel : model
 
         void setshaderparams(mesh *m, const animstate *as, bool masked, bool alphatested = false, bool skinned = true)
         {
-            GLOBALPARAMF(texscroll, (scrollu*lastmillis/1000.0f, scrollv*lastmillis/1000.0f));
-            if(alphatested) GLOBALPARAMF(alphatest, (alphatest));
+            GLOBALPARAMF(texscroll, scrollu*lastmillis/1000.0f, scrollv*lastmillis/1000.0f);
+            if(alphatested) GLOBALPARAMF(alphatest, alphatest);
 
             if(!skinned) return;
 
-            GLOBALPARAMF(transparent, (transparent));
+            GLOBALPARAMF(transparent, transparent);
 
-            if(fullbright) GLOBALPARAMF(fullbright, (0.0f, fullbright));
-            else GLOBALPARAMF(fullbright, (1.0f, as->cur.anim&ANIM_FULLBRIGHT ? 0.5f*fullbrightmodels/100.0f : 0.0f));
+            if(fullbright) GLOBALPARAMF(fullbright, 0.0f, fullbright);
+            else GLOBALPARAMF(fullbright, 1.0f, as->cur.anim&ANIM_FULLBRIGHT ? 0.5f*fullbrightmodels/100.0f : 0.0f);
 
             float curglow = glow;
             if(glowpulse > 0)
@@ -105,8 +105,8 @@ struct animmodel : model
                 curpulse -= floor(curpulse);
                 curglow += glowdelta*2*fabs(curpulse - 0.5f);
             }
-            GLOBALPARAMF(maskscale, (spec*lightmodels, curglow*glowmodels));
-            if(envmaptmu>=0 && envmapmax>0) GLOBALPARAMF(envmapscale, (envmapmin-envmapmax, envmapmax));
+            GLOBALPARAMF(maskscale, spec*lightmodels, curglow*glowmodels);
+            if(envmaptmu>=0 && envmapmax>0) GLOBALPARAMF(envmapscale, envmapmin-envmapmax, envmapmax);
         }
 
         Shader *loadshader(bool shouldenvmap, bool masked, bool alphatested)
@@ -535,7 +535,7 @@ struct animmodel : model
         int numanimparts;
         float pitchscale, pitchoffset, pitchmin, pitchmax;
 
-        part() : meshes(NULL), numanimparts(1), pitchscale(1), pitchoffset(0), pitchmin(0), pitchmax(0)
+        part(animmodel *model, int index = 0) : model(model), index(index), meshes(NULL), numanimparts(1), pitchscale(1), pitchoffset(0), pitchmin(0), pitchmax(0)
         {
             loopk(MAXANIMPARTS) anims[k] = NULL;
         }
@@ -547,6 +547,11 @@ struct animmodel : model
         virtual void cleanup()
         {
             if(meshes) meshes->cleanup();
+        }
+
+        void disablepitch()
+        {
+            pitchscale = pitchoffset = pitchmin = pitchmax = 0;
         }
 
         void calcbb(vec &bbmin, vec &bbmax, const matrix3x4 &m)
@@ -688,20 +693,28 @@ struct animmodel : model
                 animspec *spec = NULL;
                 if(anims[animpart])
                 {
-                    vector<animspec> &primary = anims[animpart][anim&ANIM_INDEX];
-                    if(&primary < &anims[animpart][game::numanims()] && primary.length()) spec = &primary[uint(varseed + basetime)%primary.length()];
+                    int primaryidx = anim&ANIM_INDEX;
+                    if(primaryidx < game::numanims())
+                    {
+                        vector<animspec> &primary = anims[animpart][primaryidx];
+                        if(primary.length()) spec = &primary[uint(varseed + basetime)%primary.length()];
+                    }
                     if((anim>>ANIM_SECONDARY)&(ANIM_INDEX|ANIM_DIR))
                     {
-                        vector<animspec> &secondary = anims[animpart][(anim>>ANIM_SECONDARY)&ANIM_INDEX];
-                        if(&secondary < &anims[animpart][game::numanims()] && secondary.length())
+                        int secondaryidx = (anim>>ANIM_SECONDARY)&ANIM_INDEX;
+                        if(secondaryidx < game::numanims())
                         {
-                            animspec &spec2 = secondary[uint(varseed + basetime2)%secondary.length()];
-                            if(!spec || spec2.priority > spec->priority)
+                            vector<animspec> &secondary = anims[animpart][secondaryidx];
+                            if(secondary.length())
                             {
-                                spec = &spec2;
-                                info.anim >>= ANIM_SECONDARY;
-                                info.basetime = basetime2;
-                            }
+                                animspec &spec2 = secondary[uint(varseed + basetime2)%secondary.length()];
+                                if(!spec || spec2.priority > spec->priority)
+                                {
+                                    spec = &spec2;
+                                    info.anim >>= ANIM_SECONDARY;
+                                    info.basetime = basetime2;
+                                }
+                             }
                         }
                     }
                 }
@@ -716,16 +729,14 @@ struct animmodel : model
 
             info.anim &= (1<<ANIM_SECONDARY)-1;
             info.anim |= anim&ANIM_FLAGS;
-            if((info.anim&ANIM_CLAMP) != ANIM_CLAMP)
+            if(info.anim&ANIM_LOOP)
             {
-                if(info.anim&(ANIM_LOOP|ANIM_START|ANIM_END))
+                info.anim &= ~ANIM_SETTIME;
+                if(!info.basetime) info.basetime = -((int)(size_t)d&0xFFF);
+
+                if(info.anim&ANIM_CLAMP)
                 {
-                    info.anim &= ~ANIM_SETTIME;
-                    if(!info.basetime) info.basetime = -((int)(size_t)d&0xFFF);
-                }
-                if(info.anim&(ANIM_START|ANIM_END))
-                {
-                    if(info.anim&ANIM_END) info.frame += info.range-1;
+                    if(info.anim&ANIM_REVERSE) info.frame += info.range-1;
                     info.range = 1;
                 }
             }
@@ -739,7 +750,7 @@ struct animmodel : model
             if(d && interp>=0)
             {
                 animinterpinfo &ai = d->animinterp[interp];
-                if((info.anim&ANIM_CLAMP)==ANIM_CLAMP) aitime = min(aitime, int(info.range*info.speed*0.5e-3f));
+                if((info.anim&(ANIM_LOOP|ANIM_CLAMP))==ANIM_CLAMP) aitime = min(aitime, int(info.range*info.speed*0.5e-3f));
                 void *ak = meshes->animkey();
                 if(d->ragdoll && !(anim&ANIM_RAGDOLL))
                 {
@@ -771,7 +782,7 @@ struct animmodel : model
 
         void intersect(int anim, int basetime, int basetime2, float pitch, const vec &axis, const vec &forward, dynent *d, const vec &o, const vec &ray, animstate *as)
         {
-            if(!(anim&ANIM_REUSE)) loopi(numanimparts)
+            if((anim&ANIM_REUSE) != ANIM_REUSE) loopi(numanimparts)
             {
                 animinfo info;
                 int interp = d && index+numanimparts<=MAXANIMPARTS ? index+i : -1, aitime = animationinterpolationtime;
@@ -822,7 +833,7 @@ struct animmodel : model
             intersectscale = resize;
             meshes->intersect(as, pitch, oaxis, oforward, d, this, oo, oray);
 
-            if(!(anim&ANIM_REUSE))
+            if((anim&ANIM_REUSE) != ANIM_REUSE)
             {
                 loopv(links)
                 {
@@ -857,7 +868,7 @@ struct animmodel : model
 
         void render(int anim, int basetime, int basetime2, float pitch, const vec &axis, const vec &forward, dynent *d, animstate *as)
         {
-            if(!(anim&ANIM_REUSE)) loopi(numanimparts)
+            if((anim&ANIM_REUSE) != ANIM_REUSE) loopi(numanimparts)
             {
                 animinfo info;
                 int interp = d && index+numanimparts<=MAXANIMPARTS ? index+i : -1, aitime = animationinterpolationtime;
@@ -922,7 +933,7 @@ struct animmodel : model
 
             meshes->render(as, pitch, oaxis, oforward, d, this);
 
-            if(!(anim&ANIM_REUSE))
+            if((anim&ANIM_REUSE) != ANIM_REUSE)
             {
                 loopv(links)
                 {
@@ -1275,6 +1286,13 @@ struct animmodel : model
     void cleanup()
     {
         loopv(parts) parts[i]->cleanup();
+    }
+
+    part &addpart()
+    {
+        part *p = new part(this, parts.length());
+        parts.add(p);
+        return *p;
     }
 
     void initmatrix(matrix3x4 &m)

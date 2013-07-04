@@ -1690,7 +1690,7 @@ static void setfog(int fogmat, float below = 0, float blend = 1, int abovemat = 
     curfogcolor.mul(ldrscale);
 
     GLOBALPARAM(fogcolor, curfogcolor);
-    GLOBALPARAMF(fogparams, (start, end, 1/(end - start)));
+    GLOBALPARAMF(fogparams, start, end, 1/(end - start));
 }
 
 static void blendfogoverlay(int fogmat, float below, float blend, vec &overlay)
@@ -1848,9 +1848,9 @@ void drawminimap()
 
     ldrscale = 1;
     ldrscaleb = ldrscale/255;
-    GLOBALPARAMF(ldrscale, (ldrscale));
+    GLOBALPARAMF(ldrscale, ldrscale);
     GLOBALPARAM(camera, camera1->o);
-    GLOBALPARAMF(millis, (lastmillis/1000.0f));
+    GLOBALPARAMF(millis, lastmillis/1000.0f);
 
     visiblecubes(false);
     collectlights();
@@ -1944,9 +1944,9 @@ void drawcubemap(int size, const vec &o, float yaw, float pitch, const cubemapsi
 
     ldrscale = 1;
     ldrscaleb = ldrscale/255;
-    GLOBALPARAMF(ldrscale, (ldrscale));
+    GLOBALPARAMF(ldrscale, ldrscale);
     GLOBALPARAM(camera, camera1->o);
-    GLOBALPARAMF(millis, (lastmillis/1000.0f));
+    GLOBALPARAMF(millis, lastmillis/1000.0f);
 
     visiblecubes();
     GLERROR;
@@ -2042,9 +2042,9 @@ namespace modelpreview
         ldrscale = 1;
         ldrscaleb = ldrscale/255;
 
-        GLOBALPARAMF(ldrscale, (ldrscale));
+        GLOBALPARAMF(ldrscale, ldrscale);
         GLOBALPARAM(camera, camera1->o);
-        GLOBALPARAMF(millis, (lastmillis/1000.0f));
+        GLOBALPARAMF(millis, lastmillis/1000.0f);
 
         projmatrix.perspective(fovy, aspect, nearplane, farplane);
         setcamprojmatrix();
@@ -2125,9 +2125,9 @@ void gl_drawframe(int w, int h)
 
     ldrscale = hdr ? 0.5f : 1;
     ldrscaleb = ldrscale/255;
-    GLOBALPARAMF(ldrscale, (ldrscale));
+    GLOBALPARAMF(ldrscale, ldrscale);
     GLOBALPARAM(camera, camera1->o);
-    GLOBALPARAMF(millis, (lastmillis/1000.0f));
+    GLOBALPARAMF(millis, lastmillis/1000.0f);
 
     visiblecubes();
 

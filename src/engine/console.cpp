@@ -572,7 +572,7 @@ static inline bool sortbinds(keym *x, keym *y)
 
 void writebinds(stream *f)
 {
-    static const char *cmds[3] = { "bind", "specbind", "editbind" };
+    static const char * const cmds[3] = { "bind", "specbind", "editbind" };
     vector<keym *> binds;
     enumerate(keyms, keym, km, binds.add(&km));
     binds.sort(sortbinds);
@@ -710,15 +710,13 @@ void complete(char *s, int maxlen, const char *cmdprefix)
     if(completesize)
     {
         char *end = strchr(&s[cmdlen], ' ');
-        if(end) f = completions.find(stringslice(&s[cmdlen], size_t(end-&s[cmdlen]+1)), NULL);
+        if(end) f = completions.find(stringslice(&s[cmdlen], int(end-&s[cmdlen])), NULL);
     }
 
     const char *nextcomplete = NULL;
     if(f) // complete using filenames
     {
         int commandsize = strchr(&s[cmdlen], ' ')+1-s;
-        cmdprefix = s;
-        cmdlen = commandsize;
         f->update();
         loopv(f->files)
         {
@@ -726,6 +724,8 @@ void complete(char *s, int maxlen, const char *cmdprefix)
                (!lastcomplete || strcmp(f->files[i], lastcomplete) > 0) && (!nextcomplete || strcmp(f->files[i], nextcomplete) < 0))
                 nextcomplete = f->files[i];
         }
+        cmdprefix = s;
+        cmdlen = commandsize;
     }
     else // complete using command names
     {
@@ -735,15 +735,14 @@ void complete(char *s, int maxlen, const char *cmdprefix)
                 nextcomplete = id.name;
         );
     }
+    DELETEA(lastcomplete);
     if(nextcomplete)
     {
         cmdlen = min(cmdlen, maxlen-1);
-        if(cmdprefix) memmove(s, cmdprefix, cmdlen);
+        if(cmdlen) memmove(s, cmdprefix, cmdlen);
         copystring(&s[cmdlen], nextcomplete, maxlen-cmdlen);
-        DELETEA(lastcomplete);
         lastcomplete = newstring(nextcomplete);
     }
-    else DELETEA(lastcomplete);
 }
 
 static inline bool sortcompletions(const char *x, const char *y)

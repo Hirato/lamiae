@@ -1725,8 +1725,9 @@ struct skelmodel : animmodel
 
         uchar *partmask;
 
-        skelpart() : buildingpartmask(NULL), partmask(NULL)
+        skelpart(animmodel *model, int index = 0) : part(model, index), buildingpartmask(NULL), partmask(NULL)
         {
+            disablepitch();
         }
 
         virtual ~skelpart()
@@ -1796,6 +1797,13 @@ struct skelmodel : animmodel
     }
 
     bool skeletal() const { return true; }
+
+    skelpart &addpart()
+    {
+        skelpart *p = new skelpart(this, parts.length());
+        parts.add(p);
+        return *p;
+    }
 };
 
 struct skeladjustment
@@ -1852,11 +1860,7 @@ template<class MDL> struct skelcommands : modelcommands<MDL, struct MDL::skelmes
     {
         if(!MDL::loading) { conoutf("not loading an %s", MDL::formatname()); return; }
         defformatstring(filename, "%s/%s", MDL::dir, meshfile);
-        part &mdl = *new part;
-        MDL::loading->parts.add(&mdl);
-        mdl.model = MDL::loading;
-        mdl.index = MDL::loading->parts.length()-1;
-        mdl.pitchscale = mdl.pitchoffset = mdl.pitchmin = mdl.pitchmax = 0;
+        part &mdl = MDL::loading->addpart();
         MDL::adjustments.setsize(0);
         mdl.meshes = MDL::loading->sharemeshes(path(filename), skelname[0] ? skelname : NULL, double(*smooth > 0 ? cos(clamp(*smooth, 0.0f, 180.0f)*RAD) : 2));
         if(!mdl.meshes) conoutf("could not load %s", filename);

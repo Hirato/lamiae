@@ -256,7 +256,7 @@ struct decalrenderer
 
             SETSWIZZLE(decal, tex);
             float colorscale = flags&DF_SATURATE ? 2 : 1;
-            LOCALPARAMF(colorscale, (colorscale, colorscale, colorscale, 1));
+            LOCALPARAMF(colorscale, colorscale, colorscale, colorscale, 1);
         }
 
         glBindTexture(GL_TEXTURE_2D, tex->id);
