@@ -41,7 +41,7 @@ void rpgobstacle::init(const char *base)
 	game::loadingrpgobstacle = this;
 	rpgscript::config->setref(this, true);
 
-	defformatstring(file)("%s/%s.cfg", game::datapath("obstacles"), base);
+	defformatstring(file, "%s/%s.cfg", game::datapath("obstacles"), base);
 	rpgexecfile(file);
 
 	game::loadingrpgobstacle = NULL;

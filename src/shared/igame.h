@@ -16,14 +16,14 @@ namespace entities
     extern void entradius(extentity &e, bool &color);
     extern bool mayattach(extentity &e);
     extern bool attachent(extentity &e, extentity &a);
-    extern bool printent(extentity &e, char *buf);
+    extern bool printent(extentity &e, char *buf, int len);
     extern extentity *newentity();
     extern void deleteentity(extentity *e);
     extern void clearents();
     extern vector<extentity *> &getents();
     extern bool dirent(extentity &e);
     extern bool radiusent(extentity &e);
-    extern void renderhelpertext(extentity &e, int &colour, vec &pos, string &tmp);
+    extern void renderhelpertext(extentity &e, vec &pos, char *buf, int len);
     extern const char *entmodel(const entity &e);
     extern float getentyaw(const entity &e);
     extern void animatemapmodel(const extentity &e, int &anim, int &basetime);

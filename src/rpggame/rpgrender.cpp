@@ -65,7 +65,7 @@ namespace game
 
 					if(DEBUG_ENT)
 					{
-						defformatstring(ds)("%p", curmap->objs[i]);
+						defformatstring(ds, "%p", curmap->objs[i]);
 						particle_textcopy(curmap->objs[i]->abovehead(), ds, PART_TEXT, 1, 0xFFFFFF, 4);
 					}
 				}
@@ -77,7 +77,7 @@ namespace game
 
 				if(DEBUG_PROJ)
 				{
-					defformatstring(ds)("%p", curmap->projs[i]);
+					defformatstring(ds, "%p", curmap->projs[i]);
 					vec pos = vec(0, 0, 6).add(curmap->projs[i]->o);
 					particle_textcopy(pos, ds, PART_TEXT, 1, 0xFFFFFF, 4);
 				}

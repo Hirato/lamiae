@@ -760,7 +760,7 @@ namespace camera
 		}
 
 		static string file;
-		formatstring(file)("%s/%s.cfg", game::datapath("cutscenes"), s);
+		formatstring(file, "%s/%s.cfg", game::datapath("cutscenes"), s);
 		cutscene = true;
 		cancel = false;
 		rpgexecfile(file);

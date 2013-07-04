@@ -795,7 +795,7 @@ void rpgchar::init(const char *base)
 	game::loadingrpgchar = this;
 	rpgscript::config->setref(this, true);
 
-	defformatstring(file)("%s/%s.cfg", game::datapath("critters"), base);
+	defformatstring(file, "%s/%s.cfg", game::datapath("critters"), base);
 	rpgexecfile(file);
 
 	game::loadingrpgchar = NULL;

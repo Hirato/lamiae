@@ -1013,7 +1013,7 @@ void stackdumper(unsigned int type, EXCEPTION_POINTERS *ep)
     EXCEPTION_RECORD *er = ep->ExceptionRecord;
     CONTEXT *context = ep->ContextRecord;
     string out, t;
-    formatstring(out)("Lamiae Win32 Exception: 0x%x [0x%x]\n\n", er->ExceptionCode, er->ExceptionCode==EXCEPTION_ACCESS_VIOLATION ? er->ExceptionInformation[1] : -1);
+    formatstring(out, "Lamiae Win32 Exception: 0x%x [0x%x]\n\n", er->ExceptionCode, er->ExceptionCode==EXCEPTION_ACCESS_VIOLATION ? er->ExceptionInformation[1] : -1);
 #ifdef _AMD64_
     STACKFRAME64 sf = {{context->Rip, 0, AddrModeFlat}, {}, {context->Rbp, 0, AddrModeFlat}, {context->Rsp, 0, AddrModeFlat}, 0};
     while(::StackWalk64(IMAGE_FILE_MACHINE_AMD64, GetCurrentProcess(), GetCurrentThread(), &sf, context, NULL, ::SymFunctionTableAccess, ::SymGetModuleBase, NULL))
@@ -1040,7 +1040,7 @@ void stackdumper(unsigned int type, EXCEPTION_POINTERS *ep)
 #endif
         {
             char *del = strrchr(line.FileName, '\\');
-            formatstring(t)("%s - %s [%d]\n", sym.Name, del ? del + 1 : line.FileName, line.LineNumber);
+            formatstring(t, "%s - %s [%d]\n", sym.Name, del ? del + 1 : line.FileName, line.LineNumber);
              concatstring(out, t);
          }
      }
@@ -1122,7 +1122,7 @@ VARFP(clockfix, 0, 0, 1, clockreset());
 void setdefaults()
 {
     execfile("config/defaults.cfg");
-    defformatstring(game)("config/%s/defaults.cfg", game::gameident());
+    defformatstring(game, "config/%s/defaults.cfg", game::gameident());
     execfile(game, false);
 }
 COMMAND(setdefaults, "");
@@ -1262,10 +1262,10 @@ int main(int argc, char **argv)
     logoutf("init: cfg");
     execfile("config/keymap.cfg");
     execfile("config/stdedit.cfg");
-    defformatstring(confname)("config/%s/std.cfg", game::gameident());
+    defformatstring(confname, "config/%s/std.cfg", game::gameident());
     execfile(confname, false);
 
-    formatstring(confname)("config/%s/sounds.cfg", game::gameident());
+    formatstring(confname, "config/%s/sounds.cfg", game::gameident());
     if(!execfile(confname, false))
         execfile("config/sounds.cfg");
 
@@ -1273,7 +1273,7 @@ int main(int argc, char **argv)
     execfile("mybrushes.cfg", false);
 
     execfile("config/ui.cfg");
-    formatstring(confname)("config/%s/ui.cfg", game::gameident());
+    formatstring(confname, "config/%s/ui.cfg", game::gameident());
     execfile(confname, false);
 
     if(game::savedservers()) execfile(game::savedservers(), false);
@@ -1281,7 +1281,7 @@ int main(int argc, char **argv)
     identflags |= IDF_PERSIST;
 
     initing = INIT_LOAD;
-    formatstring(confname)("config_%s.cfg", game::gameident());
+    formatstring(confname, "config_%s.cfg", game::gameident());
     if(!execfile(confname, false))
         setdefaults();
 
@@ -1291,7 +1291,7 @@ int main(int argc, char **argv)
     identflags &= ~IDF_PERSIST;
     initing = INIT_GAME;
 
-    formatstring(confname)("config/%s/game.cfg", game::gameident());
+    formatstring(confname, "config/%s/game.cfg", game::gameident());
     execfile(confname, false);
 
     initing = NOT_INITING;

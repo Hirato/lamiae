@@ -144,24 +144,36 @@ typedef char string[MAXSTRLEN];
 inline void vformatstring(char *d, const char *fmt, va_list v, int len = MAXSTRLEN) { _vsnprintf(d, len, fmt, v); d[len-1] = 0; }
 inline char *copystring(char *d, const char *s, size_t len = MAXSTRLEN) { strncpy(d, s, len); d[len-1] = 0; return d; }
 inline char *concatstring(char *d, const char *s, size_t len = MAXSTRLEN) { size_t used = strlen(d); return used < len ? copystring(d+used, s, len-used) : d; }
-
-struct stringformatter
+inline char *prependstring(char *d, const char *s, size_t len = MAXSTRLEN)
 {
-    char *buf;
-    stringformatter(char *buf): buf((char *)buf) {}
-    void operator()(const char *fmt, ...) PRINTFARGS(2, 3)
-    {
-        va_list v;
-        va_start(v, fmt);
-        vformatstring(buf, fmt, v);
-        va_end(v);
-    }
-};
+    size_t slen = min(strlen(s), len);
+    memmove(&d[slen], s, min(len - slen, strlen(d) + 1));
+    memcpy(d, s, slen);
+    d[len-1] = 0;
+    return d;
+}
+
+inline void nformatstring(char *d, int len, const char *fmt, ...) PRINTFARGS(3, 4);
+inline void nformatstring(char *d, int len, const char *fmt, ...)
+{
+    va_list v;
+    va_start(v, fmt);
+    vformatstring(d, fmt, v, len);
+    va_end(v);
+}
+
+template<size_t N> inline void formatstring(char (&d)[N], const char *fmt, ...) PRINTFARGS(2, 3);
+template<size_t N> inline void formatstring(char (&d)[N], const char *fmt, ...)
+{
+    va_list v;
+    va_start(v, fmt);
+    vformatstring(d, fmt, v, int(N));
+    va_end(v);
+}
 
 extern char *tempformatstring(const char *fmt, ...) PRINTFARGS(1, 2);
 
-#define formatstring(d) stringformatter((char *)d)
-#define defformatstring(d) string d; formatstring(d)
+#define defformatstring(d,...) string d; formatstring(d, __VA_ARGS__)
 #define defvformatstring(d,last,fmt) string d; { va_list ap; va_start(ap, last); vformatstring(d, fmt, ap); va_end(ap); }
 
 #define loopv(v)    for(int i = 0; i<(v).length(); i++)
@@ -415,6 +427,25 @@ static inline uint hthash(const char *key)
 static inline bool htcmp(const char *x, const char *y)
 {
     return !strcmp(x, y);
+}
+
+struct stringslice
+{
+    const char *str;
+    size_t len;
+    stringslice(const char *str, size_t len) : str(str), len(len) {}
+};
+
+static inline uint hthash(const stringslice &s)
+{
+    uint h = 5381;
+    loopi(s.len) h = ((h<<5)+h)^s.str[i];
+    return h;
+}
+
+static inline bool htcmp(const stringslice &x, const char *y)
+{
+    return x.len == strlen(y) && !memcmp(x.str, y, x.len);
 }
 
 static inline uint hthash(int key)
@@ -1039,27 +1070,32 @@ template<class K, class T> struct hashtable : hashset<hashtableentry<K, T> >
         return c->elem;
     }
 
-    T *access(const K &key)
+    template<class U>
+    T *access(const U &key)
     {
         HTFIND(key, &c->elem.data, NULL);
     }
 
-    T &access(const K &key, const T &data)
+    template<class U>
+    T &access(const U &key, const T &data)
     {
         HTFIND(key, c->elem.data, insert(key, h).data = data);
     }
 
-    T &operator[](const K &key)
+    template<class U>
+    T &operator[](const U &key)
     {
         HTFIND(key, c->elem.data, insert(key, h).data);
     }
 
-    T &find(const K &key, T &notfound)
+    template<class U>
+    T &find(const U &key, T &notfound)
     {
         HTFIND(key, c->elem.data, notfound);
     }
 
-    const T &find(const K &key, const T &notfound)
+    template<class U>
+    const T &find(const U &key, const T &notfound)
     {
         HTFIND(key, c->elem.data, notfound);
     }
@@ -1372,6 +1408,7 @@ extern void sendstring(const char *t, packetbuf &p);
 extern void sendstring(const char *t, vector<uchar> &p);
 extern void getstring(char *t, ucharbuf &p, int len);
 template<size_t N> static inline void getstring(char (&t)[N], ucharbuf &p) { getstring(t, p, int(N)); }
-extern void filtertext(char *dst, const char *src, bool whitespace = true, int len = sizeof(string)-1);
+extern void filtertext(char *dst, const char *src, bool whitespace, int len);
+template<size_t N> static inline void filtertext(char (&dst)[N], const char *src, bool whitespace = true) { filtertext(dst, src, whitespace, int(N)-1); }
 
 #endif

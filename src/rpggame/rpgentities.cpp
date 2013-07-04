@@ -190,7 +190,7 @@ namespace entities
 			break;
 		}
 		static string str;
-		formatstring(str)("%g %g %g", ret.x, ret.x, ret.z);
+		formatstring(str, "%g %g %g", ret.x, ret.x, ret.z);
 		result(str);
 	)
 
@@ -419,7 +419,7 @@ namespace entities
 		}
 	}
 
-	bool printent(extentity &e, char *buf)
+	bool printent(extentity &e, char *buf, int len)
 	{
 		return false;
 	}
@@ -442,20 +442,20 @@ namespace entities
 		}
 	}
 
-	void renderhelpertext(extentity &e, int &colour, vec &pos, string &tmp)
+	void renderhelpertext(extentity &e, vec &pos, char *buf, int len)
 	{
 		switch(e.type)
 		{
 			case TELEDEST:
 				pos.z += 3.0f;
-				formatstring(tmp)("Yaw: %i\nTag: %i",
+				nformatstring(buf, len, "Yaw: %i\nTag: %i",
 					e.attr[0],
 					e.attr[1]
 				);
 				break;
 			case JUMPPAD:
 				pos.z += 6.0f;
-				formatstring(tmp)("Z: %i\nY: %i\nX: %i\nRadius: %i",
+				nformatstring(buf, len, "Z: %i\nY: %i\nX: %i\nRadius: %i",
 					e.attr[0],
 					e.attr[1],
 					e.attr[2],
@@ -464,14 +464,14 @@ namespace entities
 				break;
 			case CHECKPOINT:
 				pos.z += 4.5f;
-				formatstring(tmp)("Yaw: %i\nTag: %i\nRadius: %i",
+				nformatstring(buf, len, "Yaw: %i\nTag: %i\nRadius: %i",
 					e.attr[0], e.attr[1], e.attr[2]
 				);
 				break;
 			case SPAWN:
 			{
 				pos.z += 4.5f;
-				formatstring(tmp)("Yaw: %i\nRadius: %i\nTag: %i",
+				nformatstring(buf, len, "Yaw: %i\nRadius: %i\nTag: %i",
 					e.attr[0],
 					e.attr[1],
 					e.attr[2]
@@ -481,7 +481,7 @@ namespace entities
 			case LOCATION:
 			{
 				pos.z += 3.0f;
-				formatstring(tmp)("Tag: %i\nRadius: %i",
+				nformatstring(buf, len, "Tag: %i\nRadius: %i",
 					e.attr[0],
 					e.attr[1]
 				);
@@ -489,14 +489,14 @@ namespace entities
 			}
 			case BLIP:
 				pos.z += 3.0f;
-				formatstring(tmp)("Texture?: %i\nTag: %i",
+				nformatstring(buf, len, "Texture?: %i\nTag: %i",
 					e.attr[0],
 					e.attr[1]
 				);
 				break;
 			case CAMERA:
 				pos.z += 6.0f;
-				formatstring(tmp)("Tag: %i\nYaw: %i\nPitch: %i\nRoll: %i",
+				nformatstring(buf, len, "Tag: %i\nYaw: %i\nPitch: %i\nRoll: %i",
 					e.attr[0],
 					e.attr[1],
 					e.attr[2],
@@ -509,13 +509,13 @@ namespace entities
 			case PLATFORM:
 			case TRIGGER:
 				pos.z += 1.5f;
-				formatstring(tmp)("Yaw: %i",
+				nformatstring(buf, len, "Yaw: %i",
 					e.attr[0]
 				);
 				break;
 			case ITEM:
 				pos.z += 3.0f;
-				formatstring(tmp)("Yaw: %i\nQuantity: %i",
+				nformatstring(buf, len, "Yaw: %i\nQuantity: %i",
 					e.attr[0],
 					max(1, e.attr[1])
 				);

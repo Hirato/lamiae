@@ -1657,7 +1657,7 @@ namespace rpgio
 
 	void loadgame(const char *name)
 	{
-		defformatstring(file)("%s/%s.sgz", game::datapath("saves"), name);
+		defformatstring(file, "%s/%s.sgz", game::datapath("saves"), name);
 		stream *f = opengzfile(file, "rb");
 
 		if(!f)
@@ -1803,7 +1803,7 @@ namespace rpgio
 		//this is to update things to a newer version if such changes are required
 		for(int v = hdr.gversion; v < game::gameversion; v++)
 		{
-			defformatstring(signal)("import %i", v);
+			defformatstring(signal, "import %i", v);
 			if(DEBUG_IO)
 				DEBUGF("the game is outdated, currently version %i - sending \"%s\" to do any needed changes", v, signal);
 			enumerate(*game::mapdata, mapinfo, map,
@@ -1826,7 +1826,7 @@ namespace rpgio
 			return;
 		}
 
-		defformatstring(file)("%s/%s.sgz.tmp", game::datapath("saves"), name);
+		defformatstring(file, "%s/%s.sgz.tmp", game::datapath("saves"), name);
 		stream *f = opengzfile(path(file), "wb");
 
 		if(!f)

@@ -162,7 +162,7 @@ static void compileglslshader(Shader &s, GLenum type, GLuint &obj, const char *d
                 case GL_FLOAT_VEC3: swizzle = ".rgb"; break;
                 case GL_FLOAT: swizzle = ".r"; break;
             }
-            formatstring(defs[i])("#define %s gl_FragData[%d]%s\n", d.name, d.loc, swizzle);
+            formatstring(defs[i], "#define %s gl_FragData[%d]%s\n", d.name, d.loc, swizzle);
             parts[numparts++] = defs[i];
         }
     }
@@ -671,9 +671,9 @@ static void gengenericvariant(Shader &s, const char *sname, const char *vs, cons
             memset(end, ' ', endlen);
         }
     }
-    defformatstring(varname)("<variant:%d,%d>%s", s.variants[row].length(), row, sname);
+    defformatstring(varname, "<variant:%d,%d>%s", s.variants[row].length(), row, sname);
     string reuse;
-    if(s.variants[row].length()) formatstring(reuse)("%d", row);
+    if(s.variants[row].length()) formatstring(reuse, "%d", row);
     else copystring(reuse, "");
     newshader(s.type, varname, vschanged ? vsv.getbuf() : reuse, pschanged ? psv.getbuf() : reuse, &s, row);
 }
@@ -693,7 +693,7 @@ static void genswizzle(Shader &s, const char *sname, const char *ps, int row = 0
     clen = strcspn(cname, "\r\n");
 
     string reuse;
-    if(s.variants[row].length()) formatstring(reuse)("%d", row);
+    if(s.variants[row].length()) formatstring(reuse, "%d", row);
     else copystring(reuse, "");
 
     loopi(2)
@@ -703,7 +703,7 @@ static void genswizzle(Shader &s, const char *sname, const char *ps, int row = 0
         pswz.put(cname, clen); pswz.put(" = ", 3); pswz.put(cname, clen); pswz.put(i ? ".rrrg;" : ".rrra;", 6);
         pswz.put(cname+clen, strlen(cname+clen)+1);
 
-        defformatstring(varname)("<variant:%d,%d>%s", s.variants[row].length(), row, sname);
+        defformatstring(varname, "<variant:%d,%d>%s", s.variants[row].length(), row, sname);
         newshader(s.type, varname, reuse, pswz.getbuf(), &s, row);
     }
 }
@@ -770,13 +770,13 @@ static void genuniformdefs(vector<char> &vsbuf, vector<char> &psbuf, const char 
     psbuf.put(ps, psmain - ps);
     if(variant) loopv(variant->defaultparams)
     {
-        defformatstring(uni)("\nuniform vec4 %s;\n", variant->defaultparams[i].name);
+        defformatstring(uni, "\nuniform vec4 %s;\n", variant->defaultparams[i].name);
         vsbuf.put(uni, strlen(uni));
         psbuf.put(uni, strlen(uni));
     }
     else loopv(slotparams)
     {
-        defformatstring(uni)("\nuniform vec4 %s;\n", slotparams[i].name);
+        defformatstring(uni, "\nuniform vec4 %s;\n", slotparams[i].name);
         vsbuf.put(uni, strlen(uni));
         psbuf.put(uni, strlen(uni));
     }
@@ -938,7 +938,7 @@ void shader(int *type, char *name, char *vs, char *ps)
 {
     if(lookupshaderbyname(name)) return;
 
-    defformatstring(info)("shader %s", name);
+    defformatstring(info, "shader %s", name);
     renderprogress(loadprogress, info);
     vector<char> vsbuf, psbuf, vsbak, psbak;
 #define GENSHADER(cond, body) \
@@ -972,12 +972,12 @@ void variantshader(int *type, char *name, int *row, char *vs, char *ps, int *max
     Shader *s = lookupshaderbyname(name);
     if(!s) return;
 
-    defformatstring(varname)("<variant:%d,%d>%s", s->variants[*row].length(), *row, name);
+    defformatstring(varname, "<variant:%d,%d>%s", s->variants[*row].length(), *row, name);
     if(*maxvariants > 0)
     {
         int numvariants = 0;
         loopi(MAXVARIANTROWS) numvariants += s->variants[i].length();
-        defformatstring(info)("shader %s", name);
+        defformatstring(info, "shader %s", name);
         renderprogress(numvariants / float(*maxvariants), info);
     }
     vector<char> vsbuf, psbuf, vsbak, psbak;
@@ -1387,7 +1387,7 @@ void reloadshaders()
     {
         if(!s.standard && !(s.type&(SHADER_DEFERRED|SHADER_INVALID)) && !s.variantshader)
         {
-            defformatstring(info)("shader %s", s.name);
+            defformatstring(info, "shader %s", s.name);
             renderprogress(0.0, info);
             if(!s.compile()) s.cleanup(true);
             loopi(MAXVARIANTROWS) loopvj(s.variants[i])
@@ -1449,7 +1449,7 @@ void setblurshader(int pass, int size, int radius, float *weights, float *offset
     Shader *&s = (target == GL_TEXTURE_RECTANGLE ? blurrectshader : blurshader)[radius-1][pass];
     if(!s)
     {
-        defformatstring(name)("blur%c%d%s", 'x'+pass, radius, target == GL_TEXTURE_RECTANGLE ? "rect" : "");
+        defformatstring(name, "blur%c%d%s", 'x'+pass, radius, target == GL_TEXTURE_RECTANGLE ? "rect" : "");
         s = lookupshaderbyname(name);
     }
     s->set();

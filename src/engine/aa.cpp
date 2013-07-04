@@ -178,7 +178,7 @@ void loadfxaashaders()
     if(fxaagreenluma || tqaa) opts[optslen++] = 'g';
     opts[optslen] = '\0';
 
-    defformatstring(fxaaname)("fxaa%d%s", fxaaquality, opts);
+    defformatstring(fxaaname, "fxaa%d%s", fxaaquality, opts);
     fxaashader = generateshader(fxaaname, "fxaashaders %d \"%s\"", fxaaquality, opts);
 }
 
@@ -255,10 +255,10 @@ void loadsmaashaders(bool split = false)
     }
     opts[optslen] = '\0';
 
-    defformatstring(lumaedgename)("SMAALumaEdgeDetection%d%s", smaaquality, opts);
-    defformatstring(coloredgename)("SMAAColorEdgeDetection%d%s", smaaquality, opts);
-    defformatstring(blendweightname)("SMAABlendingWeightCalculation%d%s", smaaquality, opts);
-    defformatstring(neighborhoodname)("SMAANeighborhoodBlending%d%s", smaaquality, opts);
+    defformatstring(lumaedgename, "SMAALumaEdgeDetection%d%s", smaaquality, opts);
+    defformatstring(coloredgename, "SMAAColorEdgeDetection%d%s", smaaquality, opts);
+    defformatstring(blendweightname, "SMAABlendingWeightCalculation%d%s", smaaquality, opts);
+    defformatstring(neighborhoodname, "SMAANeighborhoodBlending%d%s", smaaquality, opts);
     smaalumaedgeshader = lookupshaderbyname(lumaedgename);
     smaacoloredgeshader = lookupshaderbyname(coloredgename);
     smaablendweightshader = lookupshaderbyname(blendweightname);

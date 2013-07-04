@@ -1103,22 +1103,22 @@ void entset(tagval *args, int num)
     delete[] attrs;
 }
 
-void printent(extentity &e, char *buf)
+void printent(extentity &e, char *buf, int len)
 {
     switch(e.type)
     {
         case ET_PARTICLES:
-            if(printparticles(e, buf)) return;
+            if(printparticles(e, buf, len)) return;
             break;
         default:
-            if(e.type >= ET_GAMESPECIFIC && entities::printent(e, buf)) return;
+            if(e.type >= ET_GAMESPECIFIC && entities::printent(e, buf, len)) return;
             break;
     }
-    static string tmp;
     loopv(e.attr)
     {
-        formatstring(tmp)("%s%d", i ? " " : "", e.attr[i]);
-        concatstring(buf, tmp);
+        static string tmp;
+        formatstring(tmp, "%s%d", i ? " " : "", e.attr[i]);
+        concatstring(buf, tmp, len);
     }
 }
 
@@ -1148,8 +1148,8 @@ ICOMMAND(entloop,   "e", (uint *body), if(!noentedit()) addimplicit(groupeditloo
 ICOMMAND(insel,     "",  (), entfocus(efocus, intret(pointinsel(sel, e.o))));
 ICOMMAND(entget,    "",  (),
     entfocus(efocus,
-        defformatstring(s)("%s ", entities::entname(e.type));
-        printent(e, s);
+        defformatstring(s, "%s ", entities::entname(e.type));
+        printent(e, s, MAXSTRLEN);
         result(s)
     )
 );

@@ -211,7 +211,7 @@ static bool initidents()
     initedidents = true;
     for(int i = 0; i < MAXARGS; i++)
     {
-        defformatstring(argname)("arg%d", i+1);
+        defformatstring(argname, "arg%d", i+1);
         newident(argname, IDF_ARG);
     }
     dummyident = newident("//dummy", IDF_UNKNOWN);
@@ -238,8 +238,8 @@ static const char *debugline(const char *p, const char *fmt)
         if(p >= line && p <= end)
         {
             static string buf;
-            if(sourcefile) formatstring(buf)("%s:%d: %s", sourcefile, num, fmt);
-            else formatstring(buf)("%d: %s", num, fmt);
+            if(sourcefile) formatstring(buf, "%s:%d: %s", sourcefile, num, fmt);
+            else formatstring(buf, "%d: %s", num, fmt);
             return buf;
         }
         if(!*end) break;
@@ -2261,7 +2261,7 @@ bool execfile(const char *cfgfile, bool msg)
 	string s;
 	loopi(sizeof(paths)/sizeof(paths[0]))
 	{
-		formatstring(s)("%s%s", paths[i], cfgfile);
+		formatstring(s, "%s%s", paths[i], cfgfile);
 		char *buf = loadfile(path(s), NULL);
 		if(buf)
 		{
@@ -2353,7 +2353,7 @@ bool sortidents(ident *x, ident *y)
 
 void writecfg(const char *name)
 {
-    defformatstring(confname)("config_%s.cfg", game::gameident());
+    defformatstring(confname, "config_%s.cfg", game::gameident());
     stream *f = openutf8file(path((name && name[0]) ? name : confname, true), "w");
 
     if(!f) return;

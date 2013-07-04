@@ -102,7 +102,7 @@ namespace game
 // 			result("-1 -1");
 // 			return;
 // 		}
-// 		defformatstring(ret)("%i %i", hotkeys[*idx].base, hotkeys[*idx].use);
+// 		defformatstring(ret, "%i %i", hotkeys[*idx].base, hotkeys[*idx].use);
 // 		result(ret);
 // 	)
 //
@@ -112,7 +112,7 @@ namespace game
 // 	)
 //
 // 	ICOMMAND(hotkey_get_pending, "ii", (int *it, int *u),
-// 		defformatstring(str)("%i %i", pending.base, pending.use);
+// 		defformatstring(str, "%i %i", pending.base, pending.use);
 // 		result(str);
 // 	)
 //
@@ -127,9 +127,9 @@ namespace game
 		if(!mapdata || !subdir)
 			copystring(pth, "games");
 		else if(subdir[0])
-			formatstring(pth)("games/%s/%s", data, subdir);
+			formatstring(pth, "games/%s/%s", data, subdir);
 		else
-			formatstring(pth)("games/%s", data);
+			formatstring(pth, "games/%s", data);
 
 		return pth;
 	}
@@ -137,7 +137,7 @@ namespace game
 
 	ICOMMAND(include, "s", (const char *pth),
 		static string file;
-		formatstring(file)("%s/%s.cfg", datapath(), pth);
+		formatstring(file, "%s/%s.cfg", datapath(), pth);
 		rpgexecfile(file);
 	)
 
@@ -296,7 +296,7 @@ namespace game
 
 			if(!var) var = &objects[hash];
 			var->key = hash;
-			formatstring(file)("%s/%s.cfg", dir, files[i]);
+			formatstring(file, "%s/%s.cfg", dir, files[i]);
 			rpgexecfile(file);
 		}
 
@@ -350,7 +350,7 @@ namespace game
 			//the item is already registered...
 			const char *hash = files[i];
 			var = &objects[hash];
-			formatstring(file)("%s/%s.cfg", dir, files[i]);
+			formatstring(file, "%s/%s.cfg", dir, files[i]);
 
 			if(DEBUG_WORLD)
 				DEBUGF("initialising hash %s from \"%s\"", hash, file);
@@ -370,10 +370,10 @@ namespace game
 		if(!definitions)
 		{
 			if(DEBUG_WORLD) DEBUGF("loading variables");
-			formatstring(pth)("%s/variables.cfg", dir);
+			formatstring(pth, "%s/variables.cfg", dir);
 			rpgexecfile(pth);
 			if(DEBUG_WORLD) DEBUGF("loading tips");
-			formatstring(pth)("%s/tips.cfg", dir);
+			formatstring(pth, "%s/tips.cfg", dir);
 			rpgexecfile(pth);
 		}
 
@@ -390,43 +390,43 @@ namespace game
 
 		if(DEBUG_WORLD) DEBUGF("loading categories");
 		categories.deletearrays();
-		formatstring(pth)("%s/categories.cfg", dir);
+		formatstring(pth, "%s/categories.cfg", dir);
 		rpgexecfile(pth);
 		RANGECHECK(categories);
 
 		if(DEBUG_WORLD) DEBUGF("loading merchants");
-		formatstring(pth)("%s/merchants", dir);
+		formatstring(pth, "%s/merchants", dir);
 		loadassets(pth, loadingmerchant, merchants, clear);
 
 		if(DEBUG_WORLD) DEBUGF("loading scripts");
-		formatstring(pth)("%s/scripts", dir);
+		formatstring(pth, "%s/scripts", dir);
 		loadassets(pth, loadingscript, scripts, clear);
 		RANGECHECK(scripts);
 
 		if(DEBUG_WORLD) DEBUGF("loading particle effects");
-		formatstring(pth)("%s/effects", dir);
+		formatstring(pth, "%s/effects", dir);
 		loadassets(pth, loadingeffect, effects, clear);
 
 		if(DEBUG_WORLD) DEBUGF("loading statuses");
-		formatstring(pth)("%s/statuses", dir);
+		formatstring(pth, "%s/statuses", dir);
 		loadassets(pth, loadingstatusgroup, statuses, clear);
 
 		if(DEBUG_WORLD) DEBUGF("loading ammotypes");
-		formatstring(pth)("%s/ammo", dir);
+		formatstring(pth, "%s/ammo", dir);
 		loadassets(pth, loadingammotype, ammotypes, clear);
 
 		if(DEBUG_WORLD) DEBUGF("loading factions");
-		formatstring(pth)("%s/factions", dir);
+		formatstring(pth, "%s/factions", dir);
 		loadassets_2pass(pth, loadingfaction, factions, clear);
 		RANGECHECK(factions);
 
 		if(DEBUG_WORLD) DEBUGF("loading mapscripts");
-		formatstring(pth)("%s/mapscripts", dir);
+		formatstring(pth, "%s/mapscripts", dir);
 		loadassets(pth, loadingmapscript, mapscripts, clear);
 		RANGECHECK(mapscripts);
 
 		if(DEBUG_WORLD) DEBUGF("loading recipes");
-		formatstring(pth)("%s/recipes", dir);
+		formatstring(pth, "%s/recipes", dir);
 		loadassets(pth, loadingrecipe, recipes, clear);
 
 		reserved::load();
@@ -435,7 +435,7 @@ namespace game
 		{
 			if(DEBUG_WORLD) DEBUGF("loading player");
 			loadingrpgchar = player1;
-			formatstring(pth)("%s/player.cfg", dir);
+			formatstring(pth, "%s/player.cfg", dir);
 			rpgexecfile(pth);
 			loadingrpgchar = NULL;
 

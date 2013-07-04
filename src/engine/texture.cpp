@@ -1222,7 +1222,7 @@ SDL_Surface *loadsurface(const char *name)
     SDL_Surface *s = NULL;
     loopi(sizeof(exts)/sizeof(exts[0]))
     {
-        defformatstring(newname)("%s%s", name, exts[i]);
+        defformatstring(newname, "%s%s", name, exts[i]);
         stream *z = openzipfile(newname, "rb");
         if(z)
         {
@@ -1275,7 +1275,7 @@ static bool texturedata(ImageData &d, const char *tname, Slot::Tex *tex = NULL, 
         else file = tex->name;
 
         static string pname;
-        formatstring(pname)("media//%s", file);
+        formatstring(pname, "media//%s", file);
         file = path(pname);
     }
     else if(tname[0]=='<')
@@ -2033,7 +2033,7 @@ static void addname(vector<char> &key, Slot &slot, Slot::Tex &t, bool combined =
 {
     if(combined) key.add('&');
     if(prefix) { while(*prefix) key.add(*prefix++); }
-    defformatstring(tname)("media//%s", t.name);
+    defformatstring(tname, "media//%s", t.name);
     for(const char *s = path(tname); *s; key.add(*s++));
 }
 
@@ -2178,7 +2178,7 @@ Texture *loadthumbnail(Slot &slot)
     if(vslot.colorscale == vec(1, 1, 1)) addname(name, slot, slot.sts[0], false, "<thumbnail>");
     else
     {
-        defformatstring(prefix)("<thumbnail:%.2f/%.2f/%.2f>", vslot.colorscale.x, vslot.colorscale.y, vslot.colorscale.z);
+        defformatstring(prefix, "<thumbnail:%.2f/%.2f/%.2f>", vslot.colorscale.x, vslot.colorscale.y, vslot.colorscale.z);
         addname(name, slot, slot.sts[0], false, prefix);
     }
     int glow = -1;
@@ -2187,7 +2187,7 @@ Texture *loadthumbnail(Slot &slot)
         loopvj(slot.sts) if(slot.sts[j].type==TEX_GLOW) { glow = j; break; }
         if(glow >= 0)
         {
-            defformatstring(prefix)("<glow:%.2f/%.2f/%.2f>", vslot.glowcolor.x, vslot.glowcolor.y, vslot.glowcolor.z);
+            defformatstring(prefix, "<glow:%.2f/%.2f/%.2f>", vslot.glowcolor.x, vslot.glowcolor.y, vslot.glowcolor.z);
             addname(name, slot, slot.sts[glow], true, prefix);
         }
     }
@@ -2197,7 +2197,7 @@ Texture *loadthumbnail(Slot &slot)
         if(layer->colorscale == vec(1, 1, 1)) addname(name, *layer->slot, layer->slot->sts[0], true, "<layer>");
         else
         {
-            defformatstring(prefix)("<layer:%.2f/%.2f/%.2f>", layer->colorscale.x, layer->colorscale.y, layer->colorscale.z);
+            defformatstring(prefix, "<layer:%.2f/%.2f/%.2f>", layer->colorscale.x, layer->colorscale.y, layer->colorscale.z);
             addname(name, *layer->slot, layer->slot->sts[0], true, prefix);
         }
     }
@@ -2400,7 +2400,7 @@ Texture *cubemapload(const char *name, bool mipit, bool msg, bool transient)
     Texture *t = NULL;
     if(!strchr(pname, '*'))
     {
-        defformatstring(fname)("%s_*", pname);
+        defformatstring(fname, "%s_*", pname);
         t = cubemaploadwildcard(NULL, fname, mipit, false, transient);;
         if(!t && msg) conoutf(CON_ERROR, "could not load envmap %s", name);
     }
@@ -2761,7 +2761,7 @@ void gendds(char *infile, char *outfile)
 
     glHint(GL_TEXTURE_COMPRESSION_HINT, GL_NICEST);
 
-    defformatstring(cfile)("<compress>%s", infile);
+    defformatstring(cfile, "<compress>%s", infile);
     extern void reloadtex(char *name);
     Texture *t = textures.access(path(cfile));
     if(t) reloadtex(cfile);

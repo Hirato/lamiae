@@ -914,7 +914,7 @@ void renderparticles()
             if(type&PT_FLIP) concatstring(info, "f,");
             if(parts[i]->collide) concatstring(info, "c,");
             if(info[0]) info[strlen(info)-1] = '\0';
-            defformatstring(ds)("%d\t%s(%s) %s", parts[i]->count(), partnames[type&0xFF], info, title ? title : "");
+            defformatstring(ds, "%d\t%s(%s) %s", parts[i]->count(), partnames[type&0xFF], info, title ? title : "");
             draw_text(ds, FONTH, (i+n/2)*FONTH);
         }
         glDisable(GL_BLEND);
@@ -1289,7 +1289,7 @@ static void getpartprops(const entity &e, int &attr1, int &attr2, int &attr3, in
             dpp.num = 0;
 
             static string pcmd;
-            formatstring(pcmd)("particles_%i", e.attr[8]);
+            formatstring(pcmd, "particles_%i", e.attr[8]);
 
             char *ret = executestr(pcmd);
             if(ret)
@@ -1394,7 +1394,7 @@ static void makeparticles(entity &e)
         case 8:
             if(editmode || (game::showenthelpers() && showentities >= 1) || showentities==2) break;
 
-            defformatstring(aliasname)("part_text_%d", attr2);
+            defformatstring(aliasname, "part_text_%d", attr2);
             if(identexists(aliasname))
                 particle_textcopy(e.o, getalias(aliasname), PART_TEXT, 1, attr3 & 0xFFFFFF, attr4 > 0 ? attr4 : 200);
             break;
@@ -1425,32 +1425,32 @@ static void makeparticles(entity &e)
             break;
         default:
             if(editmode || e.attr[8]) return;
-            defformatstring(ds)("particles %d?", attr1);
+            defformatstring(ds, "particles %d?", attr1);
             particle_textcopy(e.o, ds, PART_TEXT, 1, 0x6496FF, 2.0f);
             break;
     }
 }
 
-bool printparticles(extentity &e, char *buf)
+bool printparticles(extentity &e, char *buf, int len)
 {
     switch(e.attr[0])
     {
         case 0: case 1: case 2: case 9: case 10: case 11: case 12: case 13: case 14: case 15:
         {
-            defformatstring(ds)("%d %d %d 0x%.6X %d %d %d %d %d", e.attr[0], e.attr[1], e.attr[2], e.attr[3], e.attr[4], e.attr[5], e.attr[6], e.attr[7], e.attr[8]);
-            concatstring(buf, ds);
+            defformatstring(ds, "%d %d %d 0x%.6X %d %d %d %d %d", e.attr[0], e.attr[1], e.attr[2], e.attr[3], e.attr[4], e.attr[5], e.attr[6], e.attr[7], e.attr[8]);
+            concatstring(buf, ds, len);
             return true;
         }
         case 5: case 8:
         {
-            defformatstring(ds)("%d %d 0x%.6X %d %d %d %d %d %d", e.attr[0], e.attr[1], e.attr[2], e.attr[3], e.attr[4], e.attr[5], e.attr[6], e.attr[7], e.attr[8]);
-            concatstring(buf, ds);
+            defformatstring(ds, "%d %d 0x%.6X %d %d %d %d %d %d", e.attr[0], e.attr[1], e.attr[2], e.attr[3], e.attr[4], e.attr[5], e.attr[6], e.attr[7], e.attr[8]);
+            concatstring(buf, ds, len);
             return true;
         }
         case 6: case 7:
         {
-            defformatstring(ds)("%d %d 0x%.6X 0x%.6X %d %d %d %d %d", e.attr[0], e.attr[1], e.attr[2], e.attr[3], e.attr[4], e.attr[5], e.attr[6], e.attr[7], e.attr[8]);
-            concatstring(buf, ds);
+            defformatstring(ds, "%d %d 0x%.6X 0x%.6X %d %d %d %d %d", e.attr[0], e.attr[1], e.attr[2], e.attr[3], e.attr[4], e.attr[5], e.attr[6], e.attr[7], e.attr[8]);
+            concatstring(buf, ds, len);
             return true;
         }
     }
@@ -1464,23 +1464,24 @@ void renderentinfo(int i)
     if(!entities::getents().inrange(i)) return;
     extentity &e = *entities::getents()[i];
     vec pos = e.o;
-    string ds, tmp;
-    // this works on the principle of concatenating strings, so null them first.
-    tmp[0] = ds[0] = '\0';
 
-    extern void printent(extentity &e, char *buf);
+    vector<char> ds;
+    if(ds.length() < 512) { ds.pad(512); ds.setsize(512); }
+    ds[0] = '\0';
+
+    extern void printent(extentity &e, char *buf, int len);
     int colour = 0xFFB600;
     pos.z += 1.5;
     if(!showenttext)
     {
-        printent(e, ds);
-        particle_textcopy(pos, ds, PART_TEXT, 1, colour, 2.0f);
+        printent(e, ds.getbuf(), ds.length());
+        particle_textcopy(pos, ds.getbuf(), PART_TEXT, 1, colour, 2.0f);
         return;
     }
 
 /*
     the format of the show ent stuff is like this
-    formatstring(ds)("long line of descriptions, newlines etc",
+    nformatstring(ds.getbuf(), ds.length(), "long line of descriptions, newlines etc",
         first level,
         second level,
         third level,
@@ -1495,7 +1496,7 @@ void renderentinfo(int i)
     {
         case ET_LIGHT:
             pos.z += 6;
-            formatstring(tmp)("Radius %i\n\fs\fRRed: %i\n\fJGreen: %i\n\fDBlue: %i\fr",
+            nformatstring(ds.getbuf(), ds.length(), "Radius %i\n\fs\fRRed: %i\n\fJGreen: %i\n\fDBlue: %i\fr",
                 e.attr[0],
                 e.attr[1],
                 e.attr[2],
@@ -1505,7 +1506,7 @@ void renderentinfo(int i)
 
         case ET_MAPMODEL:
             pos.z += 7.5;
-            formatstring(tmp)("Model: %s (%i)\nYaw: %i\nPitch: %i\nRoll: %i\nSize: %i",
+            nformatstring(ds.getbuf(), ds.length(), "Model: %s (%i)\nYaw: %i\nPitch: %i\nRoll: %i\nSize: %i",
                 mapmodelname(e.attr[0]), e.attr[0],
                 e.attr[1],
                 e.attr[2],
@@ -1515,12 +1516,12 @@ void renderentinfo(int i)
             break;
         case ET_PLAYERSTART:
             pos.z += 3.0;
-            formatstring(tmp)("Yaw: %i\nTag: %i", e.attr[0], e.attr[1]);
+            nformatstring(ds.getbuf(), ds.length(), "Yaw: %i\nTag: %i", e.attr[0], e.attr[1]);
             break;
 
         case ET_ENVMAP:
             pos.z += 4.5;
-            formatstring(tmp)("Radius: %i\nSize: %i (%i)\nBlur: %i (%i)",
+            nformatstring(ds.getbuf(), ds.length(), "Radius: %i\nSize: %i (%i)\nBlur: %i (%i)",
                 e.attr[0],
                 e.attr[1], e.attr[1] ? clamp(e.attr[1], 4, 9) : 0,
                 e.attr[2], e.attr[2] ? clamp(e.attr[2], 1, 2) : 0
@@ -1532,7 +1533,7 @@ void renderentinfo(int i)
             {
                 case 0:
                     pos.z += 13.5f;
-                    formatstring(tmp)("Type: Fire (0)\nRadius: %f\nHeight: %f\nColour: \fs\fR%i \fJ%i \fD%i\fr\nSize: %i\nSpeed: %i\nFade: %i\nGravity: %i\nTag: %i",
+                    nformatstring(ds.getbuf(), ds.length(), "Type: Fire (0)\nRadius: %f\nHeight: %f\nColour: \fs\fR%i \fJ%i \fD%i\fr\nSize: %i\nSpeed: %i\nFade: %i\nGravity: %i\nTag: %i",
                         //NULL,
                         e.attr[1] ? float(e.attr[1])/100.0f : 1.5f,
                         e.attr[2] ? float(e.attr[2])/100.0f : (e.attr[2] ? float(e.attr[2])/100.0f : 1.5f)/3,
@@ -1547,7 +1548,7 @@ void renderentinfo(int i)
                 case 1:
                 case 2:
                     pos.z += 13.5f;
-                    formatstring(tmp)("Type: %s (%i)\nRadius: %i\nHeight: %i\nColour: \fs\fR%i \fJ%i \fD%i\fr\nSize: %i\nSpeed: %i\nFade: %i\nGravity: %i\nTag: %i",
+                    nformatstring(ds.getbuf(), ds.length(), "Type: %s (%i)\nRadius: %i\nHeight: %i\nColour: \fs\fR%i \fJ%i \fD%i\fr\nSize: %i\nSpeed: %i\nFade: %i\nGravity: %i\nTag: %i",
                         e.attr[0]==1 ? "Flame" : "Smoke Plume", e.attr[0],
                         e.attr[1],
                         e.attr[2],
@@ -1563,7 +1564,7 @@ void renderentinfo(int i)
                 case 3:
                 case 4:
                     pos.z += 10.5f;
-                    formatstring(tmp)("Type: %s (%i)\nDirection: %i\nRadius: %i\nFade: %i\nSize: %i\nGravity: %i\nTag: %i",
+                    nformatstring(ds.getbuf(), ds.length(), "Type: %s (%i)\nDirection: %i\nRadius: %i\nFade: %i\nSize: %i\nGravity: %i\nTag: %i",
                         e.attr[0]==3 ? "Smoke" : "Fountain", e.attr[0],
                         e.attr[1],
                         e.attr[2],
@@ -1575,7 +1576,7 @@ void renderentinfo(int i)
                     break;
                 case 5:
                     pos.z += 10.5;
-                    formatstring(tmp)("Type: Explosion (5)\nSize: %i\nColour: \fs\fR%i \fJ%i \fD%i\fr\nTag: %i",
+                    nformatstring(ds.getbuf(), ds.length(), "Type: Explosion (5)\nSize: %i\nColour: \fs\fR%i \fJ%i \fD%i\fr\nTag: %i",
                         //NULL,
                         e.attr[1],
                         (e.attr[2] & 0xFF0000) >> 16, (e.attr[2] & 0xFF00) >> 8, e.attr[2] & 0xFF,
@@ -1585,7 +1586,7 @@ void renderentinfo(int i)
                 case 6:
                 case 7:
                     pos.z += 7.5;
-                    formatstring(tmp)("Type: Meter%s (%i)\nPercentage: %i\n1st Colour: \fs\fR%i \fJ%i \fD%i\fr\n2nd Colour: \fs\fR%i \fJ%i \fD%i\fr\nTag: %i",
+                    nformatstring(ds.getbuf(), ds.length(), "Type: Meter%s (%i)\nPercentage: %i\n1st Colour: \fs\fR%i \fJ%i \fD%i\fr\n2nd Colour: \fs\fR%i \fJ%i \fD%i\fr\nTag: %i",
                         e.attr[0]==7 ? " Versus" : "", e.attr[0],
                         e.attr[1],
                         (e.attr[2] & 0xFF0000) >> 16, (e.attr[2] & 0xFF00) >> 8, e.attr[2] & 0xFF,
@@ -1595,7 +1596,7 @@ void renderentinfo(int i)
                     break;
                 case 8:
                     pos.z += 7.5;
-                    formatstring(tmp)("Type: Text (8)\nTag: part_text_%i\nColour: \fs\fR%i \fJ%i \fD%i\fr\nSize %i\nTag: %i",
+                    nformatstring(ds.getbuf(), ds.length(), "Type: Text (8)\nTag: part_text_%i\nColour: \fs\fR%i \fJ%i \fD%i\fr\nSize %i\nTag: %i",
                         //NULL,
                         e.attr[1],
                         (e.attr[2] & 0xFF0000) >> 16, (e.attr[2] & 0xFF00) >> 8, e.attr[2] & 0xFF,
@@ -1613,7 +1614,7 @@ void renderentinfo(int i)
                 {
                     pos.z += 13.5f;
                     const static char *typenames[] = {"Flare", "Lightning", "Fire", "Smoke", "Water", "Snow", "Leaves"};
-                    formatstring(tmp)("Type: %s (%i)\n%s : %i\nLength: %i\nColour: \fs\fR%i \fJ%i \fD%i\fr\nFadetime w/%s collision: %i\nSize: %i\nVel: %i\nGravity: %i\nTag: %i",
+                    nformatstring(ds.getbuf(), ds.length(), "Type: %s (%i)\n%s : %i\nLength: %i\nColour: \fs\fR%i \fJ%i \fD%i\fr\nFadetime w/%s collision: %i\nSize: %i\nVel: %i\nGravity: %i\nTag: %i",
                         typenames[e.attr[0] - 9], e.attr[0],
                         e.attr[1] >= 256 ? "Effect" : "Direction", e.attr[1],
                         e.attr[2],
@@ -1627,14 +1628,12 @@ void renderentinfo(int i)
                     break;
                 }
 
-
-
                 case 32:
                 case 33:
                 case 34:
                 case 35:
                     pos.z += 9.0;
-                    formatstring(tmp)("Type: %sLens Flare w/%s Sparkle (%i)\n\fs\fRRed: %i\n\fJGreen: %i\n\fDBlue: %i\n\frSize: %i\nTag: %i",
+                    nformatstring(ds.getbuf(), ds.length(), "Type: %sLens Flare w/%s Sparkle (%i)\n\fs\fRRed: %i\n\fJGreen: %i\n\fDBlue: %i\n\frSize: %i\nTag: %i",
                         (e.attr[0]==32 || e.attr[0] == 33) ? "" : "Fixed-Size ", (e.attr[0]==32 || e.attr[0]==34) ? "o" : "", e.attr[0],
                         e.attr[1],
                         e.attr[2],
@@ -1646,14 +1645,14 @@ void renderentinfo(int i)
                 default:
                     if(e.attr[8]) break;
                     pos.z += 1.5;
-                    formatstring(tmp)("Invalid type: %i", e.attr[0]);
+                    nformatstring(ds.getbuf(), ds.length(), "Invalid type: %i", e.attr[0]);
                     break;
             }
             break;
 
         case ET_SOUND:
             pos.z += 4.5;
-            formatstring(tmp)("Index: %i\nRadius: %i\nListen Radius: %i",
+            nformatstring(ds.getbuf(), ds.length(), "Index: %i\nRadius: %i\nListen Radius: %i",
                 e.attr[0],
                 e.attr[1],
                 e.attr[2]
@@ -1662,20 +1661,17 @@ void renderentinfo(int i)
 
         case ET_SPOTLIGHT:
             pos.z += 1.5;
-            formatstring(tmp)("Angle: %i", e.attr[0]);
+            nformatstring(ds.getbuf(), ds.length(), "Angle: %i", e.attr[0]);
             break;
         default:
-            entities::renderhelpertext(e, colour, pos, tmp);
+            entities::renderhelpertext(e, pos, ds.getbuf(), ds.length());
             break;
     }
 
-    formatstring(ds)("%s%s",
-        tmp, tmp[0]=='\0' ? "" : "\n" /*prevents a newline on an empty tmp string*/
-    );
+    if(ds[0] != '\0') concatstring(ds.getbuf(), "\n", ds.length());
+    printent(e, ds.getbuf(), ds.length());
 
-    printent(e, ds);
-    //concatstring(ds, tmp);
-    particle_textcopy(pos, ds, PART_TEXT, 1, colour, 2.0f);
+    particle_textcopy(pos, ds.getbuf(), PART_TEXT, 1, colour, 2.0f);
 }
 
 struct editmarker //editmode markers :D
@@ -1777,8 +1773,8 @@ void updateparticles()
             extentity &e = *ents[entgroup[i]];
             if(e.type == ET_PARTICLES && e.attr[0] == 8)
             {
-                defformatstring(aliasname)("part_text_%d", e.attr[1]);
-                defformatstring(party_text)("particles:%s", getalias(aliasname));
+                defformatstring(aliasname, "part_text_%d", e.attr[1]);
+                defformatstring(party_text, "particles:%s", getalias(aliasname));
                 particle_textcopy(e.o, party_text, PART_TEXT, 1, e.attr[2] & 0xFFFFFF, e.attr[3] > 0 ? e.attr[3] : 200);
             }
             else
@@ -1792,8 +1788,8 @@ void updateparticles()
 
             if(e.type == ET_PARTICLES && e.attr[0] == 8)
             {
-                defformatstring(aliasname)("part_text_%d", e.attr[1]);
-                defformatstring(party_text)("particles:%s", getalias(aliasname));
+                defformatstring(aliasname, "part_text_%d", e.attr[1]);
+                defformatstring(party_text, "particles:%s", getalias(aliasname));
                 particle_textcopy(e.o, party_text, PART_TEXT, 1, e.attr[2] & 0xFFFFFF, e.attr[3] > 0 ? e.attr[3] : 200);
             }
             else

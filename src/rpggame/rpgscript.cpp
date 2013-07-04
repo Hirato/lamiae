@@ -1456,7 +1456,7 @@ namespace rpgscript
 
 	ICOMMAND(r_get_pos, "s", (const char *ref),
 		getreference(ref, ent, ent->getent(entidx), result("0 0 0"), r_get_pos)
-		static string s; formatstring(s)("%f %f %f", ent->getent(entidx)->o.x, ent->getent(entidx)->o.y, ent->getent(entidx)->o.z);
+		static string s; formatstring(s, "%f %f %f", ent->getent(entidx)->o.x, ent->getent(entidx)->o.y, ent->getent(entidx)->o.z);
 		result(s);
 	)
 
@@ -1972,7 +1972,7 @@ namespace rpgscript
 		status *s = (*seffects)[*idx];
 
 		//should we return mode specific details? ala rpgconfig.cpp::r_status_get_effect
-		defformatstring(str)("%i %i %i %i %f", s->type, s->strength, s->duration, s->remain, s->variance);
+		defformatstring(str, "%i %i %i %i %f", s->type, s->strength, s->duration, s->remain, s->variance);
 		result(str);
 	)
 

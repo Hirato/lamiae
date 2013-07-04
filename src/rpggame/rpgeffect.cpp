@@ -236,7 +236,7 @@ ICOMMAND(r_effect_emitline_pos, "sssffi", (const char *eff, const char *from, co
 	e->drawline(f, parsevec(to), *size, clamp(*style, (int)effect::PROJ, (int)effect::DEATH_PROLONG), curtime);
 
 	static string ret;
-	formatstring(ret)("%g %g %g", f.x, f.y, f.x);
+	formatstring(ret, "%g %g %g", f.x, f.y, f.x);
 	result(ret);
 )
 

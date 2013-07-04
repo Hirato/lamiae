@@ -86,7 +86,7 @@ void rpgplatform::init(const char *base)
 	game::loadingrpgplatform = this;
 	rpgscript::config->setref(this, true);
 
-	defformatstring(file)("%s/%s.cfg", game::datapath("platforms"), base);
+	defformatstring(file, "%s/%s.cfg", game::datapath("platforms"), base);
 	rpgexecfile(file);
 
 	game::loadingrpgplatform = NULL;

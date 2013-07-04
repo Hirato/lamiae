@@ -288,7 +288,7 @@ namespace ai
 		if(name && *name)
 			getmapfilenames(name);
 
-		defformatstring(wptname)("%s/%s.wpt", mpath, mname);
+		defformatstring(wptname, "%s/%s.wpt", mpath, mname);
 		path(wptname);
 
 		stream *f = opengzfile(wptname, "rb");
@@ -339,7 +339,7 @@ namespace ai
 		if(name && *name)
 			getmapfilenames(name);
 
-		defformatstring(wptname)("%s/%s.wpt", mpath, mname);
+		defformatstring(wptname, "%s/%s.wpt", mpath, mname);
 		path(wptname);
 
 		stream *f = opengzfile(wptname, "wb");
@@ -500,7 +500,7 @@ namespace ai
 			waypoint &w = waypoints[i];
 			if(w.o.dist(game::player1->o) > min(waypointdrawdist, maxparticledistance)) continue;
 
-			defformatstring(ds)("%i\n%i", i, w.links.length());
+			defformatstring(ds, "%i\n%i", i, w.links.length());
 			particle_textcopy(vec(0, 0, 6).add(w.o), ds, PART_TEXT, 1, 0xFF00FF, 3);
 
 			loopvj(w.links)

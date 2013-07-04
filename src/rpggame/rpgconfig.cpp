@@ -306,7 +306,7 @@ namespace game
 
 	#define VECNF(name, var, l1, l2, l3, h1, h2, h3, body) \
 		START(name, "fffN$", (float *x, float *y, float *z, int *numargs, ident *self), \
-			PREAMBLE(name, defformatstring(res)("%g %g %g", e->var.x, e->var.y, e->var.z);, result(res), printsvar(self, res)) \
+			PREAMBLE(name, defformatstring(res, "%g %g %g", e->var.x, e->var.y, e->var.z);, result(res), printsvar(self, res)) \
 			const vec res(*x, *y, *z); \
 			const vec vmin(h1, h2, h3); \
 			const vec vmax(l1, l2, l3); \
@@ -364,7 +364,7 @@ namespace game
 
 	#define VECNRO(name, var) \
 		START(name, "N$", (int *numargs, ident *self), \
-			PREAMBLE(name, defformatstring(res)("%g %g %g", e->var.x, e->var.y, e->var.z);, result(res), printsvar(self, res)) \
+			PREAMBLE(name, defformatstring(res, "%g %g %g", e->var.x, e->var.y, e->var.z);, result(res), printsvar(self, res)) \
 			conoutf(CON_WARN, #name " is read-only"); \
 		)
 
@@ -714,24 +714,24 @@ namespace game
 			case STATUS_LIGHT:
 			{
 				status_light  *ls = (status_light *) s;
-				formatstring(str)("%i %i %i %f %f %f %f", STATUS_LIGHT, s->strength, s->duration, s->variance, ls->colour.x, ls->colour.y, ls->colour.z);
+				formatstring(str, "%i %i %i %f %f %f %f", STATUS_LIGHT, s->strength, s->duration, s->variance, ls->colour.x, ls->colour.y, ls->colour.z);
 				break;
 			}
 			case STATUS_POLYMORPH:
 			{
 				status_polymorph *ps = (status_polymorph *) s;
-				formatstring(str)("%i %i %i %f \"%s\"", STATUS_POLYMORPH, s->strength, s->duration, s->variance, ps->mdl);
+				formatstring(str, "%i %i %i %f \"%s\"", STATUS_POLYMORPH, s->strength, s->duration, s->variance, ps->mdl);
 				break;
 			}
 			case STATUS_SIGNAL:
 			{
 				status_signal *ss = (status_signal *) s;
-				formatstring(str)("%i %i %i %f \"%s\"", s->type, s->strength, s->duration, s->variance, ss->signal);
+				formatstring(str, "%i %i %i %f \"%s\"", s->type, s->strength, s->duration, s->variance, ss->signal);
 				break;
 			}
 			case STATUS_SCRIPT: //return script?
 			default:
-				formatstring(str)("%i %i %i %f", s->type, s->strength, s->duration, s->variance);
+				formatstring(str, "%i %i %i %f", s->type, s->strength, s->duration, s->variance);
 				break;
 		}
 		result(str);
@@ -967,7 +967,7 @@ namespace game
 			result("-1 0");
 			return;
 		}
-		defformatstring(str)("\"%s\" %i", e->ingredients[*idx].base, e->ingredients[*idx].quantity);
+		defformatstring(str, "\"%s\" %i", e->ingredients[*idx].base, e->ingredients[*idx].quantity);
 		result(str);
 	)
 
@@ -978,7 +978,7 @@ namespace game
 			result("-1 0");
 			return;
 		}
-		defformatstring(str)("\"%s\" %i", e->catalysts[*idx].base, e->catalysts[*idx].quantity);
+		defformatstring(str, "\"%s\" %i", e->catalysts[*idx].base, e->catalysts[*idx].quantity);
 		result(str);
 	)
 
@@ -989,7 +989,7 @@ namespace game
 			result("-1 0");
 			return;
 		}
-		defformatstring(str)("\"%s\" %i", e->products[*idx].base, e->products[*idx].quantity);
+		defformatstring(str, "\"%s\" %i", e->products[*idx].base, e->products[*idx].quantity);
 		result(str);
 	)
 

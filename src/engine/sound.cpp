@@ -219,7 +219,7 @@ void startmusic(char *name, char *cmd)
         {
             loopj(sizeof(exts)/sizeof(exts[0]))
             {
-                formatstring(sn)("%s%s%s", paths[i], name, exts[j]);
+                formatstring(sn, "%s%s%s", paths[i], name, exts[j]);
                 if(dbgmusic) conoutf("trying path: %s", sn);
                 const char *file = path(sn);
                 if(loadmusic(file))
@@ -486,7 +486,7 @@ static bool loadsoundslot(soundslot &slot, bool msg = false)
     string filename;
     loopi(sizeof(exts)/sizeof(exts[0]))
     {
-        formatstring(filename)("media/sounds/%s%s", slot.sample->name, exts[i]);
+        formatstring(filename, "media/sounds/%s%s", slot.sample->name, exts[i]);
         if(msg && !i) renderprogress(0, filename);
         path(filename);
         slot.sample->chunk = loadwav(filename);
@@ -639,7 +639,7 @@ ICOMMAND(playsound, "i", (int *n), playsound(*n));
 
 ICOMMAND(entsoundname, "i", (int *id),
     if(mapsounds.inrange(*id))
-    {defformatstring(s)("%s", mapslots[mapsounds[*id].slots].sample->name); result(s);}
+    {defformatstring(s, "%s", mapslots[mapsounds[*id].slots].sample->name); result(s);}
 );
 
 void writemapsounds(stream *f)
@@ -753,7 +753,7 @@ void initmumble()
             if(mumbleinfo) wcsncpy(mumbleinfo->name, L"Lamiae", 256);
         }
     #elif defined(_POSIX_SHARED_MEMORY_OBJECTS)
-        defformatstring(shmname)("/MumbleLink.%d", getuid());
+        defformatstring(shmname, "/MumbleLink.%d", getuid());
         mumblelink = shm_open(shmname, O_RDWR, 0);
         if(mumblelink >= 0)
         {

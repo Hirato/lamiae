@@ -553,7 +553,7 @@ extern int renderconsole(int w, int h, int abovehud);
 extern void conoutf(const char *s, ...) PRINTFARGS(1, 2);
 extern void conoutf(int type, const char *s, ...) PRINTFARGS(2, 3);
 extern void resetcomplete();
-extern void complete(char *s, const char *cmdprefix);
+extern void complete(char *s, int maxlen, const char *cmdprefix);
 const char *getkeyname(int code);
 extern const char *addreleaseaction(char *s);
 extern void writebinds(stream *f);
@@ -659,7 +659,7 @@ extern void clearparticleemitters();
 extern void seedparticles();
 extern void updateparticles();
 extern void renderparticles();
-extern bool printparticles(extentity &e, char *buf);
+extern bool printparticles(extentity &e, char *buf, int len);
 
 // decal
 extern void initdecals();

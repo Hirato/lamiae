@@ -62,12 +62,12 @@ void setmapfilenames(const char *fname)
 {
     getmapfilenames(fname);
 
-    formatstring(ogzname)("%s%s.ogz", mpath, mname);
-    if(savebak==1) formatstring(bakname)("%s%s.BAK", mpath, mname);
-    else formatstring(bakname)("%s%s_%d.BAK", mpath, mname, totalmillis);
-    formatstring(mcfname)("%s%s.cfg", mpath, mname);
-    formatstring(acfname)("%s%s-art.cfg", mpath, mname);
-    formatstring(picname)("%s%s", mpath, mname);
+    formatstring(ogzname, "%s%s.ogz", mpath, mname);
+    if(savebak==1) formatstring(bakname, "%s%s.BAK", mpath, mname);
+    else formatstring(bakname, "%s%s_%d.BAK", mpath, mname, totalmillis);
+    formatstring(mcfname, "%s%s.cfg", mpath, mname);
+    formatstring(acfname, "%s%s-art.cfg", mpath, mname);
+    formatstring(picname, "%s%s", mpath, mname);
 
     path(ogzname);
     path(bakname);
@@ -78,7 +78,7 @@ void setmapfilenames(const char *fname)
 
 void mapcfgname()
 {
-    defformatstring(res)("%s%s.cfg", mpath, mname);
+    defformatstring(res, "%s%s.cfg", mpath, mname);
     path(res);
     result(res);
 }
@@ -424,8 +424,8 @@ void writemapcfg()
     if (savebak)
     {
         string bak;
-        if(savebak == 1) formatstring(bak)("%s%s.cfg.BAK", mpath, mname);
-        else formatstring(bak)("%s%s_%d.cfg.BAK", mpath, mname, totalmillis);
+        if(savebak == 1) nformatstring(bak, MAXSTRLEN, "%s%s.cfg.BAK", mpath, mname);
+        else nformatstring(bak, MAXSTRLEN, "%s%s_%d.cfg.BAK", mpath, mname, totalmillis);
         backup(acfname, bak);
     }
     stream *f = openutf8file(path(acfname, true), "w");
@@ -1361,11 +1361,11 @@ ICOMMAND(exportocta, "s", (char *mname), save_world(mname, false, true););
 
 void writeobj(char *name)
 {
-    defformatstring(fname)("%s.obj", name);
+    defformatstring(fname, "%s.obj", name);
     stream *f = openfile(path(fname), "w");
     if(!f) return;
     f->printf("# obj file of Cube 2 level\n\n");
-    defformatstring(mtlname)("%s.mtl", name);
+    defformatstring(mtlname, "%s.mtl", name);
     path(mtlname);
     f->printf("mtllib %s\n\n", mtlname);
     extern vector<vtxarray *> valist;

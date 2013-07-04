@@ -1214,7 +1214,7 @@ struct skelmodel : animmodel
             int &offset = blendoffsets.access(Shader::lastshader->program, -1);
             if(offset < 0)
             {
-                defformatstring(offsetname)("%s[%d]", u.name, (usematskel ? 3 : 2)*numgpubones);
+                defformatstring(offsetname, "%s[%d]", u.name, (usematskel ? 3 : 2)*numgpubones);
                 offset = glGetUniformLocation_(Shader::lastshader->program, offsetname);
             }
             return offset;
@@ -1851,7 +1851,7 @@ template<class MDL> struct skelcommands : modelcommands<MDL, struct MDL::skelmes
     static void loadpart(char *meshfile, char *skelname, float *smooth)
     {
         if(!MDL::loading) { conoutf("not loading an %s", MDL::formatname()); return; }
-        defformatstring(filename)("%s/%s", MDL::dir, meshfile);
+        defformatstring(filename, "%s/%s", MDL::dir, meshfile);
         part &mdl = *new part;
         MDL::loading->parts.add(&mdl);
         mdl.model = MDL::loading;
@@ -1933,7 +1933,7 @@ template<class MDL> struct skelcommands : modelcommands<MDL, struct MDL::skelmes
         if(!MDL::loading || MDL::loading->parts.empty()) { conoutf("\frnot loading an %s", MDL::formatname()); return; }
         part &mdl = *(part *)MDL::loading->parts.last();
         if(!mdl.meshes) return;
-        defformatstring(filename)("%s/%s", MDL::dir, animfile);
+        defformatstring(filename, "%s/%s", MDL::dir, animfile);
         animspec *sa = ((meshgroup *)mdl.meshes)->loadanim(path(filename));
         if(!sa) { conoutf("\frcould not load %s anim file %s", MDL::formatname(), filename); return; }
         skeleton *skel = ((meshgroup *)mdl.meshes)->skel;
@@ -1993,7 +1993,7 @@ template<class MDL> struct skelcommands : modelcommands<MDL, struct MDL::skelmes
         {
             part *p = (part *)MDL::loading->parts.last();
             if(!p->meshes) return;
-            defformatstring(filename)("%s/%s", MDL::dir, animfile);
+            defformatstring(filename, "%s/%s", MDL::dir, animfile);
             animspec *sa = ((meshgroup *)p->meshes)->loadanim(path(filename));
             if(!sa) conoutf("could not load %s anim file %s", MDL::formatname(), filename);
             else loopv(anims)

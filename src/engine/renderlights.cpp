@@ -97,7 +97,7 @@ Shader *loadbilateralshader(int pass)
     if(aopackdepth) opts[optslen++] = 'p';
     opts[optslen] = '\0';
 
-    defformatstring(name)("bilateral%c%s%d", 'x' + pass, opts, aobilateral);
+    defformatstring(name, "bilateral%c%s%d", 'x' + pass, opts, aobilateral);
     return generateshader(name, "bilateralshader \"%s\" %d", opts, aobilateral);
 }
 
@@ -132,7 +132,7 @@ Shader *loadambientobscuranceshader()
     if(aobilateral && aopackdepth) opts[optslen++] = 'p';
     opts[optslen] = '\0';
 
-    defformatstring(name)("ambientobscurance%s%d", opts, aotaps);
+    defformatstring(name, "ambientobscurance%s%d", opts, aotaps);
     return generateshader(name, "ambientobscuranceshader \"%s\" %d", opts, aotaps);
 }
 
@@ -1290,7 +1290,7 @@ static Shader *radiancehintsshader = NULL;
 
 Shader *loadradiancehintsshader()
 {
-    defformatstring(name)("radiancehints%d", rhtaps);
+    defformatstring(name, "radiancehints%d", rhtaps);
     return generateshader(name, "radiancehintsshader %d", rhtaps);
 }
 
@@ -2134,7 +2134,7 @@ Shader *loaddeferredlightshader(const char *type = NULL)
     }
     sun[sunlen] = '\0';
 
-    defformatstring(name)("deferredlight%s%s%s", common, shadow, sun);
+    defformatstring(name, "deferredlight%s%s%s", common, shadow, sun);
     return generateshader(name, "deferredlightshader \"%s\" \"%s\" \"%s\" %d %d", common, shadow, sun, usecsm, userh);
 }
 
@@ -2144,7 +2144,7 @@ void loaddeferredlightshaders()
     {
         string opts;
         if(hasMSS) copystring(opts, "MS");
-        else formatstring(opts)((msaadepthstencil && hasDS) || msaastencil || !msaaedgedetect ? "MR%d" : "MRT%d", msaasamples);
+        else formatstring(opts, (msaadepthstencil && hasDS) || msaastencil || !msaaedgedetect ? "MR%d" : "MRT%d", msaasamples);
         deferredmsaasampleshader = loaddeferredlightshader(opts);
         deferredmsaapixelshader = loaddeferredlightshader("M");
         deferredlightshader = deferredmsaapixelshader;

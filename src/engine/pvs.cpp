@@ -862,7 +862,7 @@ static void show_genpvs_progress(int unique = pvs.length(), int processed = numv
 {
     float bar1 = float(processed) / float(totalviewcells>0 ? totalviewcells : 1);
 
-    defformatstring(text1)("%.2f%% - %d of %d view cells (%d unique)", bar1 * 100, processed, totalviewcells, unique);
+    defformatstring(text1, "%.2f%% - %d of %d view cells (%d unique)", bar1 * 100, processed, totalviewcells, unique);
 
     renderprogress(bar1, text1);
 

@@ -44,7 +44,7 @@ void item::init(const char *base, bool world)
 	this->base = game::queryhashpool(base);
 	game::loadingitem = this;
 
-	defformatstring(file)("%s/%s.cfg", game::datapath("items"), base);
+	defformatstring(file, "%s/%s.cfg", game::datapath("items"), base);
 	rpgexecfile(file);
 
 	game::loadingitem = NULL;
