@@ -16,8 +16,12 @@
 					<Add directory="../rpggame" />
 				</Compiler>
 				<Linker>
+					<Add option="-m32" />
 					<Add directory="../lib" />
 				</Linker>
+				<Environment>
+					<Variable name="WINDRES_TARGET" value="pe-i386" />
+				</Environment>
 			</Target>
 			<Target title="64bit release">
 				<Option output="../../binw64/lamiae.exe" prefix_auto="0" extension_auto="0" />
@@ -30,8 +34,12 @@
 					<Add directory="../rpggame" />
 				</Compiler>
 				<Linker>
+					<Add option="-m64" />
 					<Add directory="../lib64" />
 				</Linker>
+				<Environment>
+					<Variable name="WINDRES_TARGET" value="pe-x86-64" />
+				</Environment>
 			</Target>
 		</Build>
 		<VirtualTargets>
@@ -258,9 +266,11 @@
 		<Unit filename="../shared/zip.cpp" />
 		<Unit filename="resources/lamiae.rc">
 			<Option compilerVar="WINDRES" />
+			<Option compiler="gcc" use="1" buildCommand="$rescomp -F $WINDRES_TARGET -i $file -J rc -o $resource_output -O coff $res_includes" />
 		</Unit>
 		<Unit filename="resources/mingw.rc">
 			<Option compilerVar="WINDRES" />
+			<Option compiler="gcc" use="1" buildCommand="$rescomp -F $WINDRES_TARGET -i $file -J rc -o $resource_output -O coff $res_includes" />
 		</Unit>
 		<Extensions>
 			<code_completion />
