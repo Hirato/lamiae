@@ -32,9 +32,8 @@ bool getentboundingbox(extentity &e, ivec &o, ivec &r)
 
                 o = e.o;
                 o.add(center);
-                r = radius;
+                r = radius.max(entselradius);
                 r.add(1);
-                r.max(entselradius);
                 o.sub(r);
                 r.mul(2);
                 break;

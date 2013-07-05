@@ -98,7 +98,7 @@ void freechannel(int n)
     if(!channels.inrange(n) || !channels[n].inuse) return;
     soundchannel &chan = channels[n];
     chan.inuse = false;
-    if(chan.ent) chan.ent->flags &= EF_SOUND;
+    if(chan.ent) chan.ent->flags &= ~EF_SOUND;
 }
 
 void syncchannel(soundchannel &chan)
