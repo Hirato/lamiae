@@ -76,6 +76,8 @@ namespace game
     extern int numdynents();
     extern void rendergame();
     extern void renderavatar();
+    extern const int numanims();
+    extern void findanims(const char *pattern, vector<int> &anims);
     extern void writegamedata(vector<uchar> &extras);
     extern void readgamedata(vector<uchar> &extras);
     extern int clipconsole(int w, int h);
@@ -93,9 +95,6 @@ namespace game
     //return false if you do not wish to override the associated code in game - return true otherwise
     extern bool mousemove(int &dx, int &dy, float &cursens);
     extern bool recomputecamera(physent *&camera1, physent &tempcamera, bool &detachedcamera, float &thirdpersondistance);
-
-	extern const char *animname(int i);
-	extern const int numanims();
 }
 
 namespace server

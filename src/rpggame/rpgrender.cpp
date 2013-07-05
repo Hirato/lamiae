@@ -130,12 +130,10 @@ namespace game
 		}
 	}
 
-	const char *animname(int i)
-	{
-		i &= ANIM_ALL;
-		if(i >= NUMANIMS) return "";
-		return animnames[i];
-	}
-
 	const int numanims() {return NUMANIMS;}
+
+	void findanims(const char *pattern, vector<int> &anims)
+	{
+		loopi(sizeof(animnames)/sizeof(animnames[0])) if(matchanim(animnames[i], pattern)) anims.add(i);
+	}
 }

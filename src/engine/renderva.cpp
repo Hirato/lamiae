@@ -377,8 +377,8 @@ void findvisiblemms(const vector<extentity *> &ents)
             loopv(oe->mapmodels)
             {
                 extentity &e = *ents[oe->mapmodels[i]];
-                if(e.flags&extentity::F_NOVIS) continue;
-                e.visible = true;
+                if(e.flags&EF_NOVIS) continue;
+                e.flags |= EF_RENDER;
                 ++visible;
             }
             if(!visible) continue;
@@ -406,7 +406,7 @@ extern bool getentboundingbox(extentity &e, ivec &o, ivec &r);
 static inline void rendermapmodel(extentity &e)
 {
     int anim = ANIM_MAPMODEL|ANIM_LOOP, basetime = 0;
-    if(e.flags&extentity::F_ANIM) entities::animatemapmodel(e, anim, basetime);
+    if(e.flags&EF_ANIM) entities::animatemapmodel(e, anim, basetime);
 
     rendermapmodel(e.attr[0], anim, e.o, e.attr[1], e.attr[2], e.attr[3], MDL_CULL_VFC | MDL_CULL_DIST, basetime, e.attr[4] > 0 ? e.attr[4] / 100.f : 1);
 }
@@ -426,7 +426,7 @@ void rendermapmodels()
         loopv(oe->mapmodels)
         {
             extentity &e = *ents[oe->mapmodels[i]];
-            if(!e.visible) continue;
+            if(!(e.flags&EF_RENDER)) continue;
             if(!rendered)
             {
                 rendered = true;
@@ -434,7 +434,7 @@ void rendermapmodels()
                 if(oe->query) startmodelquery(oe->query);
             }
             rendermapmodel(e);
-            e.visible = false;
+            e.flags &= ~EF_RENDER;
         }
         if(rendered && oe->query) endmodelquery();
     }
@@ -992,21 +992,21 @@ void findshadowmms()
 void batchshadowmapmodels(bool skipmesh)
 {
     if(!shadowmms) return;
-    int nflags = extentity::F_NOVIS|extentity::F_NOSHADOW;
-    if(skipmesh) nflags |= extentity::F_SHADOWMESH;
+    int nflags = EF_NOVIS|EF_NOSHADOW;
+    if(skipmesh) nflags |= EF_SHADOWMESH;
     const vector<extentity *> &ents = entities::getents();
     for(octaentities *oe = shadowmms; oe; oe = oe->rnext) loopvk(oe->mapmodels)
     {
         extentity &e = *ents[oe->mapmodels[k]];
         if(e.flags&nflags) continue;
-        e.visible = true;
+        e.flags |= EF_RENDER;
     }
     for(octaentities *oe = shadowmms; oe; oe = oe->rnext) loopvj(oe->mapmodels)
     {
         extentity &e = *ents[oe->mapmodels[j]];
-        if(!e.visible) continue;
+        if(!(e.flags&EF_RENDER)) continue;
         rendermapmodel(e);
-        e.visible = false;
+        e.flags &= ~EF_RENDER;
     }
 }
 
@@ -2102,15 +2102,15 @@ static void genshadowmeshmapmodels(shadowmesh &m, int sides, shadowdrawinfo draw
     for(octaentities *oe = shadowmms; oe; oe = oe->rnext) loopvk(oe->mapmodels)
     {
         extentity &e = *ents[oe->mapmodels[k]];
-        if(e.flags&(extentity::F_NOVIS|extentity::F_NOSHADOW)) continue;
-        e.visible = true;
+        if(e.flags&(EF_NOVIS|EF_NOSHADOW)) continue;
+        e.flags |= EF_RENDER;
     }
     vector<vec> verts;
     for(octaentities *oe = shadowmms; oe; oe = oe->rnext) loopvj(oe->mapmodels)
     {
         extentity &e = *ents[oe->mapmodels[j]];
-        if(!e.visible) continue;
-        e.visible = false;
+        if(!(e.flags&EF_RENDER)) continue;
+        e.flags &= ~EF_RENDER;
 
         mapmodelinfo *mmi = getmminfo(e.attr[0]);
         if(!mmi) continue;
@@ -2129,7 +2129,7 @@ static void genshadowmeshmapmodels(shadowmesh &m, int sides, shadowdrawinfo draw
 
         for(int j = 0; j < verts.length(); j += 3) addshadowmeshtri(m, sides, draws, verts[j], verts[j+1], verts[j+2]);
 
-        e.flags |= extentity::F_SHADOWMESH;
+        e.flags |= EF_SHADOWMESH;
     }
 }
 
@@ -2173,7 +2173,7 @@ void clearshadowmeshes()
         loopv(ents)
         {
             extentity &e = *ents[i];
-            if(e.flags&extentity::F_SHADOWMESH) e.flags &= ~extentity::F_SHADOWMESH;
+            if(e.flags&EF_SHADOWMESH) e.flags &= ~EF_SHADOWMESH;
         }
     }
     shadowmeshes.clear();

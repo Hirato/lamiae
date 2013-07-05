@@ -17,15 +17,10 @@ enum
 
 struct materialsurface
 {
-    enum
-    {
-        F_EDIT = 1<<0
-    };
-
     ivec o;
     ushort csize, rsize;
     ushort material, skip;
-    uchar orient, flags;
+    uchar orient, visible;
     union
     {
         ushort envmap;

@@ -12,21 +12,31 @@ struct entity                                   // persistent map entity
     uchar type;                                 // type is one of the above
 };
 
+enum
+{
+    EF_NOVIS      = 1<<0,
+    EF_NOSHADOW   = 1<<1,
+    EF_NOCOLLIDE  = 1<<2,
+    EF_ANIM       = 1<<3,
+    EF_SHADOWMESH = 1<<4,
+    EF_OCTA       = 1<<5,
+    EF_RENDER     = 1<<6,
+    EF_SOUND      = 1<<7,
+    EF_SPAWNED    = 1<<8
+
+};
+
 struct extentity : entity                       // part of the entity that doesn't get saved to disk
 {
-    enum
-    {
-        F_NOVIS      = 1<<0,
-        F_NOSHADOW   = 1<<1,
-        F_NOCOLLIDE  = 1<<2,
-        F_ANIM       = 1<<3,
-        F_SHADOWMESH = 1<<4
-    };
-
-    uchar spawned, inoctanode, visible, flags;  // the only dynamic state of a map entity
+    int flags;
     extentity *attached;
 
-    extentity() : visible(false), flags(0), attached(NULL) {}
+    extentity() : flags(0), attached(NULL) {}
+
+    bool spawned() const { return (flags&EF_SPAWNED) != 0; }
+    void setspawned(bool val) { if(val) flags |= EF_SPAWNED; else flags &= ~EF_SPAWNED; }
+    void setspawned() { flags |= EF_SPAWNED; }
+    void clearspawned() { flags &= ~EF_SPAWNED; }
 };
 
 #define MAXENTS 10000
@@ -99,26 +109,9 @@ struct physent                                  // base entity type, can be affe
 
 enum
 {
-    ANIM_DEAD = 0, ANIM_DYING, ANIM_IDLE,
-    ANIM_FORWARD, ANIM_BACKWARD, ANIM_LEFT, ANIM_RIGHT,
-    ANIM_CROUCH, ANIM_CROUCH_FORWARD, ANIM_CROUCH_BACKWARD, ANIM_CROUCH_LEFT, ANIM_CROUCH_RIGHT,
-    ANIM_PAIN,
-    ANIM_JUMP, ANIM_SINK, ANIM_SWIM,
-    ANIM_CROUCH_JUMP, ANIM_CROUCH_SINK, ANIM_CROUCH_SWIM,
-    ANIM_EDIT, ANIM_LAG,
-    ANIM_MAPMODEL, ANIM_TRIGGER,
+    ANIM_MAPMODEL = 0,
     ANIM_GAMESPECIFIC
 };
-
-#define ANIMNAMES \
-    "dead", "dying", "idle", \
-    "forward", "backward", "left", "right", \
-    "crouch", "crouch forward", "crouch backward", "crouch left", "crouch right", \
-    "pain", \
-    "jump", "sink", "swim", \
-    "crouch jump", "crouch sink", "crouch swim", \
-    "edit", "lag", \
-    "mapmodel", "trigger"
 
 #define ANIM_ALL         0x1FF
 #define ANIM_INDEX       0x1FF

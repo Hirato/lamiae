@@ -693,28 +693,20 @@ struct animmodel : model
                 animspec *spec = NULL;
                 if(anims[animpart])
                 {
-                    int primaryidx = anim&ANIM_INDEX;
-                    if(primaryidx < game::numanims())
-                    {
-                        vector<animspec> &primary = anims[animpart][primaryidx];
-                        if(primary.length()) spec = &primary[uint(varseed + basetime)%primary.length()];
-                    }
+                    vector<animspec> &primary = anims[animpart][anim&ANIM_INDEX];
+                    if(primary.length()) spec = &primary[uint(varseed + basetime)%primary.length()];
                     if((anim>>ANIM_SECONDARY)&(ANIM_INDEX|ANIM_DIR))
                     {
-                        int secondaryidx = (anim>>ANIM_SECONDARY)&ANIM_INDEX;
-                        if(secondaryidx < game::numanims())
+                        vector<animspec> &secondary = anims[animpart][(anim>>ANIM_SECONDARY)&ANIM_INDEX];
+                        if(secondary.length())
                         {
-                            vector<animspec> &secondary = anims[animpart][secondaryidx];
-                            if(secondary.length())
+                            animspec &spec2 = secondary[uint(varseed + basetime2)%secondary.length()];
+                            if(!spec || spec2.priority > spec->priority)
                             {
-                                animspec &spec2 = secondary[uint(varseed + basetime2)%secondary.length()];
-                                if(!spec || spec2.priority > spec->priority)
-                                {
-                                    spec = &spec2;
-                                    info.anim >>= ANIM_SECONDARY;
-                                    info.basetime = basetime2;
-                                }
-                             }
+                                spec = &spec2;
+                                info.anim >>= ANIM_SECONDARY;
+                                info.basetime = basetime2;
+                            }
                         }
                     }
                 }
@@ -1084,7 +1076,7 @@ struct animmodel : model
 
         matrixpos = 0;
         matrixstack[0].identity();
-        if(!d || !d->ragdoll || anim&ANIM_RAGDOLL)
+        if(!d || !d->ragdoll)
         {
             float secs = lastmillis/1000.0f;
             yaw += spinyaw*secs;
@@ -1209,7 +1201,7 @@ struct animmodel : model
 
         matrixpos = 0;
         matrixstack[0].identity();
-        if(!d || !d->ragdoll || anim&ANIM_RAGDOLL)
+        if(!d || !d->ragdoll)
         {
             float secs = lastmillis/1000.0f;
             yaw += spinyaw*secs;

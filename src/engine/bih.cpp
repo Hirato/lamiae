@@ -270,9 +270,9 @@ bool mmintersect(const extentity &e, const vec &o, const vec &ray, float maxdist
     }
     if(mode&RAY_SHADOW)
     {
-        if(!m->shadow || e.flags&extentity::F_NOSHADOW) return false;
+        if(!m->shadow || e.flags&EF_NOSHADOW) return false;
     }
-    else if((mode&RAY_ENTS)!=RAY_ENTS && (!m->collide || e.flags&extentity::F_NOCOLLIDE)) return false;
+    else if((mode&RAY_ENTS)!=RAY_ENTS && (!m->collide || e.flags&EF_NOCOLLIDE)) return false;
     if(!m->bih && !m->setBIH()) return false;
     vec mo = vec(o).sub(e.o), mray(ray);
     int scale = e.attr[4];

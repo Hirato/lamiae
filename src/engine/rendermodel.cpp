@@ -946,19 +946,26 @@ void rendermodel(const char *mdl, int anim, const vec &o, float yaw, float pitch
     vec center, bbradius;
     m->boundbox(center, bbradius);
     float radius = bbradius.magnitude();
-    if(d && d->ragdoll)
+    if(d)
     {
-        radius = max(radius, d->ragdoll->radius);
-        center = d->ragdoll->center;
+        if(d->ragdoll)
+        {
+            if(anim&ANIM_RAGDOLL && d->ragdoll->millis >= basetime)
+            {
+                radius = max(radius, d->ragdoll->radius);
+                center = d->ragdoll->center;
+                goto hasboundbox;
+            }
+            DELETEP(d->ragdoll);
+        }
+        if(anim&ANIM_RAGDOLL) flags &= ~(MDL_CULL_VFC | MDL_CULL_OCCLUDED | MDL_CULL_QUERY);
     }
-    else
-    {
-        center.mul(size);
-        if(roll) center.rotate_around_y(-roll*RAD);
-        if(pitch && m->pitched()) center.rotate_around_x(pitch*RAD);
-        center.rotate_around_z(yaw*RAD);
-        center.add(o);
-    }
+    center.mul(size);
+    if(roll) center.rotate_around_y(-roll*RAD);
+    if(pitch && m->pitched()) center.rotate_around_x(pitch*RAD);
+    center.rotate_around_z(yaw*RAD);
+    center.add(o);
+hasboundbox:
     radius *= size;
 
     if(flags&MDL_NORENDER) anim |= ANIM_NORENDER;
@@ -1026,6 +1033,7 @@ int intersectmodel(const char *mdl, int anim, const vec &pos, float yaw, float p
 {
     model *m = loadmodel(mdl);
     if(!m) return -1;
+    if(d && d->ragdoll && (!(anim&ANIM_RAGDOLL) || d->ragdoll->millis < basetime)) DELETEP(d->ragdoll);
     if(a) for(int i = 0; a[i].tag; i++)
     {
         if(a[i].name) a[i].m = loadmodel(a[i].name);
@@ -1065,16 +1073,10 @@ bool matchanim(const char *name, const char *pattern)
     return false;
 }
 
-void findanims(const char *pattern, vector<int> &anims)
-{
-    loopi(game::numanims())
-        if(matchanim(game::animname(i), pattern)) anims.add(i);
-}
-
 ICOMMAND(findanims, "s", (char *name),
 {
     vector<int> anims;
-    findanims(name, anims);
+    game::findanims(name, anims);
     vector<char> buf;
     string num;
     loopv(anims)
@@ -1105,84 +1107,6 @@ void loadskin(const char *dir, const char *altdir, Texture *&skin, Texture *&mas
 }
 
 // convenient function that covers the usual anims for players/monsters/npcs
-
-VARF(animoverride, -1, 0, 0x7F,
-    if(animoverride > 0) animoverride %= game::numanims());
-VAR(testanims, 0, 0, 1);
-VAR(testpitch, -90, 0, 90);
-
-void renderclient(dynent *d, const char *mdlname, modelattach *attachments, int hold, int attack, int attackdelay, int lastaction, int lastpain, float scale, bool ragdoll, float trans)
-{
-    int anim = hold ? hold : ANIM_IDLE|ANIM_LOOP;
-    float yaw = testanims && d==player ? 0 : d->yaw,
-          pitch = testpitch && d==player ? testpitch : d->pitch,
-          roll = d->roll;
-
-    vec o = d->feetpos();
-    int basetime = 0;
-    if(animoverride) anim = (animoverride<0 ? ANIM_ALL : animoverride)|ANIM_LOOP;
-    else if(d->state==CS_DEAD)
-    {
-        anim = ANIM_DYING|ANIM_NOPITCH;
-        basetime = lastpain;
-        if(ragdoll)
-        {
-            if(!d->ragdoll || d->ragdoll->millis < basetime)
-            {
-                DELETEP(d->ragdoll);
-                anim |= ANIM_RAGDOLL;
-            }
-        }
-        else if(lastmillis-basetime>1000) anim = ANIM_DEAD|ANIM_LOOP|ANIM_NOPITCH;
-    }
-    else if(d->state==CS_EDITING || d->state==CS_SPECTATOR) anim = ANIM_EDIT|ANIM_LOOP;
-    else if(d->state==CS_LAGGED)                            anim = ANIM_LAG|ANIM_LOOP;
-    else
-    {
-        if(lastmillis-lastpain < 300)
-        {
-            anim = ANIM_PAIN;
-            basetime = lastpain;
-        }
-        else if(lastpain < lastaction && (attack < 0 || lastmillis-lastaction < attackdelay))
-        {
-            anim = attack < 0 ? -attack : attack;
-            basetime = lastaction;
-        }
-
-        if(d->inwater && d->physstate<=PHYS_FALL) anim |= (((game::allowmove(d) && (d->move || d->strafe)) || d->vel.z+d->falling.z>0 ? ANIM_SWIM : ANIM_SINK)|ANIM_LOOP)<<ANIM_SECONDARY;
-        else if(d->timeinair>100) anim |= (ANIM_JUMP|ANIM_END)<<ANIM_SECONDARY;
-        else if(game::allowmove(d) && (d->move || d->strafe))
-        {
-            if(d->move>0) anim |= (ANIM_FORWARD|ANIM_LOOP)<<ANIM_SECONDARY;
-            else if(d->strafe) anim |= ((d->strafe>0 ? ANIM_LEFT : ANIM_RIGHT)|ANIM_LOOP)<<ANIM_SECONDARY;
-            else if(d->move<0) anim |= (ANIM_BACKWARD|ANIM_LOOP)<<ANIM_SECONDARY;
-        }
-
-        if(d->crouching) switch((anim>>ANIM_SECONDARY)&ANIM_INDEX)
-        {
-            case ANIM_IDLE: anim &= ~(ANIM_INDEX<<ANIM_SECONDARY); anim |= ANIM_CROUCH<<ANIM_SECONDARY; break;
-            case ANIM_JUMP: anim &= ~(ANIM_INDEX<<ANIM_SECONDARY); anim |= ANIM_CROUCH_JUMP<<ANIM_SECONDARY; break;
-            case ANIM_SWIM: anim &= ~(ANIM_INDEX<<ANIM_SECONDARY); anim |= ANIM_CROUCH_SWIM<<ANIM_SECONDARY; break;
-            case ANIM_SINK: anim &= ~(ANIM_INDEX<<ANIM_SECONDARY); anim |= ANIM_CROUCH_SINK<<ANIM_SECONDARY; break;
-            case 0: anim |= (ANIM_CROUCH|ANIM_LOOP)<<ANIM_SECONDARY; break;
-            case ANIM_FORWARD: case ANIM_BACKWARD: case ANIM_LEFT: case ANIM_RIGHT:
-                anim += (ANIM_CROUCH_FORWARD - ANIM_FORWARD)<<ANIM_SECONDARY;
-                break;
-        }
-
-        if((anim&ANIM_INDEX)==ANIM_IDLE && (anim>>ANIM_SECONDARY)&ANIM_INDEX) anim >>= ANIM_SECONDARY;
-    }
-    if(d->ragdoll && (!ragdoll || (anim&ANIM_INDEX)!=ANIM_DYING)) DELETEP(d->ragdoll);
-    if(!((anim>>ANIM_SECONDARY)&ANIM_INDEX)) anim |= (ANIM_IDLE|ANIM_LOOP)<<ANIM_SECONDARY;
-    int flags = 0;
-    if(d!=player && !(anim&ANIM_RAGDOLL)) flags |= MDL_CULL_VFC | MDL_CULL_OCCLUDED | MDL_CULL_QUERY;
-    if(d->type==ENT_PLAYER) flags |= MDL_FULLBRIGHT;
-    else flags |= MDL_CULL_DIST;
-    if(drawtex == DRAWTEX_MODELPREVIEW) flags &= ~(MDL_FULLBRIGHT | MDL_CULL_VFC | MDL_CULL_OCCLUDED | MDL_CULL_QUERY | MDL_CULL_DIST);
-    if(d->state == CS_LAGGED) trans = min(trans, 0.3f);
-    rendermodel(mdlname, anim, o, yaw, pitch, roll, flags, d, attachments, basetime, 0, scale, trans);
-}
 
 void setbbfrommodel(physent *d, const char *mdl)
 {

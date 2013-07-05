@@ -1966,7 +1966,16 @@ struct delayscript
 
 enum
 {
-	ANIM_BLOCK = ANIM_GAMESPECIFIC,
+	ANIM_TRIGGER = ANIM_GAMESPECIFIC,
+	ANIM_DEAD, ANIM_DYING, ANIM_IDLE,
+	ANIM_FORWARD, ANIM_BACKWARD, ANIM_LEFT, ANIM_RIGHT,
+	ANIM_CROUCH, ANIM_CROUCH_FORWARD, ANIM_CROUCH_BACKWARD, ANIM_CROUCH_LEFT, ANIM_CROUCH_RIGHT,
+	ANIM_PAIN,
+	ANIM_JUMP, ANIM_SINK, ANIM_SWIM,
+	ANIM_CROUCH_JUMP, ANIM_CROUCH_SINK, ANIM_CROUCH_SWIM,
+	ANIM_EDIT, ANIM_LAG,
+
+	ANIM_BLOCK,
 	ANIM_MHOLD, ANIM_MSTRIKE, ANIM_MCHARGE, ANIM_MCOOL, //swords and stuff
 	ANIM_RHOLD, ANIM_RSTRIKE, ANIM_RCHARGE, ANIM_RCOOL, //bows and stuff
 	ANIM_CHOLD, ANIM_CSTRIKE, ANIM_CCHARGE, ANIM_CCOOL, //spell casting
@@ -1977,7 +1986,15 @@ enum
 
 static const char * const animnames[] =
 {
-	ANIMNAMES,
+	"mapmodel", "trigger",
+	"dead", "dying", "idle",
+	"forward", "backward", "left", "right",
+	"crouch", "crouch forward", "crouch backward", "crouch left", "crouch right",
+	"pain",
+	"jump", "sink", "swim",
+	"crouch jump", "crouch sink", "crouch swim",
+	"edit", "lag",
+
 	"block",
 	"melee hold", "melee strike", "melee charge", "melee cooldown",
 	"range hold", "range strike", "range charge", "range cooldown",

@@ -951,8 +951,6 @@ bool read_octaworld(stream *f, octaheader &hdr)
         //OCTA entities have an unused reserved byte at the end
         f->getchar();
 
-        e.spawned = false;
-        e.inoctanode = false;
         fixent(e, octaversion);
 
         //need changes for larger attribute size and changed indices.
@@ -1205,8 +1203,6 @@ bool read_lamiaeworld(stream *f, octaheader &hdr)
         e.type = f->getchar();
         while(e.attr.length() < getattrnum(e.type)) e.attr.add(0);
 
-        e.spawned = false;
-        e.inoctanode = false;
         fixent(e, octaversion);
         if(samegame)
         {

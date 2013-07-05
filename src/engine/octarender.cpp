@@ -309,7 +309,7 @@ struct vacollect : verthash
             loopv(matsurfs)
             {
                 materialsurface &m = matsurfs[i];
-                if(m.flags&materialsurface::F_EDIT) continue;
+                if(m.visible == MATSURF_EDIT_ONLY) continue;
                 switch(m.material)
                 {
                     case MAT_GLASS: case MAT_LAVA: case MAT_WATER: break;

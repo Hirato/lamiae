@@ -634,7 +634,6 @@ struct mapmodelinfo { string name; model *m; };
 extern float transmdlsx1, transmdlsy1, transmdlsx2, transmdlsy2;
 extern uint transmdltiles[LIGHTTILE_MAXH];
 
-extern void findanims(const char *pattern, vector<int> &anims);
 extern void loadskin(const char *dir, const char *altdir, Texture *&skin, Texture *&masks);
 extern mapmodelinfo *getmminfo(int i);
 extern void resetmodelbatches();

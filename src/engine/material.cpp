@@ -45,12 +45,12 @@ struct QuadNode
         }
     }
 
-    void genmatsurf(ushort mat, uchar orient, uchar flags, int x, int y, int z, int size, materialsurface *&matbuf)
+    void genmatsurf(ushort mat, uchar orient, uchar visible, int x, int y, int z, int size, materialsurface *&matbuf)
     {
         materialsurface &m = *matbuf++;
         m.material = mat;
         m.orient = orient;
-        m.flags = flags;
+        m.visible = visible;
         m.csize = size;
         m.rsize = size;
         int dim = dimension(orient);
@@ -59,16 +59,16 @@ struct QuadNode
         m.o[dim] = z;
     }
 
-    void genmatsurfs(ushort mat, uchar orient, uchar flags, int z, materialsurface *&matbuf)
+    void genmatsurfs(ushort mat, uchar orient, uchar visible, int z, materialsurface *&matbuf)
     {
-        if(filled == 0xF) genmatsurf(mat, orient, flags, x, y, z, size, matbuf);
+        if(filled == 0xF) genmatsurf(mat, orient, visible, x, y, z, size, matbuf);
         else if(filled)
         {
             int csize = size>>1;
             loopi(4) if(filled & (1 << i))
-                genmatsurf(mat, orient, flags, i&1 ? x+csize : x, i&2 ? y+csize : y, z, csize, matbuf);
+                genmatsurf(mat, orient, visible, i&1 ? x+csize : x, i&2 ? y+csize : y, z, csize, matbuf);
         }
-        loopi(4) if(child[i]) child[i]->genmatsurfs(mat, orient, flags, z, matbuf);
+        loopi(4) if(child[i]) child[i]->genmatsurfs(mat, orient, visible, z, matbuf);
     }
 };
 
@@ -183,7 +183,7 @@ void genmatsurfs(const cube &c, int cx, int cy, int cz, int size, vector<materia
                 materialsurface m;
                 m.material = c.material&matmask;
                 m.orient = i;
-                m.flags = vis == MATSURF_EDIT_ONLY ? materialsurface::F_EDIT : 0;
+                m.visible = vis;
                 m.o = ivec(cx, cy, cz);
                 m.csize = m.rsize = size;
                 if(dimcoord(i)) m.o[dimension(i)] += size;
@@ -215,12 +215,12 @@ void calcmatbb(vtxarray *va, int cx, int cy, int cz, int size, vector<materialsu
         switch(m.material&MATF_VOLUME)
         {
             case MAT_LAVA:
-                if(m.flags&materialsurface::F_EDIT) continue;
+                if(m.visible == MATSURF_EDIT_ONLY) continue;
                 addmatbb(va->lavamin, va->lavamax, m);
                 break;
 
             case MAT_WATER:
-                if(m.flags&materialsurface::F_EDIT) continue;
+                if(m.visible == MATSURF_EDIT_ONLY) continue;
                 addmatbb(va->watermin, va->watermax, m);
                 break;
 
@@ -320,7 +320,7 @@ int optimizematsurfs(materialsurface *matbuf, int matsurfs)
          while(cur < end &&
                cur->material == start->material &&
                cur->orient == start->orient &&
-               cur->flags == start->flags &&
+               cur->visible == start->visible && 
                cur->o[dim] == start->o[dim])
             ++cur;
          if(!isliquid(start->material&MATF_VOLUME) || start->orient != O_TOP || !vertwater)
@@ -332,7 +332,7 @@ int optimizematsurfs(materialsurface *matbuf, int matsurfs)
          {
             QuadNode vmats(0, 0, worldsize);
             loopi(cur-start) vmats.insert(start[i].o[C[dim]], start[i].o[R[dim]], start[i].csize);
-            vmats.genmatsurfs(start->material, start->orient, start->flags, start->o[dim], matbuf);
+            vmats.genmatsurfs(start->material, start->orient, start->visible, start->o[dim], matbuf);
          }
          else
          {
@@ -609,7 +609,7 @@ int findmaterials()
             loopi(va->matsurfs)
             {
                 materialsurface &m = va->matbuf[i];
-                if((m.material&MATF_VOLUME) != MAT_LAVA || m.flags&materialsurface::F_EDIT) { i += m.skip; continue; }
+                if((m.material&MATF_VOLUME) != MAT_LAVA || m.visible == MATSURF_EDIT_ONLY) { i += m.skip; continue; }
                 hasmats |= 1;
                 if(m.orient == O_TOP) lavasurfs[m.material&MATF_INDEX].put(&m, 1+int(m.skip));
                 else lavafallsurfs[m.material&MATF_INDEX].put(&m, 1+int(m.skip));
@@ -630,7 +630,7 @@ int findmaterials()
             loopi(va->matsurfs)
             {
                 materialsurface &m = va->matbuf[i];
-                if((m.material&MATF_VOLUME) != MAT_WATER || m.flags&materialsurface::F_EDIT) { i += m.skip; continue; }
+                if((m.material&MATF_VOLUME) != MAT_WATER || m.visible == MATSURF_EDIT_ONLY) { i += m.skip; continue; }
                 hasmats |= 4|1;
                 if(m.orient == O_TOP) watersurfs[m.material&MATF_INDEX].put(&m, 1+int(m.skip));
                 else waterfallsurfs[m.material&MATF_INDEX].put(&m, 1+int(m.skip));
