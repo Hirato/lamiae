@@ -147,7 +147,7 @@ inline char *concatstring(char *d, const char *s, size_t len = MAXSTRLEN) { size
 inline char *prependstring(char *d, const char *s, size_t len = MAXSTRLEN)
 {
     size_t slen = min(strlen(s), len);
-    memmove(&d[slen], s, min(len - slen, strlen(d) + 1));
+    memmove(&d[slen], d, min(len - slen, strlen(d) + 1));
     memcpy(d, s, slen);
     d[len-1] = 0;
     return d;

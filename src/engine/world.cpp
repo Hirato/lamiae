@@ -34,6 +34,7 @@ bool getentboundingbox(extentity &e, ivec &o, ivec &r)
                 o.add(center);
                 r = radius;
                 r.add(1);
+                r.max(entselradius);
                 o.sub(r);
                 r.mul(2);
                 break;
@@ -497,11 +498,10 @@ void entselectionbox(const entity &e, vec &eo, vec &es)
             es.mul(e.attr[4] / 100.0f);
         }
 
-        loopi(3) if(es.v[i] < entselradius)
-            es.v[i] = entselradius;
-
         if(e.type == ET_MAPMODEL) rotatebb(eo, es, e.attr[1], e.attr[2], e.attr[3]);
         else rotatebb(eo, es, getentyaw(e), 0);
+
+        es.max(entselradius);
         eo.add(e.o);
     }
     else
