@@ -1,5 +1,6 @@
 #compiled objects
-/.objs/
+/.objs32/
+/.objs64/
 
 # codeblocks files
 *.depend
