@@ -2316,21 +2316,21 @@ bool executebool(const char *p)
 
 bool execfile(const char *cfgfile, bool msg)
 {
-	/*const char *paths[] = {"", "config/"};
-	string s;
-	loopi(sizeof(paths)/sizeof(paths[0]))
-	{
-		formatstring(s, "%s%s", paths[i], cfgfile);
-		char *buf = loadfile(path(s), NULL);
-		if(buf)
-		{
-			execute(buf);
-			delete[] buf;
-			return true;
-		}
-	}
-	if(msg) conoutf(CON_ERROR, "could not read \"%s\"", cfgfile);
-	return false; */
+    /*const char *paths[] = {"", "config/"};
+    string s;
+    loopi(sizeof(paths)/sizeof(paths[0]))
+    {
+        formatstring(s, "%s%s", paths[i], cfgfile);
+        char *buf = loadfile(path(s), NULL);
+        if(buf)
+        {
+            execute(buf);
+            delete[] buf;
+            return true;
+        }
+    }
+    if(msg) conoutf(CON_ERROR, "could not read \"%s\"", cfgfile);
+    return false; */
 
     string s;
     copystring(s, cfgfile);

@@ -489,7 +489,7 @@ void ragdolldata::move(dynent *pl, float ts)
     }
 
     if(unsticks && ragdollunstick) tryunstick(ts*ragdollunstick);
- 
+
     timestep = ts;
     if(collisions)
     {

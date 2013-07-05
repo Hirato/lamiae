@@ -148,7 +148,7 @@ namespace tiger
         compress((chunk *)temp, val.chunks);
         if(!*(const uchar *)&islittleendian)
         {
-            loopk(3) 
+            loopk(3)
             {
                 uchar *c = &val.bytes[k*sizeof(chunk)];
                 loopl(sizeof(chunk)/2) swap(c[l], c[sizeof(chunk)-1-l]);
@@ -811,7 +811,7 @@ void *genchallenge(void *pubkey, const void *seed, int seedlen, vector<char> &ch
 
     secret.print(challengestr);
     challengestr.add('\0');
-   
+
     return new gfield(answer.x);
 }
 

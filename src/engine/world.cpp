@@ -638,7 +638,7 @@ void renderentradius(extentity &e, bool color)
     switch(e.type)
     {
         case ET_LIGHT:
-			if(e.attr[0] < 0) break;
+            if(e.attr[0] < 0) break;
             if(color) gle::colorf(e.attr[1]/255.0f, e.attr[2]/255.0f, e.attr[3]/255.0f);
             renderentsphere(e, e.attr[0]);
             break;

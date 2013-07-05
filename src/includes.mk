@@ -155,6 +155,11 @@ ifeq (unix,$(PLATFORM_TYPE))
 	ENET_XCFLAGS := $(shell ./check_enet.sh $(CC) $(CFLAGS))
 endif
 
+fixspace:
+	sed -i ':rep; s/^\([ ]*\)\t/\1    /g; trep'  shared/*.cpp shared/*.h engine/*.cpp engine/*.h
+	sed -i 's/[ \t]*$$//;' shared/*.cpp shared/*.h engine/*.cpp engine/*.h rpggame/*.cpp rpggame/*.h
+
+
 default: all
 
 all: client

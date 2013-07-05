@@ -17,7 +17,7 @@ struct normalgroup
     normalgroup(const normalkey &key) : pos(key.pos), smooth(key.smooth), flat(0), normals(-1), tnormals(-1) {}
 };
 
-static inline bool htcmp(const normalkey &k, const normalgroup &n) { return k.pos == n.pos && k.smooth == n.smooth; } 
+static inline bool htcmp(const normalkey &k, const normalgroup &n) { return k.pos == n.pos && k.smooth == n.smooth; }
 
 struct normal
 {
@@ -135,7 +135,7 @@ void findnormal(const vec &pos, int smooth, const vec &surface, vec &v)
     {
         int angle = smoothgroups.inrange(smooth) && smoothgroups[smooth] >= 0 ? smoothgroups[smooth] : lerpangle;
         float lerpthreshold = sincos360[angle].x - 1e-5f;
-        if(g->tnormals < 0 || !findtnormal(*g, lerpthreshold, surface, v)) 
+        if(g->tnormals < 0 || !findtnormal(*g, lerpthreshold, surface, v))
             findnormal(*g, lerpthreshold, surface, v);
     }
     else v = surface;
@@ -211,8 +211,8 @@ void addnormals(cube &c, const ivec &o, int size)
 
         if(!numplanes) loopk(numverts) norms[k] = addnormal(pos[k], smooth, i);
         else if(numplanes==1) loopk(numverts) norms[k] = addnormal(pos[k], smooth, planes[0]);
-        else 
-        { 
+        else
+        {
             vec avg = vec(planes[0]).add(planes[1]).normalize();
             norms[0] = addnormal(pos[0], smooth, avg);
             norms[1] = addnormal(pos[1], smooth, planes[0]);
@@ -240,7 +240,7 @@ void addnormals(cube &c, const ivec &o, int size)
                 tjoint &t = tjoints[tj];
                 if(t.edge != edge) break;
                 float offset = (t.offset - offset1) * doffset;
-                vec tpos = d.tovec().mul(t.offset/8.0f).add(o); 
+                vec tpos = d.tovec().mul(t.offset/8.0f).add(o);
                 addtnormal(tpos, smooth, offset, norms[e1], norms[e2], v1, v2);
                 tj = t.next;
             }
@@ -250,7 +250,7 @@ void addnormals(cube &c, const ivec &o, int size)
 
 void calcnormals(bool lerptjoints)
 {
-    usetnormals = lerptjoints; 
+    usetnormals = lerptjoints;
     if(usetnormals) findtjoints();
     normalprogress = 1;
     loopi(8) addnormals(worldroot[i], ivec(i, 0, 0, 0, worldsize/2), worldsize/2);

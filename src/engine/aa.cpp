@@ -229,7 +229,7 @@ void dofxaa(GLuint outfbo = 0)
 
     endtimer(fxaatimer);
 }
- 
+
 GLuint smaaareatex = 0, smaasearchtex = 0, smaafbo[4] = { 0, 0, 0, 0 }, smaatex[5] = { 0, 0, 0, 0, 0 };
 int smaasubsampleorder = -1;
 
@@ -248,7 +248,7 @@ void loadsmaashaders(bool split = false)
     if(smaadepthmask || smaastencil) opts[optslen++] = 'd';
     if(split) opts[optslen++] = 's';
     if(smaagreenluma || tqaa) opts[optslen++] = 'g';
-    if(tqaa) 
+    if(tqaa)
     {
         opts[optslen++] = 't';
         if(tqaamovemask) opts[optslen++] = 'm';
@@ -306,10 +306,10 @@ void gensmaasearchdata()
         if(deltaLeft && top&(1<<2) && !(left&(1<<1)) && !(left&(1<<3))) deltaLeft++;
         smaasearchdata[y*66 + x] = deltaLeft;
         uchar deltaRight = 0;
-        if(top&(1<<3) && !(left&(1<<1)) && !(left&(1<<3))) deltaRight++;        
+        if(top&(1<<3) && !(left&(1<<1)) && !(left&(1<<3))) deltaRight++;
         if(deltaRight && top&(1<<2) && !(left&(1<<0)) && !(left&(1<<2))) deltaRight++;
         smaasearchdata[y*66 + 33 + x] = deltaRight;
-    }   
+    }
     smaasearchdatainited = true;
 }
 
@@ -354,14 +354,14 @@ vec2 areaortho(int pattern, float left, float right, float offset)
         case 3: return areaortho(0, o2, d/2, 0, left).add(areaortho(d/2, 0, d, o2, left));
         case 4: return left <= right ? areaortho(0, o1, d/2, 0, left) : vec2(0, 0);
         case 5: return vec2(0, 0);
-        case 6: 
+        case 6:
         {
             vec2 a = areaortho(0, o1, d, o2, left);
             if(fabs(offset) > 0) a.avg(areaortho(0, o1, d/2, 0, left).add(areaortho(d/2, 0, d, o2, left)));
             return a;
         }
         case 7: return areaortho(0, o1, d, o2, left);
-        case 8: return left >= right ? areaortho(d/2, 0, d, o1, left) : vec2(0, 0); 
+        case 8: return left >= right ? areaortho(d/2, 0, d, o1, left) : vec2(0, 0);
         case 9:
         {
             vec2 a = areaortho(0, o2, d, o1, left);
@@ -496,7 +496,7 @@ void gensmaaareadata()
     {
         int px = edgesortho[pattern][0]*16, py = (5*offset + edgesortho[pattern][1])*16;
         uchar *dst = &smaaareadata[(py*SMAA_AREATEX_WIDTH + px)*2];
-        loop(y, 16) 
+        loop(y, 16)
         {
             loop(x, 16)
             {
@@ -555,7 +555,7 @@ void setupsmaa(int w, int h)
             case 0: format = tqaa || (!smaagreenluma && !smaacoloredge) ? GL_RGBA8 : GL_RGB; break;
             case 1: format = hasTRG ? GL_RG8 : GL_RGBA8; break;
             case 2: case 3: format = GL_RGBA8; break;
-        }  
+        }
         createtexture(smaatex[i], w, h, NULL, 3, 1, format, GL_TEXTURE_RECTANGLE);
         glFramebufferTexture2D_(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, smaatex[i], 0);
         if(!i && split)
@@ -661,7 +661,7 @@ void dosmaa(GLuint outfbo = 0, bool split = false)
         vec4 subsamples(0, 0, 0, 0);
         if(tqaa && split) subsamples = tqaaframe&1 ? (pass != smaasubsampleorder ? vec4(6, 4, 2, 4) : vec4(3, 5, 1, 4)) : (pass != smaasubsampleorder ? vec4(4, 6, 2, 3) : vec4(5, 3, 1, 3));
         else if(tqaa) subsamples = tqaaframe&1 ? vec4(2, 2, 2, 0) : vec4(1, 1, 1, 0);
-        else if(split) subsamples = pass != smaasubsampleorder ? vec4(2, 2, 2, 0) : vec4(1, 1, 1, 0); 
+        else if(split) subsamples = pass != smaasubsampleorder ? vec4(2, 2, 2, 0) : vec4(1, 1, 1, 0);
         LOCALPARAM(subsamples, subsamples);
         glBindTexture(GL_TEXTURE_RECTANGLE, smaatex[1]);
         glActiveTexture_(GL_TEXTURE1);
@@ -684,7 +684,7 @@ void dosmaa(GLuint outfbo = 0, bool split = false)
         }
         else if(smaastencil && ((gdepthstencil && hasDS) || gstencil)) glDisable(GL_STENCIL_TEST);
     }
-        
+
     glBindFramebuffer_(GL_FRAMEBUFFER, tqaa ? tqaafbo[0] : outfbo);
     smaaneighborhoodshader->set();
     glBindTexture(GL_TEXTURE_RECTANGLE, smaatex[0]);
@@ -748,20 +748,20 @@ bool multisampledaa()
 {
     return smaa && smaaspatial && msaasamples == 2 && hasMSS;
 }
- 
+
 bool maskedaa()
 {
     return tqaa && tqaamovemask;
 }
-   
+
 void doaa(GLuint outfbo, void (*resolve)(GLuint, int))
 {
-    if(smaa) 
-    { 
+    if(smaa)
+    {
         bool split = multisampledaa();
-        resolve(smaafbo[0], split ? (tqaa ? AA_SPLIT_VELOCITY : (!smaagreenluma && !smaacoloredge ? AA_SPLIT_LUMA : AA_SPLIT)) : 
-                                    (tqaa ? AA_VELOCITY : (!smaagreenluma && !smaacoloredge ? AA_LUMA : AA_UNUSED))); 
-        dosmaa(outfbo, split); 
+        resolve(smaafbo[0], split ? (tqaa ? AA_SPLIT_VELOCITY : (!smaagreenluma && !smaacoloredge ? AA_SPLIT_LUMA : AA_SPLIT)) :
+                                    (tqaa ? AA_VELOCITY : (!smaagreenluma && !smaacoloredge ? AA_LUMA : AA_UNUSED)));
+        dosmaa(outfbo, split);
     }
     else if(fxaa) { resolve(fxaafbo, tqaa ? AA_VELOCITY : (!fxaagreenluma ? AA_LUMA : AA_UNUSED)); dofxaa(outfbo); }
     else if(tqaa) { resolve(tqaafbo[0], AA_VELOCITY); dotqaa(outfbo); }

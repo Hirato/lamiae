@@ -839,7 +839,7 @@ static void updateblendtextures(uchar &type, BlendMapNode &node, int bmx, int bm
         renderblendtexture(type, node, bmx, bmy, bmsize, data, bt->size, ux1, uy1, ux2-ux1, uy2-uy1);
         glPixelStorei(GL_UNPACK_ROW_LENGTH, bt->size);
         glBindTexture(GL_TEXTURE_2D, bt->tex);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, (ux1-tx)/step, (uy1-ty)/step, (ux2-ux1)/step, (uy2-uy1)/step, bt->format, GL_UNSIGNED_BYTE, data); 
+        glTexSubImage2D(GL_TEXTURE_2D, 0, (ux1-tx)/step, (uy1-ty)/step, (ux2-ux1)/step, (uy2-uy1)/step, bt->format, GL_UNSIGNED_BYTE, data);
     }
 
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
@@ -1072,7 +1072,7 @@ ICOMMAND(clearblendmap, "", (),
 ICOMMAND(moveblendmap, "ii", (int *dx, int *dy),
 {
     if(noedit(true) || (nompedit && multiplayer())) return;
-    if(*dx%(BM_IMAGE_SIZE<<BM_SCALE) || *dy%(BM_IMAGE_SIZE<<BM_SCALE)) 
+    if(*dx%(BM_IMAGE_SIZE<<BM_SCALE) || *dy%(BM_IMAGE_SIZE<<BM_SCALE))
     {
         conoutf(CON_ERROR, "blendmap movement must be in multiples of %d", BM_IMAGE_SIZE<<BM_SCALE);
         return;

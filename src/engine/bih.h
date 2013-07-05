@@ -39,7 +39,7 @@ struct BIH
 
     bool traverse(const vec &o, const vec &ray, float maxdist, float &dist, int mode);
     bool traverse(const vec &o, const vec &ray, const vec &invray, float maxdist, float &dist, int mode, BIHNode *curnode, float tmin, float tmax);
-    
+
     void preload();
 };
 

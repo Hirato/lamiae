@@ -1676,8 +1676,8 @@ void renderentinfo(int i)
 
 struct editmarker //editmode markers :D
 {
-	int type, colour, dist;
-	float size;
+    int type, colour, dist;
+    float size;
 };
 editmarker markers[] = {
     {PART_WATER, 0x2FBFFF, 80, .4},

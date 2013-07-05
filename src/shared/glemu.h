@@ -9,7 +9,7 @@ namespace gle
         ATTRIB_NORMAL       = 4,
         ATTRIB_TANGENT      = 5,
         ATTRIB_BONEWEIGHT   = 6,
-        ATTRIB_BONEINDEX    = 7, 
+        ATTRIB_BONEINDEX    = 7,
         MAXATTRIBS          = 8
     };
 
@@ -113,7 +113,7 @@ namespace gle
     template<size_t N, class T>
     static inline void attribv(const T *v)
     {
-        data.put((const uchar *)v, N*sizeof(T)); 
+        data.put((const uchar *)v, N*sizeof(T));
     }
 
     #define GLE_ATTRIB(suffix, type) \

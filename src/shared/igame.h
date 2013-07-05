@@ -123,5 +123,5 @@ namespace server
     extern int masterport();
     extern void processmasterinput(const char *cmd, int cmdlen, const char *args);
     extern bool ispaused();
-	extern int scaletime(int t);
+    extern int scaletime(int t);
 }

@@ -1737,7 +1737,7 @@ int dynamicshadowvabounds(int mask, vec &bbmin, vec &bbmax)
 void renderrsmgeom(bool dyntex)
 {
     renderstate cur;
-	if(!dyntex) cur.texgenmillis = 0;
+    if(!dyntex) cur.texgenmillis = 0;
 
     setupgeom(cur);
 

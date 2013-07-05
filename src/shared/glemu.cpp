@@ -75,12 +75,12 @@ namespace gle
     void drawquads(int offset, int count)
     {
         if(count <= 0) return;
-        if(offset + count > MAXQUADS) 
+        if(offset + count > MAXQUADS)
         {
             if(offset >= MAXQUADS) return;
             count = MAXQUADS - offset;
         }
-        glDrawRangeElements_(GL_TRIANGLES, offset*4, (offset + count)*4-1, count*6, GL_UNSIGNED_SHORT, (ushort *)0 + offset*6); 
+        glDrawRangeElements_(GL_TRIANGLES, offset*4, (offset + count)*4-1, count*6, GL_UNSIGNED_SHORT, (ushort *)0 + offset*6);
     }
 
     void begin(GLenum mode)
@@ -120,7 +120,7 @@ namespace gle
 
     void defattribs(const char *fmt)
     {
-        for(;; fmt += 3) 
+        for(;; fmt += 3)
         {
             GLenum format;
             switch(fmt[0])
@@ -128,7 +128,7 @@ namespace gle
                 case 'v': format = ATTRIB_VERTEX; break;
                 case 'c': format = ATTRIB_COLOR; break;
                 case 't': format = ATTRIB_TEXCOORD0; break;
-                case 'T': format = ATTRIB_TEXCOORD1; break; 
+                case 'T': format = ATTRIB_TEXCOORD1; break;
                 case 'n': format = ATTRIB_NORMAL; break;
                 case 'x': format = ATTRIB_TANGENT; break;
                 case 'w': format = ATTRIB_BONEWEIGHT; break;
@@ -156,7 +156,7 @@ namespace gle
                 glVertexAttribPointer_(a.type, a.size, a.format, GL_TRUE, vertexsize, buf);
                 break;
         }
-        if(!(enabled&(1<<a.type))) 
+        if(!(enabled&(1<<a.type)))
         {
             glEnableVertexAttribArray_(a.type);
             enabled |= 1<<a.type;
@@ -184,14 +184,14 @@ namespace gle
                 vbooffset = 0;
             }
             else if(!lastvertexsize) glBindBuffer_(GL_ARRAY_BUFFER, vbo);
-            glBufferSubData_(GL_ARRAY_BUFFER, vbooffset, data.length(), data.getbuf());    
+            glBufferSubData_(GL_ARRAY_BUFFER, vbooffset, data.length(), data.getbuf());
             buf = (uchar *)0 + vbooffset;
             if(vertexsize == lastvertexsize && buf >= lastbuf)
             {
                 start = int(buf - lastbuf)/vertexsize;
                 if(primtype == GL_QUADS && (start%4 || start + data.length()/vertexsize >= 4*MAXQUADS))
                     start = 0;
-                else buf = lastbuf; 
+                else buf = lastbuf;
             }
             vbooffset += data.length();
         }
@@ -222,12 +222,12 @@ namespace gle
             changedattribs = false;
         }
         int numvertexes = data.length()/vertexsize;
-        if(primtype == GL_QUADS) 
+        if(primtype == GL_QUADS)
         {
             if(!quadsenabled) enablequads();
             drawquads(start/4, numvertexes/4);
         }
-        else 
+        else
         {
             glDrawArrays(primtype, start, numvertexes);
         }

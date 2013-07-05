@@ -468,7 +468,7 @@ extern PFNGLENDQUERYPROC          glEndQuery_;
 extern PFNGLGETQUERYIVPROC        glGetQueryiv_;
 extern PFNGLGETQUERYOBJECTIVPROC  glGetQueryObjectiv_;
 extern PFNGLGETQUERYOBJECTUIVPROC glGetQueryObjectuiv_;
-                                        
+
 extern PFNGLCREATEPROGRAMPROC            glCreateProgram_;
 extern PFNGLDELETEPROGRAMPROC            glDeleteProgram_;
 extern PFNGLUSEPROGRAMPROC               glUseProgram_;
@@ -636,7 +636,7 @@ extern PFNGLGETUNIFORMINDICESPROC       glGetUniformIndices_;
 extern PFNGLGETACTIVEUNIFORMSIVPROC     glGetActiveUniformsiv_;
 extern PFNGLGETUNIFORMBLOCKINDEXPROC    glGetUniformBlockIndex_;
 extern PFNGLGETACTIVEUNIFORMBLOCKIVPROC glGetActiveUniformBlockiv_;
-extern PFNGLUNIFORMBLOCKBINDINGPROC     glUniformBlockBinding_; 
+extern PFNGLUNIFORMBLOCKBINDINGPROC     glUniformBlockBinding_;
 extern PFNGLBINDBUFFERBASEPROC          glBindBufferBase_;
 extern PFNGLBINDBUFFERRANGEPROC         glBindBufferRange_;
 
