@@ -36,9 +36,7 @@
 #include "begin_code.h"
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus
-/* *INDENT-OFF* */
 extern "C" {
-/* *INDENT-ON* */
 #endif
 
 /**
@@ -108,7 +106,7 @@ typedef enum
     SDL_WINDOW_INPUT_GRABBED = 0x00000100,      /**< window has grabbed input focus */
     SDL_WINDOW_INPUT_FOCUS = 0x00000200,        /**< window has input focus */
     SDL_WINDOW_MOUSE_FOCUS = 0x00000400,        /**< window has mouse focus */
-	SDL_WINDOW_FULLSCREEN_DESKTOP = ( SDL_WINDOW_FULLSCREEN | 0x00001000 ),
+    SDL_WINDOW_FULLSCREEN_DESKTOP = ( SDL_WINDOW_FULLSCREEN | 0x00001000 ),
     SDL_WINDOW_FOREIGN = 0x00000800             /**< window not created by SDL */
 } SDL_WindowFlags;
 
@@ -322,9 +320,10 @@ extern DECLSPEC int SDLCALL SDL_GetCurrentDisplayMode(int displayIndex, SDL_Disp
 
 /**
  *  \brief Get the closest match to the requested display mode.
- *  
+ *
+ *  \param displayIndex The index of display from which mode should be queried.
  *  \param mode The desired display mode
- *  \param closest A pointer to a display mode to be filled in with the closest 
+ *  \param closest A pointer to a display mode to be filled in with the closest
  *                 match of the available display modes.
  *  
  *  \return The passed in value \c closest, or NULL if no matching video mode 
@@ -355,9 +354,10 @@ extern DECLSPEC int SDLCALL SDL_GetWindowDisplayIndex(SDL_Window * window);
  *
  *  By default the window's dimensions and the desktop format and refresh rate
  *  are used.
- *  
+ *
+ *  \param window The window for which the display mode should be set.
  *  \param mode The mode to use, or NULL for the default mode.
- *  
+ *
  *  \return 0 on success, or -1 if setting the display mode failed.
  *  
  *  \sa SDL_GetWindowDisplayMode()
@@ -449,7 +449,8 @@ extern DECLSPEC const char *SDLCALL SDL_GetWindowTitle(SDL_Window * window);
 
 /**
  *  \brief Set the icon for a window.
- *  
+ *
+ *  \param window The window for which the icon should be set.
  *  \param icon The icon for the window.
  */
 extern DECLSPEC void SDLCALL SDL_SetWindowIcon(SDL_Window * window,
@@ -503,7 +504,11 @@ extern DECLSPEC void SDLCALL SDL_SetWindowPosition(SDL_Window * window,
 
 /**
  *  \brief Get the position of a window.
- *  
+ *
+ *  \param window   The window to query.
+ *  \param x        Pointer to variable for storing the x position, may be NULL
+ *  \param y        Pointer to variable for storing the y position, may be NULL
+ *
  *  \sa SDL_SetWindowPosition()
  */
 extern DECLSPEC void SDLCALL SDL_GetWindowPosition(SDL_Window * window,
@@ -511,10 +516,14 @@ extern DECLSPEC void SDLCALL SDL_GetWindowPosition(SDL_Window * window,
 
 /**
  *  \brief Set the size of a window's client area.
- *  
+ *
+ *  \param window   The window to resize.
+ *  \param w        The width of the window, must be >0
+ *  \param h        The height of the window, must be >0
+ *
  *  \note You can't change the size of a fullscreen window, it automatically
  *        matches the size of the display mode.
- *  
+ *
  *  \sa SDL_GetWindowSize()
  */
 extern DECLSPEC void SDLCALL SDL_SetWindowSize(SDL_Window * window, int w,
@@ -522,7 +531,11 @@ extern DECLSPEC void SDLCALL SDL_SetWindowSize(SDL_Window * window, int w,
 
 /**
  *  \brief Get the size of a window's client area.
- *  
+ *
+ *  \param window   The window to query.
+ *  \param w        Pointer to variable for storing the width, may be NULL
+ *  \param h        Pointer to variable for storing the height, may be NULL
+ *
  *  \sa SDL_SetWindowSize()
  */
 extern DECLSPEC void SDLCALL SDL_GetWindowSize(SDL_Window * window, int *w,
@@ -530,6 +543,10 @@ extern DECLSPEC void SDLCALL SDL_GetWindowSize(SDL_Window * window, int *w,
     
 /**
  *  \brief Set the minimum size of a window's client area.
+ *
+ *  \param window    The window to set a new minimum size.
+ *  \param min_w     The minimum width of the window, must be >0
+ *  \param min_h     The minimum height of the window, must be >0
  *
  *  \note You can't change the minimum size of a fullscreen window, it
  *        automatically matches the size of the display mode.
@@ -543,6 +560,10 @@ extern DECLSPEC void SDLCALL SDL_SetWindowMinimumSize(SDL_Window * window,
 /**
  *  \brief Get the minimum size of a window's client area.
  *
+ *  \param window   The window to query.
+ *  \param w        Pointer to variable for storing the minimum width, may be NULL
+ *  \param h        Pointer to variable for storing the minimum height, may be NULL
+ *
  *  \sa SDL_GetWindowMaximumSize()
  *  \sa SDL_SetWindowMinimumSize()
  */
@@ -551,6 +572,10 @@ extern DECLSPEC void SDLCALL SDL_GetWindowMinimumSize(SDL_Window * window,
 
 /**
  *  \brief Set the maximum size of a window's client area.
+ *
+ *  \param window    The window to set a new maximum size.
+ *  \param max_w     The maximum width of the window, must be >0
+ *  \param max_h     The maximum height of the window, must be >0
  *
  *  \note You can't change the maximum size of a fullscreen window, it
  *        automatically matches the size of the display mode.
@@ -563,6 +588,10 @@ extern DECLSPEC void SDLCALL SDL_SetWindowMaximumSize(SDL_Window * window,
     
 /**
  *  \brief Get the maximum size of a window's client area.
+ *
+ *  \param window   The window to query.
+ *  \param w        Pointer to variable for storing the maximum width, may be NULL
+ *  \param h        Pointer to variable for storing the maximum height, may be NULL
  *
  *  \sa SDL_GetWindowMinimumSize()
  *  \sa SDL_SetWindowMaximumSize()
@@ -673,14 +702,15 @@ extern DECLSPEC int SDLCALL SDL_UpdateWindowSurface(SDL_Window * window);
  *  \sa SDL_UpdateWindowSurfaceRect()
  */
 extern DECLSPEC int SDLCALL SDL_UpdateWindowSurfaceRects(SDL_Window * window,
-                                                         SDL_Rect * rects,
+                                                         const SDL_Rect * rects,
                                                          int numrects);
 
 /**
  *  \brief Set a window's input grab mode.
- *  
+ *
+ *  \param window The window for which the input grab mode should be set.
  *  \param grabbed This is SDL_TRUE to grab input, and SDL_FALSE to release input.
- *  
+ *
  *  \sa SDL_GetWindowGrab()
  */
 extern DECLSPEC void SDLCALL SDL_SetWindowGrab(SDL_Window * window,
@@ -716,7 +746,8 @@ extern DECLSPEC float SDLCALL SDL_GetWindowBrightness(SDL_Window * window);
 
 /**
  *  \brief Set the gamma ramp for a window.
- *  
+ *
+ *  \param window The window for which the gamma ramp should be set.
  *  \param red The translation table for the red channel, or NULL.
  *  \param green The translation table for the green channel, or NULL.
  *  \param blue The translation table for the blue channel, or NULL.
@@ -738,10 +769,11 @@ extern DECLSPEC int SDLCALL SDL_SetWindowGammaRamp(SDL_Window * window,
 
 /**
  *  \brief Get the gamma ramp for a window.
- *  
- *  \param red   A pointer to a 256 element array of 16-bit quantities to hold 
+ *
+ *  \param window The window from which the gamma ramp should be queried.
+ *  \param red   A pointer to a 256 element array of 16-bit quantities to hold
  *               the translation table for the red channel, or NULL.
- *  \param green A pointer to a 256 element array of 16-bit quantities to hold 
+ *  \param green A pointer to a 256 element array of 16-bit quantities to hold
  *               the translation table for the green channel, or NULL.
  *  \param blue  A pointer to a 256 element array of 16-bit quantities to hold 
  *               the translation table for the blue channel, or NULL.
@@ -902,9 +934,7 @@ extern DECLSPEC void SDLCALL SDL_GL_DeleteContext(SDL_GLContext context);
 
 /* Ends C function definitions when using C++ */
 #ifdef __cplusplus
-/* *INDENT-OFF* */
 }
-/* *INDENT-ON* */
 #endif
 #include "close_code.h"
 

@@ -1,5 +1,4 @@
 #include "engine.h"
-#include "SDL_thread.h"
 
 enum
 {

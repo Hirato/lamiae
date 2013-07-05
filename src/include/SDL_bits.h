@@ -33,18 +33,11 @@
 #include "begin_code.h"
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus
-/* *INDENT-OFF* */
 extern "C" {
-/* *INDENT-ON* */
 #endif
 
 /**
  *  \file SDL_bits.h
- *
- *  Uses inline functions for compilers that support them, and static
- *  functions for those that do not.  Because these functions become
- *  static for compilers that do not support inline functions, this
- *  header should only be included in files that actually use them.
  */
 
 /**
@@ -54,10 +47,10 @@ extern "C" {
  *
  *  \return Index of the most significant bit.
  */
-static __inline__ Sint8
+SDL_FORCE_INLINE Sint8
 SDL_MostSignificantBitIndex32(Uint32 x)
 {
-#if defined(__GNUC__)
+#if defined(__GNUC__) && __GNUC__ >= 4
     /* Count Leading Zeroes builtin in GCC.
      * http://gcc.gnu.org/onlinedocs/gcc-4.3.4/gcc/Other-Builtins.html
      */
@@ -88,9 +81,7 @@ SDL_MostSignificantBitIndex32(Uint32 x)
 
 /* Ends C function definitions when using C++ */
 #ifdef __cplusplus
-/* *INDENT-OFF* */
 }
-/* *INDENT-ON* */
 #endif
 #include "close_code.h"
 

@@ -44,9 +44,7 @@
 #include "begin_code.h"
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus
-/* *INDENT-OFF* */
 extern "C" {
-/* *INDENT-ON* */
 #endif
 
 /**
@@ -197,16 +195,43 @@ extern "C" {
 
 
 /**
+ *  \brief  A variable that lets you disable the detection and use of Xinput gamepad devices
+ *
+ *  The variable can be set to the following values:
+ *    "0"       - Disable XInput timer (only uses direct input)
+ *    "1"       - Enable XInput timer (the default)
+ */
+#define SDL_HINT_XINPUT_ENABLED "SDL_XINPUT_ENABLED"
+
+
+/**
  *  \brief  A variable that lets you manually hint extra gamecontroller db entries
  *
- *  The variable expected newline delimited rows of gamecontroller config data, see SDL_gamecontroller.h
+ *  The variable should be newline delimited rows of gamecontroller config data, see SDL_gamecontroller.h
+ *
+ *  This hint must be set before calling SDL_Init(SDL_INIT_GAMECONTROLLER)
+ *  You can update mappings after the system is initialized with SDL_GameControllerMappingForGUID() and SDL_GameControllerAddMapping()
  */
 #define SDL_HINT_GAMECONTROLLERCONFIG "SDL_GAMECONTROLLERCONFIG"
 
 
 /**
+ *  \brief  A variable that lets you enable joystick (and gamecontroller) events even when your app is in the background.
+ *
+ * The default value is "0".
+ *
+ *  The variable can be set to the following values:
+ *    "0"       - Disable joystick & gamecontroller input events when the
+ *                application is in the background.
+ *    "1"       - Enable joystick & gamecontroller input events when the
+ *                application is in the backgroumd.
+ */
+#define SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS "SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS"
+
+
+/**
  *  \brief If set to 0 then never set the top most bit on a SDL Window, even if the video mode expects it.
- *		This is a debugging aid for developers and not expected to be used by end users. The default is "1"
+ *      This is a debugging aid for developers and not expected to be used by end users. The default is "1"
  *
  *  This variable can be set to the following values:
  *    "0"       - don't allow topmost
@@ -266,9 +291,7 @@ extern DECLSPEC void SDLCALL SDL_ClearHints(void);
 
 /* Ends C function definitions when using C++ */
 #ifdef __cplusplus
-/* *INDENT-OFF* */
 }
-/* *INDENT-ON* */
 #endif
 #include "close_code.h"
 

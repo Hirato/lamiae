@@ -40,24 +40,23 @@
  *  several other languages, including Ada, C#, Eiffel, Erlang, Euphoria,
  *  Guile, Haskell, Java, Lisp, Lua, ML, Objective C, Pascal, Perl, PHP,
  *  Pike, Pliant, Python, Ruby, and Smalltalk.
- *  
- *  This library is distributed under GNU LGPL version 2, which can be
+ *
+ *  This library is distributed under the zlib license, which can be
  *  found in the file  "COPYING".  This license allows you to use SDL
- *  freely in commercial programs as long as you link with the dynamic
- *  library.
- *  
+ *  freely for any purpose as long as you retain the copyright notice.
+ *
  *  The best way to learn how to use SDL is to check out the header files in
  *  the "include" subdirectory and the programs in the "test" subdirectory.
  *  The header files and test programs are well commented and always up to date.
  *  More documentation and FAQs are available online at:
- *  	http://wiki.libsdl.org/
- *  
+ *      http://wiki.libsdl.org/
+ *
  *  If you need help with the library, or just want to discuss SDL related
  *  issues, you can join the developers mailing list:
- *  	http://www.libsdl.org/mailing-list.php
- *  
+ *      http://www.libsdl.org/mailing-list.php
+ *
  *  Enjoy!
- *  	Sam Lantinga				(slouken@libsdl.org)
+ *      Sam Lantinga                (slouken@libsdl.org)
  */
 
 #ifndef _SDL_H
@@ -93,9 +92,7 @@
 #include "begin_code.h"
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus
-/* *INDENT-OFF* */
 extern "C" {
-/* *INDENT-ON* */
 #endif
 
 /* As of version 0.5, SDL is loaded dynamically into the application */
@@ -112,9 +109,12 @@ extern "C" {
 #define SDL_INIT_VIDEO          0x00000020
 #define SDL_INIT_JOYSTICK       0x00000200
 #define SDL_INIT_HAPTIC         0x00001000
-#define SDL_INIT_GAMECONTROLLER 0x00002000		/**< turn on game controller also implicitly does JOYSTICK */
+#define SDL_INIT_GAMECONTROLLER 0x00002000      /**< turn on game controller also implicitly does JOYSTICK */
 #define SDL_INIT_NOPARACHUTE    0x00100000      /**< Don't catch fatal signals */
-#define SDL_INIT_EVERYTHING     0x0000FFFF
+#define SDL_INIT_EVERYTHING ( \
+                SDL_INIT_TIMER | SDL_INIT_AUDIO | SDL_INIT_VIDEO | \
+                SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC | SDL_INIT_GAMECONTROLLER \
+            )
 /*@}*/
 
 /**
@@ -150,9 +150,7 @@ extern DECLSPEC void SDLCALL SDL_Quit(void);
 
 /* Ends C function definitions when using C++ */
 #ifdef __cplusplus
-/* *INDENT-OFF* */
 }
-/* *INDENT-ON* */
 #endif
 #include "close_code.h"
 

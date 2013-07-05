@@ -36,9 +36,7 @@
 #include "begin_code.h"
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus
-/* *INDENT-OFF* */
 extern "C" {
-/* *INDENT-ON* */
 #endif
 
 /**
@@ -65,16 +63,16 @@ extern DECLSPEC SDL_Window * SDLCALL SDL_GetKeyboardFocus(void);
  *  \param numkeys if non-NULL, receives the length of the returned array.
  *  
  *  \return An array of key states. Indexes into this array are obtained by using ::SDL_Scancode values.
- *  
+ *
  *  \b Example:
  *  \code
- *  Uint8 *state = SDL_GetKeyboardState(NULL);
+ *  const Uint8 *state = SDL_GetKeyboardState(NULL);
  *  if ( state[SDL_SCANCODE_RETURN] )   {
  *      printf("<RETURN> is pressed.\n");
  *  }
  *  \endcode
  */
-extern DECLSPEC Uint8 *SDLCALL SDL_GetKeyboardState(int *numkeys);
+extern DECLSPEC const Uint8 *SDLCALL SDL_GetKeyboardState(int *numkeys);
 
 /**
  *  \brief Get the current key modifier state for the keyboard.
@@ -208,9 +206,7 @@ extern DECLSPEC SDL_bool SDLCALL SDL_IsScreenKeyboardShown(SDL_Window *window);
 
 /* Ends C function definitions when using C++ */
 #ifdef __cplusplus
-/* *INDENT-OFF* */
 }
-/* *INDENT-ON* */
 #endif
 #include "close_code.h"
 

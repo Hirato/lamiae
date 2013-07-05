@@ -42,14 +42,12 @@
 #include "begin_code.h"
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus
-/* *INDENT-OFF* */
 extern "C" {
-/* *INDENT-ON* */
 #endif
 
 /* General keyboard/mouse state definitions */
-#define SDL_RELEASED	0
-#define SDL_PRESSED	1
+#define SDL_RELEASED    0
+#define SDL_PRESSED 1
 
 /**
  * \brief The types of events that can be delivered.
@@ -60,6 +58,32 @@ typedef enum
 
     /* Application events */
     SDL_QUIT           = 0x100, /**< User-requested quit */
+
+    /* These application events have special meaning on iOS, see README-ios.txt for details */
+    SDL_APP_TERMINATING,        /**< The application is being terminated by the OS
+                                     Called on iOS in applicationWillTerminate()
+                                     Called on Android in onDestroy()
+                                */
+    SDL_APP_LOWMEMORY,          /**< The application is low on memory, free memory if possible.
+                                     Called on iOS in applicationDidReceiveMemoryWarning()
+                                     Called on Android in onLowMemory()
+                                */
+    SDL_APP_WILLENTERBACKGROUND, /**< The application is about to enter the background
+                                     Called on iOS in applicationWillResignActive()
+                                     Called on Android in onPause()
+                                */
+    SDL_APP_DIDENTERBACKGROUND, /**< The application did enter the background and may not get CPU for some time
+                                     Called on iOS in applicationDidEnterBackground()
+                                     Called on Android in onPause()
+                                */
+    SDL_APP_WILLENTERFOREGROUND, /**< The application is about to enter the foreground
+                                     Called on iOS in applicationWillEnterForeground()
+                                     Called on Android in onResume()
+                                */
+    SDL_APP_DIDENTERFOREGROUND, /**< The application is now interactive
+                                     Called on iOS in applicationDidBecomeActive()
+                                     Called on Android in onResume()
+                                */
 
     /* Window events */
     SDL_WINDOWEVENT    = 0x200, /**< Window state change */
@@ -77,14 +101,6 @@ typedef enum
     SDL_MOUSEBUTTONUP,          /**< Mouse button released */
     SDL_MOUSEWHEEL,             /**< Mouse wheel motion */
 
-    /* Tablet or multiple mice input device events */
-    SDL_INPUTMOTION    = 0x500, /**< Input moved */
-    SDL_INPUTBUTTONDOWN,        /**< Input button pressed */
-    SDL_INPUTBUTTONUP,          /**< Input button released */
-    SDL_INPUTWHEEL,             /**< Input wheel motion */
-    SDL_INPUTPROXIMITYIN,       /**< Input pen entered proximity */
-    SDL_INPUTPROXIMITYOUT,      /**< Input pen left proximity */
-
     /* Joystick events */
     SDL_JOYAXISMOTION  = 0x600, /**< Joystick axis motion */
     SDL_JOYBALLMOTION,          /**< Joystick trackball motion */
@@ -94,12 +110,13 @@ typedef enum
     SDL_JOYDEVICEADDED,         /**< A new joystick has been inserted into the system */
     SDL_JOYDEVICEREMOVED,       /**< An opened joystick has been removed */
 
-	/* Game controller events */
-	SDL_CONTROLLERAXISMOTION  = 0x650, /**< Game controller axis motion */
-	SDL_CONTROLLERBUTTONDOWN,          /**< Game controller button pressed */
-	SDL_CONTROLLERBUTTONUP,            /**< Game controller button released */
-	SDL_CONTROLLERDEVICEADDED,         /**< A new Game controller has been inserted into the system */
-	SDL_CONTROLLERDEVICEREMOVED,       /**< An opened Game controller has been removed */
+    /* Game controller events */
+    SDL_CONTROLLERAXISMOTION  = 0x650, /**< Game controller axis motion */
+    SDL_CONTROLLERBUTTONDOWN,          /**< Game controller button pressed */
+    SDL_CONTROLLERBUTTONUP,            /**< Game controller button released */
+    SDL_CONTROLLERDEVICEADDED,         /**< A new Game controller has been inserted into the system */
+    SDL_CONTROLLERDEVICEREMOVED,       /**< An opened Game controller has been removed */
+    SDL_CONTROLLERDEVICEREMAPPED,      /**< The controller mapping was updated */
 
     /* Touch events */
     SDL_FINGERDOWN      = 0x700,
@@ -131,12 +148,12 @@ typedef enum
 /**
  *  \brief Fields shared by every event
  */
-typedef struct SDL_GenericEvent
+typedef struct SDL_CommonEvent
 {
     Uint32 type;
     Uint32 timestamp;
-} SDL_GenericEvent;
-    
+} SDL_CommonEvent;
+
 /**
  *  \brief Window state change event data (event.window.*)
  */
@@ -204,10 +221,7 @@ typedef struct SDL_MouseMotionEvent
     Uint32 timestamp;
     Uint32 windowID;    /**< The window with mouse focus, if any */
     Uint32 which;       /**< The mouse instance id, or SDL_TOUCH_MOUSEID */
-    Uint8 state;        /**< The current button state */
-    Uint8 padding1;
-    Uint8 padding2;
-    Uint8 padding3;
+    Uint32 state;       /**< The current button state */
     Sint32 x;           /**< X coordinate, relative to window */
     Sint32 y;           /**< Y coordinate, relative to window */
     Sint32 xrel;        /**< The relative motion in the X direction */
@@ -251,7 +265,7 @@ typedef struct SDL_JoyAxisEvent
 {
     Uint32 type;        /**< ::SDL_JOYAXISMOTION */
     Uint32 timestamp;
-    Uint32 which;       /**< The joystick instance id */
+    SDL_JoystickID which; /**< The joystick instance id */
     Uint8 axis;         /**< The joystick axis index */
     Uint8 padding1;
     Uint8 padding2;
@@ -267,7 +281,7 @@ typedef struct SDL_JoyBallEvent
 {
     Uint32 type;        /**< ::SDL_JOYBALLMOTION */
     Uint32 timestamp;
-    Uint32 which;       /**< The joystick instance id */
+    SDL_JoystickID which; /**< The joystick instance id */
     Uint8 ball;         /**< The joystick trackball index */
     Uint8 padding1;
     Uint8 padding2;
@@ -283,7 +297,7 @@ typedef struct SDL_JoyHatEvent
 {
     Uint32 type;        /**< ::SDL_JOYHATMOTION */
     Uint32 timestamp;
-    Uint32 which;       /**< The joystick instance id */
+    SDL_JoystickID which; /**< The joystick instance id */
     Uint8 hat;          /**< The joystick hat index */
     Uint8 value;        /**< The hat position value.
                          *   \sa ::SDL_HAT_LEFTUP ::SDL_HAT_UP ::SDL_HAT_RIGHTUP
@@ -303,7 +317,7 @@ typedef struct SDL_JoyButtonEvent
 {
     Uint32 type;        /**< ::SDL_JOYBUTTONDOWN or ::SDL_JOYBUTTONUP */
     Uint32 timestamp;
-    Uint32 which;       /**< The joystick instance id */
+    SDL_JoystickID which; /**< The joystick instance id */
     Uint8 button;       /**< The joystick button index */
     Uint8 state;        /**< ::SDL_PRESSED or ::SDL_RELEASED */
     Uint8 padding1;
@@ -315,9 +329,9 @@ typedef struct SDL_JoyButtonEvent
  */
 typedef struct SDL_JoyDeviceEvent
 {
-	Uint32 type;        /**< ::SDL_JOYDEVICEADDED or ::SDL_JOYDEVICEREMOVED */
-	Uint32 timestamp;
-	Uint32 which;       /**< The joystick device index for the ADDED event, instance id for the REMOVED event */
+    Uint32 type;        /**< ::SDL_JOYDEVICEADDED or ::SDL_JOYDEVICEREMOVED */
+    Uint32 timestamp;
+    Sint32 which;       /**< The joystick device index for the ADDED event, instance id for the REMOVED event */
 } SDL_JoyDeviceEvent;
 
 
@@ -328,7 +342,7 @@ typedef struct SDL_ControllerAxisEvent
 {
     Uint32 type;        /**< ::SDL_CONTROLLERAXISMOTION */
     Uint32 timestamp;
-    Uint32 which;       /**< The joystick instance id */
+    SDL_JoystickID which; /**< The joystick instance id */
     Uint8 axis;         /**< The controller axis (SDL_GameControllerAxis) */
     Uint8 padding1;
     Uint8 padding2;
@@ -345,7 +359,7 @@ typedef struct SDL_ControllerButtonEvent
 {
     Uint32 type;        /**< ::SDL_CONTROLLERBUTTONDOWN or ::SDL_CONTROLLERBUTTONUP */
     Uint32 timestamp;
-    Uint32 which;       /**< The joystick instance id */
+    SDL_JoystickID which; /**< The joystick instance id */
     Uint8 button;       /**< The controller button (SDL_GameControllerButton) */
     Uint8 state;        /**< ::SDL_PRESSED or ::SDL_RELEASED */
     Uint8 padding1;
@@ -358,9 +372,9 @@ typedef struct SDL_ControllerButtonEvent
  */
 typedef struct SDL_ControllerDeviceEvent
 {
-	Uint32 type;        /**< ::SDL_CONTROLLERDEVICEADDED or ::SDL_CONTROLLERDEVICEREMOVED */
-	Uint32 timestamp;
-	Uint32 which;       /**< The joystick device index for the ADDED event, instance id for the REMOVED event */
+    Uint32 type;        /**< ::SDL_CONTROLLERDEVICEADDED, ::SDL_CONTROLLERDEVICEREMOVED, or ::SDL_CONTROLLERDEVICEREMAPPED */
+    Uint32 timestamp;
+    Sint32 which;       /**< The joystick device index for the ADDED event, instance id for the REMOVED or REMAPPED event */
 } SDL_ControllerDeviceEvent;
 
 
@@ -398,7 +412,9 @@ typedef struct SDL_MultiGestureEvent
 } SDL_MultiGestureEvent;
 
 
-/* (event.dgesture.*) */
+/**
+ * \brief Dollar Gesture Event (event.dgesture.*)
+ */
 typedef struct SDL_DollarGestureEvent
 {
     Uint32 type;        /**< ::SDL_DOLLARGESTURE */
@@ -434,13 +450,21 @@ typedef struct SDL_QuitEvent
     Uint32 timestamp;
 } SDL_QuitEvent;
 
+/**
+ *  \brief OS Specific event
+ */
+typedef struct SDL_OSEvent
+{
+    Uint32 type;        /**< ::SDL_QUIT */
+    Uint32 timestamp;
+} SDL_OSEvent;
 
 /**
  *  \brief A user-defined event type (event.user.*)
  */
 typedef struct SDL_UserEvent
 {
-    Uint32 type;        /**< ::SDL_USEREVENT through ::SDL_NUMEVENTS-1 */
+    Uint32 type;        /**< ::SDL_USEREVENT through ::SDL_LASTEVENT-1 */
     Uint32 timestamp;
     Uint32 windowID;    /**< The associated window if any */
     Sint32 code;        /**< User defined event code */
@@ -471,7 +495,7 @@ typedef struct SDL_SysWMEvent
 typedef union SDL_Event
 {
     Uint32 type;                    /**< Event type, shared with all events */
-    SDL_GenericEvent generic;       /**< Generic event data */
+    SDL_CommonEvent common;         /**< Common event data */
     SDL_WindowEvent window;         /**< Window event data */
     SDL_KeyboardEvent key;          /**< Keyboard event data */
     SDL_TextEditingEvent edit;      /**< Text editing event data */
@@ -484,9 +508,9 @@ typedef union SDL_Event
     SDL_JoyHatEvent jhat;           /**< Joystick hat event data */
     SDL_JoyButtonEvent jbutton;     /**< Joystick button event data */
     SDL_JoyDeviceEvent jdevice;     /**< Joystick device change event data */
-	SDL_ControllerAxisEvent caxis;		/**< Game Controller button event data */
-	SDL_ControllerButtonEvent cbutton;  /**< Game Controller button event data */
-	SDL_ControllerDeviceEvent cdevice;  /**< Game Controller device event data */
+    SDL_ControllerAxisEvent caxis;      /**< Game Controller axis event data */
+    SDL_ControllerButtonEvent cbutton;  /**< Game Controller button event data */
+    SDL_ControllerDeviceEvent cdevice;  /**< Game Controller device event data */
     SDL_QuitEvent quit;             /**< Quit request event data */
     SDL_UserEvent user;             /**< Custom event data */
     SDL_SysWMEvent syswm;           /**< System dependent window event data */
@@ -585,9 +609,10 @@ extern DECLSPEC int SDLCALL SDL_WaitEvent(SDL_Event * event);
  *         available event.
  *  
  *  \return 1, or 0 if there was an error while waiting for events.
- *  
- *  \param event If not NULL, the next event is removed from the queue and 
+ *
+ *  \param event If not NULL, the next event is removed from the queue and
  *               stored in that area.
+ *  \param timeout The timeout (in milliseconds) to wait for next event.
  */
 extern DECLSPEC int SDLCALL SDL_WaitEventTimeout(SDL_Event * event,
                                                  int timeout);
@@ -605,8 +630,8 @@ typedef int (SDLCALL * SDL_EventFilter) (void *userdata, SDL_Event * event);
 /**
  *  Sets up a filter to process all events before they change internal state and
  *  are posted to the internal event queue.
- *  
- *  The filter is protypted as:
+ *
+ *  The filter is prototyped as:
  *  \code
  *      int SDL_EventFilter(void *userdata, SDL_Event * event);
  *  \endcode
@@ -616,10 +641,10 @@ typedef int (SDLCALL * SDL_EventFilter) (void *userdata, SDL_Event * event);
  *  internal state will still be updated.  This allows selective filtering of
  *  dynamically arriving events.
  *  
- *  \warning  Be very careful of what you do in the event filter function, as 
+ *  \warning  Be very careful of what you do in the event filter function, as
  *            it may run in a different thread!
- *  
- *  There is one caveat when dealing with the ::SDL_QUITEVENT event type.  The
+ *
+ *  There is one caveat when dealing with the ::SDL_QuitEvent event type.  The
  *  event filter is only called when the window manager desires to close the
  *  application window.  If the event filter returns 1, then the window will
  *  be closed, otherwise the window will remain open if possible.
@@ -657,10 +682,10 @@ extern DECLSPEC void SDLCALL SDL_FilterEvents(SDL_EventFilter filter,
                                               void *userdata);
 
 /*@{*/
-#define SDL_QUERY	-1
-#define SDL_IGNORE	 0
-#define SDL_DISABLE	 0
-#define SDL_ENABLE	 1
+#define SDL_QUERY   -1
+#define SDL_IGNORE   0
+#define SDL_DISABLE  0
+#define SDL_ENABLE   1
 
 /**
  *  This function allows you to set the state of processing certain events.
@@ -686,9 +711,7 @@ extern DECLSPEC Uint32 SDLCALL SDL_RegisterEvents(int numevents);
 
 /* Ends C function definitions when using C++ */
 #ifdef __cplusplus
-/* *INDENT-OFF* */
 }
-/* *INDENT-ON* */
 #endif
 #include "close_code.h"
 

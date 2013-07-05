@@ -40,14 +40,6 @@
 #include <windows.h>
 #endif
 
-#ifdef __HAIKU__  /* !!! FIXME: temp compiler warning fix... */
-#define NO_SDL_GLEXT 1
-#endif
-
-#ifdef __FreeBSD__  /* !!! FIXME: temp compiler warning fix... */
-#define NO_SDL_GLEXT 1
-#endif
-
 #ifdef __glext_h_
 /* Someone has already included glext.h */
 #define NO_SDL_GLEXT
@@ -70,9 +62,9 @@
  *  
  *  This file is included because glext.h is not available on some systems.
  *  If you don't want this version included, simply define ::NO_SDL_GLEXT.
- *  
+ *
  *  The latest version is available from:
- *  	http://www.opengl.org/registry/
+ *      http://www.opengl.org/registry/
  */
 
 /**
@@ -83,7 +75,6 @@
  */
 
 #if !defined(NO_SDL_GLEXT) && !defined(GL_GLEXT_LEGACY)
-/* *INDENT-OFF* */
 #ifndef __glext_h_
 #define __glext_h_
 
@@ -11126,7 +11117,6 @@ typedef void (APIENTRYP PFNGLVDPAUUNMAPSURFACESNVPROC) (GLsizei numSurface, cons
 #endif
 
 #endif
-/* *INDENT-ON* */
 #endif /* NO_SDL_GLEXT */
 
 #endif /* !__IPHONEOS__ */

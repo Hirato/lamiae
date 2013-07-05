@@ -21,8 +21,8 @@
 
 /**
  *  \file SDL_surface.h
- *  
- *  Header file for ::SDL_surface definition and management functions.
+ *
+ *  Header file for ::SDL_Surface definition and management functions.
  */
 
 #ifndef _SDL_surface_h
@@ -37,16 +37,14 @@
 #include "begin_code.h"
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus
-/* *INDENT-OFF* */
 extern "C" {
-/* *INDENT-ON* */
 #endif
 
 /**
  *  \name Surface flags
- *  
- *  These are the currently supported flags for the ::SDL_surface.
- *  
+ *
+ *  These are the currently supported flags for the ::SDL_Surface.
+ *
  *  \internal
  *  Used internally (read-only).
  */
@@ -60,7 +58,7 @@ extern "C" {
 /**
  *  Evaluates to true if the surface needs to be locked before access.
  */
-#define SDL_MUSTLOCK(S)	(((S)->flags & SDL_RLEACCEL) != 0)
+#define SDL_MUSTLOCK(S) (((S)->flags & SDL_RLEACCEL) != 0)
 
 /**
  * \brief A collection of pixels used in software blitting.
@@ -107,8 +105,15 @@ typedef int (*SDL_blit) (struct SDL_Surface * src, SDL_Rect * srcrect,
  *  flags '[RGB]mask'.
  *  
  *  If the function runs out of memory, it will return NULL.
- *  
+ *
  *  \param flags The \c flags are obsolete and should be set to 0.
+ *  \param width The width in pixels of the surface to create.
+ *  \param height The height in pixels of the surface to create.
+ *  \param depth The depth in bits of the surface to create.
+ *  \param Rmask The red mask of the surface to create.
+ *  \param Gmask The green mask of the surface to create.
+ *  \param Bmask The blue mask of the surface to create.
+ *  \param Amask The alpha mask of the surface to create.
  */
 extern DECLSPEC SDL_Surface *SDLCALL SDL_CreateRGBSurface
     (Uint32 flags, int width, int height, int depth,
@@ -171,10 +176,10 @@ extern DECLSPEC SDL_Surface *SDLCALL SDL_LoadBMP_RW(SDL_RWops * src,
 
 /**
  *  Load a surface from a file.
- *  
+ *
  *  Convenience macro.
  */
-#define SDL_LoadBMP(file)	SDL_LoadBMP_RW(SDL_RWFromFile(file, "rb"), 1)
+#define SDL_LoadBMP(file)   SDL_LoadBMP_RW(SDL_RWFromFile(file, "rb"), 1)
 
 /**
  *  Save a surface to a seekable SDL data stream (memory or file).
@@ -192,7 +197,7 @@ extern DECLSPEC int SDLCALL SDL_SaveBMP_RW
  *  Convenience macro.
  */
 #define SDL_SaveBMP(surface, file) \
-		SDL_SaveBMP_RW(surface, SDL_RWFromFile(file, "wb"), 1)
+        SDL_SaveBMP_RW(surface, SDL_RWFromFile(file, "wb"), 1)
 
 /**
  *  \brief Sets the RLE acceleration hint for a surface.
@@ -404,9 +409,9 @@ extern DECLSPEC int SDLCALL SDL_FillRects
       SDL_SRCALPHA not set:
         copy RGB.
         if SDL_SRCCOLORKEY set, only copy the pixels matching the
-        RGB values of the source colour key, ignoring alpha in the
+        RGB values of the source color key, ignoring alpha in the
         comparison.
-   
+
     RGB->RGBA:
       SDL_SRCALPHA set:
         alpha-blend (using the source per-surface alpha value);
@@ -415,8 +420,8 @@ extern DECLSPEC int SDLCALL SDL_FillRects
         copy RGB, set destination alpha to source per-surface alpha value.
       both:
         if SDL_SRCCOLORKEY set, only copy the pixels matching the
-        source colour key.
-   
+        source color key.
+
     RGBA->RGBA:
       SDL_SRCALPHA set:
         alpha-blend (using the source alpha channel) the RGB values;
@@ -425,19 +430,19 @@ extern DECLSPEC int SDLCALL SDL_FillRects
       SDL_SRCALPHA not set:
         copy all of RGBA to the destination.
         if SDL_SRCCOLORKEY set, only copy the pixels matching the
-        RGB values of the source colour key, ignoring alpha in the
+        RGB values of the source color key, ignoring alpha in the
        comparison.
-   
-    RGB->RGB: 
+
+    RGB->RGB:
       SDL_SRCALPHA set:
         alpha-blend (using the source per-surface alpha value).
       SDL_SRCALPHA not set:
         copy RGB.
       both:
         if SDL_SRCCOLORKEY set, only copy the pixels matching the
-        source colour key.
+        source color key.
     \endverbatim
- *  
+ *
  *  You should call SDL_BlitSurface() unless you know exactly how SDL
  *  blitting works internally and how to use the other blit functions.
  */
@@ -491,9 +496,7 @@ extern DECLSPEC int SDLCALL SDL_LowerBlitScaled
 
 /* Ends C function definitions when using C++ */
 #ifdef __cplusplus
-/* *INDENT-OFF* */
 }
-/* *INDENT-ON* */
 #endif
 #include "close_code.h"
 

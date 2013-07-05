@@ -35,10 +35,16 @@
 #include "begin_code.h"
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus
-/* *INDENT-OFF* */
 extern "C" {
-/* *INDENT-ON* */
 #endif
+
+/* RWops Types */
+#define SDL_RWOPS_UNKNOWN   0   /* Unknown stream type */
+#define SDL_RWOPS_WINFILE   1   /* Win32 file */
+#define SDL_RWOPS_STDFILE   2   /* Stdio file */
+#define SDL_RWOPS_JNIFILE   3   /* Android asset */
+#define SDL_RWOPS_MEMORY    4   /* Memory stream */
+#define SDL_RWOPS_MEMORY_RO 5   /* Read-Only memory stream */
 
 /**
  * This is the read/write operation structure -- very basic.
@@ -53,8 +59,8 @@ typedef struct SDL_RWops
     /**
      *  Seek to \c offset relative to \c whence, one of stdio's whence values:
      *  RW_SEEK_SET, RW_SEEK_CUR, RW_SEEK_END
-     *  
-     *  \return the final offset in the data stream.
+     *
+     *  \return the final offset in the data stream, or -1 on error.
      */
     Sint64 (SDLCALL * seek) (struct SDL_RWops * context, Sint64 offset,
                              int whence);
@@ -130,6 +136,7 @@ typedef struct SDL_RWops
         struct
         {
             void *data1;
+            void *data2;
         } unknown;
     } hidden;
 
@@ -164,9 +171,9 @@ extern DECLSPEC SDL_RWops *SDLCALL SDL_RWFromConstMem(const void *mem,
 extern DECLSPEC SDL_RWops *SDLCALL SDL_AllocRW(void);
 extern DECLSPEC void SDLCALL SDL_FreeRW(SDL_RWops * area);
 
-#define RW_SEEK_SET	0       /**< Seek from the beginning of data */
-#define RW_SEEK_CUR	1       /**< Seek relative to current read point */
-#define RW_SEEK_END	2       /**< Seek relative to the end of data */
+#define RW_SEEK_SET 0       /**< Seek from the beginning of data */
+#define RW_SEEK_CUR 1       /**< Seek relative to current read point */
+#define RW_SEEK_END 2       /**< Seek relative to the end of data */
 
 /**
  *  \name Read/write macros
@@ -174,12 +181,12 @@ extern DECLSPEC void SDLCALL SDL_FreeRW(SDL_RWops * area);
  *  Macros to easily read and write from an SDL_RWops structure.
  */
 /*@{*/
-#define SDL_RWsize(ctx)	        (ctx)->size(ctx)
-#define SDL_RWseek(ctx, offset, whence)	(ctx)->seek(ctx, offset, whence)
-#define SDL_RWtell(ctx)			(ctx)->seek(ctx, 0, RW_SEEK_CUR)
-#define SDL_RWread(ctx, ptr, size, n)	(ctx)->read(ctx, ptr, size, n)
-#define SDL_RWwrite(ctx, ptr, size, n)	(ctx)->write(ctx, ptr, size, n)
-#define SDL_RWclose(ctx)		(ctx)->close(ctx)
+#define SDL_RWsize(ctx)         (ctx)->size(ctx)
+#define SDL_RWseek(ctx, offset, whence) (ctx)->seek(ctx, offset, whence)
+#define SDL_RWtell(ctx)         (ctx)->seek(ctx, 0, RW_SEEK_CUR)
+#define SDL_RWread(ctx, ptr, size, n)   (ctx)->read(ctx, ptr, size, n)
+#define SDL_RWwrite(ctx, ptr, size, n)  (ctx)->write(ctx, ptr, size, n)
+#define SDL_RWclose(ctx)        (ctx)->close(ctx)
 /*@}*//*Read/write macros*/
 
 
@@ -216,9 +223,7 @@ extern DECLSPEC size_t SDLCALL SDL_WriteBE64(SDL_RWops * dst, Uint64 value);
 
 /* Ends C function definitions when using C++ */
 #ifdef __cplusplus
-/* *INDENT-OFF* */
 }
-/* *INDENT-ON* */
 #endif
 #include "close_code.h"
 

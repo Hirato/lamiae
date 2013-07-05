@@ -31,9 +31,7 @@
 #include "begin_code.h"
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus
-/* *INDENT-OFF* */
 extern "C" {
-/* *INDENT-ON* */
 #endif
 
 /**
@@ -117,11 +115,11 @@ enum
     ((1 << 28) | ((type) << 24) | ((order) << 20) | ((layout) << 16) | \
      ((bits) << 8) | ((bytes) << 0))
 
-#define SDL_PIXELFLAG(X)	(((X) >> 28) & 0x0F)
-#define SDL_PIXELTYPE(X)	(((X) >> 24) & 0x0F)
-#define SDL_PIXELORDER(X)	(((X) >> 20) & 0x0F)
-#define SDL_PIXELLAYOUT(X)	(((X) >> 16) & 0x0F)
-#define SDL_BITSPERPIXEL(X)	(((X) >> 8) & 0xFF)
+#define SDL_PIXELFLAG(X)    (((X) >> 28) & 0x0F)
+#define SDL_PIXELTYPE(X)    (((X) >> 24) & 0x0F)
+#define SDL_PIXELORDER(X)   (((X) >> 20) & 0x0F)
+#define SDL_PIXELLAYOUT(X)  (((X) >> 16) & 0x0F)
+#define SDL_BITSPERPIXEL(X) (((X) >> 8) & 0xFF)
 #define SDL_BYTESPERPIXEL(X) \
     (SDL_ISPIXELFORMAT_FOURCC(X) ? \
         ((((X) == SDL_PIXELFORMAT_YUY2) || \
@@ -256,7 +254,7 @@ typedef struct SDL_Color
     Uint8 r;
     Uint8 g;
     Uint8 b;
-    Uint8 unused;
+    Uint8 a;
 } SDL_Color;
 #define SDL_Colour SDL_Color
 
@@ -420,9 +418,7 @@ extern DECLSPEC void SDLCALL SDL_CalculateGammaRamp(float gamma, Uint16 * ramp);
 
 /* Ends C function definitions when using C++ */
 #ifdef __cplusplus
-/* *INDENT-OFF* */
 }
-/* *INDENT-ON* */
 #endif
 #include "close_code.h"
 

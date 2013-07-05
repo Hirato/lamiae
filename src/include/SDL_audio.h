@@ -38,9 +38,7 @@
 #include "begin_code.h"
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus
-/* *INDENT-OFF* */
 extern "C" {
-/* *INDENT-ON* */
 #endif
 
 /**
@@ -88,36 +86,32 @@ typedef Uint16 SDL_AudioFormat;
  *  Defaults to LSB byte order.
  */
 /*@{*/
-#define AUDIO_U8	0x0008  /**< Unsigned 8-bit samples */
-#define AUDIO_S8	0x8008  /**< Signed 8-bit samples */
-#define AUDIO_U16LSB	0x0010  /**< Unsigned 16-bit samples */
-#define AUDIO_S16LSB	0x8010  /**< Signed 16-bit samples */
-#define AUDIO_U16MSB	0x1010  /**< As above, but big-endian byte order */
-#define AUDIO_S16MSB	0x9010  /**< As above, but big-endian byte order */
-#define AUDIO_U16	AUDIO_U16LSB
-#define AUDIO_S16	AUDIO_S16LSB
+#define AUDIO_U8        0x0008  /**< Unsigned 8-bit samples */
+#define AUDIO_S8        0x8008  /**< Signed 8-bit samples */
+#define AUDIO_U16LSB    0x0010  /**< Unsigned 16-bit samples */
+#define AUDIO_S16LSB    0x8010  /**< Signed 16-bit samples */
+#define AUDIO_U16MSB    0x1010  /**< As above, but big-endian byte order */
+#define AUDIO_S16MSB    0x9010  /**< As above, but big-endian byte order */
+#define AUDIO_U16       AUDIO_U16LSB
+#define AUDIO_S16       AUDIO_S16LSB
 /*@}*/
 
 /**
  *  \name int32 support
- *  
- *  New to SDL 1.3.
  */
 /*@{*/
-#define AUDIO_S32LSB	0x8020  /**< 32-bit integer samples */
-#define AUDIO_S32MSB	0x9020  /**< As above, but big-endian byte order */
-#define AUDIO_S32	AUDIO_S32LSB
+#define AUDIO_S32LSB    0x8020  /**< 32-bit integer samples */
+#define AUDIO_S32MSB    0x9020  /**< As above, but big-endian byte order */
+#define AUDIO_S32       AUDIO_S32LSB
 /*@}*/
 
 /**
  *  \name float32 support
- *  
- *  New to SDL 1.3.
  */
 /*@{*/
-#define AUDIO_F32LSB	0x8120  /**< 32-bit floating point samples */
-#define AUDIO_F32MSB	0x9120  /**< As above, but big-endian byte order */
-#define AUDIO_F32	AUDIO_F32LSB
+#define AUDIO_F32LSB    0x8120  /**< 32-bit floating point samples */
+#define AUDIO_F32MSB    0x9120  /**< As above, but big-endian byte order */
+#define AUDIO_F32       AUDIO_F32LSB
 /*@}*/
 
 /**
@@ -125,15 +119,15 @@ typedef Uint16 SDL_AudioFormat;
  */
 /*@{*/
 #if SDL_BYTEORDER == SDL_LIL_ENDIAN
-#define AUDIO_U16SYS	AUDIO_U16LSB
-#define AUDIO_S16SYS	AUDIO_S16LSB
-#define AUDIO_S32SYS	AUDIO_S32LSB
-#define AUDIO_F32SYS	AUDIO_F32LSB
+#define AUDIO_U16SYS    AUDIO_U16LSB
+#define AUDIO_S16SYS    AUDIO_S16LSB
+#define AUDIO_S32SYS    AUDIO_S32LSB
+#define AUDIO_F32SYS    AUDIO_F32LSB
 #else
-#define AUDIO_U16SYS	AUDIO_U16MSB
-#define AUDIO_S16SYS	AUDIO_S16MSB
-#define AUDIO_S32SYS	AUDIO_S32MSB
-#define AUDIO_F32SYS	AUDIO_F32MSB
+#define AUDIO_U16SYS    AUDIO_U16MSB
+#define AUDIO_S16SYS    AUDIO_S16MSB
+#define AUDIO_S32SYS    AUDIO_S32MSB
+#define AUDIO_F32SYS    AUDIO_F32MSB
 #endif
 /*@}*/
 
@@ -387,7 +381,7 @@ extern DECLSPEC void SDLCALL SDL_PauseAudioDevice(SDL_AudioDeviceID dev,
  *  that source if \c freesrc is non-zero.  For example, to load a WAVE file,
  *  you could do:
  *  \code
- *  	SDL_LoadWAV_RW(SDL_RWFromFile("sample.wav", "rb"), 1, ...);
+ *      SDL_LoadWAV_RW(SDL_RWFromFile("sample.wav", "rb"), 1, ...);
  *  \endcode
  *
  *  If this function succeeds, it returns the given SDL_AudioSpec,
@@ -412,7 +406,7 @@ extern DECLSPEC SDL_AudioSpec *SDLCALL SDL_LoadWAV_RW(SDL_RWops * src,
  *  Compatibility convenience function.
  */
 #define SDL_LoadWAV(file, spec, audio_buf, audio_len) \
-	SDL_LoadWAV_RW(SDL_RWFromFile(file, "rb"),1, spec,audio_buf,audio_len)
+    SDL_LoadWAV_RW(SDL_RWFromFile(file, "rb"),1, spec,audio_buf,audio_len)
 
 /**
  *  This function frees data previously allocated with SDL_LoadWAV_RW()
@@ -498,9 +492,7 @@ extern DECLSPEC int SDLCALL SDL_AudioDeviceConnected(SDL_AudioDeviceID dev);
 
 /* Ends C function definitions when using C++ */
 #ifdef __cplusplus
-/* *INDENT-OFF* */
 }
-/* *INDENT-ON* */
 #endif
 #include "close_code.h"
 

@@ -1,6 +1,7 @@
 // texture.cpp: texture slot management
 
 #include "engine.h"
+#include "SDL_image.h"
 
 #define FUNCNAME(name) name##1
 #define DEFPIXEL uint OP(r, 0);
