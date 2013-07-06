@@ -284,7 +284,7 @@ namespace game
 			{
 				if(clear)
 				{
-					WARNINGF("Duplicate instance: \"%s/%s.cfg\" - ignoring", dir, files[i]);
+					if(DEBUG_WORLD) DEBUGF("Duplicate instance: \"%s/%s.cfg\" - overriding", dir, files[i]);
 					continue;
 				}
 				var->~T();
@@ -319,7 +319,7 @@ namespace game
 
 			if(objects.access(hash))
 			{
-				WARNINGF("Duplicate instance: \"%s/%s.cfg\" - ignoring", dir, files[i]);
+				if(DEBUG_WORLD) DEBUGF("Duplicate instance: \"%s/%s.cfg\" - overriding", dir, files[i]);
 				delete[] files.remove(i--);
 				continue;
 			}
