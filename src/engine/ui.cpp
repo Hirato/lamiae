@@ -564,6 +564,10 @@ namespace UI
         }
     };
 
+    World *main;
+    World *bgworld;
+    World *ldworld;
+
     World *world;
 
     struct HorizontalList : Object
@@ -2777,7 +2781,45 @@ namespace UI
 
     void setup()
     {
-        world = new World;
+        main = new World();
+        bgworld = new World();
+        ldworld = new World();
+
+        world = main;
+    }
+
+    void renderbackground()
+    {
+        world = bgworld;
+        execute("showbackground");
+
+        Object *lasttooltip = tooltip;
+        tooltip = NULL;
+
+        world->layout();
+        render();
+
+        tooltip = lasttooltip;
+
+        hideui("background");
+        world = main;
+    }
+
+    void renderprogress()
+    {
+        world = ldworld;
+        execute("showloading");
+
+        Object *lasttooltip = tooltip;
+        tooltip = NULL;
+
+        world->layout();
+        render();
+
+        tooltip = lasttooltip;
+
+        hideui("loading");
+        world = main;
     }
 
     int showchanges = 0;

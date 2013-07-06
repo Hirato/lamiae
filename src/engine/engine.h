@@ -686,6 +686,8 @@ namespace UI
     extern void render();
     extern void clearmainmenu();
     extern int mainmenu;
+    extern void renderbackground();
+    extern void renderprogress();
 }
 
 // sound

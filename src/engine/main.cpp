@@ -2,7 +2,7 @@
 #include "engine.h"
 
 SVARO(version, "0.1.0");
-string imagelogo = "<premul>media/interface/lamiae";
+SVAR(logo, "<premul>media/interface/lamiae");
 
 extern void cleargamma();
 
@@ -148,219 +148,27 @@ void restorebackground()
 
 VARP(showversion, 0, 0, 2);
 
+ICOMMAND(bgcaption, "", (), result(backgroundcaption))
+ICOMMAND(bgimage, "", (), result(backgroundmapshot ? backgroundmapshot->name : ""))
+ICOMMAND(bgmapname, "", (), result(backgroundmapname))
+ICOMMAND(bgmapinfo, "", (), result(backgroundmapinfo ? backgroundmapinfo : ""))
+VAR(bgflags, 1, 0, -1);
+
+
 void renderbackground(const char *caption, Texture *mapshot, const char *mapname, const char *mapinfo, bool restore, bool force)
 {
     if(!inbetweenframes && !force) return;
 
     stopsounds();
 
-    int w = screenw, h = screenh;
-    getbackgroundres(w, h);
-    if(forceaspect) w = int(ceil(h*forceaspect));
-    gettextres(w, h);
-
-    static int lastupdate = -1, lastw = -1, lasth = -1;
-    static struct ray { vec2 coords[2]; } rays[5];
-
-    if((renderedframe && !UI::mainmenu && lastupdate != lastmillis) || lastw != w || lasth != h)
+    if(!restore || force)
     {
-        lastupdate = lastmillis;
-        lastw = w;
-        lasth = h;
+        bgflags = 0;
+        if(caption) bgflags |= 1;
+        if(mapshot) bgflags |= 2;
+        if(mapname) bgflags |= 4;
+        if(mapinfo) bgflags |= 8;
 
-        loopi(sizeof(rays)/sizeof(rays[0]))
-        {
-            ray &r = rays[i];
-            r.coords[0] = vec2(w/2 + rndscale(w), h/3 + rndscale(h * 1.25));
-            r.coords[1] = vec2(w/2 + rndscale(w), h/3 + rndscale(h * 1.25));
-        }
-    }
-    else if(lastupdate != lastmillis) lastupdate = lastmillis;
-
-    loopi(restore ? 1 : 3)
-    {
-        hudmatrix.ortho(0, w, h, 0, -1, 1);
-        resethudmatrix();
-        hudnotextureshader->set();
-
-        gle::defvertex(2);
-        gle::colorf(.8, .775, .65);
-
-        gle::begin(GL_TRIANGLE_STRIP);
-
-        gle::attribf(0, 0);
-        gle::attribf(w, 0);
-        gle::attribf(0, h);
-        gle::attribf(w, h);
-
-        gle::end();
-
-        hudshader->set();
-        gle::defvertex(2);
-        gle::deftexcoord0();
-        gle::colorf(1, 1, 1);
-
-        settexture(imagelogo, 3);
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-        {
-            float ldim, hoffset;
-            if(mapshot || mapname || mapinfo)
-            {
-                ldim = min(w, h) * .15;
-                hoffset = h * 0.175;
-            }
-            else
-            {
-                ldim = min(w, h) * .45;
-                hoffset = h / 2;
-            }
-            bgquad(w / 2 - ldim, hoffset - ldim, 2 * ldim, 2 * ldim);
-
-        }
-
-        float bh = 0.1f * min(w, h),
-              bw = bh * 2,
-              bx = 0.1f * bw,
-              by = h - 1.1f * bh;
-
-        settexture("<premul>media/interface/cube2badge", 3);
-        bgquad(bx, by, bw, bh);
-
-        hudnotextureshader->set();
-        gle::defvertex(2);
-        gle::defcolor(4);
-
-        float roffset = -max(w, h) * 0.02;
-        gle::begin(GL_TRIANGLES);
-        loopi(sizeof(rays)/sizeof(rays[0]))
-        {
-            gle::attribf(roffset, roffset);
-            gle::attribf(1, 1, 1, .4);
-
-            gle::attrib(rays[i].coords[0]);
-            gle::attribf(1, 1, 1, 0);
-
-            gle::attrib(rays[i].coords[1]);
-            gle::attribf(1, 1, 1, 0);
-        }
-        gle::end();
-        gle::disable();
-
-        hudshader->set();
-        gle::colorf(1, 1, 1);
-        gle::defvertex(2);
-        gle::deftexcoord0();
-
-        if(caption)
-        {
-            int tw = text_width(caption);
-            float tsz = 0.04 * min(w, h)/FONTH;
-            float tx = 0.5 * (w - tw * tsz);
-            float ty = h - .125 * min(w, h) - 1.25 * FONTH * tsz;
-
-            pushhudmatrix();
-            hudmatrix.translate(tx, ty, 0);
-            hudmatrix.scale(tsz, tsz, 1);
-            flushhudmatrix();
-
-            draw_text(caption, 0, 0);
-
-            pophudmatrix();
-        }
-
-
-        if(mapshot || mapname)
-        {
-            int infowidth = 16 * FONTH;
-            float sz = 0.35 * min(w, h);
-            float isz = (0.85 * min(w, h) - sz) / infowidth;
-            float x = .5 * w - sz / 2;
-            float y = .55 * h - sz / 2;
-
-            if(mapinfo)
-            {
-                int mw, mh;
-                text_bounds(mapinfo, mw, mh, infowidth);
-                x = (w - sz - FONTH - mw * isz) / 2 + sz + FONTH;
-
-                pushhudmatrix();
-                hudmatrix.translate(x, y, 0);
-                hudmatrix.scale(isz, isz, 1);
-                flushhudmatrix();
-
-                draw_text(mapinfo, 0, 0, 0xFF, 0xCF, 0x5F, 0xFF, -1, infowidth);
-                gle::colorf(1, 1, 1);
-
-                pophudmatrix();
-
-                x -= sz + FONTH;
-            }
-
-            if(mapshot != notexture)
-            {
-                glBindTexture(GL_TEXTURE_2D, mapshot->id);
-                bgquad(x, y, sz, sz);
-            }
-            else
-            {
-                float tsz = sz / max(FONTH, FONTW);
-
-                pushhudmatrix();
-                hudmatrix.translate(x + (sz - FONTW * tsz) / 2 , y + (sz - FONTH * tsz) / 2, 0);
-                hudmatrix.scale(tsz, tsz, 1);
-                flushhudmatrix();
-
-                draw_text("?", 0, 0);
-
-                pophudmatrix();
-            }
-
-            settexture("media/interface/mapshot_frame", 3);
-            bgquad(x, y, sz, sz);
-
-            if(mapname)
-            {
-                int tw = text_width(mapname);
-                float tsz = min(.75, sz * .9 / tw);
-
-                pushhudmatrix();
-                hudmatrix.translate(x + (sz - tw * tsz) / 2, y - FONTH + sz * 0.9, 0);
-                hudmatrix.scale(tsz, tsz, 1);
-                flushhudmatrix();
-
-                draw_text(mapname, 0, 0);
-
-                pophudmatrix();
-            }
-        }
-
-        if(showversion == 2 || (!mapshot && !mapname && !caption && !mapinfo && showversion))
-        {
-            int tw = text_width(version);
-            float sz = min(0.75, min(w, h) * .1 / max(1, tw));
-
-            pushhudmatrix();
-            hudmatrix.translate(w * .875, h * .95 - FONTH * sz, 0);
-            hudmatrix.scale(sz, sz, 1);
-            flushhudmatrix();
-
-            draw_text(version, 0, 0);
-
-            pophudmatrix();
-        }
-
-        glDisable(GL_BLEND);
-
-        gle::disable();
-
-        if(!restore) swapbuffers();
-    }
-
-    if(!restore)
-    {
-        renderedframe = false;
         copystring(backgroundcaption, caption ? caption : "");
         backgroundmapshot = mapshot;
         copystring(backgroundmapname, mapname ? mapname : "");
@@ -371,10 +179,43 @@ void renderbackground(const char *caption, Texture *mapshot, const char *mapname
                 backgroundmapinfo = newstring(mapinfo);
         }
     }
+
+    loopi(restore ? 1 : 3)
+    {
+        int w = screenw, h = screenh;
+        getbackgroundres(w, h);
+        if(forceaspect) w = int(ceil(h*forceaspect));
+        gettextres(w, h);
+
+        hudmatrix.ortho(0, w, h, 0, -1, 1);
+        resethudmatrix();
+        hudnotextureshader->set();
+
+        gle::defvertex(2);
+        gle::colorf(0, 0, 0);
+
+        gle::begin(GL_TRIANGLE_STRIP);
+        gle::attribf(0, 0);
+        gle::attribf(w, 0);
+        gle::attribf(0, h);
+        gle::attribf(w, h);
+
+        gle::end();
+        gle::disable();
+
+        UI::renderbackground();
+
+        if(!restore) swapbuffers();
+    }
+
+    if(!restore) renderedframe = false;
+    gle::disable();
 }
 
-float loadprogress = 0;
-
+FVAR(loadprogress, 1, 0, -1);
+VAR(loadbg, 1, 0, -1);
+const char *loadtext = NULL;
+ICOMMAND(loadtext, "", (), result(loadtext ? loadtext : ""))
 void renderprogress(float bar, const char *text, GLuint tex, bool background)   // also used during loading
 {
     if(!inbetweenframes || drawtex) return;
@@ -386,104 +227,12 @@ void renderprogress(float bar, const char *text, GLuint tex, bool background)   
     #endif
 
     if(background) restorebackground();
+    loadbg = background;
+    loadprogress = bar;
+    loadtext = text;
 
-    int w = screenw, h = screenh;
-    if(forceaspect) w = int(ceil(h*forceaspect));
-    getbackgroundres(w, h);
-    gettextres(w, h);
-    hudmatrix.ortho(0, w, h, 0, -1, 1);
-    resethudmatrix();
-
-    hudnotextureshader->set();
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    /// TODO 1) replace this with a texture of some sort
-    /// TODO 2) use renderedframe to check for backdrops
-    float fh = 0.03 * min(w, h) + FONTH;
-    float fw = 0.02 * min(w, h) + min(fh * 100, w * .75f);
-    float fx = (w - fw) / 2;
-    float fy = h - fh - FONTH + 0.01 * min(w, h);
-
-    gle::colorf(1, 1, 1);
-    gle::defvertex(2);
-    gle::begin(GL_TRIANGLE_STRIP);
-
-    gle::attribf(fx, fy);
-    gle::attribf(fx + fw, fy);
-    gle::attribf(fx, fy + fh);
-    gle::attribf(fx + fw, fy + fh);
-
-    gle::end();
-
-    gle::colorf(0, 0, 0);
-    gle::begin(GL_LINES);
-
-    gle::attribf(fx, fy);
-    gle::attribf(fx + fw, fy);
-
-    gle::attribf(fx + fw, fy);
-    gle::attribf(fx + fw, fy + fh);
-
-    gle::attribf(fx + fw, fy + fh);
-    gle::attribf(fx, fy + fh);
-
-    gle::attribf(fx, fy + fh);
-    gle::attribf(fx, fy);
-
-    gle::end();
-
-
-    float bh = 0.01 * min(w, h) + FONTH;
-    float bw = min(fh * 100, w * .75f);
-    float bx = (w - bw) / 2;
-    float by = h - bh - FONTH;
-
-    if(bar > 0)
-    {
-        gle::begin(GL_TRIANGLE_STRIP);
-        gle::attribf(bx, by);
-        gle::attribf(bx + bw * bar, by);
-        gle::attribf(bx, by + bh);
-        gle::attribf(bx + bw * bar, by + bh);
-        gle::end();
-    }
-
-    if(text)
-    {
-        int tw, th;
-        text_bounds(text, tw, th);
-        float offset = 0.005 * min(w, h);
-        float tsz = min(.5f, (bw - 2 * offset) / tw);
-        float tx = bx + offset + (bw - tw * tsz) / 2;
-        float ty = by + offset + (FONTH - FONTH * tsz) / 2;
-
-        pushhudmatrix();
-        hudmatrix.translate(tx, ty, 0);
-        hudmatrix.scale(tsz, tsz, 1);
-        flushhudmatrix();
-        draw_text(text, 0, 0);
-        pophudmatrix();
-    }
-    hudshader->set();
-    gle::defvertex(2);
-    gle::deftexcoord0();
-
-    if(tex)
-    {
-        float sz = 0.35 * min(w, h);
-        float x = .5 * w - sz / 2;
-        float y = .5 * h - sz / 2;
-
-        glBindTexture(GL_TEXTURE_2D, tex);
-        bgquad(x, y, sz, sz);
-
-        settexture("media/interface/mapshot_frame", 3);
-        bgquad(x, y, sz, sz);
-    }
-
-    glDisable(GL_BLEND);
-    gle::disable();
+    UI::renderprogress();
+    loadtext = NULL;
     swapbuffers();
 }
 
@@ -712,7 +461,7 @@ bool resettextures()
     if(
         reloadtexture("<premul>media/interface/cube2badge") &&
         reloadtexture("media/interface/mapshot_frame") &&
-        reloadtexture(imagelogo)
+        reloadtexture(logo)
     ) return true;
     return false;
 }
@@ -1246,16 +995,6 @@ int main(int argc, char **argv)
     if(!execfile("config/font.cfg", false)) fatal("cannot find font definitions");
     if(!setfont("default")) fatal("no default font specified");
 
-    inbetweenframes = true;
-    renderbackground("initialising...");
-
-    logoutf("init: world");
-    camera1 = player = game::iterdynents(0);
-    emptymap(0, true, NULL, false);
-
-    logoutf("init: sound");
-    initsound();
-
     logoutf("init: cfg");
     execfile("config/keymap.cfg");
     execfile("config/stdedit.cfg");
@@ -1292,6 +1031,16 @@ int main(int argc, char **argv)
     execfile(confname, false);
 
     initing = NOT_INITING;
+
+    inbetweenframes = true;
+    renderbackground("initialising...");
+
+    logoutf("init: world");
+    camera1 = player = game::iterdynents(0);
+    emptymap(0, true, NULL, false);
+
+    logoutf("init: sound");
+    initsound();
 
     logoutf("init: shaders");
     initgbuffer();
