@@ -104,7 +104,7 @@ const struct material
     {"lava", MAT_LAVA}, {"lava1", MAT_LAVA}, {"lava2", MAT_LAVA+1}, {"lava3", MAT_LAVA+2}, {"lava4", MAT_LAVA+3},
     {"clip", MAT_CLIP},
     {"noclip", MAT_NOCLIP},
-    {"aiclip", MAT_GAMECLIP},
+    {"gameclip", MAT_GAMECLIP},
     {"death", MAT_DEATH},
     {"pain", MAT_PAIN},
     {"alpha", MAT_ALPHA}
