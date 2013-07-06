@@ -650,7 +650,7 @@ namespace entities
 		else if(e.type >= CRITTER && e.type <= TRIGGER)
 		{
 			static char buf[64];
-			snprintf(buf, 64, "%i", e.attr[1]);
+			nformatstring(buf, 64, "%d", e.attr[1]);
 			e.attr.remove(1);
 
 			memcpy(e.id, buf, 64);
