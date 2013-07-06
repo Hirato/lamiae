@@ -1006,7 +1006,7 @@ static inline void compileident(vector<uint> &code, const stringslice &word)
 
 static inline void compileint(vector<uint> &code, const stringslice &word)
 {
-    return compileint(code, parseint(word.str));
+    compileint(code, word.len ? parseint(word.str) : 0);
 }
 
 static inline void compilefloat(vector<uint> &code, float f = 0.0f)
@@ -1024,7 +1024,7 @@ static inline void compilefloat(vector<uint> &code, float f = 0.0f)
 
 static inline void compilefloat(vector<uint> &code, const stringslice &word)
 {
-    return compilefloat(code, parsefloat(word.str));
+    compilefloat(code, word.len ? parsefloat(word.str) : 0.0f);
 }
 
 static inline void compileval(vector<uint> &code, int wordtype, const stringslice &word = stringslice(NULL, 0))
