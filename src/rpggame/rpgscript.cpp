@@ -510,7 +510,7 @@ namespace rpgscript
 	void changemap()
 	{
 		map->setref(curmap, true);
-		player->setref(player1, true); //just in case someone's decided to be stupid...
+		player->setref(player1, true);
 		talker->setnull(true);
 		looter->setnull(true);
 		trader->setnull(true);

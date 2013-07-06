@@ -620,12 +620,14 @@ namespace game
 			}
 		}
 
+		mapinfo *lastmap = curmap;
 		curmap = accessmap(name);
 		rpgscript::changemap();
 
 		if(DEBUG_WORLD)
 			DEBUGF("adding player to curmap vector");
 		curmap->objs.add(player1);
+		if(lastmap) lastmap->getsignal("leave", false);
 
 		if(!curmap->loaded)
 		{
@@ -636,6 +638,7 @@ namespace game
 			curmap->getsignal("load", false);
 			curmap->loaded = true;
 		}
+		curmap->getsignal("enter", false);
 
 		if(!transfer)
 			spawnplayer(player1);
