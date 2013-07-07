@@ -155,11 +155,6 @@ ifeq (unix,$(PLATFORM_TYPE))
 	ENET_XCFLAGS := $(shell ./check_enet.sh $(CC) $(CFLAGS))
 endif
 
-fixspace:
-	sed -i ':rep; s/^\([ ]*\)\t/\1    /g; trep'  shared/*.cpp shared/*.h engine/*.cpp engine/*.h
-	sed -i 's/[ \t]*$$//;' shared/*.cpp shared/*.h engine/*.cpp engine/*.h rpggame/*.cpp rpggame/*.h
-
-
 default: all
 
 all: client
@@ -201,6 +196,10 @@ shared/cube2font.o: shared/cube2font.c
 
 cube2font: shared/cube2font.o
 	$(CXX) $(CXXFLAGS) -o cube2font shared/cube2font.o `freetype-config --libs` -lz
+
+fixspace:
+	sed -i ':rep; s/^\([ ]*\)\t/\1    /g; trep'  shared/*.cpp shared/*.h engine/*.cpp engine/*.h
+	sed -i 's/[ \t]*$$//;' shared/*.cpp shared/*.h engine/*.cpp engine/*.h rpggame/*.cpp rpggame/*.h
 
 depend:
 	makedepend -fincludes.mk -Y -Ienet/include $(subst .o,.c,$(ENET_OBJS))
