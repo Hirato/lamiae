@@ -4,9 +4,9 @@ extern bool reloadtexture(const char *name); //texture.cpp
 
 namespace rpgio
 {
-	#define GAME_VERSION 44
+	#define SAVE_VERSION 44
 	#define COMPAT_VERSION 44
-	#define GAME_MAGIC "RPGS"
+	#define SAVE_MAGIC "RPGS"
 
 	/**
 		SAVING STUFF
@@ -1670,9 +1670,9 @@ namespace rpgio
 		f->read(&hdr, sizeof(saveheader));
 		lilswap(&hdr.sversion, 2);
 
-		if(hdr.sversion < COMPAT_VERSION || hdr.sversion > GAME_VERSION || strncmp(hdr.magic, GAME_MAGIC, 4))
+		if(hdr.sversion < COMPAT_VERSION || hdr.sversion > SAVE_VERSION || strncmp(hdr.magic, SAVE_MAGIC, 4))
 		{
-			ERRORF("Unsupported version or corrupt save: %i (%i) - %4.4s (%s)", hdr.sversion, GAME_VERSION, hdr.magic, GAME_MAGIC);
+			ERRORF("Unsupported version or corrupt save: %i (%i) - %4.4s (%s)", hdr.sversion, SAVE_VERSION, hdr.magic, SAVE_MAGIC);
 			delete f;
 			return;
 		}
@@ -1709,11 +1709,11 @@ namespace rpgio
 			num = f->getlil<int>(); \
 			loopi(num) \
 			{ \
-				if(abort) break; \
+				if(abort) goto cleanup; \
 				if(f->end()) \
 				{ \
 					ERRORF("unexpected EoF, aborting"); \
-					abort = true; break; \
+					abort = true; goto cleanup; \
 				} \
 				if(DEBUG_IO) \
 					DEBUGF("reading " #m " %i of %i", i + 1, num); \
@@ -1785,11 +1785,11 @@ namespace rpgio
 		delete f;
 		characters.shrink(0);
 		updates.shrink(0);
+		rpgscript::cleanlocals();
 
 		if(abort)
 		{
 			ERRORF("aborted - something went seriously wrong");
-			rpgscript::cleanlocals();
 			localdisconnect();
 			delete[] curmap;
 			return;
@@ -1836,9 +1836,9 @@ namespace rpgio
 		}
 
 		saveheader hdr;
-		hdr.sversion = GAME_VERSION;
+		hdr.sversion = SAVE_VERSION;
 		hdr.gversion = game::gameversion;
-		memcpy(hdr.magic, GAME_MAGIC, 4);
+		memcpy(hdr.magic, SAVE_MAGIC, 4);
 
 		lilswap(&hdr.sversion, 2);
 		f->write(&hdr, sizeof(saveheader));
