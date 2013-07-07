@@ -979,20 +979,19 @@ namespace rpgscript
 	{
 		if (a == b) return true;
 		if (!locals.inrange(a) || !locals.inrange(b)) return false;
+		if(locals[a]->variables.length() != locals[b]->variables.length()) return false;
 
-		static vector<rpgvar *> varsa, varsb;
-		varsa.setsize(0); varsb.setsize(0);
+		// The idea here is that since the hashtables are of the same size,
+		// They should have the same variables in the same order if they are equivalent.
+		static vector<rpgvar *> vars;
+		vars.setsize(0);
 
-		enumerate(locals[a]->variables, rpgvar, var, varsa.add(&var);)
-		enumerate(locals[b]->variables, rpgvar, var, varsb.add(&var);)
+		enumerate(locals[a]->variables, rpgvar, var, vars.add(&var);)
 
-		if(varsa.length() != varsb.length()) return false;
-
-		loopv(varsa)
-		{
-			if(strcmp(varsa[i]->name, varsb[i]->name)) return false;
-			if(strcmp(varsa[i]->value, varsb[i]->value)) return false;
-		}
+		int idx = 0;
+		enumerate(locals[b]->variables, rpgvar, var,
+			if(var.name != vars[idx]->name || strcmp(var.value, vars[idx++]->value)) return false;
+		)
 
 		return true;
 	}
