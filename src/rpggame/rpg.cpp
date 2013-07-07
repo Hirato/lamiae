@@ -195,6 +195,8 @@ namespace game
 		mergecache.setsize(0);
 		camera::cleanup(true);
 		DELETEA(cpmap); cpnum = -1;
+		extern void clearhuds();
+		clearhuds();
 
 		if(DEBUG_WORLD)
 			DEBUGF("resetting map directory");

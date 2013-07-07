@@ -285,14 +285,35 @@ namespace game
 
 	ICOMMAND(hudline, "C", (const char *t), hudline("%s", t));
 
-	uint *hud = NULL;
+	struct hudset
+	{
+		const char *name;
+		uint *code;
+
+		hudset(const char *n, uint *c) : name(newstring(n)), code(c) {}
+		~hudset() { delete[] name; freecode(code); }
+	};
+
+	vector<hudset *> huds;
 	FVAR(hud_right, 1, 0, -1);
 	FVAR(hud_bottom, 1, 0, -1);
 
-	ICOMMAND(r_hud, "e", (uint *body),
-		freecode(hud);
-		keepcode((hud = body));
+	ICOMMAND(r_hud, "se", (const char *name, uint *body),
+		keepcode(body);
+		loopv(huds)	if(!strcmp(huds[i]->name, name))
+		{
+			freecode(huds[i]->code);
+			huds[i]->code = body;
+			return;
+		}
+		huds.add(new hudset(name, body));
 	)
+
+	void clearhuds()
+	{
+		huds.deletecontents();
+	}
+	COMMANDN(r_clearhud, clearhuds, "");
 
 	FVARP(hudlinescale, 0.1, 0.75, 1);
 
@@ -314,7 +335,7 @@ namespace game
 
 		if(rpggui::open()) {}
 		else if(camera::cutscene) camera::render(ceil(hud_right), ceil(hud_bottom));
-		else if(hud) rpgexecute(hud);
+		else loopv(huds) rpgexecute(huds[i]->code);
 
 		if(lines.length())
 		{
