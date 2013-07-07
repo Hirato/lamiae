@@ -2739,7 +2739,9 @@ static inline bool calclightscissor(lightinfo &l)
     return sx1 < sx2 && sy1 < sy2 && sz1 < sz2;
 }
 
+extern bool dolightgc;
 extern void getlightprops(const extentity &e, int &radius, int &red, int &green, int &blue);
+extern void culldynlightprops();
 
 void collectlights()
 {
@@ -2781,6 +2783,8 @@ void collectlights()
 
         if(calclightscissor(l)) lightorder.add(lights.length()-1);
     }
+
+    if(dolightgc) culldynlightprops();
 
     updatedynlights();
     int numdynlights = finddynlights();

@@ -1263,6 +1263,7 @@ void regularlensflare(vec o, uchar r, uchar g, uchar b, bool sun, bool sparkle, 
     flares.addflare(o, r, g, b, sun, sparkle, sizemod);
 }
 
+bool dopartgc = false;
 struct dynpartprops
 {
     int lastupdate, num;
@@ -1282,6 +1283,7 @@ static void getpartprops(const entity &e, int &attr1, int &attr2, int &attr3, in
     if(e.attr[8] > 0)
     {
         dynpartprops &dpp = dynpartpropcache[e.attr[8]];
+        dopartgc = dopartgc || !dpp.lastupdate;
 
         if(dpp.lastupdate < lastmillis)
         {
@@ -1760,12 +1762,21 @@ void updateparticles()
             pe.lastemit = lastmillis;
         }
         if(dbgpcull && (canemit || replayed) && addedparticles) conoutf(CON_DEBUG, "%d emitters, %d particles", emitted, addedparticles);
+        if(dopartgc)
+        {
+            vector<int> pending;
+            enumeratekt(dynpartpropcache, int, id, dynpartprops, props,
+                if(props.lastupdate < lastmillis) pending.add(id);
+            )
+            while(pending.length()) dynpartpropcache.remove(pending.pop());
+        }
     }
 
     const vector<extentity *> &ents = entities::getents();
     if(editmode || (game::showenthelpers() && showentities >= 1) || showentities==2) // show sparkly thingies for map entities in edit mode
     {
         // note: order matters in this case as particles of the same type are drawn in the reverse order that they are added
+        static string aliasname, party_text;
         loopv(entgroup)
         {
             renderentinfo(entgroup[i]);
@@ -1773,8 +1784,8 @@ void updateparticles()
             extentity &e = *ents[entgroup[i]];
             if(e.type == ET_PARTICLES && e.attr[0] == 8)
             {
-                defformatstring(aliasname, "part_text_%d", e.attr[1]);
-                defformatstring(party_text, "particles:%s", getalias(aliasname));
+                formatstring(aliasname, "part_text_%d", e.attr[1]);
+                formatstring(party_text, "particles:%s", getalias(aliasname));
                 particle_textcopy(e.o, party_text, PART_TEXT, 1, e.attr[2] & 0xFFFFFF, e.attr[3] > 0 ? e.attr[3] : 200);
             }
             else
@@ -1788,8 +1799,8 @@ void updateparticles()
 
             if(e.type == ET_PARTICLES && e.attr[0] == 8)
             {
-                defformatstring(aliasname, "part_text_%d", e.attr[1]);
-                defformatstring(party_text, "particles:%s", getalias(aliasname));
+                formatstring(aliasname, "part_text_%d", e.attr[1]);
+                formatstring(party_text, "particles:%s", getalias(aliasname));
                 particle_textcopy(e.o, party_text, PART_TEXT, 1, e.attr[2] & 0xFFFFFF, e.attr[3] > 0 ? e.attr[3] : 200);
             }
             else
@@ -1802,7 +1813,7 @@ void updateparticles()
             else
             {
                 if(expemitmillis < totalmillis)
-                particle_fireball(e.o, markers[entmarkertype].size, markers[entmarkertype].type, 1, markers[entmarkertype].colour);
+                    particle_fireball(e.o, markers[entmarkertype].size, markers[entmarkertype].type, 1, markers[entmarkertype].colour);
             }
         }
         if(editmode) renderentinfo(enthover);

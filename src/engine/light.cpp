@@ -281,6 +281,7 @@ struct dynlightprops
 };
 
 hashtable<int, dynlightprops> dynlightpropcache;
+bool dolightgc = false;
 
 void getlightprops(const extentity &e, int &radius, int &red, int &green, int &blue)
 {
@@ -292,6 +293,7 @@ void getlightprops(const extentity &e, int &radius, int &red, int &green, int &b
     if(e.attr[5] > 0)
     {
         dynlightprops &dlp = dynlightpropcache[e.attr[5]];
+        dolightgc = dolightgc || !dlp.lastupdate;
 
         if(dlp.lastupdate < lastmillis)
         {
@@ -331,6 +333,15 @@ void getlightprops(const extentity &e, int &radius, int &red, int &green, int &b
             case 0: break;
         }
     }
+}
+
+void culldynlightprops()
+{
+    vector<int> pending;
+    enumeratekt(dynlightpropcache, int, id, dynlightprops, props,
+        if(props.lastupdate < lastmillis) pending.add(id);
+    )
+    while(pending.length()) dynlightpropcache.remove(pending.pop());
 }
 
 #define LIGHTCACHESIZE 1024
