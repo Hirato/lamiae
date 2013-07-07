@@ -215,6 +215,7 @@ static inline bool rpgexecfile(const char *cfgfile, bool msg = true)
 {
 	int lastflags = identflags;
 	identflags &= ~IDF_PERSIST;
+	identflags |= IDF_GAME;
 	bool ret = execfile(cfgfile, msg);
 	identflags = lastflags;
 	return ret;
@@ -224,6 +225,7 @@ static inline void rpgexecuteret(const uint *code, tagval &result)
 {
 	int lastflags = identflags;
 	identflags &= ~IDF_PERSIST;
+	identflags |= IDF_GAME;
 	::executeret(code, result);
 	identflags = lastflags;
 }
@@ -232,6 +234,7 @@ static inline void rpgexecuteret(const char *p, tagval &result)
 {
 	int lastflags = identflags;
 	identflags &= ~IDF_PERSIST;
+	identflags |= IDF_GAME;
 	::executeret(p, result);
 	identflags = lastflags;
 }
@@ -240,6 +243,7 @@ static inline char *rpgexecutestr(const uint *code)
 {
 	int lastflags = identflags;
 	identflags &= ~IDF_PERSIST;
+	identflags |= IDF_GAME;
 	char *ret = ::executestr(code);
 	identflags = lastflags;
 	return ret;
@@ -249,6 +253,7 @@ static inline char *rpgexecutestr(const char *p)
 {
 	int lastflags = identflags;
 	identflags &= ~IDF_PERSIST;
+	identflags |= IDF_GAME;
 	char *ret = ::executestr(p);
 	identflags = lastflags;
 	return ret;
@@ -258,6 +263,7 @@ static inline int rpgexecute(const uint *code)
 {
 	int lastflags = identflags;
 	identflags &= ~IDF_PERSIST;
+	identflags |= IDF_GAME;
 	int ret = ::execute(code);
 	identflags = lastflags;
 	return ret;
@@ -267,6 +273,7 @@ static inline int rpgexecute(const char *p)
 {
 	int lastflags = identflags;
 	identflags &= ~IDF_PERSIST;
+	identflags |= IDF_GAME;
 	int ret = ::execute(p);
 	identflags = lastflags;
 	return ret;

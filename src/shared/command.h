@@ -43,7 +43,7 @@ enum
 
 enum { ID_VAR, ID_FVAR, ID_SVAR, ID_COMMAND, ID_ALIAS, ID_LOCAL };
 
-enum { IDF_PERSIST = 1<<0, IDF_OVERRIDE = 1<<1, IDF_HEX = 1<<2, IDF_READONLY = 1<<3, IDF_OVERRIDDEN = 1<<4, IDF_UNKNOWN = 1<<5, IDF_ARG = 1<<6 };
+enum { IDF_PERSIST = 1<<0, IDF_OVERRIDE = 1<<1, IDF_HEX = 1<<2, IDF_READONLY = 1<<3, IDF_OVERRIDDEN = 1<<4, IDF_UNKNOWN = 1<<5, IDF_ARG = 1<<6, IDF_GAME = 1<<7 };
 
 struct ident;
 
@@ -307,54 +307,67 @@ inline void ident::getcval(tagval &v) const
 #define VARN(name, global, min, cur, max) _VAR(name, global, min, cur, max, 0)
 #define VARNP(name, global, min, cur, max) _VAR(name, global, min, cur, max, IDF_PERSIST)
 #define VARNR(name, global, min, cur, max) _VAR(name, global, min, cur, max, IDF_OVERRIDE)
+#define VARNG(name, global, min, cur, max) _VAR(name, global, min, cur, max, IDF_GAME)
 #define VAR(name, min, cur, max) _VAR(name, name, min, cur, max, 0)
 #define VARP(name, min, cur, max) _VAR(name, name, min, cur, max, IDF_PERSIST)
 #define VARR(name, min, cur, max) _VAR(name, name, min, cur, max, IDF_OVERRIDE)
+#define VARG(name, min, cur, max) _VAR(name, name, min, cur, max, IDF_GAME)
 #define _VARF(name, global, min, cur, max, body, persist)  void var_##name(); int global = variable(#name, min, cur, max, &global, var_##name, persist); void var_##name() { body; }
 #define VARFN(name, global, min, cur, max, body) _VARF(name, global, min, cur, max, body, 0)
 #define VARF(name, min, cur, max, body) _VARF(name, name, min, cur, max, body, 0)
 #define VARFP(name, min, cur, max, body) _VARF(name, name, min, cur, max, body, IDF_PERSIST)
 #define VARFR(name, min, cur, max, body) _VARF(name, name, min, cur, max, body, IDF_OVERRIDE)
+#define VARFG(name, min, cur, max, body) _VARF(name, name, min, cur, max, body, IDF_GAME)
+
 
 #define _HVAR(name, global, min, cur, max, persist)  int global = variable(#name, min, cur, max, &global, NULL, persist | IDF_HEX)
 #define HVARN(name, global, min, cur, max) _HVAR(name, global, min, cur, max, 0)
 #define HVARNP(name, global, min, cur, max) _HVAR(name, global, min, cur, max, IDF_PERSIST)
 #define HVARNR(name, global, min, cur, max) _HVAR(name, global, min, cur, max, IDF_OVERRIDE)
+#define HVARNG(name, global, min, cur, max) _HVAR(name, global, min, cur, max, IDF_GAME)
 #define HVAR(name, min, cur, max) _HVAR(name, name, min, cur, max, 0)
 #define HVARP(name, min, cur, max) _HVAR(name, name, min, cur, max, IDF_PERSIST)
 #define HVARR(name, min, cur, max) _HVAR(name, name, min, cur, max, IDF_OVERRIDE)
+#define HVARG(name, min, cur, max) _HVAR(name, name, min, cur, max, IDF_GAME)
 #define _HVARF(name, global, min, cur, max, body, persist)  void var_##name(); int global = variable(#name, min, cur, max, &global, var_##name, persist | IDF_HEX); void var_##name() { body; }
 #define HVARFN(name, global, min, cur, max, body) _HVARF(name, global, min, cur, max, body, 0)
 #define HVARF(name, min, cur, max, body) _HVARF(name, name, min, cur, max, body, 0)
 #define HVARFP(name, min, cur, max, body) _HVARF(name, name, min, cur, max, body, IDF_PERSIST)
 #define HVARFR(name, min, cur, max, body) _HVARF(name, name, min, cur, max, body, IDF_OVERRIDE)
+#define HVARFG(name, min, cur, max, body) _HVARF(name, name, min, cur, max, body, IDF_GAME)
 
 #define _FVAR(name, global, min, cur, max, persist) float global = fvariable(#name, min, cur, max, &global, NULL, persist)
 #define FVARN(name, global, min, cur, max) _FVAR(name, global, min, cur, max, 0)
 #define FVARNP(name, global, min, cur, max) _FVAR(name, global, min, cur, max, IDF_PERSIST)
 #define FVARNR(name, global, min, cur, max) _FVAR(name, global, min, cur, max, IDF_OVERRIDE)
+#define FVARNG(name, global, min, cur, max) _FVAR(name, global, min, cur, max, IDF_GAME)
 #define FVAR(name, min, cur, max) _FVAR(name, name, min, cur, max, 0)
 #define FVARP(name, min, cur, max) _FVAR(name, name, min, cur, max, IDF_PERSIST)
 #define FVARR(name, min, cur, max) _FVAR(name, name, min, cur, max, IDF_OVERRIDE)
+#define FVARG(name, min, cur, max) _FVAR(name, name, min, cur, max, IDF_GAME)
 #define _FVARF(name, global, min, cur, max, body, persist) void var_##name(); float global = fvariable(#name, min, cur, max, &global, var_##name, persist); void var_##name() { body; }
 #define FVARFN(name, global, min, cur, max, body) _FVARF(name, global, min, cur, max, body, 0)
 #define FVARF(name, min, cur, max, body) _FVARF(name, name, min, cur, max, body, 0)
 #define FVARFP(name, min, cur, max, body) _FVARF(name, name, min, cur, max, body, IDF_PERSIST)
 #define FVARFR(name, min, cur, max, body) _FVARF(name, name, min, cur, max, body, IDF_OVERRIDE)
+#define FVARFG(name, min, cur, max, body) _FVARF(name, name, min, cur, max, body, IDF_GAME)
 
 #define _SVAR(name, global, cur, persist) char *global = svariable(#name, cur, &global, NULL, persist)
 #define SVARN(name, global, cur) _SVAR(name, global, cur, 0)
 #define SVARNP(name, global, cur) _SVAR(name, global, cur, IDF_PERSIST)
 #define SVARNR(name, global, cur) _SVAR(name, global, cur, IDF_OVERRIDE)
+#define SVARNG(name, global, cur) _SVAR(name, global, cur, IDF_GAME)
 #define SVAR(name, cur) _SVAR(name, name, cur, 0)
 #define SVARO(name, cur) _SVAR(name, name, cur, IDF_READONLY)
 #define SVARP(name, cur) _SVAR(name, name, cur, IDF_PERSIST)
 #define SVARR(name, cur) _SVAR(name, name, cur, IDF_OVERRIDE)
+#define SVARG(name, cur) _SVAR(name, name, cur, IDF_GAME)
 #define _SVARF(name, global, cur, body, persist) void var_##name(); char *global = svariable(#name, cur, &global, var_##name, persist); void var_##name() { body; }
 #define SVARFN(name, global, cur, body) _SVARF(name, global, cur, body, 0)
 #define SVARF(name, cur, body) _SVARF(name, name, cur, body, 0)
 #define SVARFP(name, cur, body) _SVARF(name, name, cur, body, IDF_PERSIST)
 #define SVARFR(name, cur, body) _SVARF(name, name, cur, body, IDF_OVERRIDE)
+#define SVARFG(name, cur, body) _SVARF(name, name, cur, body, IDF_GAME)
 
 // anonymous inline commands, uses nasty template trick with line numbers to keep names unique
 #define ICOMMANDNS(name, cmdname, nargs, proto, b) template<int N> struct cmdname; template<> struct cmdname<__LINE__> { static bool init; static void run proto; }; bool cmdname<__LINE__>::init = addcommand(name, (identfun)cmdname<__LINE__>::run, nargs); void cmdname<__LINE__>::run proto \

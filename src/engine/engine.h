@@ -539,7 +539,6 @@ extern void clientkeepalive();
 // command
 extern hashset<ident> idents;
 
-extern void clearoverrides();
 extern void writecfg(const char *name = NULL);
 
 extern void checksleep(int millis);

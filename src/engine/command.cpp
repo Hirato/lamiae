@@ -161,9 +161,9 @@ void clearoverride(ident &i)
     i.flags &= ~IDF_OVERRIDDEN;
 }
 
-void clearoverrides()
+void clearoverrides(int flags)
 {
-    enumerate(idents, ident, i, clearoverride(i));
+    enumerate(idents, ident, i, if(i.flags & flags) clearoverride(i));
 }
 
 static bool initedidents = false;
@@ -449,7 +449,16 @@ static void setalias(const char *name, tagval &v)
     {
         if(id->type == ID_ALIAS)
         {
-            if(id->index < MAXARGS) setarg(*id, v); else setalias(*id, v);
+            if(id->index < MAXARGS) setarg(*id, v);
+            else if(((identflags | id->flags) & (IDF_GAME|IDF_OVERRIDE)) &&
+                    ((identflags ^ id->flags) & IDF_OVERRIDE) == 0 &&
+                    ((identflags ^ id->flags) & IDF_GAME)     == 0)
+            {
+                debugcode("cannot override alias %s in current context", id->name);
+                freearg(v);
+            }
+            else
+                setalias(*id, v);
         }
         else
         {
@@ -511,6 +520,16 @@ char *svariable(const char *name, const char *cur, char **storage, identfun fun,
     if(!id || id->type!=vartype) return retval;
 #define GETVAR(id, name, retval) _GETVAR(id, ID_VAR, name, retval)
 #define OVERRIDEVAR(errorval, saveval, resetval, clearval) \
+    if(identflags&IDF_GAME || id->flags&IDF_GAME) \
+    { \
+        if(((identflags ^ id->flags) & IDF_GAME) == 0) \
+        { \
+            debugcode("game variable %s can only be interacted with in a game context", id->name); \
+            errorval; \
+        } \
+        if(!(id->flags&IDF_OVERRIDDEN)) { saveval; id->flags |= IDF_OVERRIDDEN; } \
+        else { clearval; } \
+    } \
     if(identflags&IDF_OVERRIDDEN || id->flags&IDF_OVERRIDE) \
     { \
         if(id->flags&IDF_PERSIST) \

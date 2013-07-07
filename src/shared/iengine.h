@@ -109,6 +109,7 @@ extern void mpremip(bool local);
 
 // command
 extern int identflags;
+extern void clearoverrides(int flags = ~IDF_GAME);
 
 extern void cleancode(ident &id);
 extern void pusharg(ident &id, const tagval &v, identstack &stack);
