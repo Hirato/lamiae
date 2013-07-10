@@ -467,7 +467,7 @@ struct localinst
 	int refs;
 	hashset<rpgvar> variables;
 
-	localinst() : refs(0), variables(hashset<rpgvar>(128)) {}
+	localinst() : refs(0), variables(128) {}
 };
 
 struct response
@@ -548,8 +548,7 @@ struct script
 	hashset<dialogue> chat;
 	dialogue *curnode;
 
-	script() : key(NULL), listeners(hashset<signal>(64)),
-		chat(hashset<dialogue>(64)), curnode(NULL) {}
+	script() : key(NULL), listeners(64), chat(64), curnode(NULL) {}
 	~script() {}
 };
 static inline bool htcmp(const char *key, const script &ref) { return !strcmp(key, ref.key); }
@@ -559,7 +558,7 @@ struct mapscript
 	const char *key;
 	hashset<signal> listeners;
 
-	mapscript() : key(NULL), listeners(hashset<signal>(64)) {}
+	mapscript() : key(NULL), listeners(64) {}
 	~mapscript() {}
 };
 static inline bool htcmp(const char *key, const mapscript &ref) { return !strcmp(key, ref.key); }
@@ -1960,7 +1959,7 @@ struct delayscript
 	int remaining;
 
 	bool update();
-	delayscript() : refs(hashset<reference>(128)), script(NULL), remaining(0) {}
+	delayscript() : refs(128), script(NULL), remaining(0) {}
 	~delayscript() { delete[] script; }
 };
 
