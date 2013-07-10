@@ -979,19 +979,31 @@ namespace rpgscript
 	{
 		if (a == b) return true;
 		if (!locals.inrange(a) || !locals.inrange(b)) return false;
-		if(locals[a]->variables.length() != locals[b]->variables.length()) return false;
 
-		// The idea here is that since the hashtables are of the same size,
-		// They should have the same variables in the same order if they are equivalent.
-		static vector<rpgvar *> vars;
-		vars.setsize(0);
+		hashset<rpgvar> &seta = locals[a]->variables,
+			&setb = locals[b]->variables;
 
-		enumerate(locals[a]->variables, rpgvar, var, vars.add(&var);)
+		if(seta.length() != setb.length()) return false;
+		//ASSERT(seta->size == setb->size);
 
-		int idx = 0;
-		enumerate(locals[b]->variables, rpgvar, var,
-			if(var.name != vars[idx]->name || strcmp(var.value, vars[idx++]->value)) return false;
-		)
+		//we walk both tables at once as they are of the same size.
+		loopi(seta.size)
+		{
+			hashset<rpgvar>::chain *chaina = seta.chains[i], *chainb = setb.chains[i];
+			if(!chaina != !chainb) return false;
+			while(chaina)
+			{
+				while(chainb)
+				{
+					rpgvar &vara = chaina->elem, &varb = chainb->elem;
+					if(vara.name == varb.name && !strcmp(vara.value, varb.value)) break;
+					chainb = chainb->next;
+				}
+				if(!chainb) return false;
+				chainb = setb.chains[i];
+				chaina = chaina->next;
+			}
+		}
 
 		return true;
 	}

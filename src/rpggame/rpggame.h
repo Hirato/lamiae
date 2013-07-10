@@ -467,7 +467,7 @@ struct localinst
 	int refs;
 	hashset<rpgvar> variables;
 
-	localinst() : refs(0) {}
+	localinst() : refs(0), variables(hashset<rpgvar>(128)) {}
 };
 
 struct response
