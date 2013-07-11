@@ -114,14 +114,6 @@ void mdlglow(float *percent, float *delta, float *pulse)
 
 COMMAND(mdlglow, "fff");
 
-void mdlglare(float *specglare, float *glowglare)
-{
-    checkmdl;
-    loadingmodel->setglare(*specglare, *glowglare);
-}
-
-COMMAND(mdlglare, "ff");
-
 void mdlenvmap(float *envmapmax, float *envmapmin, char *envmap)
 {
     checkmdl;

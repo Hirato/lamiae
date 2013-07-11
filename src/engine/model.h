@@ -32,7 +32,6 @@ struct model
     virtual void setspec(float spec) {}
     virtual void setambient(float ambient) {}
     virtual void setglow(float glow, float glowdelta, float glowpulse) {}
-    virtual void setglare(float specglare, float glowglare) {}
     virtual void setalphatest(float alpha) {}
     virtual void setfullbright(float fullbright) {}
     virtual void setcullface(bool cullface) {}
