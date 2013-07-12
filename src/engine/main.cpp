@@ -619,6 +619,8 @@ static void checkmousemotion(int &dx, int &dy)
     }
 }
 
+VARP(joydeadzone, 0, 3000, 32767);
+
 void checkinput()
 {
     SDL_Event event;
@@ -641,6 +643,43 @@ void checkinput()
                 if(len > 0) { buf[len] = '\0'; processtextinput((const char *)buf, len); }
                 break;
             }
+
+            case SDL_CONTROLLERAXISMOTION:
+                if(event.caxis.axis < SDL_CONTROLLER_AXIS_TRIGGERLEFT &&
+                    abs(event.caxis.value) < joydeadzone)
+                    event.caxis.value = 0;
+
+                switch(event.caxis.axis)
+                {
+                    case SDL_CONTROLLER_AXIS_LEFTX:
+                        processjoy(-1, -min<int>(0, event.caxis.value));
+                        processjoy(-2, max<int>(0, event.caxis.value));
+                        break;
+                    case SDL_CONTROLLER_AXIS_LEFTY:
+                        processjoy(-3, -min<int>(0, event.caxis.value));
+                        processjoy(-4, max<int>(0, event.caxis.value));
+                        break;
+                    case SDL_CONTROLLER_AXIS_RIGHTX:
+                        processjoy(-5, -min<int>(0, event.caxis.value));
+                        processjoy(-6, max<int>(0, event.caxis.value));
+                        break;
+                    case SDL_CONTROLLER_AXIS_RIGHTY:
+                        processjoy(-7, -min<int>(0, event.caxis.value));
+                        processjoy(-8, max<int>(0, event.caxis.value));
+                        break;
+                    case SDL_CONTROLLER_AXIS_TRIGGERLEFT:
+                        processjoy(-9, (event.caxis.value + 32767) >> 1);
+                        break;
+                    case SDL_CONTROLLER_AXIS_TRIGGERRIGHT:
+                        processjoy(-10, (event.caxis.value + 32767) >> 1);
+                        break;
+                }
+
+            case SDL_CONTROLLERBUTTONDOWN:
+            case SDL_CONTROLLERBUTTONUP:
+                processjoy(event.cbutton.button, event.cbutton.state == SDL_PRESSED ? 32767 : 0);
+
+                break;
 
             case SDL_KEYDOWN:
             case SDL_KEYUP:
@@ -960,7 +999,15 @@ int main(int argc, char **argv)
         #ifdef _DEBUG
         par = SDL_INIT_NOPARACHUTE;
         #endif
-        if(SDL_Init(SDL_INIT_TIMER|SDL_INIT_VIDEO|SDL_INIT_AUDIO|par)<0) fatal("Unable to initialize SDL: %s", SDL_GetError());
+        if(SDL_Init(SDL_INIT_TIMER|SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_GAMECONTROLLER|par)<0) fatal("Unable to initialize SDL: %s", SDL_GetError());
+        loopi(SDL_NumJoysticks())
+        {
+            conoutf("found joystick device %d: %s", i, SDL_GameControllerNameForIndex(i));
+            if(!SDL_IsGameController(i)) continue;
+
+            if(!SDL_GameControllerOpen(i)) conoutf("unable to open gamepad %d", i);
+            else conoutf("device successfully opened");
+        }
     }
 
     logoutf("init: net");
@@ -997,6 +1044,7 @@ int main(int argc, char **argv)
 
     logoutf("init: cfg");
     execfile("config/keymap.cfg");
+    execfile("config/joymap.cfg");
     execfile("config/stdedit.cfg");
     defformatstring(confname, "config/%s/std.cfg", game::gameident());
     execfile(confname, false);

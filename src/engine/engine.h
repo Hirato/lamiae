@@ -547,6 +547,7 @@ extern void clearsleep(bool clearoverrides = true);
 
 // console
 extern void processkey(int code, bool isdown);
+extern void processjoy(int code, int strength);
 extern void processtextinput(const char *str, int len);
 extern int rendercommand(int x, int y, int w);
 extern int renderconsole(int w, int h, int abovehud);

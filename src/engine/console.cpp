@@ -169,13 +169,14 @@ struct keym
     int code;
     char *name;
     char *actions[NUMACTIONS];
-    bool pressed;
+    int strength;
 
-    keym() : code(-1), name(NULL), pressed(false) { loopi(NUMACTIONS) actions[i] = newstring(""); }
+    keym() : code(-1), name(NULL), strength(0) { loopi(NUMACTIONS) actions[i] = newstring(""); }
     ~keym() { DELETEA(name); loopi(NUMACTIONS) DELETEA(actions[i]); }
 };
 
 hashtable<int, keym> keyms(128);
+hashtable<int, keym> joyms(128);
 
 void keymap(int *code, char *key)
 {
@@ -186,7 +187,18 @@ void keymap(int *code, char *key)
     km.name = newstring(key);
 }
 
+
+void joymap(int *code, char *key)
+{
+    if(identflags&IDF_OVERRIDDEN) { conoutf(CON_ERROR, "cannot override joymap %d", *code); return; }
+    keym &km = joyms[*code];
+    km.code = *code;
+    DELETEA(km.name);
+    km.name = newstring(key);
+}
+
 COMMAND(keymap, "is");
+COMMAND(joymap, "is");
 
 keym *keypressed = NULL;
 char *keyaction = NULL;
@@ -197,7 +209,7 @@ const char *getkeyname(int code)
     return km ? km->name : NULL;
 }
 
-void searchbinds(char *action, int type)
+void searchbinds(hashtable<int, keym> &keyms, char *action, int type)
 {
     vector<char> names;
     enumerate(keyms, keym, km,
@@ -212,7 +224,7 @@ void searchbinds(char *action, int type)
     result(names.getbuf());
 }
 
-keym *findbind(char *key)
+keym *findbind(hashtable<int, keym> &keyms, char *key)
 {
     enumerate(keyms, keym, km,
     {
@@ -221,16 +233,16 @@ keym *findbind(char *key)
     return NULL;
 }
 
-void getbind(char *key, int type)
+void getbind(hashtable<int, keym> &keyms, char *key, int type)
 {
-    keym *km = findbind(key);
+    keym *km = findbind(keyms, key);
     result(km ? km->actions[type] : "");
 }
 
-void bindkey(char *key, char *action, int state, const char *cmd)
+void bindkey(hashtable<int, keym> &keyms, char *key, char *action, int state, const char *cmd)
 {
     if(identflags&IDF_OVERRIDDEN) { conoutf(CON_ERROR, "cannot override %s \"%s\"", cmd, key); return; }
-    keym *km = findbind(key);
+    keym *km = findbind(keyms, key);
     if(!km) { conoutf(CON_ERROR, "unknown key \"%s\"", key); return; }
     char *&binding = km->actions[state];
     if(!keypressed || keyaction!=binding) delete[] binding;
@@ -241,15 +253,25 @@ void bindkey(char *key, char *action, int state, const char *cmd)
     binding = newstring(action, len);
 }
 
-ICOMMAND(bind,     "ss", (char *key, char *action), bindkey(key, action, keym::ACTION_DEFAULT, "bind"));
-ICOMMAND(specbind, "ss", (char *key, char *action), bindkey(key, action, keym::ACTION_SPECTATOR, "specbind"));
-ICOMMAND(editbind, "ss", (char *key, char *action), bindkey(key, action, keym::ACTION_EDITING, "editbind"));
-ICOMMAND(getbind,     "s", (char *key), getbind(key, keym::ACTION_DEFAULT));
-ICOMMAND(getspecbind, "s", (char *key), getbind(key, keym::ACTION_SPECTATOR));
-ICOMMAND(geteditbind, "s", (char *key), getbind(key, keym::ACTION_EDITING));
-ICOMMAND(searchbinds,     "s", (char *action), searchbinds(action, keym::ACTION_DEFAULT));
-ICOMMAND(searchspecbinds, "s", (char *action), searchbinds(action, keym::ACTION_SPECTATOR));
-ICOMMAND(searcheditbinds, "s", (char *action), searchbinds(action, keym::ACTION_EDITING));
+ICOMMAND(bind,     "ss", (char *key, char *action), bindkey(keyms, key, action, keym::ACTION_DEFAULT, "bind"));
+ICOMMAND(specbind, "ss", (char *key, char *action), bindkey(keyms, key, action, keym::ACTION_SPECTATOR, "specbind"));
+ICOMMAND(editbind, "ss", (char *key, char *action), bindkey(keyms, key, action, keym::ACTION_EDITING, "editbind"));
+ICOMMAND(getbind,     "s", (char *key), getbind(keyms, key, keym::ACTION_DEFAULT));
+ICOMMAND(getspecbind, "s", (char *key), getbind(keyms, key, keym::ACTION_SPECTATOR));
+ICOMMAND(geteditbind, "s", (char *key), getbind(keyms, key, keym::ACTION_EDITING));
+ICOMMAND(searchbinds,     "s", (char *action), searchbinds(keyms, action, keym::ACTION_DEFAULT));
+ICOMMAND(searchspecbinds, "s", (char *action), searchbinds(keyms, action, keym::ACTION_SPECTATOR));
+ICOMMAND(searcheditbinds, "s", (char *action), searchbinds(keyms, action, keym::ACTION_EDITING));
+
+ICOMMAND(joybind,     "ss", (char *key, char *action), bindkey(joyms, key, action, keym::ACTION_DEFAULT, "bind"));
+ICOMMAND(specjoybind, "ss", (char *key, char *action), bindkey(joyms, key, action, keym::ACTION_SPECTATOR, "specbind"));
+ICOMMAND(editjoybind, "ss", (char *key, char *action), bindkey(joyms, key, action, keym::ACTION_EDITING, "editbind"));
+ICOMMAND(getjoybind,     "s", (char *key), getbind(joyms, key, keym::ACTION_DEFAULT));
+ICOMMAND(getspecjoybind, "s", (char *key), getbind(joyms, key, keym::ACTION_SPECTATOR));
+ICOMMAND(geteditjoybind, "s", (char *key), getbind(joyms, key, keym::ACTION_EDITING));
+ICOMMAND(searchjoybinds,     "s", (char *action), searchbinds(joyms, action, keym::ACTION_DEFAULT));
+ICOMMAND(searchspecjoybinds, "s", (char *action), searchbinds(joyms, action, keym::ACTION_SPECTATOR));
+ICOMMAND(searcheditjoybinds, "s", (char *action), searchbinds(joyms, action, keym::ACTION_EDITING));
 
 void inputcommand(char *init, char *action = NULL, char *prompt = NULL, char *flags = NULL) // turns input to the command line on or off
 {
@@ -379,19 +401,19 @@ void onrelease(const char *s)
 
 COMMAND(onrelease, "s");
 
-void execbind(keym &k, bool isdown)
+void execbind(keym &k, int strength)
 {
     loopv(releaseactions)
     {
         releaseaction &ra = releaseactions[i];
         if(ra.key==&k)
         {
-            if(!isdown) execute(ra.action);
+            if(!strength) execute(ra.action);
             delete[] ra.action;
             releaseactions.remove(i--);
         }
     }
-    if(isdown)
+    if(strength)
     {
         int state = keym::ACTION_DEFAULT;
         if(!UI::mainmenu)
@@ -406,7 +428,7 @@ void execbind(keym &k, bool isdown)
         keypressed = NULL;
         if(keyaction!=action) delete[] keyaction;
     }
-    k.pressed = isdown;
+    k.strength = strength;
 }
 
 bool consoleinput(const char *str, int len)
@@ -550,19 +572,26 @@ void processtextinput(const char *str, int len)
 void processkey(int code, bool isdown)
 {
     keym *haskey = keyms.access(code);
-    if(haskey && haskey->pressed) execbind(*haskey, isdown); // allow pressed keys to release
+    if(haskey && haskey->strength) execbind(*haskey, isdown ? 32767 : 0); // allow pressed keys to release
     else if(!UI::keypress(code, isdown)) // 3D GUI mouse button intercept
     {
         if(!consolekey(code, isdown))
         {
-            if(haskey) execbind(*haskey, isdown);
+            if(haskey) execbind(*haskey, isdown ? 32767 : 0);
         }
     }
+}
+
+void processjoy(int code, int strength)
+{
+    keym *haskey = joyms.access(code);
+    if(haskey) execbind(*haskey, strength);
 }
 
 void clear_console()
 {
     keyms.clear();
+    joyms.clear();
 }
 
 static inline bool sortbinds(keym *x, keym *y)
@@ -585,6 +614,24 @@ void writebinds(stream *f)
             {
                 if(validateblock(km.actions[j])) f->printf("%s %s [%s]\n", cmds[j], escapestring(km.name), km.actions[j]);
                 else f->printf("%s %s %s\n", cmds[j], escapestring(km.name), escapestring(km.actions[j]));
+            }
+        }
+    }
+
+    binds.setsize(0);
+
+    static const char * const joycmds[3] = { "joybind", "specjoybind", "editjoybind" };
+    enumerate(joyms, keym, km, binds.add(&km));
+    binds.sort(sortbinds);
+    loopj(3)
+    {
+        loopv(binds)
+        {
+            keym &km = *binds[i];
+            if(*km.actions[j])
+            {
+                if(validateblock(km.actions[j])) f->printf("%s %s [%s]\n", joycmds[j], escapestring(km.name), km.actions[j]);
+                else f->printf("%s %s %s\n", joycmds[j], escapestring(km.name), escapestring(km.actions[j]));
             }
         }
     }
