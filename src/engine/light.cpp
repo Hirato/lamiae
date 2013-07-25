@@ -303,7 +303,7 @@ void getlightprops(const extentity &e, int &radius, int &red, int &green, int &b
             static string lcmd;
             formatstring(lcmd, "light_%i", e.attr[5]);
 
-            char *ret = executestr(lcmd);
+            char *ret = execidentstr(lcmd);
             if(ret)
             {
                 vector<char *> vals;

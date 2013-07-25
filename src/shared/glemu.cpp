@@ -96,7 +96,7 @@ namespace gle
             vertexsize = 0;
         }
         changedattribs = true;
-        attribmask |= type;
+        attribmask |= 1<<type;
         attribinfo &a = attribdefs[numattribs++];
         a.type = type;
         a.size = size;

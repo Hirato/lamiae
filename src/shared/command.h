@@ -1,13 +1,15 @@
 // script binding functionality
 
-enum { VAL_NULL = 0, VAL_INT, VAL_FLOAT, VAL_STR, VAL_ANY, VAL_CODE, VAL_MACRO, VAL_IDENT, VAL_CSTR, VAL_CANY, VAL_WORD };
+enum { VAL_NULL = 0, VAL_INT, VAL_FLOAT, VAL_STR, VAL_ANY, VAL_CODE, VAL_MACRO, VAL_IDENT, VAL_CSTR, VAL_CANY, VAL_WORD, VAL_POP, VAL_COND };
 
 enum
 {
     CODE_START = 0,
     CODE_OFFSET,
+    CODE_NULL,
     CODE_POP,
     CODE_ENTER,
+    CODE_ENTER_RESULT,
     CODE_EXIT,
     CODE_VAL,
     CODE_VALI,
@@ -16,6 +18,7 @@ enum
     CODE_BOOL,
     CODE_BLOCK,
     CODE_COMPILE,
+    CODE_COND,
     CODE_FORCE,
     CODE_RESULT,
     CODE_IDENT, CODE_IDENTU, CODE_IDENTARG,
@@ -29,6 +32,8 @@ enum
     CODE_ALIAS, CODE_ALIASU, CODE_ALIASARG, CODE_CALL, CODE_CALLU, CODE_CALLARG,
     CODE_PRINT,
     CODE_LOCAL,
+    CODE_DO,
+    CODE_JUMP, CODE_JUMP_TRUE, CODE_JUMP_FALSE, CODE_JUMP_RESULT_TRUE, CODE_JUMP_RESULT_FALSE,
 
     CODE_OP_MASK = 0x3F,
     CODE_RET = 6,
@@ -41,7 +46,7 @@ enum
     RET_FLOAT  = VAL_FLOAT<<CODE_RET,
 };
 
-enum { ID_VAR, ID_FVAR, ID_SVAR, ID_COMMAND, ID_ALIAS, ID_LOCAL };
+enum { ID_VAR, ID_FVAR, ID_SVAR, ID_COMMAND, ID_ALIAS, ID_LOCAL, ID_DO, ID_IF, ID_RESULT, ID_AND, ID_OR };
 
 enum { IDF_PERSIST = 1<<0, IDF_OVERRIDE = 1<<1, IDF_HEX = 1<<2, IDF_READONLY = 1<<3, IDF_OVERRIDDEN = 1<<4, IDF_UNKNOWN = 1<<5, IDF_ARG = 1<<6 };
 
@@ -107,6 +112,7 @@ struct ident
         int minval;    // ID_VAR
         float minvalf; // ID_FVAR
         int valtype;   // ID_ALIAS
+        int numargs;   // ID_COMMAND
     };
     union
     {
@@ -160,8 +166,8 @@ struct ident
         : type(t), name(n), valtype(v.type), code(NULL), stack(NULL), flags(flags)
     { val = v; }
     // ID_COMMAND
-    ident(int t, const char *n, const char *args, uint argmask, void *f = NULL, int flags = 0)
-        : type(t), name(n), args(args), argmask(argmask), fun((identfun)f), flags(flags)
+    ident(int t, const char *n, const char *args, uint argmask, int numargs, void *f = NULL, int flags = 0)
+        : type(t), name(n), numargs(numargs), args(args), argmask(argmask), fun((identfun)f), flags(flags)
     {}
 
     void changed() { if(fun) fun(); }
@@ -299,8 +305,10 @@ inline void ident::getcval(tagval &v) const
 }
 
 // nasty macros for registering script functions, abuses globals to avoid excessive infrastructure
-#define KEYWORD(name, type) static bool __dummy_##name = addkeyword(type, #name)
-#define COMMANDN(name, fun, nargs) static bool __dummy_##fun = addcommand(#name, (identfun)fun, nargs)
+#define KEYWORD(name, type) static bool __dummy_##type = addcommand(#name, (identfun)NULL, NULL, type)
+#define COMMANDKN(name, type, fun, nargs) static bool __dummy_##fun = addcommand(#name, (identfun)fun, nargs, type)
+#define COMMANDK(name, type, nargs) COMMANDKN(name, type, name, nargs)
+#define COMMANDN(name, fun, nargs) COMMANDKN(name, ID_COMMAND, fun, nargs)
 #define COMMAND(name, nargs) COMMANDN(name, name, nargs)
 
 #define _VAR(name, global, min, cur, max, persist)  int global = variable(#name, min, cur, max, &global, NULL, persist)
@@ -357,11 +365,15 @@ inline void ident::getcval(tagval &v) const
 #define SVARFR(name, cur, body) _SVARF(name, name, cur, body, IDF_OVERRIDE)
 
 // anonymous inline commands, uses nasty template trick with line numbers to keep names unique
-#define ICOMMANDNS(name, cmdname, nargs, proto, b) template<int N> struct cmdname; template<> struct cmdname<__LINE__> { static bool init; static void run proto; }; bool cmdname<__LINE__>::init = addcommand(name, (identfun)cmdname<__LINE__>::run, nargs); void cmdname<__LINE__>::run proto \
-    { b; }
-#define ICOMMANDN(name, cmdname, nargs, proto, b) ICOMMANDNS(#name, cmdname, nargs, proto, b)
 #define ICOMMANDNAME(name) _icmd_##name
-#define ICOMMAND(name, nargs, proto, b) ICOMMANDN(name, ICOMMANDNAME(name), nargs, proto, b)
 #define ICOMMANDSNAME _icmds_
+#define ICOMMANDKNS(name, type, cmdname, nargs, proto, b) template<int N> struct cmdname; template<> struct cmdname<__LINE__> { static bool init; static void run proto; }; bool cmdname<__LINE__>::init = addcommand(name, (identfun)cmdname<__LINE__>::run, nargs, type); void cmdname<__LINE__>::run proto \
+    { b; }
+#define ICOMMANDKN(name, type, cmdname, nargs, proto, b) ICOMMANDKNS(#name, type, cmdname, nargs, proto, b)
+#define ICOMMANDK(name, type, nargs, proto, b) ICOMMANDKN(name, type, ICOMMANDNAME(name), nargs, proto, b)
+#define ICOMMANDKS(name, type, nargs, proto, b) ICOMMANDKNS(name, type, ICOMMANDSNAME, nargs, proto, b)
+#define ICOMMANDNS(name, cmdname, nargs, proto, b) ICOMMANDKNS(name, ID_COMMAND, cmdname, nargs, proto, b)
+#define ICOMMANDN(name, cmdname, nargs, proto, b) ICOMMANDNS(#name, cmdname, nargs, proto, b)
+#define ICOMMAND(name, nargs, proto, b) ICOMMANDN(name, ICOMMANDNAME(name), nargs, proto, b)
 #define ICOMMANDS(name, nargs, proto, b) ICOMMANDNS(name, ICOMMANDSNAME, nargs, proto, b)
 

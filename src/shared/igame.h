@@ -80,7 +80,7 @@ namespace game
     extern void findanims(const char *pattern, vector<int> &anims);
     extern void writegamedata(vector<uchar> &extras);
     extern void readgamedata(vector<uchar> &extras);
-    extern int clipconsole(int w, int h);
+    extern float clipconsole(int w, int h);
     extern const char *defaultcrosshair(int index);
     extern int selectcrosshair(float &r, float &g, float &b);
     extern void setupcamera();

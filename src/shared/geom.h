@@ -1239,6 +1239,8 @@ struct bvec
 
     void flip() { x -= 128; y -= 128; z -= 128; }
 
+    void scale(int k, int d) { x = uchar((x*k)/d); y = uchar((y*k)/d); z = uchar((z*k)/d); }
+
     bvec &shl(int n) { x<<= n; y<<= n; z<<= n; return *this; }
     bvec &shr(int n) { x>>= n; y>>= n; z>>= n; return *this; }
 

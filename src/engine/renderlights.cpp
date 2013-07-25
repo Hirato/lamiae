@@ -390,7 +390,7 @@ GLuint shouldscale()
     return scalefbo[0];
 }
 
-void doscale(int w, int h)
+void doscale()
 {
     if(!scaletex[0]) return;
 
@@ -399,20 +399,20 @@ void doscale(int w, int h)
     if(gscalecubic)
     {
         glBindFramebuffer_(GL_FRAMEBUFFER, scalefbo[1]);
-        glViewport(0, 0, gw, h);
+        glViewport(0, 0, gw, screenh);
         glBindTexture(GL_TEXTURE_RECTANGLE, scaletex[0]);
         SETSHADER(scalecubicy);
         screenquad(gw, gh);
         glBindFramebuffer_(GL_FRAMEBUFFER, 0);
-        glViewport(0, 0, w, h);
+        glViewport(0, 0, screenw, screenh);
         glBindTexture(GL_TEXTURE_RECTANGLE, scaletex[1]);
         SETSHADER(scalecubicx);
-        screenquad(gw, h);
+        screenquad(gw, screenh);
     }
     else
     {
         glBindFramebuffer_(GL_FRAMEBUFFER, 0);
-        glViewport(0, 0, w, h);
+        glViewport(0, 0, screenw, screenh);
         glBindTexture(GL_TEXTURE_RECTANGLE, scaletex[0]);
         SETSHADER(scalelinear);
         screenquad(gw, gh);
@@ -689,16 +689,16 @@ void bindgdepth()
     }
 }
 
-void setupgbuffer(int w, int h)
+void setupgbuffer()
 {
-    int sw = w, sh = h;
+    int sw = renderw, sh = renderh;
     if(gscale != 100)
     {
-        sw = max((w*gscale + 99)/100, 1);
-        sh = max((h*gscale + 99)/100, 1);
+        sw = max((renderw*gscale + 99)/100, 1);
+        sh = max((renderh*gscale + 99)/100, 1);
     }
 
-    if(gw == sw && gh == sh && (gscale == 100 || (scalew == w && scaleh == h))) return;
+    if(gw == sw && gh == sh && ((sw >= screenw && sh >= screenh) || (scalew == screenw && scaleh == screenh))) return;
 
     cleanupscale();
     cleanupbloom();
@@ -796,7 +796,7 @@ void setupgbuffer(int w, int h)
 
     glBindFramebuffer_(GL_FRAMEBUFFER, 0);
 
-    if(gscale != 100) setupscale(sw, sh, w, h);
+    if(gw < screenw || gh < screenh) setupscale(gw, gh, screenw, screenh);
 }
 
 void cleanupgbuffer()
@@ -2668,7 +2668,6 @@ void renderlights(float bsx1 = -1, float bsy1 = -1, float bsx2 = 1, float bsy2 =
 
                     if(hasDBT && depthtestlights > 1) glDepthBounds_(sz1*0.5f + 0.5f, sz2*0.5f + 0.5f);
 
-                    // FIXME: render light geometry here
                     lightquad(sz1);
 
                     lightpassesused++;
@@ -3890,10 +3889,10 @@ void shadegbuffer()
     endtimer(shcputimer);
 }
 
-void setupframe(int w, int h)
+void setupframe()
 {
     GLERROR;
-    setupgbuffer(w, h);
+    setupgbuffer();
     if(hdr && (bloomw < 0 || bloomh < 0)) setupbloom(gw, gh);
     if(ao && (aow < 0 || aoh < 0)) setupao(gw, gh);
     if(!shadowatlasfbo) setupshadowatlas();

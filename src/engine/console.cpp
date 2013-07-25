@@ -52,13 +52,13 @@ void conoutf(int type, const char *fmt, ...)
 VAR(fullconsole, 0, 0, 1);
 ICOMMAND(toggleconsole, "", (), { fullconsole ^= 1; });
 
-int rendercommand(int x, int y, int w)
+float rendercommand(float x, float y, float w)
 {
     if(commandmillis < 0) return 0;
 
     defformatstring(s, "%s %s", commandprompt ? commandprompt : ">", commandbuf);
-    int width, height;
-    text_bounds(s, width, height, w);
+    float width, height;
+    text_boundsf(s, width, height, w);
     y -= height;
     draw_text(s, x, y, 0xFF, 0xFF, 0xFF, 0xFF, (commandpos>=0) ? (commandpos+1+(commandprompt?strlen(commandprompt):1)) : strlen(s), w);
     return height;
@@ -97,7 +97,7 @@ ICOMMAND(miniconskip, "i", (int *n), setconskip(miniconskip, miniconfilter, *n))
 
 ICOMMAND(clearconsole, "", (), { while(conlines.length()) delete[] conlines.pop().line; });
 
-int drawconlines(int conskip, int confade, int conwidth, int conheight, int conoff, int filter, int y = 0, int dir = 1)
+float drawconlines(int conskip, int confade, float conwidth, float conheight, float conoff, int filter, float y = 0, int dir = 1)
 {
     int numl = conlines.length(), offset = min(conskip, numl);
 
@@ -118,8 +118,8 @@ int drawconlines(int conskip, int confade, int conwidth, int conheight, int cono
         int idx = offset+i < numl ? offset+i : --offset;
         if(!(conlines[idx].type&filter)) continue;
         char *line = conlines[idx].line;
-        int width, height;
-        text_bounds(line, width, height, conwidth);
+        float width, height;
+        text_boundsf(line, width, height, conwidth);
         if(totalheight + height > conheight) { numl = i; if(offset == idx) ++offset; break; }
         totalheight += height;
     }
@@ -129,8 +129,8 @@ int drawconlines(int conskip, int confade, int conwidth, int conheight, int cono
         int idx = offset + (dir > 0 ? numl-i-1 : i);
         if(!(conlines[idx].type&filter)) continue;
         char *line = conlines[idx].line;
-        int width, height;
-        text_bounds(line, width, height, conwidth);
+        float width, height;
+        text_boundsf(line, width, height, conwidth);
         if(dir <= 0) y -= height;
         draw_text(line, conoff, y, 0xFF, 0xFF, 0xFF, 0xFF, -1, conwidth);
         if(dir > 0) y += height;
@@ -138,19 +138,19 @@ int drawconlines(int conskip, int confade, int conwidth, int conheight, int cono
     return y+conoff;
 }
 
-int renderconsole(int w, int h, int abovehud)                   // render buffer taking into account time & scrolling
+float renderconsole(float w, float h, float abovehud)                   // render buffer taking into account time & scrolling
 {
-    int conpad = fullconsole ? 0 : FONTH/4,
-        conoff = fullconsole ? FONTH : FONTH/3,
-        conheight = min(fullconsole ? ((h*fullconsize/100)/FONTH)*FONTH : FONTH*consize, h - 2*(conpad + conoff)),
-        conwidth = w - 2*(conpad + conoff) - (fullconsole ? 0 : game::clipconsole(w, h));
+    float conpad = fullconsole ? 0 : FONTH/4,
+          conoff = fullconsole ? FONTH : FONTH/3,
+          conheight = min(fullconsole ? ((h*fullconsize/100)/FONTH)*FONTH : FONTH*consize, h - 2*(conpad + conoff)),
+          conwidth = w - 2*(conpad + conoff) - (fullconsole ? 0 : game::clipconsole(w, h));
 
-    extern void consolebox(int x1, int y1, int x2, int y2);
+    extern void consolebox(float x1, float y1, float x2, float y2);
     if(fullconsole) consolebox(conpad, conpad, conwidth+conpad+2*conoff, conheight+conpad+2*conoff);
 
-    int y = drawconlines(conskip, fullconsole ? 0 : confade, conwidth, conheight, conpad+conoff, fullconsole ? fullconfilter : confilter);
+    float y = drawconlines(conskip, fullconsole ? 0 : confade, conwidth, conheight, conpad+conoff, fullconsole ? fullconfilter : confilter);
     if(!fullconsole && (miniconsize && miniconwidth))
-        drawconlines(miniconskip, miniconfade, (miniconwidth*(w - 2*(conpad + conoff)))/100, min(FONTH*miniconsize, abovehud - y), conpad+conoff, miniconfilter, abovehud, -1);
+        drawconlines(miniconskip, miniconfade, (miniconwidth*(w - 2*(conpad + conoff)))/100, min(float(FONTH*miniconsize), abovehud - y), conpad+conoff, miniconfilter, abovehud, -1);
     return fullconsole ? conheight + 2*(conpad + conoff) : y;
 }
 
@@ -359,7 +359,13 @@ COMMANDN(history, history_, "i");
 struct releaseaction
 {
     keym *key;
-    char *action;
+    union
+    {
+        char *action;
+        ident *id;
+    };
+    int numargs;
+    tagval args[3];
 };
 vector<releaseaction> releaseactions;
 
@@ -369,7 +375,18 @@ const char *addreleaseaction(char *s)
     releaseaction &ra = releaseactions.add();
     ra.key = keypressed;
     ra.action = s;
+    ra.numargs = -1;
     return keypressed->name;
+}
+
+tagval *addreleaseaction(ident *id, int numargs)
+{
+    if(!keypressed || numargs > 3) return NULL;
+    releaseaction &ra = releaseactions.add();
+    ra.key = keypressed;
+    ra.id = id;
+    ra.numargs = numargs;
+    return ra.args;
 }
 
 void onrelease(const char *s)
@@ -386,8 +403,12 @@ void execbind(keym &k, bool isdown)
         releaseaction &ra = releaseactions[i];
         if(ra.key==&k)
         {
-            if(!isdown) execute(ra.action);
-            delete[] ra.action;
+            if(ra.numargs < 0)
+            {
+                if(!isdown) execute(ra.action);
+                delete[] ra.action;
+            }
+            else execute(isdown ? NULL : ra.id, ra.args, ra.numargs);
             releaseactions.remove(i--);
         }
     }

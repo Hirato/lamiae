@@ -1618,25 +1618,19 @@ template<class MDL, class MESH> struct modelcommands
 
     static void setspec(char *meshname, float *percent)
     {
-        float spec = 1.0f;
-        if(*percent>0) spec = *percent/100.0f;
-        else if(*percent<0) spec = 0.0f;
+        float spec = *percent > 0 ? *percent/100.0f : 0.0f;
         loopskins(meshname, s, s.spec = spec);
     }
 
     static void setambient(char *meshname, float *percent)
     {
-        float ambient = 0.3f;
-        if(*percent>0) ambient = *percent/100.0f;
-        else if(*percent<0) ambient = 0.0f;
+        float ambient = *percent > 0 ? *percent/100.0f : 0.0f;
         loopskins(meshname, s, s.ambient = ambient);
     }
 
     static void setglow(char *meshname, float *percent, float *delta, float *pulse)
     {
-        float glow = 3.0f, glowdelta = *delta/100.0f, glowpulse = *pulse > 0 ? *pulse/1000.0f : 0;
-        if(*percent>0) glow = *percent/100.0f;
-        else if(*percent<0) glow = 0.0f;
+        float glow = *percent > 0 ? *percent/100.0f : 0.0f, glowdelta = *delta/100.0f, glowpulse = *pulse > 0 ? *pulse/1000.0f : 0;
         glowdelta -= glow;
         loopskins(meshname, s, {s.glow = glow; s.glowdelta = glowdelta; s.glowpulse = glowpulse;});
     }

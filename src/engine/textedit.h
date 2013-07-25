@@ -135,6 +135,8 @@ struct editline
     }
 };
 
+enum { EDITORFOCUSED = 1, EDITORUSED, EDITORFOREVER };
+
 struct editor
 {
     int mode; //editor mode - 1= keep while focused, 2= keep while used in gui, 3= keep forever (i.e. until mode changes)

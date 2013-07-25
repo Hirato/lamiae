@@ -1293,7 +1293,7 @@ static void getpartprops(const entity &e, int &attr1, int &attr2, int &attr3, in
             static string pcmd;
             formatstring(pcmd, "particles_%i", e.attr[8]);
 
-            char *ret = executestr(pcmd);
+            char *ret = execidentstr(pcmd);
             if(ret)
             {
                 vector<char *> vals;

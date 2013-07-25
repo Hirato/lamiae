@@ -4,7 +4,7 @@
 
 Shader *Shader::lastshader = NULL;
 
-Shader *nullshader = NULL, *hudshader = NULL, *hudnotextureshader = NULL, *nocolorshader = NULL, *foggedshader = NULL, *foggednotextureshader = NULL, *ldrshader = NULL, *ldrnotextureshader = NULL, *stdworldshader = NULL, *rsmworldshader = NULL;
+Shader *nullshader = NULL, *hudshader = NULL, *hudtextshader = NULL, *hudnotextureshader = NULL, *nocolorshader = NULL, *foggedshader = NULL, *foggednotextureshader = NULL, *ldrshader = NULL, *ldrnotextureshader = NULL, *stdworldshader = NULL, *rsmworldshader = NULL;
 
 static hashtable<const char *, GlobalShaderParamState> globalparams(256);
 static hashtable<const char *, int> localparams(256);
@@ -26,9 +26,10 @@ void loadshaders()
 
     nullshader = lookupshaderbyname("null");
     hudshader = lookupshaderbyname("hud");
+    hudtextshader = lookupshaderbyname("hudtext");
     hudnotextureshader = lookupshaderbyname("hudnotexture");
     stdworldshader = lookupshaderbyname("stdworld");
-    if(!nullshader || !hudshader || !hudnotextureshader || !stdworldshader) fatal("cannot find shader definitions");
+    if(!nullshader || !hudshader || !hudtextshader || !hudnotextureshader || !stdworldshader) fatal("cannot find shader definitions");
 
     dummyslot.shader = stdworldshader;
 
@@ -633,6 +634,7 @@ static const char *findglslmain(const char *s)
 
 static void gengenericvariant(Shader &s, const char *sname, const char *vs, const char *ps, int row = 0)
 {
+    int rowoffset = 0;
     bool vschanged = false, pschanged = false;
     vector<char> vsv, psv;
     vsv.put(vs, strlen(vs)+1);
@@ -643,6 +645,7 @@ static void gengenericvariant(Shader &s, const char *sname, const char *vs, cons
     {
         vspragma = strstr(vspragma, "#pragma CUBE2_variant");
         if(!vspragma) break;
+        if(sscanf(vspragma + len, "row %d", &rowoffset) == 1) continue;
         memset(vspragma, ' ', len);
         vspragma += len;
         if(!strncmp(vspragma, "override", olen))
@@ -659,6 +662,7 @@ static void gengenericvariant(Shader &s, const char *sname, const char *vs, cons
     {
         pspragma = strstr(pspragma, "#pragma CUBE2_variant");
         if(!pspragma) break;
+        if(sscanf(pspragma + len, "row %d", &rowoffset) == 1) continue;
         memset(pspragma, ' ', len);
         pspragma += len;
         if(!strncmp(pspragma, "override", olen))
@@ -671,6 +675,8 @@ static void gengenericvariant(Shader &s, const char *sname, const char *vs, cons
             memset(end, ' ', endlen);
         }
     }
+    row += rowoffset;
+    if(row < 0 || row >= MAXVARIANTROWS) return;
     defformatstring(varname, "<variant:%d,%d>%s", s.variants[row].length(), row, sname);
     string reuse;
     if(s.variants[row].length()) formatstring(reuse, "%d", row);
@@ -823,6 +829,28 @@ void setupshaders()
         "    fragcolor = colorscale * color;\n"
         "}\n");
     if(hudshader) genswizzle(*hudshader, hudshader->name, hudshader->psstr);
+    hudtextshader = newshader(0, "<init>hudtext",
+        "attribute vec4 vvertex, vcolor;\n"
+        "attribute vec2 vtexcoord0;\n"
+        "uniform mat4 hudmatrix;\n"
+        "varying vec2 texcoord0;\n"
+        "varying vec4 colorscale;\n"
+        "void main(void) {\n"
+        "    gl_Position = hudmatrix * vvertex;\n"
+        "    texcoord0 = vtexcoord0;\n"
+        "    colorscale = vcolor;\n"
+        "}\n",
+        "uniform sampler2D tex0;\n"
+        "uniform vec4 textparams;\n"
+        "varying vec2 texcoord0;\n"
+        "varying vec4 colorscale;\n"
+        "fragdata(0, fragcolor, vec4)\n"
+        "void main(void) {\n"
+        "    float dist = texture2D(tex0, texcoord0).r;\n"
+        "    float border = smoothstep(textparams.x, textparams.y, dist);\n"
+        "    float outline = smoothstep(textparams.z, textparams.w, dist);\n"
+        "    fragcolor = vec4(colorscale.rgb * outline, colorscale.a * border);\n"
+        "}\n");
     hudnotextureshader = newshader(0, "<init>hudnotexture",
         "attribute vec4 vvertex, vcolor;\n"
         "uniform mat4 hudmatrix;"
@@ -838,7 +866,7 @@ void setupshaders()
         "}\n");
     standardshader = false;
 
-    if(!nullshader || !hudshader || !hudnotextureshader) fatal("failed to setup shaders");
+    if(!nullshader || !hudshader || !hudtextshader || !hudnotextureshader) fatal("failed to setup shaders");
 
     dummyslot.shader = nullshader;
 }

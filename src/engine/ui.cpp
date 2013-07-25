@@ -2976,7 +2976,7 @@ ICOMMAND(loopchanges, "se", (char *var, uint *body),
 HVARP(fullconcolor, 0, 0x4F4F4F, 0xFFFFFF);
 FVARP(fullconblend, 0, .8, 1);
 
-void consolebox(int x1, int y1, int x2, int y2)
+void consolebox(float x1, float y1, float x2, float y2)
 {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 

@@ -706,7 +706,7 @@ struct cubemapside
 
 extern const cubemapside cubemapsides[6];
 extern Texture *notexture;
-extern Shader *nullshader, *hudshader, *hudnotextureshader, *nocolorshader, *foggedshader, *foggednotextureshader, *ldrshader, *ldrnotextureshader, *stdworldshader, *rsmworldshader;
+extern Shader *nullshader, *hudshader, *hudtextshader, *hudnotextureshader, *nocolorshader, *foggedshader, *foggednotextureshader, *ldrshader, *ldrnotextureshader, *stdworldshader, *rsmworldshader;
 extern int maxvsuniforms, maxfsuniforms;
 
 extern Shader *lookupshaderbyname(const char *name);

@@ -92,9 +92,6 @@ soundchannel &newchannel(int n, soundslot *slot, const vec *loc = NULL, extentit
 
 void freechannel(int n)
 {
-    // Note that this can potentially be called from the SDL_mixer audio thread.
-    // Be careful of race conditions when checking chan.inuse without locking audio.
-    // Can't use Mix_Playing() checks due to bug with looping sounds in SDL_mixer.
     if(!channels.inrange(n) || !channels[n].inuse) return;
     soundchannel &chan = channels[n];
     chan.inuse = false;
@@ -153,7 +150,7 @@ void stopmusic()
 
 VARF(sound, 0, 1, 1, initwarning("sound configuration", INIT_RESET, CHANGE_SOUND));
 VARF(soundchans, 1, 32, 128, initwarning("sound configuration", INIT_RESET, CHANGE_SOUND));
-VARF(soundfreq, 0, MIX_DEFAULT_FREQUENCY, 44100, initwarning("sound configuration", INIT_RESET, CHANGE_SOUND));
+VARF(soundfreq, 0, 44100, 44100, initwarning("sound configuration", INIT_RESET, CHANGE_SOUND));
 VARF(soundbufferlen, 128, 1024, 4096, initwarning("sound configuration", INIT_RESET, CHANGE_SOUND));
 
 void initsound()
@@ -165,7 +162,6 @@ void initsound()
         return;
     }
     Mix_AllocateChannels(soundchans);
-    Mix_ChannelFinished(freechannel);
     maxchannels = soundchans;
     nosound = false;
 }
@@ -425,28 +421,35 @@ bool updatechannel(soundchannel &chan)
     return true;
 }
 
+void reclaimchannels()
+{
+    loopv(channels)
+    {
+        soundchannel &chan = channels[i];
+        if(chan.inuse && !Mix_Playing(i)) freechannel(i);
+    }
+}
+
+void syncchannels()
+{
+    loopv(channels)
+    {
+        soundchannel &chan = channels[i];
+        if(chan.inuse && chan.hasloc() && updatechannel(chan)) syncchannel(chan);
+    }
+}
+
 void updatesounds()
 {
     updatemumble();
     if(nosound) return;
     if(minimized) stopsounds();
-    else if(UI::mainmenu) stopmapsounds();
-    else checkmapsounds();
-    int dirty = 0;
-    loopv(channels)
+    else
     {
-        soundchannel &chan = channels[i];
-        if(chan.inuse && chan.hasloc() && updatechannel(chan)) dirty++;
-    }
-    if(dirty)
-    {
-        SDL_LockAudio(); // workaround for race conditions inside Mix_SetPanning
-        loopv(channels)
-        {
-            soundchannel &chan = channels[i];
-            if(chan.inuse && chan.dirty) syncchannel(chan);
-        }
-        SDL_UnlockAudio();
+        reclaimchannels();
+        if(UI::mainmenu) stopmapsounds();
+        else checkmapsounds();
+        syncchannels();
     }
     if(music)
     {
@@ -582,15 +585,9 @@ int playsound(int n, const vec *loc, extentity *ent, int flags, int loops, int f
     chanid = -1;
     loopv(channels) if(!channels[i].inuse) { chanid = i; break; }
     if(chanid < 0 && channels.length() < maxchannels) chanid = channels.length();
-    if(chanid < 0) loopv(channels) if(!channels[i].volume) { chanid = i; break; }
+    if(chanid < 0) loopv(channels) if(!channels[i].volume) { Mix_HaltChannel(i); freechannel(i); chanid = i; break; }
     if(chanid < 0) return -1;
 
-    SDL_LockAudio(); // must lock here to prevent freechannel/Mix_SetPanning race conditions
-    if(channels.inrange(chanid) && channels[chanid].inuse)
-    {
-        Mix_HaltChannel(chanid);
-        freechannel(chanid);
-    }
     soundchannel &chan = newchannel(chanid, &slot, loc, ent, flags, radius);
     updatechannel(chan);
     int playing = -1;
@@ -602,7 +599,6 @@ int playsound(int n, const vec *loc, extentity *ent, int flags, int loops, int f
     else playing = expire >= 0 ? Mix_PlayChannelTimed(chanid, slot.sample->chunk, loops, expire) : Mix_PlayChannel(chanid, slot.sample->chunk, loops);
     if(playing >= 0) syncchannel(chan);
     else freechannel(chanid);
-    SDL_UnlockAudio();
     return playing;
 }
 

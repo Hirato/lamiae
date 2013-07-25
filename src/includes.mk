@@ -191,15 +191,15 @@ endif
 	cp lamiae$(MACHINE).$(BIN_SUFFIX) ../$(PLATFORM_PATH)/
 	chmod o+x ../$(PLATFORM_PATH)/lamiae$(MACHINE).$(BIN_SUFFIX)
 
-shared/cube2font.o: shared/cube2font.c
+shared/tessfont.o: shared/tessfont.c
 	$(CXX) $(CXXFLAGS) -c -o $@ $< `freetype-config --cflags`
 
-cube2font: shared/cube2font.o
-	$(CXX) $(CXXFLAGS) -o cube2font shared/cube2font.o `freetype-config --libs` -lz
+tessfont: shared/tessfont.o
+	$(CXX) $(CXXFLAGS) -o tessfont shared/tessfont.o `freetype-config --libs` -lz
 
 fixspace:
-	sed -i ':rep; s/^\([ ]*\)\t/\1    /g; trep'  shared/*.cpp shared/*.h engine/*.cpp engine/*.h
-	sed -i 's/[ \t]*$$//;' shared/*.cpp shared/*.h engine/*.cpp engine/*.h rpggame/*.cpp rpggame/*.h
+	sed -i ':rep; s/^\([ ]*\)\t/\1    /g; trep'  shared/*.c shared/*.cpp shared/*.h engine/*.cpp engine/*.h
+	sed -i 's/[ \t]*$$//;' shared/*.c shared/*.cpp shared/*.h engine/*.cpp engine/*.h rpggame/*.cpp rpggame/*.h
 
 depend:
 	makedepend -fincludes.mk -Y -Ienet/include $(subst .o,.c,$(ENET_OBJS))

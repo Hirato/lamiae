@@ -2436,7 +2436,7 @@ VAR(aaenvmap, 0, 2, 4);
 
 GLuint genenvmap(const vec &o, int envmapsize, int blur)
 {
-    int rendersize = 1<<(envmapsize+aaenvmap), sizelimit = min(hwcubetexsize, min(vieww, viewh));
+    int rendersize = 1<<(envmapsize+aaenvmap), sizelimit = min(hwcubetexsize, min(gw, gh));
     if(maxtexsize) sizelimit = min(sizelimit, maxtexsize);
     while(rendersize > sizelimit) rendersize /= 2;
     int texsize = min(rendersize, 1<<envmapsize);
@@ -2482,7 +2482,7 @@ GLuint genenvmap(const vec &o, int envmapsize, int blur)
         createtexture(tex, texsize, texsize, dst, 3, 2, GL_RGB5, side.target);
     }
     glBindFramebuffer_(GL_FRAMEBUFFER, 0);
-    glViewport(0, 0, vieww, viewh);
+    glViewport(0, 0, screenw, screenh);
     delete[] pixels;
     clientkeepalive();
     forcecubemapload(tex);
@@ -2513,7 +2513,7 @@ void genenvmaps()
     if(envmaps.empty()) return;
     renderprogress(0, "generating environment maps...");
     int lastprogress = SDL_GetTicks();
-    setupframe(screenw, screenh);
+    setupframe();
     loopv(envmaps)
     {
         envmap &em = envmaps[i];
