@@ -17,6 +17,7 @@ enum
     CODE_MACRO,
     CODE_BOOL,
     CODE_BLOCK,
+    CODE_EMPTY,
     CODE_COMPILE,
     CODE_COND,
     CODE_FORCE,

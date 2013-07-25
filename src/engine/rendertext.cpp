@@ -329,7 +329,7 @@ static void text_color(char c, char *stack, int size, int &sp, bvec colour, int 
                     if(cw <= 0 || w + cw > maxwidth) break;\
                     w += cw;\
                 }\
-                if(x + w > maxwidth && j!=0) { TEXTLINE(j-1) x = 0; y += FONTH; }\
+                if(x + w > maxwidth && x > 0) { TEXTLINE(j-1) x = 0; y += FONTH; }\
                 TEXTWORD\
             }\
             else\
@@ -443,7 +443,7 @@ void draw_text(const char *str, float left, float top, int r, int g, int b, int 
     {
         gle::color(color, a);
         gle::begin(GL_QUADS);
-        if(maxwidth != -1 && cx >= maxwidth) { cx = 0; cy += FONTH; }
+        if(maxwidth >= 0 && cx >= maxwidth && cx > 0) { cx = 0; cy += FONTH; }
         if(verttextcursor)
         {
             if(curfont->chars.inrange('|' - curfont->charoffset))

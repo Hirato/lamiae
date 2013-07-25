@@ -252,9 +252,11 @@ int connectwithtimeout(ENetSocket sock, const char *hostname, const ENetAddress 
     return cd.result;
 }
 
+static int currentprotocol = server::protocolversion();
+
 enum { UNRESOLVED = 0, RESOLVING, RESOLVED };
 
-struct serverinfo
+struct serverinfo : servinfo
 {
     enum
     {
@@ -263,18 +265,15 @@ struct serverinfo
         MAXPINGS = 3
     };
 
-    string name, map, sdesc;
-    int port, numplayers, resolved, ping, lastping, nextping;
+    int resolved, lastping, nextping;
     int pings[MAXPINGS];
-    vector<int> attr;
     ENetAddress address;
     bool keep;
     const char *password;
 
     serverinfo()
-     : port(-1), numplayers(0), resolved(UNRESOLVED), keep(false), password(NULL)
+     : resolved(UNRESOLVED), keep(false), password(NULL)
     {
-        name[0] = map[0] = sdesc[0] = '\0';
         clearpings();
     }
 
@@ -294,8 +293,9 @@ struct serverinfo
     void cleanup()
     {
         clearpings();
+        protocol = -1;
+        numplayers = maxplayers = 0;
         attr.setsize(0);
-        numplayers = 0;
     }
 
     void reset()
@@ -325,12 +325,24 @@ struct serverinfo
         calcping();
     }
 
+    const char *status() const
+    {
+        if(address.host == ENET_HOST_ANY) return "[unknown host]";
+        if(ping == WAITING) return "[waiting for response]";
+        if(protocol < currentprotocol) return "[older protocol]";
+        if(protocol > currentprotocol) return "[newer protocol]";
+        return NULL;
+    }
+
+    bool valid() const { return !status(); }
+
     static bool compare(serverinfo *a, serverinfo *b)
     {
-        bool ac = server::servercompatible(a->name, a->sdesc, a->map, a->ping, a->attr, a->numplayers),
-             bc = server::servercompatible(b->name, b->sdesc, b->map, b->ping, b->attr, b->numplayers);
-        if(ac > bc) return true;
-        if(bc > ac) return false;
+        if(a->protocol == currentprotocol)
+        {
+            if(b->protocol != currentprotocol) return true;
+        }
+        else if(b->protocol == currentprotocol) return false;
         if(a->keep > b->keep) return true;
         if(a->keep < b->keep) return false;
         if(a->numplayers < b->numplayers) return false;
@@ -339,8 +351,8 @@ struct serverinfo
         if(a->ping < b->ping) return true;
         int cmp = strcmp(a->name, b->name);
         if(cmp != 0) return cmp < 0;
-        if(a->port < b->port) return true;
-        if(a->port > b->port) return false;
+        if(a->address.port < b->address.port) return true;
+        if(a->address.port > b->address.port) return false;
         return false;
     }
 };
@@ -356,7 +368,6 @@ static serverinfo *newserver(const char *name, int port, uint ip = ENET_HOST_ANY
     si->address.port = server::serverinfoport(port);
     if(ip!=ENET_HOST_ANY) si->resolved = RESOLVED;
 
-    si->port = port;
     if(name) copystring(si->name, name);
     else if(ip==ENET_HOST_ANY || enet_address_get_host_ip(&si->address, si->name, sizeof(si->name)) < 0)
     {
@@ -376,7 +387,7 @@ void addserver(const char *name, int port, const char *password, bool keep)
     loopv(servers)
     {
         serverinfo *s = servers[i];
-        if(strcmp(s->name, name) || s->port != port) continue;
+        if(strcmp(s->name, name) || s->address.port != port) continue;
         if(password && (!s->password || strcmp(s->password, password)))
         {
             DELETEA(s->password);
@@ -495,14 +506,16 @@ void checkpings()
         ucharbuf p(ping, len);
         int millis = getint(p), rtt = clamp(totalmillis - millis, 0, min(servpingdecay, totalmillis));
         if(millis >= lastreset && rtt < servpingdecay) si->addping(rtt, millis);
+        si->protocol = getint(p);
         si->numplayers = getint(p);
+        si->maxplayers = getint(p);
         int numattr = getint(p);
         si->attr.setsize(0);
         loopj(numattr) { int attr = getint(p); if(p.overread()) break; si->attr.add(attr); }
         getstring(text, p);
         filtertext(si->map, text, false);
         getstring(text, p);
-        filtertext(si->sdesc, text);
+        filtertext(si->desc, text);
     }
 }
 
@@ -532,61 +545,49 @@ void refreshservers()
     if(autosortservers) sortservers();
 }
 
-serverinfo *selectedserver = NULL;
-
 ICOMMAND(numservers, "", (), intret(servers.length()))
-ICOMMAND(selectserver, "i", (int *i),
-    if(selectedserver) return;
-    if(servers.inrange(*i))
-        selectedserver = servers[*i];
-)
-ICOMMAND(serverinfo, "ii", (int *i, int *n),
-    refreshservers();
-    if(!servers.inrange(*i))
-    {
-        result("");
-        return;
+
+#define GETSERVERINFO_(idx, si, body) \
+    if(servers.inrange(idx)) \
+    { \
+        serverinfo &si = *servers[idx]; \
+        body; \
     }
-    serverinfo &si = *servers[*i];
-    switch(*n)
+#define GETSERVERINFO(idx, si, body) GETSERVERINFO_(idx, si, if(si.valid()) { body; })
+
+ICOMMAND(servinfovalid, "i", (int *i), GETSERVERINFO_(*i, si, intret(si.valid() ? 1 : 0)));
+ICOMMAND(servinfodesc, "i", (int *i),
+    GETSERVERINFO_(*i, si,
     {
-        case 0: result(si.name); return;
-        case 1: intret(si.port); return;
-        case 2:
-            if(si.address.host == ENET_HOST_ANY) result("[unknown host]");
-            else if(si.ping == serverinfo::WAITING) result("[waiting for response]");
-            else result(si.sdesc);
+        const char *status = si.status();
+        result(status ? status : si.desc);
+    }));
+ICOMMAND(servinfoname, "i", (int *i), GETSERVERINFO(*i, si, result(si.name)));
+ICOMMAND(servinfoport, "i", (int *i), GETSERVERINFO(*i, si, intret(si.address.port)));
+ICOMMAND(servinfomap, "i", (int *i), GETSERVERINFO(*i, si, result(si.map)));
+ICOMMAND(servinfoping, "i", (int *i), GETSERVERINFO(*i, si, intret(si.ping)));
+ICOMMAND(servinfonumplayers, "i", (int *i), GETSERVERINFO(*i, si, intret(si.numplayers)));
+ICOMMAND(servinfomaxplayers, "i", (int *i), GETSERVERINFO(*i, si, intret(si.maxplayers)));
+ICOMMAND(servinfoplayers, "i", (int *i),
+    GETSERVERINFO(*i, si,
+    {
+        if(si.maxplayers <= 0) intret(si.numplayers);
+        else result(tempformatstring(si.numplayers >= si.maxplayers ? "\f3%d/%d" : "%d/%d", si.numplayers, si.maxplayers));
+    }));
+ICOMMAND(servinfoattr, "ii", (int *i, int *n), GETSERVERINFO(*i, si, { if(si.attr.inrange(*n)) intret(si.attr[*n]); }));
 
-            return;
-        case 3: result(si.map); return;
-        case 4: intret(si.ping); return;
-        case 5: intret(si.numplayers); return;
-        default: result(""); return;
-    }
-)
+ICOMMAND(connectservinfo, "i", (int *i), GETSERVERINFO(*i, si, connectserv(si.name, si.address.port, si.password)));
 
-ICOMMAND(serverauxinfo, "ii", (int *i, int *n),
-    refreshservers();
-    if(servers.inrange(*i) && servers[*i]->attr.inrange(*n))
-        intret(servers[*i]->attr[*n]);
-    else intret(0);
-)
-
-void connectselected()
+servinfo *getservinfo(int i)
 {
-    if(!selectedserver) return;
-    connectserv(selectedserver->name, selectedserver->port, selectedserver->password);
-    selectedserver = NULL;
+    return servers.inrange(i) && servers[i]->valid() ? servers[i] : NULL;
 }
-
-COMMAND(connectselected, "");
 
 void clearservers(bool full = false)
 {
     resolverclear();
     if(full) servers.deletecontents();
     else loopvrev(servers) if(!servers[i]->keep) delete servers.remove(i);
-    selectedserver = NULL;
 }
 
 
@@ -664,7 +665,6 @@ void updatefrommaster()
 
 void initservers()
 {
-    selectedserver = NULL;
     if(autoupdateservers && !updatedservers) updatefrommaster();
 }
 
@@ -673,6 +673,7 @@ ICOMMAND(keepserver, "sis", (const char *name, int *port, const char *password),
 ICOMMAND(clearservers, "i", (int *full), clearservers(*full!=0));
 COMMAND(updatefrommaster, "");
 COMMAND(initservers, "");
+COMMAND(refreshservers, "");
 
 void writeservercfg()
 {
@@ -686,8 +687,8 @@ void writeservercfg()
         if(s->keep)
         {
             if(!kept) f->printf("// servers that should never be cleared from the server list\n\n");
-            if(s->password) f->printf("keepserver %s %d %s\n", escapeid(s->name), s->port, escapestring(s->password));
-            else f->printf("keepserver %s %d\n", escapeid(s->name), s->port);
+            if(s->password) f->printf("keepserver %s %d %s\n", escapeid(s->name), s->address.port, escapestring(s->password));
+            else f->printf("keepserver %s %d\n", escapeid(s->name), s->address.port);
             kept++;
         }
     }
@@ -698,8 +699,8 @@ void writeservercfg()
         serverinfo *s = servers[i];
         if(!s->keep)
         {
-            if(s->password) f->printf("addserver %s %d %s\n", escapeid(s->name), s->port, escapestring(s->password));
-            else f->printf("addserver %s %d\n", escapeid(s->name), s->port);
+            if(s->password) f->printf("addserver %s %d %s\n", escapeid(s->name), s->address.port, escapestring(s->password));
+            else f->printf("addserver %s %d\n", escapeid(s->name), s->address.port);
         }
     }
     delete f;

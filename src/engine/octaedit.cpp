@@ -2036,6 +2036,15 @@ COMMAND(getcurtex, "");
 COMMAND(getseltex, "");
 ICOMMAND(getreptex, "", (), { if(!noedit()) intret(vslots.inrange(reptex) ? reptex : -1); });
 COMMAND(gettexname, "ii");
+ICOMMAND(looptexmru, "re", (ident *id, uint *body),
+{
+    loopstart(id, stack);
+    filltexlist();
+    loopv(texmru) { loopiter(id, stack, texmru[i]); execute(body); }
+    loopend(id, stack);
+});
+ICOMMAND(numvslots, "", (), intret(vslots.length()));
+ICOMMAND(numslots, "", (), intret(slots.length()));
 
 void replacetexcube(cube &c, int oldtex, int newtex)
 {

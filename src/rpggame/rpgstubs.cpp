@@ -36,7 +36,7 @@ namespace server
 	bool sendpackets(bool force) { return false; }
 	void serverinforeply(ucharbuf &q, ucharbuf &p) {}
 	void serverupdate() {}
-	bool servercompatible(char *name, char *sdec, char *map, int ping, const vector<int> &attr, int np) { return true; }
+	int protocolversion() { return -1; }
 	int laninfoport() {return 0;}
 	int serverinfoport(int servport) {return 0;}
 	int serverport(int infoport) {return 0;}

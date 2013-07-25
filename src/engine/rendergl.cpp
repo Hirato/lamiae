@@ -1887,7 +1887,7 @@ void drawminimap()
     glBindTexture(GL_TEXTURE_2D, 0);
 
     glBindFramebuffer_(GL_FRAMEBUFFER, 0);
-    glViewport(0, 0, vieww, viewh);
+    glViewport(0, 0, screenw, screenh);
 }
 
 void drawcubemap(int size, const vec &o, float yaw, float pitch, const cubemapside &side)

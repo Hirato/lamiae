@@ -1243,6 +1243,16 @@ inline char *newstring(const char *s)           { return newstring(s, strlen(s))
 inline char *newstringbuf(const char *s)        { return newstring(s, MAXSTRLEN-1); }
 inline char *newstring(const stringslice &s)    { return newstring(s.str, s.len); }
 
+inline char *newconcatstring(const char *s, const char *t)
+{
+    size_t slen = strlen(s), tlen = strlen(t);
+    char *r = newstring(slen + tlen);
+    memcpy(r, s, slen);
+    memcpy(&r[slen], t, tlen);
+    r[slen+tlen] = '\0';
+    return r;
+}
+
 const int islittleendian = 1;
 #ifdef SDL_BYTEORDER
 #define endianswap16 SDL_Swap16
