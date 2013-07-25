@@ -2082,7 +2082,7 @@ namespace rpgscript
 
 		loopv(buckets)
 		{
-			loopiter(id, stack, buckets[i]);
+			loopiter(id, stack, buckets[i]->name);
 			rpgexecute(body);
 		}
 
@@ -2097,7 +2097,7 @@ namespace rpgscript
 
 		loopv(journ->entries)
 		{
-			loopiter(journ->entries[i]);
+			loopiter(id, stack, journ->entries[i]);
 			rpgexecute(body);
 		}
 
