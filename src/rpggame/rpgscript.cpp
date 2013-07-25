@@ -2071,67 +2071,36 @@ namespace rpgscript
 	}
 
 	ICOMMAND(r_journal_loop_buckets, "re", (ident *id, const uint *body),
-		if(id->type != ID_ALIAS) return;
-		identstack stack;
-		int n = 0;
+		loopstart(id, stack);
 
 		vector<journal *> buckets;
 
 		enumerate(game::journals, journal, bucket,
 			buckets.add(&bucket);
 		)
-
 		buckets.sort(sortjournal);
 
 		loopv(buckets)
 		{
-			char *val = newstring(buckets[i]->name);
-			if(n++)
-			{
-				if(id->valtype == VAL_STR) delete[] id->val.s;
-				else id->valtype = VAL_STR;
-				cleancode(*id);
-				id->val.s = val;
-			}
-			else
-			{
-				tagval t;
-				t.setstr(val);
-				pusharg(*id, t, stack);
-				id->flags &= ~IDF_UNKNOWN;
-			}
+			loopiter(id, stack, buckets[i]);
 			rpgexecute(body);
 		}
-		if(n) poparg(*id);
+
+		loopend(id, stack);
 	)
 
 	ICOMMAND(r_journal_loop_entries, "sre", (const char *bucket, ident *id, const uint *body),
-		if(id->type != ID_ALIAS) return;
-		identstack stack;
-		int n = 0;
+		loopstart(id, stack);
 
 		journal *journ = game::journals.access(bucket);
 		if(!journ) return;
 
 		loopv(journ->entries)
 		{
-			char *val = newstring(journ->entries[i]);
-			if(n++)
-			{
-				if(id->valtype == VAL_STR) delete[] id->val.s;
-				else id->valtype = VAL_STR;
-				cleancode(*id);
-				id->val.s = val;
-			}
-			else
-			{
-				tagval t;
-				t.setstr(val);
-				pusharg(*id, t, stack);
-				id->flags &= ~IDF_UNKNOWN;
-			}
+			loopiter(journ->entries[i]);
 			rpgexecute(body);
 		}
-		if(n) poparg(*id);
+
+		loopend(id, stack);
 	)
 }
