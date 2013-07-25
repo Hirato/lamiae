@@ -570,6 +570,21 @@ namespace UI
 
     World *world;
 
+    struct Color
+    {
+        uchar r, g, b, a;
+
+        Color() {}
+        Color(uint c) : r((c>>16)&0xFF), g((c>>8)&0xFF), b(c&0xFF), a(c>>24 ? c>>24 : 0xFF) {}
+        Color(uint c, uchar a) : r((c>>16)&0xFF), g((c>>8)&0xFF), b(c&0xFF), a(a) {}
+        Color(uchar r, uchar g, uchar b, uchar a = 255) : r(r), g(g), b(b), a(a) {}
+
+        void init() { gle::colorub(r, g, b, a); }
+        void attrib() { gle::attribub(r, g, b, a); }
+
+        static void def() { gle::defcolor(4, GL_UNSIGNED_BYTE); }
+    };
+
     struct HorizontalList : Object
     {
         float space;
@@ -1547,15 +1562,15 @@ namespace UI
         enum { SOLID = 0, MODULATE };
 
         int type;
-        vec4 color;
+        Color color;
 
-        Rectangle(int type, float r, float g, float b, float a, float minw = 0, float minh = 0) : Filler(minw, minh), type(type), color(r, g, b, a) {}
+        Rectangle(int type, const Color &color, float minw = 0, float minh = 0) : Filler(minw, minh), type(type), color(color) {}
 
         void draw(float sx, float sy)
         {
             if(type==MODULATE) glBlendFunc(GL_ZERO, GL_SRC_COLOR);
             hudnotextureshader->set();
-            gle::color(color);
+            color.init();
 
             gle::defvertex(2);
 
@@ -1572,6 +1587,96 @@ namespace UI
             gle::deftexcoord0();
 
             if(type==MODULATE) glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            Object::draw(sx, sy);
+        }
+    };
+
+    struct Gradient : Rectangle
+    {
+        enum { VERTICAL, HORIZONTAL };
+
+        int dir;
+        Color color2;
+
+        Gradient(int type, int dir, const Color &color, const Color color2, float minw = 0, float minh = 0) : Rectangle(type, color, minw, minh), dir(dir), color2(color2) {}
+        ~Gradient() {}
+
+        void draw(float sx, float sy)
+        {
+            if(type==MODULATE) glBlendFunc(GL_ZERO, GL_SRC_COLOR);
+            hudnotextureshader->set();
+
+            gle::defvertex(2);
+            Color::def();
+
+            gle::begin(GL_TRIANGLE_STRIP);
+            gle::attribf(sx+w, sy);   (dir == HORIZONTAL ? color2 : color).attrib();
+            gle::attribf(sx,   sy);   color.attrib();
+            gle::attribf(sx+w, sy+h); color2.attrib();
+            gle::attribf(sx,   sy+h); (dir == HORIZONTAL ? color : color2).attrib();
+            gle::end();
+
+            hudshader->set();
+            gle::defvertex(2);
+            gle::deftexcoord0();
+            if(type==MODULATE) glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+            Object::draw(sx, sy);
+        }
+    };
+
+    struct Line : Filler
+    {
+        Color color;
+
+        Line(const Color &color, float minw = 0, float minh = 0) : Filler(minw, minh), color(color) {}
+        ~Line() {}
+
+        void draw(float sx, float sy)
+        {
+            hudnotextureshader->set();
+            color.init();
+
+            gle::defvertex(2);
+            gle::begin(GL_LINES);
+            gle::attribf(sx,   sy);
+            gle::attribf(sx+w, sy+h);
+            gle::end();
+
+            hudshader->set();
+            gle::colorf(1, 1, 1);
+            gle::defvertex(2);
+            gle::deftexcoord0();
+
+            Object::draw(sx, sy);
+        }
+    };
+
+    struct Outline : Filler
+    {
+        Color color;
+
+        Outline(const Color &color, float minw = 0, float minh = 0) : Filler(minw, minh), color(color) {}
+        ~Outline() {}
+
+        void draw(float sx, float sy)
+        {
+            hudnotextureshader->set();
+            color.init();
+
+            gle::defvertex(2);
+            gle::begin(GL_LINE_LOOP);
+            gle::attribf(sx,   sy);
+            gle::attribf(sx+w, sy);
+            gle::attribf(sx+w, sy+h);
+            gle::attribf(sx,   sy+h);
+            gle::end();
+
+            hudshader->set();
+            gle::colorf(1, 1, 1);
+            gle::defvertex(2);
+            gle::deftexcoord0();
+
             Object::draw(sx, sy);
         }
     };
@@ -2004,7 +2109,7 @@ namespace UI
         ModelPreview(float minw, float minh, const char *m, int a, const char *attach) : Filler(minw, minh), mdl(newstring(m))
         {
             int aprim = (a & ANIM_INDEX) | ANIM_LOOP;
-            int asec = ((a >> 8) & ANIM_INDEX);
+            int asec = ((a >> 9) & ANIM_INDEX);
             if(asec) asec |= ANIM_LOOP;
 
             anim = aprim | (asec << ANIM_SECONDARY);
@@ -2041,7 +2146,7 @@ namespace UI
             {
                 vec center, radius;
                 m->boundbox(center, radius);
-                float dist = 2.0f * max(max(radius.x, radius.y), 1.1f * radius.z),
+                float dist = 2.0f * max(radius.magnitude2(), 1.1f * radius.z),
                     yaw = fmod(totalmillis / 10000.f * 360.f, 360.f);
                 vec o(-center.x, dist - center.y, -0.1f * dist - center.z);
 
@@ -2074,7 +2179,6 @@ namespace UI
 
             Object::draw(sx, sy);
         }
-
     };
 
     // default size of text in terms of rows per screenful
@@ -2085,10 +2189,10 @@ namespace UI
         const char *str;
         float scale;
         float wrap;
-        vec color;
+        Color color;
 
-        Text(const char *str, float scale = 1, float wrap = -1, float r = 1, float g = 1, float b = 1)
-            : str(newstring(str)), scale(scale), wrap(wrap), color(r, g, b) {}
+        Text(const char *str, float scale = 1, float wrap = -1, const Color &color = Color(255, 255, 255))
+            : str(newstring(str)), scale(scale), wrap(wrap), color(color) {}
         ~Text() { delete[] str; }
 
         Object *target(float cx, float cy)
@@ -2105,7 +2209,7 @@ namespace UI
             pushhudmatrix();
             hudmatrix.scale(k, k, 1);
             flushhudmatrix();
-            draw_text(str, int(sx/k), int(sy/k), color.x * 255, color.y * 255, color.z * 255, 255, -1, wrap <= 0 ? -1 : wrap/k);
+            draw_text(str, int(sx/k), int(sy/k), color.r, color.g, color.b, color.a, -1, wrap <= 0 ? -1 : wrap/k);
 
             pophudmatrix();
             gle::colorf(1, 1, 1);
@@ -2134,9 +2238,9 @@ namespace UI
         uint *cmd;
         float scale;
         float wrap;
-        vec color;
+        Color color;
 
-        EvalText(uint *cmd, float scale = 1, float wrap = -1, float r = 1, float g = 1, float b = 1) : cmd(cmd), scale(scale), wrap(wrap), color(r, g, b) { keepcode(cmd); }
+        EvalText(uint *cmd, float scale = 1, float wrap = -1, const Color &color = Color(255, 255, 255)) : cmd(cmd), scale(scale), wrap(wrap), color(color) { keepcode(cmd); }
         ~EvalText() { freecode(cmd); }
 
         Object *target(float cx, float cy)
@@ -2157,12 +2261,13 @@ namespace UI
             hudmatrix.scale(k, k, 1);
             flushhudmatrix();
 
-            draw_text(result.getstr(), int(sx/k), int(sy/k), color.x * 255, color.y * 255, color.z * 255, 255, -1, wrap <= 0 ? -1 : wrap/k);
+            draw_text(result.getstr(), int(sx/k), int(sy/k), color.r, color.g, color.b, color.a, -1, wrap <= 0 ? -1 : wrap/k);
 
             pophudmatrix();
             gle::colorf(1, 1, 1);
 
             Object::draw(sx, sy);
+            result.cleanup();
         }
 
         void layout()
@@ -2179,6 +2284,8 @@ namespace UI
             else
                 w = max(w, min(wrap, tw*k));
             h = max(h, th*k);
+
+            result.cleanup();
         }
     };
 
@@ -2631,11 +2738,11 @@ namespace UI
         if(image && image->tex==notexture) image->tex = textureload(texname, 3, true, false);
     });
 
-    ICOMMAND(uicolor, "ffffffe", (float *r, float *g, float *b, float *a, float *minw, float *minh, uint *children),
-        addui(new Rectangle(Rectangle::SOLID, *r, *g, *b, *a, *minw, *minh), children));
+    ICOMMAND(uicolor, "iffe", (int *c, float *minw, float *minh, uint *children),
+        addui(new Rectangle(Rectangle::SOLID, Color(*c), *minw, *minh), children));
 
-    ICOMMAND(uimodcolor, "fffffe", (float *r, float *g, float *b, float *minw, float *minh, uint *children),
-        addui(new Rectangle(Rectangle::MODULATE, *r, *g, *b, 1, *minw, *minh), children));
+    ICOMMAND(uimodcolor, "iffe", (int *c, float *minw, float *minh, uint *children),
+        addui(new Rectangle(Rectangle::MODULATE, Color(*c), *minw, *minh), children));
 
     ICOMMAND(uistretchedimage, "sffe", (char *texname, float *minw, float *minh, uint *children),
         addui(new StretchedImage(textureload(texname, 3, true, false), *minw, *minh), children));
@@ -2662,14 +2769,14 @@ namespace UI
         addui(new ModelPreview(*minw, *minh, model, *anim, attach), children);
     )
 
-    ICOMMAND(uicolortext, "sfffffe", (char *text, float *scale, float *wrap, float *r, float *g, float *b, uint *children),
-        addui(new Text(text, *scale <= 0 ? 1 : *scale, *wrap, *r, *g, *b), children));
+    ICOMMAND(uicolortext, "sffie", (char *text, float *scale, float *wrap, int *c, uint *children),
+        addui(new Text(text, *scale <= 0 ? 1 : *scale, *wrap, Color(*c)), children));
 
     ICOMMAND(uitext, "sffe", (char *text, float *scale, float *wrap, uint *children),
         addui(new Text(text, *scale <= 0 ? 1 : *scale, *wrap), children));
 
-    ICOMMAND(uicolorevaltext, "efffffe", (uint *cmd, float *scale, float *wrap,float *r, float *g, float *b, uint *children),
-        addui(new EvalText(cmd, *scale <= 0 ? 1 : *scale, *wrap, *r, *g, *b), children));
+    ICOMMAND(uicolorevaltext, "effie", (uint *cmd, float *scale, float *wrap, int *c, uint *children),
+        addui(new EvalText(cmd, *scale <= 0 ? 1 : *scale, *wrap, Color(*c)), children));
 
     ICOMMAND(uievaltext, "effe", (uint *cmd, float *scale, float *wrap, uint *children),
         addui(new EvalText(cmd, *scale <= 0 ? 1 : *scale, *wrap), children));
@@ -2679,6 +2786,24 @@ namespace UI
 
     ICOMMAND(uifield, "siefse", (char *var, int *length, uint *onchange, float *scale, char *filter, uint *children),
         addui(new Field(var, *length, onchange, *scale, filter[0] ? filter : NULL), children));
+
+    ICOMMAND(uivgradient, "iiffe", (int *c, int *c2, float *minw, float *minh, uint *children),
+        addui(new Gradient(Gradient::SOLID, Gradient::VERTICAL, Color(*c), Color(*c2), *minw, *minh), children));
+
+    ICOMMAND(uimodvgradient, "iiffe", (int *c, int *c2, float *minw, float *minh, uint *children),
+        addui(new Gradient(Gradient::MODULATE, Gradient::VERTICAL, Color(*c), Color(*c2), *minw, *minh), children));
+
+    ICOMMAND(uihgradient, "iiffe", (int *c, int *c2, float *minw, float *minh, uint *children),
+        addui(new Gradient(Gradient::SOLID, Gradient::HORIZONTAL, Color(*c), Color(*c2), *minw, *minh), children));
+
+    ICOMMAND(uimodhgradient, "iiffe", (int *c, int *c2, float *minw, float *minh, uint *children),
+        addui(new Gradient(Gradient::MODULATE, Gradient::HORIZONTAL, Color(*c), Color(*c2), *minw, *minh), children));
+
+    ICOMMAND(uioutline, "iffe", (int *c, float *minw, float *minh, uint *children),
+        addui(new Outline(Color(*c), *minw, *minh), children));
+
+    ICOMMAND(uiline, "iffe", (int *c, float *minw, float *minh, uint *children),
+        addui(new Line(Color(*c), *minw, *minh), children));
 
     FVAR(cursorsensitivity, 1e-3f, 1, 1000);
 
