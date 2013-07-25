@@ -1099,6 +1099,27 @@ namespace rpgscript
 		}
 	}
 
+	int copylocal(int od)
+	{
+		int id = alloclocal();
+		if(!locals.inrange(od) || !locals[od])
+		{
+			ERRORF("copylocal called with a bad instance id: %i\f3REPORT A BUG!", od);
+			return id;
+		}
+
+		localinst &dst = *locals[id],
+			&src = *locals[od];
+
+		enumerate(src.variables, rpgvar, var,
+			rpgvar &newvar = dst.variables[var.name];
+			newvar.name = var.name;
+			newvar.value = newstring(var.value);
+		)
+
+		return id;
+	}
+
 	ICOMMAND(r_local_get, "ss", (const char *ref, const char *name),
 		getreference(ref, gen, gen->getinv(genidx) || gen->getent(genidx) || gen->getmap(genidx), result(""), r_local_get)
 
@@ -1133,6 +1154,11 @@ namespace rpgscript
 		if(!li) return;
 
 		if(*li == -1) *li = alloclocal();
+		else if(locals[*li]->refs >= 2)
+		{
+			freelocal(*li);
+			*li = copylocal(*li);
+		}
 
 		rpgvar &var = locals[*li]->variables[name];
 		if(!var.name) var.name = queryhashpool(name);
