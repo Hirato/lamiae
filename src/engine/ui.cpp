@@ -609,13 +609,21 @@ namespace UI
         {
             if(children.empty()) return;
 
+            float dspace = space;
+            if(adjust & CLAMP_MASK)
+            {
+                dspace = w;
+                loopchildren(o, dspace -= o->w);
+                dspace /= children.length() - 1;
+            }
+
             float offset = 0;
             loopchildren(o,
             {
                 o->x = offset;
                 offset += o->w;
                 o->adjustlayout(o->x, 0, offset - o->x, h);
-                offset += space;
+                offset += dspace;
             });
         }
     };
@@ -644,13 +652,21 @@ namespace UI
         {
             if(children.empty()) return;
 
+            float dspace = space;
+            if(adjust & CLAMP_MASK)
+            {
+                dspace = h;
+                loopchildren(o, dspace -= o->h);
+                dspace /= children.length() - 1;
+            }
+
             float offset = 0;
             loopchildren(o,
             {
                 o->y = offset;
                 offset += o->h;
                 o->adjustlayout(0, o->y, w, offset - o->y);
-                offset += space;
+                offset += dspace;
             });
         }
 
@@ -673,47 +689,34 @@ namespace UI
             loopchildren(o,
             {
                 o->layout();
-                if(!widths.inrange(column)) widths.add(o->w);
+                if(widths.length() <= column) widths.add(o->w);
                 else if(o->w > widths[column]) widths[column] = o->w;
-                if(!heights.inrange(row)) heights.add(o->h);
+                if(heights.length() <= row) heights.add(o->h);
                 else if(o->h > heights[row]) heights[row] = o->h;
                 column = (column + 1) % columns;
                 if(!column) row++;
             });
 
-            w = h = 0;
-            column = row = 0;
-            float offset = 0;
-            loopchildren(o,
-            {
-                o->x = offset;
-                o->y = h;
-                o->adjustlayout(o->x, o->y, widths[column], heights[row]);
-                offset += widths[column];
-                w = max(w, offset);
-                column = (column + 1) % columns;
-                if(!column)
-                {
-                    offset = 0;
-                    h += heights[row];
-                    row++;
-                }
-            });
-            if(column) h += heights[row];
-
-            w += space*max(widths.length() - 1, 0);
-            h += space*max(heights.length() - 1, 0);
+            w = space * max(widths.length() - 1, 0);
+            h = space * max(heights.length() - 1, 0);
+            loopv(widths) w += widths[i];
+            loopv(heights) h += heights[i];
         }
 
         void adjustchildren()
         {
             if(children.empty()) return;
 
-            float cspace = w, rspace = h;
-            loopv(widths) cspace -= widths[i];
-            loopv(heights) rspace -= heights[i];
-            cspace /= max(widths.length() - 1, 1);
-            rspace /= max(heights.length() - 1, 1);
+            float cspace = space, rspace = space;
+
+            if(adjust & CLAMP_MASK)
+            {
+                cspace = w, rspace = h;
+                loopv(widths) cspace -= widths[i];
+                loopv(heights) rspace -= heights[i];
+                cspace /= widths.length() - 1;
+                rspace /= heights.length() - 1;
+            }
 
             int column = 0, row = 0;
             float offsetx = 0, offsety = 0;
