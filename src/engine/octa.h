@@ -259,7 +259,20 @@ const uint F_SOLID = 0x80808080;    // all edges in the range (0,8)
 #define octaindex(d,x,y,z)  (((z)<<D[d])+((y)<<C[d])+((x)<<R[d]))
 #define octastep(x, y, z, scale) (((((z)>>(scale))&1)<<2) | ((((y)>>(scale))&1)<<1) | (((x)>>(scale))&1))
 
-#define loopoctabox(c, size, o, s) uchar possible = octantrectangleoverlap(c, size, o, s); loopi(8) if(possible&(1<<i))
+static inline uchar octaboxoverlap(const ivec &o, int size, const ivec &bbmin, const ivec &bbmax)
+{
+    uchar p = 0xFF; // bitmask of possible collisions with octants. 0 bit = 0 octant, etc
+    ivec mid = ivec(o).add(size);
+    if(mid.z <= bbmin.z)      p &= 0xF0; // not in a -ve Z octant
+    else if(mid.z >= bbmax.z) p &= 0x0F; // not in a +ve Z octant
+    if(mid.y <= bbmin.y)      p &= 0xCC; // not in a -ve Y octant
+    else if(mid.y >= bbmax.y) p &= 0x33; // etc..
+    if(mid.x <= bbmin.x)      p &= 0xAA;
+    else if(mid.x >= bbmax.x) p &= 0x55;
+    return p;
+}
+
+#define loopoctabox(o, size, bbmin, bbmax) uchar possible = octaboxoverlap(o, size, bbmin, bbmax); loopi(8) if(possible&(1<<i))
 
 enum
 {

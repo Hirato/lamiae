@@ -10,7 +10,21 @@ SVARR(maptitle, "Untitled Map by Unknown");
 VAR(octaentsize, 0, 128, 1024);
 VAR(entselradius, 0, 2, 10);
 
-bool getentboundingbox(extentity &e, ivec &o, ivec &r)
+static inline void mmboundbox(const entity &e, model *m, vec &center, vec &radius)
+{
+    m->boundbox(center, radius);
+    if(e.attr5 > 0) { float scale = e.attr5/100.0f; center.mul(scale); radius.mul(scale); }
+    rotatebb(center, radius, e.attr2, e.attr3, e.attr4);
+}
+
+static inline void mmcollisionbox(const entity &e, model *m, vec &center, vec &radius)
+{
+    m->collisionbox(center, radius);
+    if(e.attr5 > 0) { float scale = e.attr5/100.0f; center.mul(scale); radius.mul(scale); }
+    rotatebb(center, radius, e.attr2, e.attr3, e.attr4);
+}
+
+bool getentboundingbox(const extentity &e, ivec &o, ivec &r)
 {
     switch(e.type)
     {
@@ -22,28 +36,18 @@ bool getentboundingbox(extentity &e, ivec &o, ivec &r)
             if(m)
             {
                 vec center, radius;
-                m->boundbox(center, radius);
-                if(e.attr[4] > 0)
-                {
-                    center.mul(e.attr[4] / 100.0f);
-                    radius.mul(e.attr[4] / 100.0f);
-                }
-                rotatebb(center, radius, e.attr[1], e.attr[2], e.attr[3]);
-
-                o = e.o;
-                o.add(center);
-                r = radius.max(entselradius);
-                r.add(1);
-                o.sub(r);
-                r.mul(2);
+                mmboundbox(e, m, center, radius);
+                center.add(e.o);
+                radius.max(entselradius);
+                o = vec(center).sub(radius);
+                r = vec(center).add(radius).add(1);
                 break;
             }
         }
         // invisible mapmodels use entselradius
         default:
-            o = e.o;
-            o.sub(entselradius);
-            r.x = r.y = r.z = entselradius*2;
+            o = vec(e.o).sub(entselradius);
+            r = vec(e.o).add(entselradius+1);
             break;
     }
     return true;
@@ -78,11 +82,8 @@ void modifyoctaentity(int flags, int id, extentity &e, cube *c, const ivec &cor,
                             if(oe.mapmodels.empty()) va->mapmodels.add(&oe);
                         }
                         oe.mapmodels.add(id);
-                        loopk(3)
-                        {
-                            oe.bbmin[k] = min(oe.bbmin[k], max(oe.o[k], bo[k]));
-                            oe.bbmax[k] = max(oe.bbmax[k], min(oe.o[k]+size, bo[k]+br[k]));
-                        }
+                        oe.bbmin.min(bo).max(oe.o);
+                        oe.bbmax.max(br).min(ivec(oe.o).add(oe.size));
                         break;
                     }
                     // invisible mapmodel
@@ -112,17 +113,14 @@ void modifyoctaentity(int flags, int id, extentity &e, cube *c, const ivec &cor,
                         {
                             extentity &e = *entities::getents()[oe.mapmodels[j]];
                             ivec eo, er;
-                            if(getentboundingbox(e, eo, er)) loopk(3)
+                            if(getentboundingbox(e, eo, er))
                             {
-                                oe.bbmin[k] = min(oe.bbmin[k], eo[k]);
-                                oe.bbmax[k] = max(oe.bbmax[k], eo[k]+er[k]);
+                                oe.bbmin.min(eo);
+                                oe.bbmax.max(er);
                             }
                         }
-                        loopk(3)
-                        {
-                            oe.bbmin[k] = max(oe.bbmin[k], oe.o[k]);
-                            oe.bbmax[k] = min(oe.bbmax[k], oe.o[k]+size);
-                        }
+                        oe.bbmin.max(oe.o);
+                        oe.bbmax.min(ivec(oe.o).add(oe.size));
                         break;
                     }
                     // invisible mapmodel
@@ -167,7 +165,7 @@ static bool modifyoctaent(int flags, int id, extentity &e)
     {
         int leafsize = octaentsize, limit = max(r.x, max(r.y, r.z));
         while(leafsize < limit) leafsize *= 2;
-        int diff = ~(leafsize-1) & ((o.x^(o.x+r.x))|(o.y^(o.y+r.y))|(o.z^(o.z+r.z)));
+        int diff = ~(leafsize-1) & ((o.x^r.x)|(o.y^r.y)|(o.z^r.z));
         if(diff && (limit > octaentsize/2 || diff < leafsize*2)) leafsize *= 2;
         modifyoctaentity(flags, id, e, worldroot, ivec(0, 0, 0), worldsize>>1, o, r, leafsize);
     }
@@ -235,8 +233,8 @@ void findents(int low, int high, bool notspawned, const vec &pos, const vec &rad
 {
     vec invradius(1/radius.x, 1/radius.y, 1/radius.z);
     ivec bo = vec(pos).sub(radius).sub(1),
-         br = vec(radius).add(1).mul(2);
-    int diff = (bo.x^(bo.x+br.x)) | (bo.y^(bo.y+br.y)) | (bo.z^(bo.z+br.z)) | octaentsize,
+         br = vec(pos).add(radius).add(1);
+    int diff = (bo.x^br.x) | (bo.y^br.y) | (bo.z^br.z) | octaentsize,
         scale = worldscale-1;
     if(diff&~((1<<scale)-1) || uint(bo.x|bo.y|bo.z|(bo.x+br.x)|(bo.y+br.y)|(bo.z+br.z)) >= uint(worldsize))
     {
@@ -283,7 +281,7 @@ bool noentedit()
     return !entediting;
 }
 
-bool pointinsel(selinfo &sel, vec &o)
+bool pointinsel(const selinfo &sel, const vec &o)
 {
     return(o.x <= sel.o.x+sel.s.x*sel.grid
         && o.x >= sel.o.x
@@ -490,16 +488,7 @@ void entselectionbox(const entity &e, vec &eo, vec &es)
 
     if(m)
     {
-        m->collisionbox(eo, es);
-        if(e.type == ET_MAPMODEL && e.attr[4] > 0)
-        {
-            eo.mul(e.attr[4] / 100.0f);
-            es.mul(e.attr[4] / 100.0f);
-        }
-
-        if(e.type == ET_MAPMODEL) rotatebb(eo, es, e.attr[1], e.attr[2], e.attr[3]);
-        else rotatebb(eo, es, getentyaw(e), 0);
-
+        mmcollisionbox(e, m, eo, es);
         es.max(entselradius);
         eo.add(e.o);
     }
@@ -518,16 +507,16 @@ VAR(entmovingshadow, 0, 1, 1);
 
 extern void boxs(int orient, vec o, const vec &s);
 extern void boxs3D(const vec &o, vec s, int g);
-extern void editmoveplane(const vec &o, const vec &ray, int d, float off, vec &handle, vec &dest, bool first);
+extern bool editmoveplane(const vec &o, const vec &ray, int d, float off, vec &handle, vec &dest, bool first);
 
-bool initentdragging = true;
+int entmoving = 0;
 
 void entdrag(const vec &ray)
 {
     if(noentedit() || !haveselent()) return;
 
     float r = 0, c = 0;
-    static vec v, handle;
+    static vec dest, handle;
     vec eo, es;
     int d = dimension(entorient),
         dc= dimcoord(entorient);
@@ -535,20 +524,21 @@ void entdrag(const vec &ray)
     entfocus(entgroup.last(),
         entselectionbox(e, eo, es);
 
-        editmoveplane(e.o, ray, d, eo[d] + (dc ? es[d] : 0), handle, v, initentdragging);
+        if(!editmoveplane(e.o, ray, d, eo[d] + (dc ? es[d] : 0), handle, dest, entmoving==1))
+            return;
 
-        ivec g(v);
+        ivec g = dest;
         int z = g[d]&(~(sel.grid-1));
         g.add(sel.grid/2).mask(~(sel.grid-1));
         g[d] = z;
 
-        r = (entselsnap ? g[R[d]] : v[R[d]]) - e.o[R[d]];
-        c = (entselsnap ? g[C[d]] : v[C[d]]) - e.o[C[d]];
+        r = (entselsnap ? g[R[d]] : dest[R[d]]) - e.o[R[d]];
+        c = (entselsnap ? g[C[d]] : dest[C[d]]) - e.o[C[d]];
     );
 
-    if(initentdragging) makeundoent();
+    if(entmoving==1) makeundoent();
     groupeditpure(e.o[R[d]] += r; e.o[C[d]] += c);
-    initentdragging = false;
+    entmoving = 2;
 }
 
 VARP(showenthelpers, 0, 1, 2); // editmode, always
@@ -790,16 +780,35 @@ bool hoveringonent(int ent, int orient)
 }
 
 VAR(entitysurf, 0, 0, 1);
-VARF(entmoving, 0, 0, 2,
-    if(enthover < 0 || noentedit())
-        entmoving = 0;
-    else if(entmoving == 1)
-        entmoving = enttoggle(enthover);
-    else if(entmoving == 2 && entgroup.find(enthover) < 0)
-        entadd(enthover);
-    if(entmoving > 0)
-        initentdragging = true;
-);
+
+ICOMMAND(entadd, "", (),
+{
+    if(enthover >= 0 && !noentedit())
+    {
+        if(entgroup.find(enthover) < 0) entadd(enthover);
+        if(entmoving > 1) entmoving = 1;
+    }
+});
+
+ICOMMAND(enttoggle, "", (),
+{
+    if(enthover < 0 || noentedit() || !enttoggle(enthover)) { entmoving = 0; intret(0); }
+    else { if(entmoving > 1) entmoving = 1; intret(1); }
+});
+
+ICOMMAND(entmoving, "b", (int *n),
+{
+    if(*n >= 0)
+    {
+        if(!*n || enthover < 0 || noentedit()) entmoving = 0;
+        else
+        {
+            if(entgroup.find(enthover) < 0) { entadd(enthover); entmoving = 1; }
+            else if(!entmoving) entmoving = 1;
+        }
+    }
+    intret(entmoving);
+});
 
 void entpush(int *dir)
 {

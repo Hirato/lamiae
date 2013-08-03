@@ -981,7 +981,7 @@ void paintblendmap(bool msg)
         y = (int)floor(clamp(worldpos.y, 0.0f, float(worldsize))/(1<<BM_SCALE) - 0.5f*brush->h);
     blitblendmap(brush->data, x, y, brush->w, brush->h, blendpaintmode);
     previewblends(ivec((x-1)<<BM_SCALE, (y-1)<<BM_SCALE, 0),
-                  ivec((brush->w+2)<<BM_SCALE, (brush->h+2)<<BM_SCALE, worldsize));
+                  ivec((x+brush->w+1)<<BM_SCALE, (y+brush->h+1)<<BM_SCALE, worldsize));
 }
 
 VAR(paintblendmapdelay, 1, 500, 3000);
@@ -1026,7 +1026,7 @@ void clearblendmapsel()
         y2 = (sel.o.y+sel.s.y*sel.grid+(1<<BM_SCALE)-1)>>BM_SCALE;
     fillblendmap(x1, y1, x2-x1, y2-y1, 0xFF);
     previewblends(ivec(x1<<BM_SCALE, y1<<BM_SCALE, 0),
-                  ivec((x2-x1)<<BM_SCALE, (y2-y1)<<BM_SCALE, worldsize));
+                  ivec(x2<<BM_SCALE, y2<<BM_SCALE, worldsize));
 }
 
 COMMAND(clearblendmapsel, "");
@@ -1040,7 +1040,7 @@ void invertblendmapsel()
         y2 = (sel.o.y+sel.s.y*sel.grid+(1<<BM_SCALE)-1)>>BM_SCALE;
     invertblendmap(x1, y1, x2-x1, y2-y1);
     previewblends(ivec(x1<<BM_SCALE, y1<<BM_SCALE, 0),
-                  ivec((x2-x1)<<BM_SCALE, (y2-y1)<<BM_SCALE, worldsize));
+                  ivec(x2<<BM_SCALE, y2<<BM_SCALE, worldsize));
 }
 
 COMMAND(invertblendmapsel, "");

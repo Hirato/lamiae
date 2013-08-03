@@ -296,16 +296,16 @@ struct decalrenderer
         return d;
     }
 
-    ivec bborigin, bbsize;
+    ivec bbmin, bbmax;
     vec decalcenter, decalnormal, decaltangent, decalbitangent;
     float decalradius, decalu, decalv;
     bvec decalcolor;
 
     void adddecal(const vec &center, const vec &dir, float radius, const bvec &color, int info)
     {
-        int isz = int(ceil(radius));
-        bborigin = ivec(center).sub(isz);
-        bbsize = ivec(isz*2, isz*2, isz*2);
+        int bbradius = int(ceil(radius));
+        bbmin = ivec(center).sub(bbradius);
+        bbmax = ivec(center).add(bbradius);
 
         decalcolor = color;
         decalcenter = center;
@@ -505,9 +505,9 @@ struct decalrenderer
             for(;;)
             {
                 materialsurface &m = matbuf[i];
-                if(m.o[dim] >= bborigin[dim] && m.o[dim] <= bborigin[dim] + bbsize[dim] &&
-                   m.o[c] + m.csize >= bborigin[c] && m.o[c] <= bborigin[c] + bbsize[c] &&
-                   m.o[r] + m.rsize >= bborigin[r] && m.o[r] <= bborigin[r] + bbsize[r])
+                if(m.o[dim] >= bbmin[dim] && m.o[dim] <= bbmax[dim] &&
+                   m.o[c] + m.csize >= bbmin[c] && m.o[c] <= bbmax[c] &&
+                   m.o[r] + m.rsize >= bbmin[r] && m.o[r] <= bbmax[r])
                 {
                     static cube dummy;
                     gentris(dummy, m.orient, m.o, max(m.csize, m.rsize), &m);
@@ -539,7 +539,7 @@ struct decalrenderer
 
     void gentris(cube *cu, const ivec &o, int size, int escaped = 0)
     {
-        int overlap = octantrectangleoverlap(o, size, bborigin, bbsize);
+        int overlap = octaboxoverlap(o, size, bbmin, bbmax);
         loopi(8)
         {
             if(overlap&(1<<i))

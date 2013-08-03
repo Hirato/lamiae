@@ -34,7 +34,7 @@ struct particleemitter
     vec bbmin, bbmax;
     vec center;
     float radius;
-    ivec bborigin, bbsize;
+    ivec cullmin, cullmax;
     int maxfade, lastemit, lastcull;
 
     particleemitter(extentity *ent)
@@ -45,8 +45,8 @@ struct particleemitter
     {
         center = vec(bbmin).add(bbmax).mul(0.5f);
         radius = bbmin.dist(bbmax)/2;
-        bborigin = ivec(int(floor(bbmin.x)), int(floor(bbmin.y)), int(floor(bbmin.z)));
-        bbsize = ivec(int(ceil(bbmax.x)), int(ceil(bbmax.y)), int(ceil(bbmax.z))).sub(bborigin);
+        cullmin = ivec(int(floor(bbmin.x)), int(floor(bbmin.y)), int(floor(bbmin.z)));
+        cullmax = ivec(int(ceil(bbmax.x)), int(ceil(bbmax.y)), int(ceil(bbmax.z)));
         if(dbgpseed) conoutf(CON_DEBUG, "radius: %f, maxfade: %d", radius, maxfade);
     }
 
@@ -1746,7 +1746,7 @@ void updateparticles()
             if(cullparticles && pe.maxfade >= 0)
             {
                 if(isfoggedsphere(pe.radius, pe.center)) { pe.lastcull = lastmillis; continue; }
-                if(pvsoccluded(pe.bborigin, pe.bbsize)) { pe.lastcull = lastmillis; continue; }
+                if(pvsoccluded(pe.cullmin, pe.cullmax)) { pe.lastcull = lastmillis; continue; }
             }
             makeparticles(e);
             emitted++;

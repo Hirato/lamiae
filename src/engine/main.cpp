@@ -1003,8 +1003,8 @@ int main(int argc, char **argv)
     if(!execfile(confname, false))
         execfile("config/sounds.cfg");
 
-    execfile("config/brush.cfg");
-    execfile("mybrushes.cfg", false);
+    execfile("config/heightmap.cfg");
+    execfile("config/blendbrush.cfg");
 
     execfile("config/ui.cfg");
     formatstring(confname, "config/%s/ui.cfg", game::gameident());

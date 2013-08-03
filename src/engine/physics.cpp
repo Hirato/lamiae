@@ -114,7 +114,6 @@ static inline bool raycubeintersect(const clipplanes &p, const cube &c, const ve
 }
 
 extern void entselectionbox(const entity &e, vec &eo, vec &es);
-extern int entselradius;
 float hitentdist;
 int hitent, hitorient;
 
@@ -1165,9 +1164,9 @@ static inline bool octacollide(physent *d, const vec &dir, float cutoff, const i
 
 static inline bool octacollide(physent *d, const vec &dir, float cutoff, const ivec &bo, const ivec &bs)
 {
-    int diff = (bo.x^(bo.x+bs.x)) | (bo.y^(bo.y+bs.y)) | (bo.z^(bo.z+bs.z)),
+    int diff = (bo.x^bs.x) | (bo.y^bs.y) | (bo.z^bs.z),
         scale = worldscale-1;
-    if(diff&~((1<<scale)-1) || uint(bo.x|bo.y|bo.z|(bo.x+bs.x)|(bo.y+bs.y)|(bo.z+bs.z)) >= uint(worldsize))
+    if(diff&~((1<<scale)-1) || uint(bo.x|bo.y|bo.z|bs.x|bs.y|bs.z) >= uint(worldsize))
        return octacollide(d, dir, cutoff, bo, bs, worldroot, ivec(0, 0, 0), worldsize>>1);
     const cube *c = &worldroot[octastep(bo.x, bo.y, bo.z, scale)];
     if(c->ext && c->ext->ents && !mmcollide(d, dir, cutoff, *c->ext->ents)) return false;
@@ -1197,8 +1196,8 @@ bool collide(physent *d, const vec &dir, float cutoff, bool playercol)
     hitplayer = NULL;
     wall.x = wall.y = wall.z = 0;
     ivec bo(int(d->o.x-d->radius), int(d->o.y-d->radius), int(d->o.z-d->eyeheight)),
-         bs(int(d->radius*2), int(d->radius*2), int(d->eyeheight+d->aboveeye));
-    bs.add(2);  // guard space for rounding errors
+         bs(int(d->o.x+d->radius), int(d->o.y+d->radius), int(d->o.z+d->aboveeye));
+    bs.add(1);  // guard space for rounding errors
     if(!octacollide(d, dir, cutoff, bo, bs)) return false;//, worldroot, ivec(0, 0, 0), worldsize>>1)) return false; // collide with world
     return !playercol || plcollide(d, dir);
 }

@@ -59,7 +59,7 @@ void boxsgrid(int orient, vec o, vec s, int g)
     xtraverts += gle::end();
 }
 
-selinfo sel, lastsel;
+selinfo sel, lastsel, savedsel;
 
 int orient = 0;
 int gridsize = 8;
@@ -82,12 +82,16 @@ VARF(dragging, 0, 0, 1,
     sel.orient = orient;
 );
 
-VARF(moving, 0, 0, 1,
-    if(!moving) return;
-    vec v(cur.v); v.add(1);
-    moving = pointinsel(sel, v);
-    if(moving) havesel = false; // tell cursorupdate to create handle
-);
+int moving = 0;
+ICOMMAND(moving, "b", (int *n),
+{
+    if(*n >= 0)
+    {
+        if(!*n || (moving<=1 && !pointinsel(sel, cur.tovec().add(1)))) moving = 0;
+        else if(!moving) moving = 1;
+    }
+    intret(moving);
+});
 
 VARF(gridpower, 0, 3, 12,
 {
@@ -104,11 +108,14 @@ VARF(hmapedit, 0, 0, 1, horient = sel.orient);
 
 void forcenextundo() { lastsel.orient = -1; }
 
+namespace hmap { void cancel(); }
+
 void cubecancel()
 {
     havesel = false;
     moving = dragging = hmapedit = passthroughsel = 0;
     forcenextundo();
+    hmap::cancel();
 }
 
 void cancelsel()
@@ -191,6 +198,11 @@ COMMAND(cancelsel, "");
 COMMAND(reorient, "");
 COMMAND(selextend, "");
 
+ICOMMAND(selmoved, "", (), { if(noedit(true)) return; intret(sel.o != savedsel.o ? 1 : 0); });
+ICOMMAND(selsave, "", (), { if(noedit(true)) return; savedsel = sel; });
+ICOMMAND(selrestore, "", (), { if(noedit(true)) return; sel = savedsel; });
+ICOMMAND(selswap, "", (), { if(noedit(true)) return; swap(sel, savedsel); });
+
 ///////// selection support /////////////
 
 cube &blockcube(int x, int y, int z, const block3 &b, int rgrid) // looks up a world cube, based on coordinates mapped by the block
@@ -260,26 +272,20 @@ void updateselection()
     sel.s.z = abs(lastcur.z-cur.z)/sel.grid+1;
 }
 
-void editmoveplane(const vec &o, const vec &ray, int d, float off, vec &handle, vec &dest, bool first)
+bool editmoveplane(const vec &o, const vec &ray, int d, float off, vec &handle, vec &dest, bool first)
 {
     plane pl(d, off);
     float dist = 0.0f;
+    if(!pl.rayintersect(player->o, ray, dist))
+        return false;
 
-    if(pl.rayintersect(player->o, ray, dist))
-    {
-        dest = ray;
-        dest.mul(dist);
-        dest.add(player->o);
-        if(first)
-        {
-            handle = dest;
-            handle.sub(o);
-        }
-        dest.sub(handle);
-    }
+    dest = vec(ray).mul(dist).add(player->o);
+    if(first) handle = vec(dest).sub(o);
+    dest.sub(handle);
+    return true;
 }
 
-inline bool isheightmap(int orient, int d, bool empty, cube *c);
+namespace hmap { inline bool isheightmap(int orient, int d, bool empty, cube *c); }
 extern void entdrag(const vec &ray);
 extern bool hoveringonent(int ent, int orient);
 extern void renderentselection(const vec &o, const vec &ray, bool entmoving);
@@ -303,22 +309,22 @@ void rendereditcursor()
 
     if(moving)
     {
-        ivec e;
-        static vec v, handle;
-        editmoveplane(sel.o.tovec(), dir, od, sel.o[D[od]]+odc*sel.grid*sel.s[D[od]], handle, v, !havesel);
-        if(!havesel)
+        static vec dest, handle;
+        if(editmoveplane(sel.o.tovec(), camdir, od, sel.o[D[od]]+odc*sel.grid*sel.s[D[od]], handle, dest, moving==1))
         {
-            v.add(handle);
-            (e = handle).mask(~(sel.grid-1));
-            v.sub(handle = e.tovec());
-            havesel = true;
+            if(moving==1)
+            {
+                dest.add(handle);
+                handle = ivec(handle).mask(~(sel.grid-1)).tovec();
+                dest.sub(handle);
+                moving = 2;
+            }
+            ivec o = ivec(dest).mask(~(sel.grid-1));
+            sel.o[R[od]] = o[R[od]];
+            sel.o[C[od]] = o[C[od]];
         }
-        (e = v).mask(~(sel.grid-1));
-        sel.o[R[od]] = e[R[od]];
-        sel.o[C[od]] = e[C[od]];
     }
-    else
-    if(entmoving)
+    else if(entmoving)
     {
         entdrag(dir);
     }
@@ -378,7 +384,7 @@ void rendereditcursor()
 
             if(hmapedit==1 && dimcoord(horient) == (dir[dimension(horient)]<0))
             {
-                hmapsel = isheightmap(horient, dimension(horient), false, c);
+                hmapsel = hmap::isheightmap(horient, dimension(horient), false, c);
                 if(hmapsel)
                     od = dimension(orient = horient);
             }
@@ -454,7 +460,7 @@ void rendereditcursor()
     }
 
     // selections
-    if(havesel)
+    if(havesel || moving)
     {
         d = dimension(sel.orient);
         gle::colorub(50,50,50);   // grid
@@ -934,58 +940,58 @@ void freeeditinfo(editinfo *&e)
     e = NULL;
 }
 
-struct octabrushheader
+struct prefabheader
 {
     char magic[4];
     int version;
 };
 
-struct octabrush : editinfo
+struct prefab : editinfo
 {
     char *name;
 
-    octabrush() : name(NULL) {}
-    ~octabrush() { DELETEA(name); if(copy) freeblock(copy); }
+    prefab() : name(NULL) {}
+    ~prefab() { DELETEA(name); if(copy) freeblock(copy); }
 };
 
-static inline bool htcmp(const char *key, const octabrush &b) { return !strcmp(key, b.name); }
+static inline bool htcmp(const char *key, const prefab &b) { return !strcmp(key, b.name); }
 
-static hashset<octabrush> octabrushes;
+static hashset<prefab> prefabs;
 
-void delbrush(char *name)
+void delprefab(char *name)
 {
-    if(octabrushes.remove(name))
-        conoutf("deleted brush %s", name);
+    if(prefabs.remove(name))
+        conoutf("deleted prefab %s", name);
 }
-COMMAND(delbrush, "s");
+COMMAND(delprefab, "s");
 
-void savebrush(char *name)
+void saveprefab(char *name)
 {
     if(!name[0] || noedit(true) || (nompedit && multiplayer())) return;
-    octabrush *b = octabrushes.access(name);
+    prefab *b = prefabs.access(name);
     if(!b)
     {
-        b = &octabrushes[name];
+        b = &prefabs[name];
         b->name = newstring(name);
     }
     if(b->copy) freeblock(b->copy);
     protectsel(b->copy = blockcopy(block3(sel), sel.grid));
     changed(sel);
-    defformatstring(filename, strpbrk(name, "/\\") ? "media/%s.obr" : "media/brush/%s.obr", name);
+    defformatstring(filename, strpbrk(name, "/\\") ? "media/%s.obr" : "media/prefab/%s.obr", name);
     path(filename);
     stream *f = opengzfile(filename, "wb");
-    if(!f) { conoutf(CON_ERROR, "could not write brush to %s", filename); return; }
-    octabrushheader hdr;
+    if(!f) { conoutf(CON_ERROR, "could not write prefab to %s", filename); return; }
+    prefabheader hdr;
     memcpy(hdr.magic, "OEBR", 4);
     hdr.version = 0;
     lilswap(&hdr.version, 1);
     f->write(&hdr, sizeof(hdr));
     streambuf<uchar> s(f);
-    if(!packblock(*b->copy, s)) { delete f; conoutf(CON_ERROR, "could not pack brush %s", filename); return; }
+    if(!packblock(*b->copy, s)) { delete f; conoutf(CON_ERROR, "could not pack prefab %s", filename); return; }
     delete f;
-    conoutf("wrote brush file %s", filename);
+    conoutf("wrote prefab file %s", filename);
 }
-COMMAND(savebrush, "s");
+COMMAND(saveprefab, "s");
 
 void pasteblock(block3 &b, selinfo &sel, bool local)
 {
@@ -997,31 +1003,31 @@ void pasteblock(block3 &b, selinfo &sel, bool local)
     sel.orient = o;
 }
 
-void pastebrush(char *name)
+void pasteprefab(char *name)
 {
     if(!name[0] || noedit() || (nompedit && multiplayer())) return;
-    octabrush *b = octabrushes.access(name);
+    prefab *b = prefabs.access(name);
     if(!b)
     {
-        defformatstring(filename, strpbrk(name, "/\\") ? "media/%s.obr" : "media/brush/%s.obr", name);
+        defformatstring(filename, strpbrk(name, "/\\") ? "media/%s.obr" : "media/prefab/%s.obr", name);
         path(filename);
         stream *f = opengzfile(filename, "rb");
-        if(!f) { conoutf(CON_ERROR, "could not read brush %s", filename); return; }
-        octabrushheader hdr;
-        if(f->read(&hdr, sizeof(hdr)) != sizeof(octabrushheader) || memcmp(hdr.magic, "OEBR", 4)) { delete f; conoutf(CON_ERROR, "brush %s has malformatted header", filename); return; }
+        if(!f) { conoutf(CON_ERROR, "could not read prefab %s", filename); return; }
+        prefabheader hdr;
+        if(f->read(&hdr, sizeof(hdr)) != sizeof(prefabheader) || memcmp(hdr.magic, "OEBR", 4)) { delete f; conoutf(CON_ERROR, "prefab %s has malformatted header", filename); return; }
         lilswap(&hdr.version, 1);
-        if(hdr.version != 0) { delete f; conoutf(CON_ERROR, "brush %s uses unsupported version", filename); return; }
+        if(hdr.version != 0) { delete f; conoutf(CON_ERROR, "prefab %s uses unsupported version", filename); return; }
         streambuf<uchar> s(f);
         block3 *copy = NULL;
-        if(!unpackblock(copy, s)) { delete f; conoutf(CON_ERROR, "could not unpack brush %s", filename); return; }
+        if(!unpackblock(copy, s)) { delete f; conoutf(CON_ERROR, "could not unpack prefab %s", filename); return; }
         delete f;
-        b = &octabrushes[name];
+        b = &prefabs[name];
         b->name = newstring(name);
         b->copy = copy;
     }
     pasteblock(*b->copy, sel, true);
 }
-COMMAND(pastebrush, "s");
+COMMAND(pasteprefab, "s");
 
 void mpcopy(editinfo *&e, selinfo &sel, bool local)
 {
@@ -1086,73 +1092,66 @@ void compacteditvslots()
 
 ///////////// height maps ////////////////
 
-#define MAXBRUSH    64
-#define MAXBRUSHC   63
-#define MAXBRUSH2   32
-int brush[MAXBRUSH][MAXBRUSH];
-VAR(brushx, 0, MAXBRUSH2, MAXBRUSH);
-VAR(brushy, 0, MAXBRUSH2, MAXBRUSH);
-bool paintbrush = 0;
-int brushmaxx = 0, brushminx = MAXBRUSH;
-int brushmaxy = 0, brushminy = MAXBRUSH;
-
-void clearbrush()
-{
-    memset(brush, 0, sizeof brush);
-    brushmaxx = brushmaxy = 0;
-    brushminx = brushminy = MAXBRUSH;
-    paintbrush = false;
-}
-
-void brushvert(int *x, int *y, int *v)
-{
-    *x += MAXBRUSH2 - brushx + 1; // +1 for automatic padding
-    *y += MAXBRUSH2 - brushy + 1;
-    if(*x<0 || *y<0 || *x>=MAXBRUSH || *y>=MAXBRUSH) return;
-    brush[*x][*y] = clamp(*v, 0, 8);
-    paintbrush = paintbrush || (brush[*x][*y] > 0);
-    brushmaxx = min(MAXBRUSH-1, max(brushmaxx, *x+1));
-    brushmaxy = min(MAXBRUSH-1, max(brushmaxy, *y+1));
-    brushminx = max(0,          min(brushminx, *x-1));
-    brushminy = max(0,          min(brushminy, *y-1));
-}
-
-vector<int> htextures;
-
-COMMAND(clearbrush, "");
-COMMAND(brushvert, "iii");
-ICOMMAND(hmapcancel, "", (), htextures.setsize(0); );
-ICOMMAND(hmapselect, "", (),
-    int t = lookupcube(cur.x, cur.y, cur.z).texture[orient];
-    int i = htextures.find(t);
-    if(i<0)
-        htextures.add(t);
-    else
-        htextures.remove(i);
-);
-
-inline bool ishtexture(int t)
-{
-    loopv(htextures)
-        if(t == htextures[i])
-            return false;
-    return true;
-}
-
-VARP(bypassheightmapcheck, 0, 0, 1);    // temp
-
-inline bool isheightmap(int o, int d, bool empty, cube *c)
-{
-    return havesel ||
-           (empty && isempty(*c)) ||
-           ishtexture(c->texture[o]);
-}
-
 namespace hmap
 {
-#   define PAINTED     1
-#   define NOTHMAP     2
-#   define MAPPED      16
+    vector<int> textures;
+
+    void cancel() { textures.setsize(0); }
+
+    ICOMMAND(hmapcancel, "", (), cancel());
+    ICOMMAND(hmapselect, "", (),
+        int t = lookupcube(cur.x, cur.y, cur.z).texture[orient];
+        int i = textures.find(t);
+        if(i<0)
+            textures.add(t);
+        else
+            textures.remove(i);
+    );
+
+    inline bool isheightmap(int o, int d, bool empty, cube *c)
+    {
+        return havesel ||
+            (empty && isempty(*c)) ||
+            textures.empty() ||
+            textures.find(c->texture[o]) >= 0;
+    }
+
+    #define MAXBRUSH    64
+    #define MAXBRUSHC   63
+    #define MAXBRUSH2   32
+    int brush[MAXBRUSH][MAXBRUSH];
+    VARN(hbrushx, brushx, 0, MAXBRUSH2, MAXBRUSH);
+    VARN(hbrushy, brushy, 0, MAXBRUSH2, MAXBRUSH);
+    bool paintbrush = 0;
+    int brushmaxx = 0, brushminx = MAXBRUSH;
+    int brushmaxy = 0, brushminy = MAXBRUSH;
+
+    void clearhbrush()
+    {
+        memset(brush, 0, sizeof brush);
+        brushmaxx = brushmaxy = 0;
+        brushminx = brushminy = MAXBRUSH;
+        paintbrush = false;
+    }
+    COMMAND(clearhbrush, "");
+
+    void hbrushvert(int *x, int *y, int *v)
+    {
+        *x += MAXBRUSH2 - brushx + 1; // +1 for automatic padding
+        *y += MAXBRUSH2 - brushy + 1;
+        if(*x<0 || *y<0 || *x>=MAXBRUSH || *y>=MAXBRUSH) return;
+        brush[*x][*y] = clamp(*v, 0, 8);
+        paintbrush = paintbrush || (brush[*x][*y] > 0);
+        brushmaxx = min(MAXBRUSH-1, max(brushmaxx, *x+1));
+        brushmaxy = min(MAXBRUSH-1, max(brushmaxy, *y+1));
+        brushminx = max(0,          min(brushminx, *x-1));
+        brushminy = max(0,          min(brushminy, *y-1));
+    }
+    COMMAND(hbrushvert, "iii");
+
+    #define PAINTED     1
+    #define NOTHMAP     2
+    #define MAPPED      16
     uchar  flags[MAXBRUSH][MAXBRUSH];
     cube   *cmap[MAXBRUSHC][MAXBRUSHC][4];
     int    mapz[MAXBRUSHC][MAXBRUSHC];

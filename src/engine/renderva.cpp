@@ -232,16 +232,62 @@ static inline bool insideva(const vtxarray *va, const vec &v, int margin = 2)
 ///////// occlusion queries /////////////
 
 #define MAXQUERY 2048
+#define MAXQUERYFRAMES 2
+
+int deferquery = 0;
 
 struct queryframe
 {
     int cur, max, defer;
     occludequery queries[MAXQUERY];
+
+    queryframe() : cur(0), max(0), defer(0) {}
+
+    void flip()
+    {
+        loopi(cur) queries[i].owner = NULL;
+        for(; defer > 0 && max < MAXQUERY; defer--)
+        {
+            queries[max].owner = NULL;
+            queries[max].fragments = -1;
+            glGenQueries_(1, &queries[max++].id);
+        }
+        cur = defer = 0;
+    }
+
+    occludequery *newquery(void *owner)
+    {
+        if(cur >= max)
+        {
+            if(max >= MAXQUERY) return NULL;
+            if(deferquery)
+            {
+                if(max + defer < MAXQUERY) defer++;
+                return NULL;
+            }
+            glGenQueries_(1, &queries[max++].id);
+        }
+        occludequery *query = &queries[cur++];
+        query->owner = owner;
+        query->fragments = -1;
+        return query;
+    }
+
+    void reset() { loopi(max) queries[i].owner = NULL; }
+
+    void cleanup()
+    {
+        loopi(max)
+        {
+            glDeleteQueries_(1, &queries[i].id);
+            queries[i].owner = NULL;
+        }
+        cur = max = defer = 0;
+    }
 };
 
-static queryframe queryframes[2] = {{0, 0}, {0, 0}};
+static queryframe queryframes[MAXQUERYFRAMES];
 static uint flipquery = 0;
-int deferquery = 0;
 
 int getnumqueries()
 {
@@ -250,54 +296,23 @@ int getnumqueries()
 
 void flipqueries()
 {
-    flipquery = (flipquery + 1) % 2;
-    queryframe &qf = queryframes[flipquery];
-    loopi(qf.cur) qf.queries[i].owner = NULL;
-    for(; qf.defer > 0 && qf.max < MAXQUERY; qf.defer--)
-    {
-        qf.queries[qf.max].owner = NULL;
-        qf.queries[qf.max].fragments = -1;
-        glGenQueries_(1, &qf.queries[qf.max++].id);
-    }
-    qf.cur = qf.defer = 0;
+    flipquery = (flipquery + 1) % MAXQUERYFRAMES;
+    queryframes[flipquery].flip();
 }
 
 occludequery *newquery(void *owner)
 {
-    queryframe &qf = queryframes[flipquery];
-    if(qf.cur >= qf.max)
-    {
-        if(qf.max >= MAXQUERY) return NULL;
-        if(deferquery)
-        {
-            if(qf.max + qf.defer < MAXQUERY) qf.defer++;
-            return NULL;
-        }
-        glGenQueries_(1, &qf.queries[qf.max++].id);
-    }
-    occludequery *query = &qf.queries[qf.cur++];
-    query->owner = owner;
-    query->fragments = -1;
-    return query;
+    return queryframes[flipquery].newquery(owner);
 }
 
 void resetqueries()
 {
-    loopi(2) loopj(queryframes[i].max) queryframes[i].queries[j].owner = NULL;
+    loopi(MAXQUERYFRAMES) queryframes[i].reset();
 }
 
 void clearqueries()
 {
-    loopi(2)
-    {
-        queryframe &qf = queryframes[i];
-        loopj(qf.max)
-        {
-            glDeleteQueries_(1, &qf.queries[j].id);
-            qf.queries[j].owner = NULL;
-        }
-        qf.cur = qf.max = qf.defer = 0;
-    }
+    loopi(MAXQUERYFRAMES) queryframes[i].cleanup();
 }
 
 VAR(oqfrags, 0, 8, 64);
@@ -360,7 +375,7 @@ void findvisiblemms(const vector<extentity *> &ents)
     for(vtxarray *va = visibleva; va; va = va->next) if(va->occluded < OCCLUDE_BB && va->curvfc < VFC_FOGGED) loopv(va->mapmodels)
     {
         octaentities *oe = va->mapmodels[i];
-        if(isfoggedcube(oe->o, oe->size) || pvsoccluded(oe->bbmin, ivec(oe->bbmax).sub(oe->bbmin))) continue;
+        if(isfoggedcube(oe->o, oe->size) || pvsoccluded(oe->bbmin, oe->bbmax)) continue;
 
         bool occluded = oe->query && oe->query->owner == oe && checkquery(oe->query);
         if(occluded)
@@ -400,8 +415,6 @@ void findvisiblemms(const vector<extentity *> &ents)
 }
 
 VAR(oqmm, 0, 4, 8);
-
-extern bool getentboundingbox(extentity &e, ivec &o, ivec &r);
 
 static inline void rendermapmodel(extentity &e)
 {
@@ -469,7 +482,7 @@ void rendermapmodels()
 static inline bool bbinsideva(const ivec &bo, const ivec &br, vtxarray *va)
 {
     return bo.x >= va->bbmin.x && bo.y >= va->bbmin.y && va->o.z >= va->bbmin.z &&
-        bo.x + br.x <= va->bbmax.x && bo.y + br.y <= va->bbmax.y && bo.z + br.z <= va->bbmax.z;
+        br.x <= va->bbmax.x && br.y <= va->bbmax.y && br.z <= va->bbmax.z;
 }
 
 static inline bool bboccluded(const ivec &bo, const ivec &br, cube *c, const ivec &o, int size)
@@ -490,7 +503,7 @@ static inline bool bboccluded(const ivec &bo, const ivec &br, cube *c, const ive
 
 bool bboccluded(const ivec &bo, const ivec &br)
 {
-    int diff = (bo.x^(bo.x+br.x)) | (bo.y^(bo.y+br.y)) | (bo.z^(bo.z+br.z));
+    int diff = (bo.x^br.x) | (bo.y^br.y) | (bo.z^br.z);
     if(diff&~((1<<worldscale)-1)) return false;
     int scale = worldscale-1;
     if(diff&(1<<scale)) return bboccluded(bo, br, worldroot, ivec(0, 0, 0), 1<<scale);

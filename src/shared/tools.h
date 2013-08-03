@@ -1172,8 +1172,7 @@ template <class T, int SIZE> struct ringbuf
     }
 
     bool empty() const { return !len; }
-
-    const int length() const { return len; }
+    int length() const { return len; }
 
     T &add()
     {

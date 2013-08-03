@@ -228,6 +228,7 @@ COMMAND(mdlname, "");
 #define checkragdoll \
     if(!loadingmodel->skeletal()) { conoutf(CON_ERROR, "not loading a skeletal model"); return; } \
     skelmodel *m = (skelmodel *)loadingmodel; \
+    if(m->parts.empty()) return; \
     skelmodel::skelmeshgroup *meshes = (skelmodel::skelmeshgroup *)m->parts.last()->meshes; \
     if(!meshes) return; \
     skelmodel::skeleton *skel = meshes->skel; \
@@ -449,9 +450,8 @@ COMMAND(clearmodel, "s");
 
 bool modeloccluded(const vec &center, float radius)
 {
-    int br = int(radius*2)+1;
-    return pvsoccluded(ivec(int(center.x-radius), int(center.y-radius), int(center.z-radius)), ivec(br, br, br)) ||
-           bboccluded(ivec(int(center.x-radius), int(center.y-radius), int(center.z-radius)), ivec(br, br, br));
+    ivec bbmin = vec(center).sub(radius), bbmax = vec(center).add(radius+1);
+    return pvsoccluded(bbmin, bbmax) || bboccluded(bbmin, bbmax);
 }
 
 struct batchedmodel

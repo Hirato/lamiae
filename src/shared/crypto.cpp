@@ -249,6 +249,8 @@ template<int BI_DIGITS> struct bigint
 
     bool hasbit(int n) const { return n/BI_DIGIT_BITS < len && ((digits[n/BI_DIGIT_BITS]>>(n%BI_DIGIT_BITS))&1); }
 
+    bool morebits(int n) const { return len > n/BI_DIGIT_BITS; }
+
     template<int X_DIGITS, int Y_DIGITS> bigint &add(const bigint<X_DIGITS> &x, const bigint<Y_DIGITS> &y)
     {
         dbldigit carry = 0;
@@ -284,6 +286,19 @@ template<int BI_DIGITS> struct bigint
     template<int Y_DIGITS> bigint &sub(const bigint<Y_DIGITS> &y) { return sub(*this, y); }
 
     void shrink() { while(len && !digits[len-1]) len--; }
+    void shrinkdigits(int n) { len = n; shrink(); }
+    void shrinkbits(int n) { shrinkdigits(n/BI_DIGIT_BITS); }
+
+    template<int Y_DIGITS> void copyshrinkdigits(const bigint<Y_DIGITS> &y, int n)
+    {
+        len = min(y.len, n);
+        memcpy(digits, y.digits, len*sizeof(digit));
+        shrink();
+    }
+    template<int Y_DIGITS> void copyshrinkbits(const bigint<Y_DIGITS> &y, int n)
+    {
+        copyshrinkdigits(y, n/BI_DIGIT_BITS);
+    }
 
     template<int X_DIGITS, int Y_DIGITS> bigint &mul(const bigint<X_DIGITS> &x, const bigint<Y_DIGITS> &y)
     {
@@ -343,6 +358,35 @@ template<int BI_DIGITS> struct bigint
     }
     bigint &lshift(int n) { return lshift(*this, n); }
 
+    void zerodigits(int i, int n)
+    {
+        memset(&digits[i], 0, n*sizeof(digit));
+    }
+    void zerobits(int i, int n)
+    {
+        zerodigits(i/BI_DIGIT_BITS, n/BI_DIGIT_BITS);
+    }
+
+    template<int Y_DIGITS> void copydigits(int to, const bigint<Y_DIGITS> &y, int from, int n)
+    {
+        int avail = min(y.len-from, n);
+        memcpy(&digits[to], &y.digits[from], avail*sizeof(digit));
+        if(avail < n) memset(&digits[to+avail], 0, (n-avail)*sizeof(digit));
+    }
+    template<int Y_DIGITS> void copybits(int to, const bigint<Y_DIGITS> &y, int from, int n)
+    {
+        copydigits(to/BI_DIGIT_BITS, y, from/BI_DIGIT_BITS, n/BI_DIGIT_BITS);
+    }
+
+    void dupdigits(int to, int from, int n)
+    {
+        memcpy(&digits[to], &digits[from], n*sizeof(digit));
+    }
+    void dupbits(int to, int from, int n)
+    {
+        dupdigits(to/BI_DIGIT_BITS, from/BI_DIGIT_BITS, n/BI_DIGIT_BITS);
+    }
+
     template<int Y_DIGITS> bool operator==(const bigint<Y_DIGITS> &y) const
     {
         if(len!=y.len) return false;
@@ -372,7 +416,7 @@ template<int BI_DIGITS> struct bigint
 typedef bigint<GF_DIGITS+1> gfint;
 
 /* NIST prime Galois fields.
- * Currently only supports NIST P-192, where P=2^192-2^64-1.
+ * Currently only supports NIST P-192, where P=2^192-2^64-1, and P-256, where P=2^256-2^224+2^192+2^96-1.
  */
 struct gfield : gfint
 {
@@ -444,41 +488,100 @@ struct gfield : gfint
     template<int RESULT_DIGITS> void reduce(const bigint<RESULT_DIGITS> &result)
     {
 #if GF_BITS==192
-        len = min(result.len, GF_DIGITS);
-        memcpy(digits, result.digits, len*sizeof(digit));
-        shrink();
+        // B = T + S1 + S2 + S3 mod p
+        copyshrinkdigits(result, GF_DIGITS); // T
 
-        if(result.len > 192/BI_DIGIT_BITS)
+        if(result.morebits(192))
         {
             gfield s;
-            memcpy(s.digits, &result.digits[192/BI_DIGIT_BITS], min(result.len-192/BI_DIGIT_BITS, 64/BI_DIGIT_BITS)*sizeof(digit));
-            if(result.len < 256/BI_DIGIT_BITS) memset(&s.digits[result.len-192/BI_DIGIT_BITS], 0, (256/BI_DIGIT_BITS-result.len)*sizeof(digit));
-            memcpy(&s.digits[64/BI_DIGIT_BITS], s.digits, 64/BI_DIGIT_BITS*sizeof(digit));
-            s.len = 128/BI_DIGIT_BITS;
-            s.shrink();
-            add(s);
+            s.copybits(0, result, 192, 64);
+            s.dupbits(64, 0, 64);
+            s.shrinkbits(128);
+            add(s); // S1
 
-            if(result.len > 256/BI_DIGIT_BITS)
+            if(result.morebits(256))
             {
-                memset(s.digits, 0, 64/BI_DIGIT_BITS*sizeof(digit));
-                memcpy(&s.digits[64/BI_DIGIT_BITS], &result.digits[256/BI_DIGIT_BITS], min(result.len-256/BI_DIGIT_BITS, 64/BI_DIGIT_BITS)*sizeof(digit));
-                if(result.len < 320/BI_DIGIT_BITS) memset(&s.digits[result.len+(64-256)/BI_DIGIT_BITS], 0, (320/BI_DIGIT_BITS-result.len)*sizeof(digit));
-                memcpy(&s.digits[128/BI_DIGIT_BITS], &s.digits[64/BI_DIGIT_BITS], 64/BI_DIGIT_BITS*sizeof(digit));
-                s.len = GF_DIGITS;
-                s.shrink();
-                add(s);
+                s.zerobits(0, 64);
+                s.copybits(64, result, 256, 64);
+                s.dupbits(128, 64, 64);
+                s.shrinkdigits(GF_DIGITS);
+                add(s); // S2
 
-                if(result.len > 320/BI_DIGIT_BITS)
+                if(result.morebits(320))
                 {
-                    memcpy(s.digits, &result.digits[320/BI_DIGIT_BITS], min(result.len-320/BI_DIGIT_BITS, 64/BI_DIGIT_BITS)*sizeof(digit));
-                    if(result.len < 384/BI_DIGIT_BITS) memset(&s.digits[result.len-320/BI_DIGIT_BITS], 0, (384/BI_DIGIT_BITS-result.len)*sizeof(digit));
-                    memcpy(&s.digits[64/BI_DIGIT_BITS], s.digits, 64/BI_DIGIT_BITS*sizeof(digit));
-                    memcpy(&s.digits[128/BI_DIGIT_BITS], s.digits, 64/BI_DIGIT_BITS*sizeof(digit));
-                    s.len = GF_DIGITS;
-                    s.shrink();
-                    add(s);
+                    s.copybits(0, result, 320, 64);
+                    s.dupbits(64, 0, 64);
+                    s.dupbits(128, 0, 64);
+                    s.shrinkdigits(GF_DIGITS);
+                    add(s); // S3
                 }
             }
+        }
+        else if(*this >= P) gfint::sub(*this, P);
+#elif GF_BITS==256
+        // B = T + 2*S1 + 2*S2 + S3 + S4 - D1 - D2 - D3 - D4 mod p
+        copyshrinkdigits(result, GF_DIGITS); // T
+
+        if(result.morebits(256))
+        {
+            gfield s;
+            if(result.morebits(352))
+            {
+                s.zerobits(0, 96);
+                s.copybits(96, result, 352, 160);
+                s.shrinkdigits(GF_DIGITS);
+                add(s); add(s); // S1
+
+                if(result.morebits(384))
+                {
+                    //s.zerobits(0, 96);
+                    s.copybits(96, result, 384, 128);
+                    s.shrinkbits(224);
+                    add(s); add(s); // S2
+                }
+            }
+
+            s.copybits(0, result, 256, 96);
+            s.zerobits(96, 96);
+            s.copybits(192, result, 448, 64);
+            s.shrinkdigits(GF_DIGITS);
+            add(s); // S3
+
+            s.copybits(0, result, 288, 96);
+            s.copybits(96, result, 416, 96);
+            s.dupbits(192, 96, 32);
+            s.copybits(224, result, 256, 32);
+            s.shrinkdigits(GF_DIGITS);
+            add(s); // S4
+
+            s.copybits(0, result, 352, 96);
+            s.zerobits(96, 96);
+            s.copybits(192, result, 256, 32);
+            s.copybits(224, result, 320, 32);
+            s.shrinkdigits(GF_DIGITS);
+            sub(s); // D1
+
+            s.copybits(0, result, 384, 128);
+            //s.zerobits(128, 64);
+            s.copybits(192, result, 288, 32);
+            s.copybits(224, result, 352, 32);
+            s.shrinkdigits(GF_DIGITS);
+            sub(s); // D2
+
+            s.copybits(0, result, 416, 96);
+            s.copybits(96, result, 256, 96);
+            s.zerobits(192, 32);
+            s.copybits(224, result, 384, 32);
+            s.shrinkdigits(GF_DIGITS);
+            sub(s); // D3
+
+            s.copybits(0, result, 448, 64);
+            s.zerobits(64, 32);
+            s.copybits(96, result, 288, 96);
+            //s.zerobits(192, 32);
+            s.copybits(224, result, 416, 32);
+            s.shrinkdigits(GF_DIGITS);
+            sub(s); // D4
         }
         else if(*this >= P) gfint::sub(*this, P);
 #else
@@ -708,21 +811,21 @@ const gfield gfield::P("ffffffffffffffffffffffffffffffff000000000000000000000001
 const gfield ecjacobian::B("b4050a850c04b3abf54132565044b0b7d7bfd8ba270b39432355ffb4");
 const ecjacobian ecjacobian::base(
     gfield("b70e0cbd6bb4bf7f321390b94a03c1d356c21122343280d6115c1d21"),
-    gfield("bd376388b5f723fb4c22dfe6cd4375a05a07476444d5819985007e34"),
+    gfield("bd376388b5f723fb4c22dfe6cd4375a05a07476444d5819985007e34")
 );
 #elif GF_BITS==256
 const gfield gfield::P("ffffffff00000001000000000000000000000000ffffffffffffffffffffffff");
 const gfield ecjacobian::B("5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b");
 const ecjacobian ecjacobian::base(
     gfield("6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296"),
-    gfield("4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5"),
+    gfield("4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5")
 );
 #elif GF_BITS==384
 const gfield gfield::P("fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeffffffff0000000000000000ffffffff");
 const gfield ecjacobian::B("b3312fa7e23ee7e4988e056be3f82d19181d9c6efe8141120314088f5013875ac656398d8a2ed19d2a85c8edd3ec2aef");
 const ecjacobian ecjacobian::base(
     gfield("aa87ca22be8b05378eb1c71ef320ad746e1d3b628ba79b9859f741e082542a385502f25dbf55296c3a545e3872760ab7"),
-    gfield("3617de4a96262c6f5d9e98bf9292dc29f8f41dbd289a147ce9da3113b5f0b8c00a60b1ce1d7e819d7a431d7c90ea0e5f"),
+    gfield("3617de4a96262c6f5d9e98bf9292dc29f8f41dbd289a147ce9da3113b5f0b8c00a60b1ce1d7e819d7a431d7c90ea0e5f")
 );
 #elif GF_BITS==521
 const gfield gfield::P("1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");

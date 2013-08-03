@@ -716,14 +716,14 @@ struct pvsworker
         return true;
     }
 
-    bool materialoccluded(pvsnode &p, const ivec &co, int size, const ivec &bborigin, const ivec &bbsize)
+    bool materialoccluded(pvsnode &p, const ivec &co, int size, const ivec &bbmin, const ivec &bbmax)
     {
         pvsnode *children = &pvsnodes[p.children];
-        loopoctabox(co, size, bborigin, bbsize)
+        loopoctabox(co, size, bbmin, bbmax)
         {
             ivec o(i, co.x, co.y, co.z, size);
             if(children[i].flags & PVS_HIDE_BB) continue;
-            if(!children[i].children || !materialoccluded(children[i], o, size/2, bborigin, bbsize)) return false;
+            if(!children[i].children || !materialoccluded(children[i], o, size/2, bbmin, bbmax)) return false;
         }
         return true;
     }
@@ -735,13 +735,12 @@ struct pvsworker
         loopv(matsurfs)
         {
             materialsurface &m = *matsurfs[i];
-            ivec bborigin(m.o), bbsize(0, 0, 0);
+            ivec bbmin(m.o), bbmax(m.o);
             int dim = dimension(m.orient);
-            bbsize[C[dim]] = m.csize;
-            bbsize[R[dim]] = m.rsize;
-            bborigin[dim] -= 2;
-            bbsize[dim] = 2;
-            if(!materialoccluded(pvsnodes[0], vec(0, 0, 0), worldsize/2, bborigin, bbsize)) return false;
+            bbmin[dim] += dimcoord(m.orient) ? -2 : 2;
+            bbmax[C[dim]] += m.csize;
+            bbmax[R[dim]] += m.rsize;
+            if(!materialoccluded(pvsnodes[0], vec(0, 0, 0), worldsize/2, bbmin, bbmax)) return false;
         }
         return true;
     }
@@ -1202,54 +1201,53 @@ void pvsstats()
 
 COMMAND(pvsstats, "");
 
-static inline bool pvsoccluded(uchar *buf, const ivec &co, int size, const ivec &bborigin, const ivec &bbsize)
+static inline bool pvsoccluded(uchar *buf, const ivec &co, int size, const ivec &bbmin, const ivec &bbmax)
 {
     uchar leafmask = buf[0];
-    loopoctabox(co, size, bborigin, bbsize)
+    loopoctabox(co, size, bbmin, bbmax)
     {
         ivec o(i, co.x, co.y, co.z, size);
         if(leafmask&(1<<i))
         {
             uchar leafvalues = buf[1+i];
-            if(!leafvalues || (leafvalues!=0xFF && octantrectangleoverlap(o, size>>1, bborigin, bbsize)&~leafvalues))
+            if(!leafvalues || (leafvalues!=0xFF && octaboxoverlap(o, size>>1, bbmin, bbmax)&~leafvalues))
                 return false;
         }
-        else if(!pvsoccluded(buf+9*buf[1+i], o, size>>1, bborigin, bbsize)) return false;
+        else if(!pvsoccluded(buf+9*buf[1+i], o, size>>1, bbmin, bbmax)) return false;
     }
     return true;
 }
 
-static inline bool pvsoccluded(uchar *buf, const ivec &bborigin, const ivec &bbsize)
+static inline bool pvsoccluded(uchar *buf, const ivec &bbmin, const ivec &bbmax)
 {
-    int diff = (bborigin.x^(bborigin.x+bbsize.x)) | (bborigin.y^(bborigin.y+bbsize.y)) | (bborigin.z^(bborigin.z+bbsize.z));
+    int diff = (bbmin.x^bbmax.x) | (bbmin.y^bbmax.y) | (bbmin.z^bbmax.z);
     if(diff&~((1<<worldscale)-1)) return false;
     int scale = worldscale-1;
     while(!(diff&(1<<scale)))
     {
-        int i = octastep(bborigin.x, bborigin.y, bborigin.z, scale);
+        int i = octastep(bbmin.x, bbmin.y, bbmin.z, scale);
         scale--;
         uchar leafmask = buf[0];
         if(leafmask&(1<<i))
         {
             uchar leafvalues = buf[1+i];
-            return leafvalues && (leafvalues==0xFF || !(octantrectangleoverlap(ivec(bborigin).mask(~((2<<scale)-1)), 1<<scale, bborigin, bbsize)&~leafvalues));
+            return leafvalues && (leafvalues==0xFF || !(octaboxoverlap(ivec(bbmin).mask(~((2<<scale)-1)), 1<<scale, bbmin, bbmax)&~leafvalues));
         }
         buf += 9*buf[1+i];
     }
-    return pvsoccluded(buf, ivec(bborigin).mask(~((2<<scale)-1)), 1<<scale, bborigin, bbsize);
+    return pvsoccluded(buf, ivec(bbmin).mask(~((2<<scale)-1)), 1<<scale, bbmin, bbmax);
 }
 
-bool pvsoccluded(const ivec &bborigin, const ivec &bbsize)
+bool pvsoccluded(const ivec &bbmin, const ivec &bbmax)
 {
-    return curpvs!=NULL && pvsoccluded(curpvs, bborigin, bbsize);
+    return curpvs!=NULL && pvsoccluded(curpvs, bbmin, bbmax);
 }
 
 bool pvsoccludedsphere(const vec &center, float radius)
 {
     if(curpvs==NULL) return false;
-    ivec bborigin = vec(center).sub(radius), bbradius = vec(center).add(radius+1);
-    bbradius.sub(bborigin);
-    return pvsoccluded(curpvs, bborigin, bbradius);
+    ivec bbmin = vec(center).sub(radius), bbmax = vec(center).add(radius+1);
+    return pvsoccluded(curpvs, bbmin, bbmax);
 }
 
 bool waterpvsoccluded(int height)
