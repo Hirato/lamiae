@@ -783,8 +783,8 @@ bool mmcollide(physent *d, const vec &dir, float cutoff, octaentities &oc) // co
     loopv(oc.mapmodels)
     {
         extentity &e = *ents[oc.mapmodels[i]];
-        if(e.flags&EF_NOCOLLIDE || !mapmodels.inrange(e.attr1)) continue;
-        mapmodelinfo &mmi = mapmodels[e.attr1];
+        if(e.flags&EF_NOCOLLIDE || !mapmodels.inrange(e.attr[0])) continue;
+        mapmodelinfo &mmi = mapmodels[e.attr[0]];
         model *m = mmi.collide;
         if(!m)
         {

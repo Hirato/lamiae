@@ -320,6 +320,8 @@ COMMAND(rdanimjoints, "i");
 // mapmodels
 
 vector<mapmodelinfo> mapmodels;
+static const char * const mmprefix = "mapmodel/";
+static const int mmprefixlen = strlen(mmprefix);
 
 void mapmodel(char *name)
 {
