@@ -587,62 +587,54 @@ namespace UI
 
     struct HorizontalList : Object
     {
-        float space;
+        float space, subw;
 
         HorizontalList(float space = 0) : space(space) {}
 
         void layout()
         {
-            w = h = 0;
+            subw = h = 0;
             loopchildren(o,
             {
-                o->x = w;
+                o->x = subw;
                 o->y = 0;
                 o->layout();
-                w += o->w;
+                subw += o->w;
                 h = max(h, o->y + o->h);
             });
-            w += space*max(children.length() - 1, 0);
+            w = subw + space*max(children.length() - 1, 0);
         }
 
         void adjustchildren()
         {
             if(children.empty()) return;
 
-            float dspace = space;
-            if(adjust & CLAMP_MASK)
-            {
-                dspace = w;
-                loopchildren(o, dspace -= o->w);
-                dspace /= children.length() - 1;
-            }
-
-            float offset = 0;
+            float offset = 0, cspace = (w - subw) / max(children.length() - 1, 1);
             loopchildren(o,
             {
                 o->x = offset;
                 offset += o->w;
                 o->adjustlayout(o->x, 0, offset - o->x, h);
-                offset += dspace;
+                offset += cspace;
             });
         }
     };
 
     struct VerticalList : Object
     {
-        float space;
+        float space, subh;
 
         VerticalList(float space = 0) : space(space) {}
 
         void layout()
         {
-            w = h = 0;
+            w = subh = 0;
             loopchildren(o,
             {
                 o->x = 0;
-                o->y = h;
+                o->y = subh;
                 o->layout();
-                h += o->h;
+                subh += o->h;
                 w = max(w, o->x + o->w);
             });
             h += space*max(children.length() - 1, 0);
@@ -652,21 +644,13 @@ namespace UI
         {
             if(children.empty()) return;
 
-            float dspace = space;
-            if(adjust & CLAMP_MASK)
-            {
-                dspace = h;
-                loopchildren(o, dspace -= o->h);
-                dspace /= children.length() - 1;
-            }
-
-            float offset = 0;
+            float offset = 0, cspace = (h - subh) / max(children.length() - 1, 1);
             loopchildren(o,
             {
                 o->y = offset;
                 offset += o->h;
                 o->adjustlayout(0, o->y, w, offset - o->y);
-                offset += dspace;
+                offset += cspace;
             });
         }
 
@@ -675,7 +659,7 @@ namespace UI
     struct Table : Object
     {
         int columns;
-        float space;
+        float space, subh, subw;
         vector<float> widths, heights;
 
         Table(int columns, float space = 0) : columns(columns), space(space) {}
@@ -697,29 +681,21 @@ namespace UI
                 if(!column) row++;
             });
 
-            w = space * max(widths.length() - 1, 0);
-            h = space * max(heights.length() - 1, 0);
-            loopv(widths) w += widths[i];
-            loopv(heights) h += heights[i];
+            subh = subw = 0;
+            loopv(widths) subw += widths[i];
+            loopv(heights) subh += heights[i];
+            w = subw + space * max(widths.length() - 1, 0);
+            h = subh + space * max(heights.length() - 1, 0);
         }
 
         void adjustchildren()
         {
             if(children.empty()) return;
 
-            float cspace = space, rspace = space;
-
-            if(adjust & CLAMP_MASK)
-            {
-                cspace = w, rspace = h;
-                loopv(widths) cspace -= widths[i];
-                loopv(heights) rspace -= heights[i];
-                cspace /= widths.length() - 1;
-                rspace /= heights.length() - 1;
-            }
-
             int column = 0, row = 0;
-            float offsetx = 0, offsety = 0;
+            float offsetx = 0, offsety = 0,
+                  cspace = (w - subw) / max(widths.length() - 1, 1),
+                  rspace = (h - subh) / max(heights.length() - 1, 1);
 
             loopchildren(o,
             {
@@ -2644,6 +2620,23 @@ namespace UI
         if(!build.length()) world->layout();
     }
 
+    static inline float parsepixeloffset(const tagval *t, int size)
+    {
+        switch(t->type)
+        {
+            case VAL_INT: return t->i;
+            case VAL_FLOAT: return t->f;
+            case VAL_NULL: return 0;
+            default:
+            {
+                const char *s = t->getstr();
+                char *end;
+                float val = strtod(s, &end);
+                return *end == 'p' ? val/size : val;
+            }
+        }
+    }
+
     ICOMMAND(uialign, "ii", (int *xalign, int *yalign),
     {
         if(build.length()) build.last()->adjust = (build.last()->adjust & ~ALIGN_MASK) | ((clamp(*xalign, -1, 1)+2)<<ALIGN_HSHIFT) | ((clamp(*yalign, -1, 1)+2)<<ALIGN_VSHIFT);
@@ -2750,18 +2743,18 @@ namespace UI
     ICOMMAND(uistretchedimage, "sffe", (char *texname, float *minw, float *minh, uint *children),
         addui(new StretchedImage(textureload(texname, 3, true, false), *minw, *minh), children));
 
-    ICOMMAND(uicroppedimage, "sffsssse", (char *texname, float *minw, float *minh, char *cropx, char *cropy, char *cropw, char *croph, uint *children),
+    ICOMMAND(uicroppedimage, "sfftttte", (char *texname, float *minw, float *minh, tagval *cropx, tagval *cropy, tagval *cropw, tagval *croph, uint *children),
         Texture *tex = textureload(texname, 3, true, false);
         addui(new CroppedImage(tex, *minw, *minh,
-            strchr(cropx, 'p') ? atof(cropx) / tex->xs : atof(cropx),
-            strchr(cropy, 'p') ? atof(cropy) / tex->ys : atof(cropy),
-            strchr(cropw, 'p') ? atof(cropw) / tex->xs : atof(cropw),
-            strchr(croph, 'p') ? atof(croph) / tex->ys : atof(croph)), children));
+            parsepixeloffset(cropx, tex->xs),
+            parsepixeloffset(cropy, tex->ys),
+            parsepixeloffset(cropw, tex->xs),
+            parsepixeloffset(croph, tex->ys), children));
 
-    ICOMMAND(uiborderedimage, "ssfe", (char *texname, char *texborder, float *screenborder, uint *children),
+    ICOMMAND(uiborderedimage, "stfe", (char *texname, tagval *texborder, float *screenborder, uint *children),
         Texture *tex = textureload(texname, 3, true, false);
         addui(new BorderedImage(tex,
-                strchr(texborder, 'p') ? atof(texborder) / tex->xs : atof(texborder),
+                parsepixeloffset(texborder, tex->xs),
                 *screenborder), children));
 
     ICOMMAND(uitiledimage, "sffffe", (char *texname, float *tilew, float *tileh, float *minw, float *minh, uint *children),
