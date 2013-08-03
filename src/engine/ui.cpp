@@ -637,7 +637,7 @@ namespace UI
                 subh += o->h;
                 w = max(w, o->x + o->w);
             });
-            h += space*max(children.length() - 1, 0);
+            h = subh + space*max(children.length() - 1, 0);
         }
 
         void adjustchildren()
