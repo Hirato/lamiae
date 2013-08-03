@@ -2,7 +2,7 @@
 
 namespace game
 {
-	bool needminimap() { return game::mapdata; }
+	bool needminimap() { return game::connected; }
 
 	void quad(int x, int y, int xs, int ys)
 	{
@@ -319,7 +319,7 @@ namespace game
 
 	void gameplayhud(int w, int h)
 	{
-		if(!mapdata || !curmap || editmode)
+		if(!connected || !curmap || editmode)
 			return;
 
 		gle::colorf(1, 1, 1);

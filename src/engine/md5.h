@@ -401,24 +401,23 @@ struct md5 : skelmodel, skelloader<md5>
     {
         skelpart &mdl = addpart();
         adjustments.setsize(0);
-        const char *fname = loadname + strlen(loadname);
-        do --fname; while(fname >= loadname && *fname!='/' && *fname!='\\');
+        const char *fname = name + strlen(name);
+        do --fname; while(fname >= name && *fname!='/' && *fname!='\\');
         fname++;
-        defformatstring(meshname, "media/models/%s/%s.md5mesh", loadname, fname);
+        defformatstring(meshname, "media/models/%s/%s.md5mesh", name, fname);
         mdl.meshes = sharemeshes(path(meshname), NULL, 2.0);
         if(!mdl.meshes) return false;
         mdl.initanimparts();
         mdl.initskins();
-        defformatstring(animname, "media/models/%s/%s.md5anim", loadname, fname);
+        defformatstring(animname, "media/models/%s/%s.md5anim", name, fname);
         ((md5meshgroup *)mdl.meshes)->loadanim(path(animname));
         return true;
     }
 
     bool load()
     {
-        if(loaded) return true;
-        formatstring(dir, "media/models/%s", loadname);
-        defformatstring(cfgname, "media/models/%s/md5.cfg", loadname);
+        formatstring(dir, "media/models/%s", name);
+        defformatstring(cfgname, "media/models/%s/md5.cfg", name);
 
         loading = this;
         identflags &= ~IDF_PERSIST;
@@ -444,7 +443,7 @@ struct md5 : skelmodel, skelloader<md5>
             p->endanimparts();
             p->meshes->shared++;
         }
-        return loaded = true;
+        return true;
     }
 };
 

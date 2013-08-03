@@ -51,7 +51,7 @@ COMMAND(mdlcullface, "i");
 void mdlcollide(int *collide)
 {
     checkmdl;
-    loadingmodel->collide = *collide!=0;
+    loadingmodel->collide = *collide!=0 ? (loadingmodel->collide ? loadingmodel->collide : COLLIDE_OBB) : COLLIDE_NONE;
 }
 
 COMMAND(mdlcollide, "i");
@@ -59,10 +59,22 @@ COMMAND(mdlcollide, "i");
 void mdlellipsecollide(int *collide)
 {
     checkmdl;
-    loadingmodel->ellipsecollide = *collide!=0;
+    loadingmodel->collide = *collide!=0 ? COLLIDE_ELLIPSE : COLLIDE_NONE;
 }
 
 COMMAND(mdlellipsecollide, "i");
+
+void mdltricollide(char *collide)
+{
+    checkmdl;
+    DELETEA(loadingmodel->collidemodel);
+    char *end = NULL;
+    int val = strtol(collide, &end, 0);
+    if(*end) { val = 1; loadingmodel->collidemodel = newstring(collide); }
+    loadingmodel->collide = val ? COLLIDE_TRI : COLLIDE_NONE;
+}
+
+COMMAND(mdltricollide, "s");
 
 void mdlspec(float *percent)
 {
@@ -202,7 +214,7 @@ COMMAND(mdlalphashadow, "i");
 void mdlbb(float *rad, float *h, float *eyeheight)
 {
     checkmdl;
-    loadingmodel->collideradius = *rad;
+    loadingmodel->collidexyradius = *rad;
     loadingmodel->collideheight = *h;
     loadingmodel->eyeheight = *eyeheight;
 }
@@ -220,7 +232,7 @@ COMMAND(mdlextendbb, "fff");
 void mdlname()
 {
     checkmdl;
-    result(loadingmodel->name());
+    result(loadingmodel->name);
 }
 
 COMMAND(mdlname, "");
@@ -309,11 +321,12 @@ COMMAND(rdanimjoints, "i");
 
 vector<mapmodelinfo> mapmodels;
 
-void mmodel(char *name)
+void mapmodel(char *name)
 {
     mapmodelinfo &mmi = mapmodels.add();
-    copystring(mmi.name, name);
-    mmi.m = NULL;
+    if(name[0]) formatstring(mmi.name, "%s%s", mmprefix, name);
+    else mmi.name[0] = '\0';
+    mmi.m = mmi.collide = NULL;
 }
 
 void mapmodelreset(int *n)
@@ -322,22 +335,22 @@ void mapmodelreset(int *n)
     mapmodels.shrink(clamp(*n, 0, mapmodels.length()));
 }
 
-mapmodelinfo *getmminfo(int i) { return mapmodels.inrange(i) ? &mapmodels[i] : NULL; }
 const char *mapmodelname(int i) { return mapmodels.inrange(i) ? mapmodels[i].name : NULL; }
 
-COMMAND(mmodel, "s");
-COMMAND(mapmodelreset, "i");
+ICOMMAND(mmodel, "s", (char *name), mapmodel(name));
+COMMAND(mapmodel, "s");COMMAND(mapmodelreset, "i");
 ICOMMAND(mapmodelname, "i", (int *index), { result(mapmodels.inrange(*index) ? mapmodels[*index].name : ""); });
 ICOMMAND(nummapmodels, "", (), { intret(mapmodels.length()); });
 
 // model registry
 
-hashtable<const char *, model *> mdllookup;
+hashnameset<model *> models;
 vector<const char *> preloadmodels;
+hashset<char *> failedmodels;
 
 void preloadmodel(const char *name)
 {
-    if(!name || !name[0] || mdllookup.access(name)) return;
+    if(!name || !name[0] || models.access(name) || preloadmodels.htfind(name) >= 0) return;
     preloadmodels.add(newstring(name));
 }
 
@@ -361,27 +374,40 @@ void flushpreloadedmodels(bool msg)
 void preloadusedmapmodels(bool msg, bool bih)
 {
     vector<extentity *> &ents = entities::getents();
-    vector<int> mapmodels;
+    vector<int> used;
     loopv(ents)
     {
         extentity &e = *ents[i];
-        if(e.type==ET_MAPMODEL && e.attr[0] >= 0 && mapmodels.find(e.attr[0]) < 0) mapmodels.add(e.attr[0]);
+        if(e.type==ET_MAPMODEL && e.attr[0] >= 0 && used.find(e.attr[0]) < 0) used.add(e.attr[0]);
     }
 
-    loopv(mapmodels)
+    vector<const char *> col;
+    loopv(used)
     {
-        loadprogress = float(i+1)/mapmodels.length();
-        int mmindex = mapmodels[i];
-        mapmodelinfo *mmi = getmminfo(mmindex);
-        if(!mmi) { if(msg) conoutf(CON_WARN, "could not find map model: %d", mmindex); }
-        else if(mmi->name[0] && !loadmodel(NULL, mmindex, msg)) { if(msg) conoutf(CON_WARN, "could not load model: %s", mmi->name); }
-        else if(mmi->m)
+        loadprogress = float(i+1)/used.length();
+        int mmindex = used[i];
+        if(!mapmodels.inrange(mmindex)) { if(msg) conoutf(CON_WARN, "could not find map model: %d", mmindex); continue; }
+        mapmodelinfo &mmi = mapmodels[mmindex];
+        if(!mmi.name[0]) continue;
+        model *m = loadmodel(NULL, mmindex, msg);
+        if(!m) { if(msg) conoutf(CON_WARN, "could not load map model: %s", mmi.name); }
+        else
         {
-            if(bih) mmi->m->preloadBIH();
-            mmi->m->preloadmeshes();
-            mmi->m->preloadshaders();
+            if(bih) m->preloadBIH();
+            m->preloadmeshes();
+            m->preloadshaders();
+            if(m->collidemodel && col.htfind(m->collidemodel) < 0) col.add(m->collidemodel);
         }
     }
+
+    loopv(col)
+    {
+        loadprogress = float(i+1)/col.length();
+        model *m = loadmodel(col[i], -1, msg);
+        if(!m) { if(msg) conoutf(CON_WARN, "could not load collide model: %s", col[i]); }
+        else if(!m->bih) m->setBIH();
+    }
+
     loadprogress = 0;
 }
 
@@ -394,12 +420,12 @@ model *loadmodel(const char *name, int i, bool msg)
         if(mmi.m) return mmi.m;
         name = mmi.name;
     }
-    model **mm = mdllookup.access(name);
+    model **mm = models.access(name);
     model *m;
     if(mm) m = *mm;
     else
     {
-        if(loadingmodel) return NULL;
+        if(!name[0] || loadingmodel || failedmodels.find(name, NULL)) return NULL;
         if(msg)
         {
             defformatstring(filename, "media/models/%s", name);
@@ -417,32 +443,40 @@ model *loadmodel(const char *name, int i, bool msg)
         if(!m)
         {
             conoutf(CON_WARN, "unable to load model: media/models/%s", name);
+            failedmodels.add(newstring(name));
             return NULL;
         }
-        mdllookup.access(m->name(), m);
+        models.access(m->name, m);
     }
     if(mapmodels.inrange(i) && !mapmodels[i].m) mapmodels[i].m = m;
     return m;
 }
 
-void clear_mdls()
+void clear_models()
 {
-    enumerate(mdllookup, model *, m, delete m);
+
+    enumerate(models, model *, m, delete m);
 }
 
 void cleanupmodels()
 {
-    enumerate(mdllookup, model *, m, m->cleanup());
+
+    enumerate(models, model *, m, m->cleanup());
 }
 
 void clearmodel(char *name)
 {
-    model **m = mdllookup.access(name);
+    model *m = models.find(name, NULL);
     if(!m) { conoutf("model %s is not loaded", name); return; }
-    loopv(mapmodels) if(mapmodels[i].m==*m) mapmodels[i].m = NULL;
-    mdllookup.remove(name);
-    (*m)->cleanup();
-    delete *m;
+    loopv(mapmodels)
+    {
+        mapmodelinfo &mmi = mapmodels[i];
+        if(mmi.m == m) mmi.m = NULL;
+        if(mmi.collide == m) mmi.collide = NULL;
+    }
+    models.remove(name);
+    m->cleanup();
+    delete m;
     conoutf("cleared model %s", name);
 }
 
@@ -957,7 +991,6 @@ hasboundbox:
     if(a) for(int i = 0; a[i].tag; i++)
     {
         if(a[i].name) a[i].m = loadmodel(a[i].name);
-        //if(a[i].m && a[i].m->type()!=m->type()) a[i].m = NULL;
     }
 
     if(flags&MDL_CULL_QUERY)
@@ -1098,13 +1131,7 @@ void setbbfrommodel(physent *d, const char *mdl)
     if(!m) return;
     vec center, radius;
     m->collisionbox(center, radius);
-    d->collidetype = m->ellipsecollide ? COLLIDE_ELLIPSE : COLLIDE_OBB;
-//     if(!m->ellipsecollide)
-//     {
-//         d->collidetype = COLLIDE_OBB;
-//         //d->collidetype = COLLIDE_AABB;
-//         //rotatebb(center, radius, int(d->yaw), int(d->pitch));
-//     }
+    if(m->collide != COLLIDE_ELLIPSE) d->collidetype = COLLIDE_OBB;
     d->xradius   = radius.x + fabs(center.x);
     d->yradius   = radius.y + fabs(center.y);
     d->radius    = d->collidetype==COLLIDE_OBB ? sqrtf(d->xradius*d->xradius + d->yradius*d->yradius) : max(d->xradius, d->yradius);

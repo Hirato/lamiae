@@ -33,12 +33,19 @@ struct BIH
         DELETEA(tris);
     }
 
-    static bool triintersect(tri &t, const vec &o, const vec &ray, float maxdist, float &dist, int mode, tri *noclip);
-
     void build(vector<BIHNode> &buildnodes, ushort *indices, int numindices, const vec &vmin, const vec &vmax, int depth = 1);
 
     bool traverse(const vec &o, const vec &ray, float maxdist, float &dist, int mode);
     bool traverse(const vec &o, const vec &ray, const vec &invray, float maxdist, float &dist, int mode, BIHNode *curnode, float tmin, float tmax);
+    bool triintersect(const tri &t, const vec &o, const vec &ray, float maxdist, float &dist, int mode);
+
+    bool boxcollide(physent *d, const vec &dir, float cutoff, const vec &o, int yaw, int pitch, int roll, float scale = 1);
+    bool ellipsecollide(physent *d, const vec &dir, float cutoff, const vec &o, int yaw, int pitch, int roll, float scale = 1);
+
+    template<int C, class M>
+    void collide(physent *d, const vec &dir, float cutoff, const vec &center, const vec &radius, const M &orient, float &dist, BIHNode *curnode, const vec &bo, const vec &br);
+    template<int C, class M>
+    void tricollide(const tri &t, physent *d, const vec &dir, float cutoff, const vec &center, const vec &radius, const M &orient, float &dist, const vec &bo, const vec &br);
 
     void preload();
 };

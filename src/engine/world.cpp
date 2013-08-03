@@ -7,21 +7,21 @@ VARNR(mapscale, worldscale, 1, 0, 0);
 VARNR(mapsize, worldsize, 1, 0, 0);
 SVARR(maptitle, "Untitled Map by Unknown");
 
-VAR(octaentsize, 0, 128, 1024);
+VAR(octaentsize, 0, 64, 1024);
 VAR(entselradius, 0, 2, 10);
 
 static inline void mmboundbox(const entity &e, model *m, vec &center, vec &radius)
 {
     m->boundbox(center, radius);
-    if(e.attr5 > 0) { float scale = e.attr5/100.0f; center.mul(scale); radius.mul(scale); }
-    rotatebb(center, radius, e.attr2, e.attr3, e.attr4);
+    if(e.attr[4] > 0) { float scale = e.attr[4]/100.0f; center.mul(scale); radius.mul(scale); }
+    rotatebb(center, radius, e.attr[1], e.attr[2], e.attr[3]);
 }
 
 static inline void mmcollisionbox(const entity &e, model *m, vec &center, vec &radius)
 {
     m->collisionbox(center, radius);
-    if(e.attr5 > 0) { float scale = e.attr5/100.0f; center.mul(scale); radius.mul(scale); }
-    rotatebb(center, radius, e.attr2, e.attr3, e.attr4);
+    if(e.attr[4] > 0) { float scale = e.attr[4]/100.0f; center.mul(scale); radius.mul(scale); }
+    rotatebb(center, radius, e.attr[1], e.attr[2], e.attr[3]);
 }
 
 bool getentboundingbox(const extentity &e, ivec &o, ivec &r)
@@ -32,7 +32,7 @@ bool getentboundingbox(const extentity &e, ivec &o, ivec &r)
             return false;
         case ET_MAPMODEL:
         {
-            model *m = loadmodel(NULL, e.attr[0]);
+            model *m = loadmapmodel(e.attr[0]);
             if(m)
             {
                 vec center, radius;
@@ -74,7 +74,7 @@ void modifyoctaentity(int flags, int id, extentity &e, cube *c, const ivec &cor,
             switch(e.type)
             {
                 case ET_MAPMODEL:
-                    if(loadmodel(NULL, e.attr[0]))
+                    if(loadmapmodel(e.attr[0]))
                     {
                         if(va)
                         {
@@ -99,7 +99,7 @@ void modifyoctaentity(int flags, int id, extentity &e, cube *c, const ivec &cor,
             switch(e.type)
             {
                 case ET_MAPMODEL:
-                    if(loadmodel(NULL, e.attr[0]))
+                    if(loadmapmodel(e.attr[0]))
                     {
                         oe.mapmodels.removeobj(id);
                         if(va)
@@ -163,7 +163,7 @@ static bool modifyoctaent(int flags, int id, extentity &e)
     }
     else
     {
-        int leafsize = octaentsize, limit = max(r.x, max(r.y, r.z));
+        int leafsize = octaentsize, limit = max(r.x - o.x, max(r.y - o.y, r.z - o.z));
         while(leafsize < limit) leafsize *= 2;
         int diff = ~(leafsize-1) & ((o.x^r.x)|(o.y^r.y)|(o.z^r.z));
         if(diff && (limit > octaentsize/2 || diff < leafsize*2)) leafsize *= 2;
@@ -484,7 +484,7 @@ void entselectionbox(const entity &e, vec &eo, vec &es)
     model *m = NULL;
     const char *mname = entities::entmodel(e);
     if(mname) m = loadmodel(mname);
-    else if(e.type == ET_MAPMODEL) m = loadmodel(NULL, e.attr[0]);
+    else if(e.type == ET_MAPMODEL) m = loadmapmodel(e.attr[0]);
 
     if(m)
     {
@@ -874,7 +874,7 @@ bool dropentity(entity &e, int drop = -1)
     if(drop<0) drop = entdrop;
     if(e.type == ET_MAPMODEL)
     {
-        model *m = loadmodel(NULL, e.attr[0]);
+        model *m = loadmapmodel(e.attr[0]);
         if(m)
         {
             vec center;
@@ -1207,19 +1207,19 @@ int findentity(int type, int index, int attr1, int attr2)
     for(int i = index; i<ents.length(); i++)
     {
         extentity &e = *ents[i];
-    if(e.type == type &&
-        (attr1 < 0 || e.attr.length() <= 0 || e.attr[0] == attr1 ) &&
-        (attr1 < 0 || e.attr.length() <= 1 || e.attr[1] == attr2 )
-    )
+        if(e.type == type &&
+            (attr1 < 0 || e.attr.length() <= 0 || e.attr[0] == attr1 ) &&
+            (attr1 < 0 || e.attr.length() <= 1 || e.attr[1] == attr2 )
+        )
         return i;
     }
     loopj(min(index, ents.length()))
     {
         extentity &e = *ents[j];
-    if(e.type == type &&
-        (attr1 < 0 || e.attr.length() <= 0 || e.attr[0] == attr1 ) &&
-        (attr1 < 0 || e.attr.length() <= 1 || e.attr[1] == attr2 )
-    )
+        if(e.type == type &&
+            (attr1 < 0 || e.attr.length() <= 0 || e.attr[0] == attr1 ) &&
+            (attr1 < 0 || e.attr.length() <= 1 || e.attr[1] == attr2 )
+        )
             return j;
     }
     return -1;

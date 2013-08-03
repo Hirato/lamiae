@@ -1353,7 +1353,7 @@ namespace rpgio
 	}
 
 	//don't mind the ::blah, just a namespace collision with rpgio:: when we want it from the global scope
-	void writereferences(stream *f, const vector<mapinfo *> &maps, hashset< ::reference> &stack)
+	void writereferences(stream *f, const vector<mapinfo *> &maps, hashnameset< ::reference> &stack)
 	{
 		f->putlil(stack.length());
 
@@ -1473,7 +1473,7 @@ namespace rpgio
 		)
 	}
 
-	void readreferences(stream *f, const vector<mapinfo *> &maps, hashset< ::reference> &stack)
+	void readreferences(stream *f, const vector<mapinfo *> &maps, hashnameset< ::reference> &stack)
 	{
 		int num = f->getlil<int>();
 		loopi(num)
@@ -1806,7 +1806,7 @@ namespace rpgio
 			defformatstring(signal, "import %i", v);
 			if(DEBUG_IO)
 				DEBUGF("the game is outdated, currently version %i - sending \"%s\" to do any needed changes", v, signal);
-			enumerate(*game::mapdata, mapinfo, map,
+			enumerate(game::mapdata, mapinfo, map,
 				map.getsignal(signal, true, NULL);
 			)
 		}
@@ -1815,7 +1815,7 @@ namespace rpgio
 
 	void savegame(const char *name)
 	{
-		if(!game::mapdata || !game::curmap)
+		if(!game::connected || !game::curmap)
 		{
 			ERRORF("No game in progress, can't save");
 			return;
@@ -1898,7 +1898,7 @@ namespace rpgio
 		game::curmap->objs.removeobj(game::player1);
 
 		vector<mapinfo *> maps;
-		enumerate(*game::mapdata, mapinfo, map, maps.add(&map););
+		enumerate(game::mapdata, mapinfo, map, maps.add(&map););
 		WRITE(map, maps, writemap(f, maps[i]));
 
 		WRITE(reference stack, rpgscript::stack,

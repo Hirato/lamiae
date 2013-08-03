@@ -337,6 +337,12 @@ typedef void (APIENTRYP PFNGLUNIFORMMATRIX4X3FVPROC) (GLint location, GLsizei co
 #define glMultiDrawArrays_ glMultiDrawArrays
 #define glMultiDrawElements_ glMultiDrawElements
 
+#define glBlendFuncSeparate_ glBlendFuncSeparate
+#define glBlendEquationSeparate_ glBlendEquationSeparate
+#define glStencilOpSeparate_ glStencilOpSeparate
+#define glStencilFuncSeparate_ glStencilFuncSeparate
+#define glStencilMaskSeparate_ glStencilMaskSeparate
+
 #define glGenBuffers_ glGenBuffers
 #define glBindBuffer_ glBindBuffer
 #define glMapBuffer_ glMapBuffer
@@ -451,6 +457,12 @@ extern PFNGLGETCOMPRESSEDTEXIMAGEPROC   glGetCompressedTexImage_;
 extern PFNGLDRAWRANGEELEMENTSPROC glDrawRangeElements_;
 extern PFNGLMULTIDRAWARRAYSPROC   glMultiDrawArrays_;
 extern PFNGLMULTIDRAWELEMENTSPROC glMultiDrawElements_;
+
+extern PFNGLBLENDFUNCSEPARATEPROC glBlendFuncSeparate_;
+extern PFNGLBLENDEQUATIONSEPARATEPROC glBlendEquationSeparate_;
+extern PFNGLSTENCILOPSEPARATEPROC glStencilOpSeparate_;
+extern PFNGLSTENCILFUNCSEPARATEPROC glStencilFuncSeparate_;
+extern PFNGLSTENCILMASKSEPARATEPROC glStencilMaskSeparate_;
 
 extern PFNGLGENBUFFERSPROC       glGenBuffers_;
 extern PFNGLBINDBUFFERPROC       glBindBuffer_;
@@ -611,6 +623,9 @@ typedef void (APIENTRYP PFNGLBINDBUFFERBASEPROC) (GLenum target, GLuint index, G
 typedef void (APIENTRYP PFNGLBINDFRAGDATALOCATIONPROC) (GLuint program, GLuint color, const GLchar *name);
 typedef void (APIENTRYP PFNGLCLAMPCOLORPROC) (GLenum target, GLenum clamp);
 typedef const GLubyte * (APIENTRYP PFNGLGETSTRINGIPROC) (GLenum name, GLuint index);
+typedef void (APIENTRYP PFNGLCOLORMASKIPROC) (GLuint index, GLboolean r, GLboolean g, GLboolean b, GLboolean a);
+typedef void (APIENTRYP PFNGLENABLEIPROC) (GLenum target, GLuint index);
+typedef void (APIENTRYP PFNGLDISABLEIPROC) (GLenum target, GLuint index);
 #elif GL_GLEXT_VERSION < 43
 typedef void (APIENTRYP PFNGLBINDBUFFERRANGEPROC) (GLenum target, GLuint index, GLuint buffer, GLintptr offset, GLsizeiptr size);
 typedef void (APIENTRYP PFNGLBINDBUFFERBASEPROC) (GLenum target, GLuint index, GLuint buffer);
@@ -618,6 +633,11 @@ typedef void (APIENTRYP PFNGLBINDBUFFERBASEPROC) (GLenum target, GLuint index, G
 
 extern PFNGLGETSTRINGIPROC glGetStringi_;
 extern PFNGLBINDFRAGDATALOCATIONPROC glBindFragDataLocation_;
+
+// GL_EXT_draw_buffers2
+extern PFNGLCOLORMASKIPROC glColorMaski_;
+extern PFNGLENABLEIPROC glEnablei_;
+extern PFNGLDISABLEIPROC glDisablei_;
 
 #ifndef GL_VERSION_3_1
 #define GL_VERSION_3_1 1

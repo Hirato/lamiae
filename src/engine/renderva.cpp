@@ -2118,16 +2118,14 @@ static void genshadowmeshmapmodels(shadowmesh &m, int sides, shadowdrawinfo draw
         if(e.flags&(EF_NOVIS|EF_NOSHADOW)) continue;
         e.flags |= EF_RENDER;
     }
-    vector<vec> verts;
+    vector<triangle> tris;
     for(octaentities *oe = shadowmms; oe; oe = oe->rnext) loopvj(oe->mapmodels)
     {
         extentity &e = *ents[oe->mapmodels[j]];
         if(!(e.flags&EF_RENDER)) continue;
         e.flags &= ~EF_RENDER;
 
-        mapmodelinfo *mmi = getmminfo(e.attr[0]);
-        if(!mmi) continue;
-        model *mm = mmi->m ? mmi->m : loadmodel(mmi->name);
+        model *mm = loadmapmodel(e.attr[0]);
         if(!mm || !mm->shadow || mm->animated() || (mm->alphashadow && mm->alphatested())) continue;
 
         matrix3x4 orient;
@@ -2137,10 +2135,14 @@ static void genshadowmeshmapmodels(shadowmesh &m, int sides, shadowdrawinfo draw
         if(e.attr[3]) orient.rotate_around_y(sincosmod360(-e.attr[3]));
         if(e.attr[4] > 0) orient.scale(e.attr[4]/100.0f);
         orient.settranslation(e.o);
-        verts.setsize(0);
-        mm->genshadowmesh(verts, orient);
+        tris.setsize(0);
+        mm->genshadowmesh(tris, orient);
 
-        for(int j = 0; j < verts.length(); j += 3) addshadowmeshtri(m, sides, draws, verts[j], verts[j+1], verts[j+2]);
+        loopv(tris)
+        {
+            triangle &t = tris[i];
+            addshadowmeshtri(m, sides, draws, t.a, t.b, t.c);
+        }
 
         e.flags |= EF_SHADOWMESH;
     }

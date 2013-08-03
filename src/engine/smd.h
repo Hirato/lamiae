@@ -418,10 +418,10 @@ struct smd : skelmodel, skelloader<smd>
     {
         skelpart &mdl = addpart();
         adjustments.setsize(0);
-        const char *fname = loadname + strlen(loadname);
-        do --fname; while(fname >= loadname && *fname!='/' && *fname!='\\');
+        const char *fname = name + strlen(name);
+        do --fname; while(fname >= name && *fname!='/' && *fname!='\\');
         fname++;
-        defformatstring(meshname, "media/models/%s/%s.smd", loadname, fname);
+        defformatstring(meshname, "media/models/%s/%s.smd", name, fname);
         mdl.meshes = sharemeshes(path(meshname), NULL);
         if(!mdl.meshes) return false;
         mdl.initanimparts();
@@ -431,9 +431,8 @@ struct smd : skelmodel, skelloader<smd>
 
     bool load()
     {
-        if(loaded) return true;
-        formatstring(dir, "media/models/%s", loadname);
-        defformatstring(cfgname, "media/models/%s/smd.cfg", loadname);
+        formatstring(dir, "media/models/%s", name);
+        defformatstring(cfgname, "media/models/%s/smd.cfg", name);
 
         loading = this;
         identflags &= ~IDF_PERSIST;
@@ -459,7 +458,7 @@ struct smd : skelmodel, skelloader<smd>
             p->endanimparts();
             p->meshes->shared++;
         }
-        return loaded = true;
+        return true;
     }
 };
 

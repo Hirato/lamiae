@@ -250,8 +250,8 @@ struct animmodel : model
         }
 
         virtual void calcbb(vec &bbmin, vec &bbmax, const matrix3x4 &m) {}
-        virtual void gentris(Texture *tex, vector<BIH::tri> *out, const matrix3x4 &m) {}
-        virtual void genshadowmesh(vector<vec> &tris, const matrix3x4 &m) {}
+        virtual void genBIH(Texture *tex, vector<BIH::tri> *out, const matrix3x4 &m) {}
+        virtual void genshadowmesh(vector<triangle> &tris, const matrix3x4 &m) {}
 
         virtual void setshader(Shader *s)
         {
@@ -400,12 +400,12 @@ struct animmodel : model
             loopv(meshes) meshes[i]->calcbb(bbmin, bbmax, m);
         }
 
-        void gentris(vector<skin> &skins, vector<BIH::tri> *tris, const matrix3x4 &m)
+        void genBIH(vector<skin> &skins, vector<BIH::tri> *tris, const matrix3x4 &m)
         {
-            loopv(meshes) meshes[i]->gentris(skins[i].tex && skins[i].tex->type&Texture::ALPHA ? skins[i].tex : NULL, tris, m);
+            loopv(meshes) meshes[i]->genBIH(skins[i].tex && skins[i].tex->type&Texture::ALPHA ? skins[i].tex : NULL, tris, m);
         }
 
-        void genshadowmesh(vector<vec> &tris, const matrix3x4 &m)
+        void genshadowmesh(vector<triangle> &tris, const matrix3x4 &m)
         {
             loopv(meshes) meshes[i]->genshadowmesh(tris, m);
         }
@@ -500,7 +500,7 @@ struct animmodel : model
 
     meshgroup *sharemeshes(const char *name, ...)
     {
-        static hashtable<const char *, meshgroup *> meshgroups;
+        static hashnameset<meshgroup *> meshgroups;
         if(!meshgroups.access(name))
         {
             va_list args;
@@ -508,7 +508,7 @@ struct animmodel : model
             meshgroup *group = loadmeshes(name, args);
             va_end(args);
             if(!group) return NULL;
-            meshgroups[group->name] = group;
+            meshgroups.add(group);
         }
         return meshgroups[name];
     }
@@ -568,21 +568,21 @@ struct animmodel : model
             }
         }
 
-        void gentris(vector<BIH::tri> *tris, const matrix3x4 &m)
+        void genBIH(vector<BIH::tri> *tris, const matrix3x4 &m)
         {
             matrix3x4 t = m;
             t.scale(model->scale);
-            meshes->gentris(skins, tris, t);
+            meshes->genBIH(skins, tris, t);
             loopv(links)
             {
                 matrix3x4 n;
                 meshes->concattagtransform(this, links[i].tag, m, n);
                 n.translate(links[i].translate, model->scale);
-                links[i].p->gentris(tris, n);
+                links[i].p->genBIH(tris, n);
             }
         }
 
-        void genshadowmesh(vector<vec> &tris, const matrix3x4 &m)
+        void genshadowmesh(vector<triangle> &tris, const matrix3x4 &m)
         {
             matrix3x4 t = m;
             t.scale(model->scale);
@@ -964,7 +964,7 @@ struct animmodel : model
             if(animpart<0 || animpart>=MAXANIMPARTS) return;
             if(frame<0 || range<=0 || !meshes || !meshes->hasframes(frame, range))
             {
-                conoutf("invalid frame %d, range %d in model %s", frame, range, model->loadname);
+                conoutf("invalid frame %d, range %d in model %s", frame, range, model->name);
                 return;
             }
             if(!anims[animpart]) anims[animpart] = new vector<animspec>[game::numanims()];
@@ -993,8 +993,6 @@ struct animmodel : model
 
     void intersect(int anim, int basetime, int basetime2, float pitch, const vec &axis, const vec &forward, dynent *d, modelattach *a, const vec &o, const vec &ray)
     {
-        if(!loaded) return;
-
         int numtags = 0;
         if(a)
         {
@@ -1004,7 +1002,7 @@ struct animmodel : model
                 numtags++;
 
                 animmodel *m = (animmodel *)a[i].m;
-                if(!m || !m->loaded) continue;
+                if(!m) continue;
                 part *p = m->parts[0];
                 switch(linktype(m, p))
                 {
@@ -1044,7 +1042,7 @@ struct animmodel : model
         if(a) for(int i = numtags-1; i >= 0; i--)
         {
             animmodel *m = (animmodel *)a[i].m;
-            if(!m || !m->loaded) continue;
+            if(!m) continue;
             part *p = m->parts[0];
             switch(linktype(m, p))
             {
@@ -1070,8 +1068,6 @@ struct animmodel : model
 
     int intersect(int anim, int basetime, int basetime2, const vec &pos, float yaw, float pitch, float roll, dynent *d, modelattach *a, float size, const vec &o, const vec &ray, float &dist, int mode)
     {
-        if(!loaded) return -1;
-
         vec axis(1, 0, 0), forward(0, 1, 0);
 
         matrixpos = 0;
@@ -1113,8 +1109,6 @@ struct animmodel : model
 
     void render(int anim, int basetime, int basetime2, float pitch, const vec &axis, const vec &forward, dynent *d, modelattach *a)
     {
-        if(!loaded) return;
-
         int numtags = 0;
         if(a)
         {
@@ -1124,7 +1118,7 @@ struct animmodel : model
                 numtags++;
 
                 animmodel *m = (animmodel *)a[i].m;
-                if(!m || !m->loaded)
+                if(!m)
                 {
                     if(a[i].pos) link(NULL, a[i].tag, vec(0, 0, 0), 0, 0, a[i].pos);
                     continue;
@@ -1168,7 +1162,7 @@ struct animmodel : model
         if(a) for(int i = numtags-1; i >= 0; i--)
         {
             animmodel *m = (animmodel *)a[i].m;
-            if(!m || !m->loaded)
+            if(!m)
             {
                 if(a[i].pos) unlink(NULL);
                 continue;
@@ -1195,8 +1189,6 @@ struct animmodel : model
 
     void render(int anim, int basetime, int basetime2, const vec &o, float yaw, float pitch, float roll, dynent *d, modelattach *a, float size, float trans)
     {
-        if(!loaded) return;
-
         vec axis(1, 0, 0), forward(0, 1, 0);
 
         matrixpos = 0;
@@ -1258,22 +1250,16 @@ struct animmodel : model
         if(d) d->lastrendered = lastmillis;
     }
 
-    bool loaded;
-    char *loadname;
     vector<part *> parts;
 
-    animmodel(const char *name) : loaded(false)
+    animmodel(const char *name) : model(name)
     {
-        loadname = newstring(name);
     }
 
-    virtual ~animmodel()
+    ~animmodel()
     {
-        delete[] loadname;
         parts.deletecontents();
     }
-
-    const char *name() const { return loadname; }
 
     void cleanup()
     {
@@ -1296,12 +1282,12 @@ struct animmodel : model
         m.translate(translate, scale);
     }
 
-    void gentris(vector<BIH::tri> *tris)
+    void genBIH(vector<BIH::tri> *tris)
     {
         if(parts.empty()) return;
         matrix3x4 m;
         initmatrix(m);
-        parts[0]->gentris(tris, m);
+        parts[0]->genBIH(tris, m);
         for(int i = 1; i < parts.length(); i++)
         {
             part *p = parts[i];
@@ -1309,13 +1295,13 @@ struct animmodel : model
             {
                 case LINK_COOP:
                 case LINK_REUSE:
-                    p->gentris(tris, m);
+                    p->genBIH(tris, m);
                     break;
             }
         }
     }
 
-    void genshadowmesh(vector<vec> &tris, const matrix3x4 &orient)
+    void genshadowmesh(vector<triangle> &tris, const matrix3x4 &orient)
     {
         if(parts.empty()) return;
         matrix3x4 m;
@@ -1345,7 +1331,7 @@ struct animmodel : model
     {
         if(bih) return bih;
         vector<BIH::tri> tris[2];
-        gentris(tris);
+        genBIH(tris);
         bih = new BIH(tris);
         return bih;
     }
@@ -1688,7 +1674,7 @@ template<class MDL, class MESH> struct modelcommands
     {
         if(!MDL::loading) { conoutf("not loading an %s", MDL::formatname()); return; }
         if(!MDL::loading->parts.inrange(*parent) || !MDL::loading->parts.inrange(*child)) { conoutf("no models loaded to link"); return; }
-        if(!MDL::loading->parts[*parent]->link(MDL::loading->parts[*child], tagname, vec(*x, *y, *z))) conoutf("could not link model %s", MDL::loading->loadname);
+        if(!MDL::loading->parts[*parent]->link(MDL::loading->parts[*child], tagname, vec(*x, *y, *z))) conoutf("could not link model %s", MDL::loading->name);
     }
 
     template<class F> void modelcommand(F *fun, const char *suffix, const char *args)

@@ -165,7 +165,7 @@ namespace game
 	extern hashset<merchant> merchants;
 
 	extern vector<const char *> categories, tips;
-	extern hashset<rpgvar> variables;
+	extern hashnameset<rpgvar> variables;
 	extern hashset<journal> journals;
 
 // 	extern vector<equipment> hotkeys;
@@ -191,7 +191,7 @@ namespace game
 	extern bool connected;
 	extern bool transfer;
 	extern rpgchar *player1;
-	extern hashset<mapinfo> *mapdata;
+	extern hashnameset<mapinfo> mapdata;
 	extern mapinfo *curmap;
 
 	extern const char *cpmap; extern int cpnum;
@@ -301,7 +301,7 @@ namespace rpgscript
 
 	extern void pushstack();
 	extern void popstack();
-	extern vector<hashset<reference> *> stack;
+	extern vector<hashnameset<reference> *> stack;
 	extern vector<localinst *> locals;
 	extern vector<delayscript *> delaystack;
 }
@@ -460,12 +460,10 @@ struct rpgvar
 	~rpgvar() { delete[] value; }
 };
 
-static inline bool htcmp(const char *key, const rpgvar &ref) { return !strcmp(key, ref.name); }
-
 struct localinst
 {
 	int refs;
-	hashset<rpgvar> variables;
+	hashnameset<rpgvar> variables;
 
 	localinst() : refs(0), variables(128) {}
 };
@@ -539,12 +537,11 @@ struct signal
 		loopv(code) freecode(code[i]);
 	}
 };
-static inline bool htcmp(const char *key, const signal &ref) { return !strcmp(key, ref.name); }
 
 struct script
 {
 	const char *key;
-	hashset<signal> listeners;
+	hashnameset<signal> listeners;
 	hashset<dialogue> chat;
 	dialogue *curnode;
 
@@ -556,7 +553,7 @@ static inline bool htcmp(const char *key, const script &ref) { return !strcmp(ke
 struct mapscript
 {
 	const char *key;
-	hashset<signal> listeners;
+	hashnameset<signal> listeners;
 
 	mapscript() : key(NULL), listeners(64) {}
 	~mapscript() {}
@@ -1850,8 +1847,6 @@ struct mapinfo
 	}
 };
 
-static inline bool htcmp(const char *key, const mapinfo &ref) { return !strcmp(key, ref.name); }
-
 //this is compatible with the FPSGAME waypoints
 struct waypoint
 {
@@ -1950,11 +1945,9 @@ struct reference
 	~reference();
 };
 
-static inline bool htcmp(const char *key, const reference &ref) { return !strcmp(key, ref.name); }
-
 struct delayscript
 {
-	hashset<reference> refs;
+	hashnameset<reference> refs;
 	const char *script;
 	int remaining;
 

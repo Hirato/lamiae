@@ -19,11 +19,11 @@ namespace game
 	hashset<merchant> merchants;
 
 	vector<const char *> categories, tips;
-	hashset<rpgvar> variables;
+	hashnameset<rpgvar> variables;
 	hashset<journal> journals;
 
 	string data; //data folder
-	hashset<mapinfo> *mapdata = NULL;
+	hashnameset<mapinfo> mapdata;
 	mapinfo *curmap = NULL;
 	bool connected = false;
 	bool transfer = false;
@@ -124,7 +124,7 @@ namespace game
 	const char *datapath(const char *subdir)
 	{
 		static string pth;
-		if(!mapdata || !subdir)
+		if(!connected || !subdir)
 			copystring(pth, "games");
 		else if(subdir[0])
 			formatstring(pth, "games/%s/%s", data, subdir);
@@ -202,17 +202,12 @@ namespace game
 			DEBUGF("resetting map directory");
 		setmapdir(NULL);
 
-		if(mapdata)
-		{
-			if(DEBUG_WORLD)
-				DEBUGF("clearing map data: %p %p", mapdata, curmap);
+		if(DEBUG_WORLD)
+			DEBUGF("clearing map data; curmap: %p", curmap);
 
-			if(curmap)
-				curmap->objs.removeobj(player1);
-
-			delete mapdata; mapdata = NULL;
-			curmap = NULL;
-		}
+		if(curmap) curmap->objs.removeobj(player1);
+		mapdata.clear();
+		curmap = NULL;
 
 		if(DEBUG_WORLD)
 			DEBUGF(
@@ -451,7 +446,7 @@ namespace game
 	}
 
 	ICOMMAND(r_rehash, "", (),
-		if(!mapdata) return;
+		if(!connected) return;
 		conoutf("Reloading configuration files in /games/%s", data);
 		loadassets(datapath(), true, false);
 		if(abort)
@@ -483,7 +478,6 @@ namespace game
 		cleangame();
 		rpgscript::init();
 
-		mapdata = new hashset<mapinfo>();
 		copystring(data, game);
 		if(DEBUG_WORLD)
 			DEBUGF("setting map directory to: %s", datapath("maps"));
@@ -550,20 +544,20 @@ namespace game
 
 	mapinfo *accessmap(const char *name)
 	{
-		if(!mapdata)
+		if(!connected)
 		{
-			ERRORF("no map data; cannot access data for \"%s\"", name);
+			ERRORF("Cannot retrieve map information for \"%s\" - no game in progress!", name);
 			return NULL;
 		}
 
-		mapinfo *ret = mapdata->access(name);
+		mapinfo *ret = mapdata.access(name);
 		if(DEBUG_WORLD)
-			DEBUGF("finding map data (%p)", ret);
+			DEBUGF("searching for map data (%p)", ret);
 
 		if(!ret)
 		{
 			const char *newname = newstring(name);
-			ret = &(*mapdata)[newname];
+			ret = &mapdata[newname];
 			ret->name = newname;
 
 			if(DEBUG_WORLD)
@@ -656,7 +650,7 @@ namespace game
 
 		if(DEBUG_WORLD)
 		{
-			enumerate(*mapdata, mapinfo, info,
+			enumerate(mapdata, mapinfo, info,
 				DEBUGF("map %s", info.name);
 				DEBUGF("script %s", info.script->key);
 				DEBUGF("flags %i", info.flags);
@@ -706,7 +700,7 @@ namespace game
 	void updateworld()
 	{
 		rpggui::forcegui();
-		if(!mapdata || !curtime) return;
+		if(!connected || !curtime) return;
 		if(!curmap)
 		{
 			openworld(firstmap);
@@ -946,7 +940,7 @@ namespace game
 		startmap("untitled");
 	}
 
-	void gameconnect(bool _remote) { connected = true; if(!mapdata) newgame(NULL); }
+	void gameconnect(bool _remote) { if(!connected) { connected = true; newgame(NULL); } }
 
 	void gamedisconnect(bool cleanup)
 	{
@@ -992,7 +986,7 @@ namespace game
 
 	const char *getscreenshotinfo()
 	{
-		if(mapdata) return data;
+		if(connected) return data;
 		return "title";
 	}
 

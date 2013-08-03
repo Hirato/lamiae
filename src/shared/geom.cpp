@@ -62,7 +62,7 @@ bool raysphereintersect(const vec &center, float radius, const vec &o, const vec
     return true;
 }
 
-bool rayrectintersect(const vec &b, const vec &s, const vec &o, const vec &ray, float &dist, int &orient)
+bool rayboxintersect(const vec &b, const vec &s, const vec &o, const vec &ray, float &dist, int &orient)
 {
     loop(d, 3) if(ray[d])
     {

@@ -114,7 +114,7 @@ static inline bool pvsoccluded(const ivec &bborigin, int size)
 }
 
 // rendergl
-extern bool hasVAO, hasTR, hasTSW, hasFBO, hasAFBO, hasDS, hasTF, hasCBF, hasS3TC, hasFXT1, hasLATC, hasRGTC, hasAF, hasFBB, hasFBMS, hasTMS, hasMSS, hasFBMSBS, hasNVFBMSC, hasNVTMS, hasUBO, hasMBR, hasDB, hasTG, hasT4, hasTQ, hasPF, hasTRG, hasDBT, hasDC, hasDBGO, hasGPU4, hasGPU5, hasEAL;
+extern bool hasVAO, hasTR, hasTSW, hasFBO, hasAFBO, hasDS, hasTF, hasCBF, hasS3TC, hasFXT1, hasLATC, hasRGTC, hasAF, hasFBB, hasFBMS, hasTMS, hasMSS, hasFBMSBS, hasNVFBMSC, hasNVTMS, hasUBO, hasMBR, hasDB2, hasTG, hasT4, hasTQ, hasPF, hasTRG, hasDBT, hasDC, hasDBGO, hasGPU4, hasGPU5, hasEAL;
 extern int glversion, glslversion;
 
 enum { DRAWTEX_NONE = 0, DRAWTEX_ENVMAP, DRAWTEX_MINIMAP, DRAWTEX_MODELPREVIEW };
@@ -527,7 +527,7 @@ extern void abortconnect();
 extern void clientkeepalive();
 
 // command
-extern hashset<ident> idents;
+extern hashnameset<ident> idents;
 
 extern void clearoverrides();
 extern void writecfg(const char *name = NULL);
@@ -620,13 +620,14 @@ extern void resetmap();
 extern void startmap(const char *name);
 
 // rendermodel
-struct mapmodelinfo { string name; model *m; };
+struct mapmodelinfo { string name; model *m, *collide; };
+
+extern vector<mapmodelinfo> mapmodels;
 
 extern float transmdlsx1, transmdlsy1, transmdlsx2, transmdlsy2;
 extern uint transmdltiles[LIGHTTILE_MAXH];
 
 extern void loadskin(const char *dir, const char *altdir, Texture *&skin, Texture *&masks);
-extern mapmodelinfo *getmminfo(int i);
 extern void resetmodelbatches();
 extern void startmodelquery(occludequery *query);
 extern void endmodelquery();
@@ -642,6 +643,18 @@ extern int batcheddynamicmodels();
 extern int batcheddynamicmodelbounds(int mask, vec &bbmin, vec &bbmax);
 extern void cleanupmodels();
 
+static inline model *loadmapmodel(int n)
+{
+    if(mapmodels.inrange(n))
+    {
+        model *m = mapmodels[n].m;
+        return m ? m : loadmodel(NULL, n);
+    }
+    return NULL;
+}
+
+static inline mapmodelinfo *getmminfo(int n) { return mapmodels.inrange(n) ? &mapmodels[n] : NULL; }
+
 // renderparticles
 extern void initparticles();
 extern void clearparticles();
@@ -652,9 +665,11 @@ extern void renderparticles();
 extern bool printparticles(extentity &e, char *buf, int len);
 
 // decal
+enum { DB_OPAQUE = 0, DB_TRANSPARENT, NUMDB };
+
 extern void initdecals();
 extern void cleardecals();
-extern void renderdecals();
+extern void renderdecals(int db = DB_OPAQUE);
 
 // rendersky
 extern int skytexture, skyshadow, explicitsky;

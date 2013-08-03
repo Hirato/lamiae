@@ -718,12 +718,12 @@ struct edgegroup
     int axis;
 };
 
-static uint hthash(const edgegroup &g)
+static inline uint hthash(const edgegroup &g)
 {
     return g.slope.x^g.slope.y^g.slope.z^g.origin.x^g.origin.y^g.origin.z;
 }
 
-static bool htcmp(const edgegroup &x, const edgegroup &y)
+static inline bool htcmp(const edgegroup &x, const edgegroup &y)
 {
     return x.slope==y.slope && x.origin==y.origin;
 }

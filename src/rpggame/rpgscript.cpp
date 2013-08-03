@@ -288,7 +288,7 @@ namespace rpgscript
 	*/
 
 	vector<rpgent *> obits; //r_destroy
-	vector<hashset<reference> *> stack;
+	vector<hashnameset<reference> *> stack;
 	vector<localinst *> locals;
 	vector<delayscript *> delaystack;
 	reference *player = NULL;
@@ -303,7 +303,7 @@ namespace rpgscript
 	{
 		if(DEBUG_VSCRIPT) DEBUGF("pushing new stack...");
 		int size = stack.length() ? 64 : 1024;
-		stack.add(new hashset<reference>(size));
+		stack.add(new hashnameset<reference>(size));
 		if(DEBUG_VSCRIPT) DEBUGF("new depth is %i", stack.length());
 	}
 
@@ -396,7 +396,7 @@ namespace rpgscript
 		return registertemp(name, (void *) 0);
 	}
 
-	void copystack(hashset<reference> &dst)
+	void copystack(hashnameset<reference> &dst)
 	{
 		loopvj(stack)
 		{
@@ -475,7 +475,7 @@ namespace rpgscript
 	void removereferences(rpgent *ptr, bool references)
 	{
 		obits.removeobj(ptr);
-		enumerate(*mapdata, mapinfo, map,
+		enumerate(mapdata, mapinfo, map,
 			map.objs.removeobj(ptr);
 			loopvj(map.loadactions)
 			{
@@ -980,7 +980,7 @@ namespace rpgscript
 		if (a == b) return true;
 		if (!locals.inrange(a) || !locals.inrange(b)) return false;
 
-		hashset<rpgvar> &seta = locals[a]->variables,
+		hashnameset<rpgvar> &seta = locals[a]->variables,
 			&setb = locals[b]->variables;
 
 		if(seta.length() != setb.length()) return false;
@@ -989,7 +989,7 @@ namespace rpgscript
 		//we walk both tables at once as they are of the same size.
 		loopi(seta.size)
 		{
-			hashset<rpgvar>::chain *chaina = seta.chains[i], *chainb = setb.chains[i];
+			hashnameset<rpgvar>::chain *chaina = seta.chains[i], *chainb = setb.chains[i];
 			if(!chaina != !chainb) return false;
 			while(chaina)
 			{
@@ -1201,7 +1201,7 @@ namespace rpgscript
 		else if(!receiver)
 		{
 			if(DEBUG_VSCRIPT) DEBUGF("no receiver, sending signal to everything");
-			enumerate(*game::mapdata, mapinfo, map,
+			enumerate(game::mapdata, mapinfo, map,
 				map.getsignal(sig, true, sender ? sender->getent(sendidx) : NULL);
 			)
 			camera::getsignal(sig);
@@ -1229,14 +1229,13 @@ namespace rpgscript
 	COMMANDN(r_signal, sendsignal, "sssi");
 
 	ICOMMAND(r_loop_maps, "se", (const char *ref, uint *body),
-		if(!mapdata) return;
 		if(!*ref) {ERRORF("r_loop_maps; requires reference to alias maps to"); return;}
 
 		pushstack();
 		reference *cur = registertemp(ref, NULL);
 		cur->immutable = true;
 
-		enumerate(*mapdata, mapinfo, map,
+		enumerate(mapdata, mapinfo, map,
 			cur->setref(&map, true);
 			rpgexecute(body);
 		)

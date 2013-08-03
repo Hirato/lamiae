@@ -231,12 +231,12 @@ namespace rpggui
 
 	bool open()
 	{
-		return !editmode && mapdata && curmap && UI::numui();
+		return !editmode && connected && curmap && UI::numui();
 	}
 
 	void forcegui()
 	{
-		if(editmode || !mapdata)
+		if(editmode || !connected)
 		{
 			UI::hideui("chat");
 			UI::hideui("trade");

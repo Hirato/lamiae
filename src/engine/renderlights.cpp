@@ -3635,17 +3635,18 @@ void rendertransparent()
         switch(layer)
         {
         case 0:
-            if(hasmats&1) renderliquidmaterials();
+            renderliquidmaterials();
             break;
         case 1:
-            if(hasalphavas&1) renderalphageom(1);
+            renderalphageom(1);
             break;
         case 2:
             if(hasalphavas&2) renderalphageom(2);
             if(hasmats&2) rendersolidmaterials();
+            renderdecals(DB_TRANSPARENT);
             break;
         case 3:
-            if(hasmodels) rendertransparentmodelbatches();
+            rendertransparentmodelbatches();
             break;
         }
 
@@ -3769,9 +3770,7 @@ void rendergbuffer(bool depthclear)
         game::rendergame();
         rendermodelbatches();
         GLERROR;
-        maskgbuffer("c");
         renderdecals();
-        maskgbuffer("cngd");
         GLERROR;
         renderavatar();
         GLERROR;

@@ -2,7 +2,7 @@
 
 #include "engine.h"
 
-bool hasVAO = false, hasTR = false, hasTSW = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasS3TC = false, hasFXT1 = false, hasLATC = false, hasRGTC = false, hasAF = false, hasFBB = false, hasFBMS = false, hasTMS = false, hasMSS = false, hasFBMSBS = false, hasNVFBMSC = false, hasNVTMS = false, hasUBO = false, hasMBR = false, hasDB = false, hasTG = false, hasT4 = false, hasTQ = false, hasPF = false, hasTRG = false, hasDBT = false, hasDC = false, hasDBGO = false, hasGPU4 = false, hasGPU5 = false, hasEAL = false;
+bool hasVAO = false, hasTR = false, hasTSW = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasS3TC = false, hasFXT1 = false, hasLATC = false, hasRGTC = false, hasAF = false, hasFBB = false, hasFBMS = false, hasTMS = false, hasMSS = false, hasFBMSBS = false, hasNVFBMSC = false, hasNVTMS = false, hasUBO = false, hasMBR = false, hasDB2 = false, hasTG = false, hasT4 = false, hasTQ = false, hasPF = false, hasTRG = false, hasDBT = false, hasDC = false, hasDBGO = false, hasGPU4 = false, hasGPU5 = false, hasEAL = false;
 bool mesa = false, intel = false, ati = false, nvidia = false;
 
 int hasstencil = 0;
@@ -78,6 +78,12 @@ PFNGLGETCOMPRESSEDTEXIMAGEPROC   glGetCompressedTexImage_   = NULL;
 PFNGLDRAWRANGEELEMENTSPROC glDrawRangeElements_ = NULL;
 PFNGLMULTIDRAWARRAYSPROC   glMultiDrawArrays_   = NULL;
 PFNGLMULTIDRAWELEMENTSPROC glMultiDrawElements_ = NULL;
+
+PFNGLBLENDFUNCSEPARATEPROC     glBlendFuncSeparate_     = NULL;
+PFNGLBLENDEQUATIONSEPARATEPROC glBlendEquationSeparate_ = NULL;
+PFNGLSTENCILOPSEPARATEPROC     glStencilOpSeparate_     = NULL;
+PFNGLSTENCILFUNCSEPARATEPROC   glStencilFuncSeparate_   = NULL;
+PFNGLSTENCILMASKSEPARATEPROC   glStencilMaskSeparate_   = NULL;
 
 PFNGLGENBUFFERSPROC       glGenBuffers_       = NULL;
 PFNGLBINDBUFFERPROC       glBindBuffer_       = NULL;
@@ -177,6 +183,11 @@ PFNGLDRAWBUFFERSPROC glDrawBuffers_ = NULL;
 PFNGLGETSTRINGIPROC           glGetStringi_           = NULL;
 PFNGLBINDFRAGDATALOCATIONPROC glBindFragDataLocation_ = NULL;
 
+// GL_EXT_draw_buffers2
+PFNGLCOLORMASKIPROC glColorMaski_ = NULL;
+PFNGLENABLEIPROC    glEnablei_    = NULL;
+PFNGLDISABLEIPROC   glDisablei_   = NULL;
+
 // GL_ARB_uniform_buffer_object
 PFNGLGETUNIFORMINDICESPROC       glGetUniformIndices_       = NULL;
 PFNGLGETACTIVEUNIFORMSIVPROC     glGetActiveUniformsiv_     = NULL;
@@ -263,8 +274,7 @@ void parseglexts()
         loopi(numexts)
         {
             const char *ext = (const char *)glGetStringi_(GL_EXTENSIONS, i);
-            const char *str = newstring(ext);
-            glexts[str] = str;
+            glexts.add(newstring(ext));
         }
     }
     else
@@ -276,11 +286,7 @@ void parseglexts()
             if(!*exts) break;
             const char *ext = exts;
             while(*exts && *exts != ' ') exts++;
-            if(exts > ext)
-            {
-                const char *str = newstring(ext, size_t(exts-ext));
-                glexts[str] = str;
-            }
+            if(exts > ext) glexts.add(newstring(ext, size_t(exts-ext)));
         }
     }
 }
@@ -342,6 +348,12 @@ void gl_checkextensions()
     glDrawRangeElements_ =        (PFNGLDRAWRANGEELEMENTSPROC)        getprocaddress("glDrawRangeElements");
     glMultiDrawArrays_ =          (PFNGLMULTIDRAWARRAYSPROC)          getprocaddress("glMultiDrawArrays");
     glMultiDrawElements_ =        (PFNGLMULTIDRAWELEMENTSPROC)        getprocaddress("glMultiDrawElements");
+
+    glBlendFuncSeparate_ =        (PFNGLBLENDFUNCSEPARATEPROC)        getprocaddress("glBlendFuncSeparate");
+    glBlendEquationSeparate_ =    (PFNGLBLENDEQUATIONSEPARATEPROC)    getprocaddress("glBlendEquationSeparate");
+    glStencilOpSeparate_ =        (PFNGLSTENCILOPSEPARATEPROC)        getprocaddress("glStencilOpSeparate");
+    glStencilFuncSeparate_ =      (PFNGLSTENCILFUNCSEPARATEPROC)      getprocaddress("glStencilFuncSeparate");
+    glStencilMaskSeparate_ =      (PFNGLSTENCILMASKSEPARATEPROC)      getprocaddress("glStencilMaskSeparate");
 
     glGenBuffers_ =               (PFNGLGENBUFFERSPROC)               getprocaddress("glGenBuffers");
     glBindBuffer_ =               (PFNGLBINDBUFFERPROC)               getprocaddress("glBindBuffer");
@@ -504,6 +516,11 @@ void gl_checkextensions()
 
         glClampColor_ = (PFNGLCLAMPCOLORPROC)getprocaddress("glClampColor");
         hasCBF = true;
+
+        glColorMaski_ = (PFNGLCOLORMASKIPROC)getprocaddress("glColorMaski");
+        glEnablei_ =    (PFNGLENABLEIPROC)getprocaddress("glEnablei");
+        glDisablei_ =   (PFNGLENABLEIPROC)getprocaddress("glDisablei");
+        hasDB2 = true;
     }
     else
     {
@@ -538,6 +555,14 @@ void gl_checkextensions()
             glClampColor_ = (PFNGLCLAMPCOLORPROC)getprocaddress("glClampColorARB");
             hasCBF = true;
             if(dbgexts) conoutf(CON_INIT, "Using GL_ARB_color_buffer_float extension.");
+        }
+        if(hasext("GL_EXT_draw_buffers2"))
+        {
+            glColorMaski_ = (PFNGLCOLORMASKIPROC)getprocaddress("glColorMaskIndexedEXT");
+            glEnablei_ =    (PFNGLENABLEIPROC)getprocaddress("glEnableIndexedEXT");
+            glDisablei_ =   (PFNGLENABLEIPROC)getprocaddress("glDisableIndexedEXT");
+            hasDB2 = true;
+            if(dbgexts) conoutf(CON_INIT, "Using GL_EXT_draw_buffers2 extension.");
         }
     }
 
@@ -1203,7 +1228,6 @@ void recomputecamera()
             }
             camera1->reset();
             camera1->type = ENT_CAMERA;
-//             camera1->collidetype = COLLIDE_AABB;
             camera1->move = -1;
             camera1->eyeheight = camera1->aboveeye = camera1->radius = camera1->xradius = camera1->yradius = 2;
 

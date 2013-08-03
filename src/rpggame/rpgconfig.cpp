@@ -531,7 +531,7 @@ namespace game
 		keepcode(scr);
 	)
 
-	signal *getsignal(const char *sig, hashset<signal> &table)
+	signal *getsignal(const char *sig, hashnameset<signal> &table)
 	{
 		signal *listen = table.access(sig);
 		if(listen) return listen;

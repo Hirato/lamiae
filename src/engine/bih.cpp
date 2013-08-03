@@ -1,6 +1,8 @@
 #include "engine.h"
 
-bool BIH::triintersect(tri &t, const vec &o, const vec &ray, float maxdist, float &dist, int mode, tri *noclip)
+extern vec hitsurface;
+
+bool BIH::triintersect(const tri &t, const vec &o, const vec &ray, float maxdist, float &dist, int mode)
 {
     vec p;
     p.cross(ray, t.c);
@@ -22,6 +24,11 @@ bool BIH::triintersect(tri &t, const vec &o, const vec &ray, float maxdist, floa
         int si = clamp(int(t.tex->xs * (t.tc[0] + u*(t.tc[2] - t.tc[0]) + v*(t.tc[4] - t.tc[0]))), 0, t.tex->xs-1),
             ti = clamp(int(t.tex->ys * (t.tc[1] + u*(t.tc[3] - t.tc[1]) + v*(t.tc[5] - t.tc[1]))), 0, t.tex->ys-1);
         if(!(t.tex->alphamask[ti*((t.tex->xs+7)/8) + si/8] & (1<<(si%8)))) return false;
+    }
+    if(!(mode&RAY_SHADOW))
+    {
+        hitsurface.cross(t.b, t.c).normalize();
+        if(hitsurface.dot(ray) > 0) hitsurface.neg();
     }
     dist = f;
     return true;
@@ -55,12 +62,12 @@ inline bool BIH::traverse(const vec &o, const vec &ray, const vec &invray, float
                     tmin = max(tmin, farsplit);
                     continue;
                 }
-                else if(triintersect(tris[curnode->childindex(faridx)], o, ray, maxdist, dist, mode, noclip)) return true;
+                else if(triintersect(tris[curnode->childindex(faridx)], o, ray, maxdist, dist, mode)) return true;
             }
         }
         else if(curnode->isleaf(nearidx))
         {
-            if(triintersect(tris[curnode->childindex(nearidx)], o, ray, maxdist, dist, mode, noclip)) return true;
+            if(triintersect(tris[curnode->childindex(nearidx)], o, ray, maxdist, dist, mode)) return true;
             if(farsplit < tmax)
             {
                 if(!curnode->isleaf(faridx))
@@ -69,7 +76,7 @@ inline bool BIH::traverse(const vec &o, const vec &ray, const vec &invray, float
                     tmin = max(tmin, farsplit);
                     continue;
                 }
-                else if(triintersect(tris[curnode->childindex(faridx)], o, ray, maxdist, dist, mode, noclip)) return true;
+                else if(triintersect(tris[curnode->childindex(faridx)], o, ray, maxdist, dist, mode)) return true;
             }
         }
         else
@@ -93,7 +100,7 @@ inline bool BIH::traverse(const vec &o, const vec &ray, const vec &invray, float
                         continue;
                     }
                 }
-                else if(triintersect(tris[curnode->childindex(faridx)], o, ray, maxdist, dist, mode, noclip)) return true;
+                else if(triintersect(tris[curnode->childindex(faridx)], o, ray, maxdist, dist, mode)) return true;
             }
             curnode = &nodes[curnode->childindex(nearidx)];
             tmax = min(tmax, nearsplit);
@@ -125,7 +132,7 @@ inline bool BIH::traverse(const vec &o, const vec &ray, float maxdist, float &di
     if(tmin >= maxdist || tmin>=tmax) return false;
     tmax = min(tmax, maxdist);
 
-    return BIH::traverse(o, ray, invray, maxdist, dist, mode, &nodes[0], tmin, tmax);
+    return traverse(o, ray, invray, maxdist, dist, mode, &nodes[0], tmin, tmax);
 }
 
 void BIH::build(vector<BIHNode> &buildnodes, ushort *indices, int numindices, const vec &vmin, const vec &vmax, int depth)
@@ -231,9 +238,7 @@ BIH::BIH(vector<tri> *t)
         bbmax.max(tri.a).max(tri.b).max(tri.c);
     }
 
-    radius = max(max(max(fabs(bbmin.x), fabs(bbmin.y)), fabs(bbmin.z)),
-                 max(max(fabs(bbmax.x), fabs(bbmax.y)), fabs(bbmax.z)));
-    radius *= radius;
+    radius = vec(bbmin).abs().max(vec(bbmax).abs()).magnitude();
 
     vector<BIHNode> buildnodes;
     ushort *indices = new ushort[numtris];
@@ -260,14 +265,8 @@ BIH::BIH(vector<tri> *t)
 
 bool mmintersect(const extentity &e, const vec &o, const vec &ray, float maxdist, int mode, float &dist)
 {
-    extern vector<mapmodelinfo> mapmodels;
-    if(!mapmodels.inrange(e.attr[0])) return false;
-    model *m = mapmodels[e.attr[0]].m;
-    if(!m)
-    {
-         m = loadmodel(NULL, e.attr[0]);
-        if(!m) return false;
-    }
+    model *m = loadmapmodel(e.attr[0]);
+    if(!m) return false;
     if(mode&RAY_SHADOW)
     {
         if(!m->shadow || e.flags&EF_NOSHADOW) return false;
@@ -277,7 +276,7 @@ bool mmintersect(const extentity &e, const vec &o, const vec &ray, float maxdist
     vec mo = vec(o).sub(e.o), mray(ray);
     int scale = e.attr[4];
     if(scale > 0) mo.mul(100.0f/scale);
-    float v = mo.dot(mray), inside = m->bih->radius - mo.squaredlen();
+    float v = mo.dot(mray), inside = m->bih->radius*m->bih->radius - mo.squaredlen();
     if((inside < 0 && v > 0) || inside + v*v < 0) return false;
     int yaw = e.attr[1], pitch = e.attr[2], roll = e.attr[3];
     if(yaw != 0)
@@ -301,8 +300,321 @@ bool mmintersect(const extentity &e, const vec &o, const vec &ray, float maxdist
     if(m->bih->traverse(mo, mray, maxdist ? maxdist : 1e16f, dist, mode))
     {
         if(scale > 0) dist *= scale/100.0f;
+        if(!(mode&RAY_SHADOW))
+        {
+            if(roll != 0) hitsurface.rotate_around_y(sincosmod360(-roll));
+            if(pitch != 0) hitsurface.rotate_around_x(sincosmod360(pitch));
+            if(yaw != 0) hitsurface.rotate_around_z(sincosmod360(yaw));
+        }
         return true;
     }
     return false;
 }
 
+static inline float segmentdistance(const vec &p1, const vec &q1, const vec &p2, const vec &d2)
+{
+    vec d1 = vec(q1).sub(p1), r = vec(p1).sub(p2);
+    float a = d1.squaredlen(), e = d2.squaredlen(), f = d2.dot(r), s, t;
+    if(a <= 1e-4f)
+    {
+        if(e <= 1e-4f) return r.squaredlen();
+        s = 0;
+        t = clamp(f / e, 0.0f, 1.0f);
+    }
+    else
+    {
+        float c = d1.dot(r);
+        if(e <= 1e-4f)
+        {
+            t = 0;
+            s = clamp(-c / a, 0.0f, 1.0f);
+        }
+        else
+        {
+            float b = d1.dot(d2), denom = a*e - b*b;
+            s = denom ? clamp((b*f - c*e) / denom, 0.0f, 1.0f) : 0.0f;
+            t = b*s + f;
+            if(t < 0)
+            {
+                t = 0;
+                s = clamp(-c / a, 0.0f, 1.0f);
+            }
+            else if(t > e)
+            {
+                t = 1;
+                s = clamp((b - c) / a, 0.0f, 1.0f);
+            }
+            else t /= e;
+        }
+    }
+    vec c1 = vec(d1).mul(s).add(p1),
+        c2 = vec(d2).mul(t).add(p2);
+    return vec(c1).sub(c2).squaredlen();
+}
+
+static inline float trisegmentdistance(const vec &n, const vec &a, const vec &ab, const vec &ac, const vec &p, const vec &q)
+{
+    vec pq = vec(q).sub(p), b = vec(ab).add(a), c = vec(ac).add(a),
+        pa = vec(a).sub(p), pb = vec(b).sub(p), pc = vec(c).sub(p),
+        qa = vec(a).sub(q), qb = vec(b).sub(q), qc = vec(c).sub(q);
+    float dist;
+    if(pq.scalartriple(pa, pb) > 0) // P outside AB
+    {
+        dist = segmentdistance(a, b, p, pq);
+        if(pq.scalartriple(qc, qb) > 0) dist = min(dist, segmentdistance(b, c, p, pq)); // Q outside BC
+        else if(pq.scalartriple(qa, qc) > 0) dist = min(dist, segmentdistance(c, a, p, pq)); // Q outside CA
+        else if(pq.scalartriple(qb, qa) <= 0) dist = min(dist, (float)fabs(n.dot(qa))/n.squaredlen()); // Q inside AB
+    }
+    else if(pq.scalartriple(pb, pc) > 0) // P outside BC
+    {
+        dist = segmentdistance(b, c, p, pq);
+        if(pq.scalartriple(qa, qc) > 0) dist = min(dist, segmentdistance(c, a, p, pq)); // Q outside CA
+        else if(pq.scalartriple(qb, qa) > 0) dist = min(dist, segmentdistance(a, b, p, pq)); // Q outside AB
+        else if(pq.scalartriple(qc, qb) <= 0) dist = min(dist, (float)fabs(n.dot(qa))/n.squaredlen()); // Q inside BC
+    }
+    else if(pq.scalartriple(pc, pa) > 0) // P outside CA
+    {
+        dist = segmentdistance(c, a, p, pq);
+        if(pq.scalartriple(qb, qa) > 0) dist = min(dist, segmentdistance(a, b, p, pq)); // Q outside AB
+        else if(pq.scalartriple(qc, qb) > 0) dist = min(dist, segmentdistance(b, c, p, pq)); // Q outside BC
+        else if(pq.scalartriple(qa, qc) <= 0) dist = min(dist, (float)fabs(n.dot(qa))/n.squaredlen()); // Q inside CA
+    }
+    else if(pq.scalartriple(qb, qa) > 0) dist = min(segmentdistance(a, b, p, pq), n.dot(pa)); // Q outside AB
+    else if(pq.scalartriple(qc, qb) > 0) dist = min(segmentdistance(b, c, p, pq), n.dot(pa)); // Q outside BC
+    else if(pq.scalartriple(qa, qc) > 0) dist = min(segmentdistance(c, a, p, pq), n.dot(pa)); // Q outside CA
+    else dist = min(fabs(n.dot(pa)), fabs(n.dot(qa)))/n.squaredlen(); // both P and Q inside
+    return dist;
+}
+
+static inline bool triboxoverlap(const vec &radius, const vec &a, const vec &ab, const vec &ac)
+{
+    vec b = vec(ab).add(a), c = vec(ac).add(a),
+        bc = vec(ac).sub(ab);
+
+    #define TESTAXIS(v0, v1, v2, e, s, t) { \
+        float p = v0.s*v1.t - v0.t*v1.s, \
+              q = v2.s*e.t - v2.t*e.s, \
+              r = radius.s*fabs(e.t) + radius.t*fabs(e.s); \
+        if(p < q) { if(q < -r || p > r) return false; } \
+        else if(p < -r || q > r) return false; \
+    }
+
+    TESTAXIS(a, b, c, ab, z, y);
+    TESTAXIS(a, b, c, ab, x, z);
+    TESTAXIS(a, b, c, ab, y, x);
+
+    TESTAXIS(b, c, a, bc, z, y);
+    TESTAXIS(b, c, a, bc, x, z);
+    TESTAXIS(b, c, a, bc, y, x);
+
+    TESTAXIS(a, c, b, ac, y, z);
+    TESTAXIS(a, c, b, ac, z, x);
+    TESTAXIS(a, c, b, ac, x, y);
+
+    #define TESTFACE(w) { \
+        if(a.w < b.w) \
+        { \
+            if(b.w < c.w) { if(c.w < -radius.w || a.w > radius.w) return false; } \
+            else if(b.w < -radius.w || min(a.w, c.w) > radius.w) return false; \
+        } \
+        else if(a.w < c.w) { if(c.w < -radius.w || b.w > radius.w) return false; } \
+        else if(a.w < -radius.w || min(b.w, c.w) > radius.w) return false; \
+    }
+
+    TESTFACE(x);
+    TESTFACE(y);
+    TESTFACE(z);
+
+    return true;
+}
+
+template<>
+inline void BIH::tricollide<COLLIDE_ELLIPSE>(const tri &t, physent *d, const vec &dir, float cutoff, const vec &center, const vec &radius, const matrix3x3 &orient, float &dist, const vec &bo, const vec &br)
+{
+    if(&t >= noclip) return;
+
+    vec n = vec().cross(t.b, t.c), zr = vec(orient.c).mul(radius.z - radius.x);
+    if(trisegmentdistance(n, t.a, t.b, t.c, vec(center).sub(zr), vec(center).add(zr)) > radius.x*radius.x) return;
+
+    float nmag = 1/n.magnitude(),
+          pdist = (n.dot(vec(center).sub(t.a)) - fabs(n.dot(zr))) * nmag;
+    if(pdist <= dist) return;
+
+    collideinside = true;
+
+    n = orient.transform(n).mul(nmag);
+
+    if(!dir.iszero())
+    {
+        if(n.dot(dir) >= -cutoff) return;
+        if(d->type==ENT_PLAYER &&
+            pdist < (dir.z*n.z < 0 ?
+               2*radius.z*(d->zmargin/(d->aboveeye+d->eyeheight)-(dir.z < 0 ? 1/3.0f : 1/4.0f)) :
+               (dir.x*n.x < 0 || dir.y*n.y < 0 ? -radius.x : 0)))
+            return;
+    }
+
+    dist = pdist;
+    collidewall = n;
+}
+
+template<>
+inline void BIH::tricollide<COLLIDE_OBB>(const tri &t, physent *d, const vec &dir, float cutoff, const vec &center, const vec &radius, const matrix3x4 &orient, float &dist, const vec &bo, const vec &br)
+{
+    vec a = orient.transform(t.a), b = orient.transformnormal(t.b), c = orient.transformnormal(t.c);
+    if(!triboxoverlap(radius, a, b, c)) return;
+
+    vec n;
+    n.cross(b, c);
+    float pdist = -n.dot(a), r = radius.absdot(n);
+    if(fabs(pdist) > r) return;
+
+    float nmag = 1/n.magnitude();
+    pdist = (pdist - r)*nmag;
+    if(pdist <= dist) return;
+
+    collideinside = true;
+
+    n.mul(nmag);
+
+    if(!dir.iszero())
+    {
+        if(n.dot(dir) >= -cutoff) return;
+        if(d->type==ENT_PLAYER &&
+            pdist < (dir.z*n.z < 0 ?
+               2*radius.z*(d->zmargin/(d->aboveeye+d->eyeheight)-(dir.z < 0 ? 1/3.0f : 1/4.0f)) :
+               (dir.x*n.x < 0 || dir.y*n.y < 0 ? -max(radius.x, radius.y) : 0)))
+            return;
+    }
+
+    dist = pdist;
+    collidewall = n;
+}
+
+template<int C, class M>
+inline void BIH::collide(physent *d, const vec &dir, float cutoff, const vec &center, const vec &radius, const M &orient, float &dist, BIHNode *curnode, const vec &bo, const vec &br)
+{
+    BIHNode *stack[128];
+    int stacksize = 0;
+    vec bmin = vec(bo).sub(br), bmax = vec(bo).add(br);
+    for(;;)
+    {
+        int axis = curnode->axis();
+        const int nearidx = 0, faridx = nearidx^1;
+        float nearsplit = bmin[axis] - curnode->split[nearidx],
+              farsplit = curnode->split[faridx] - bmax[axis];
+
+        if(nearsplit > 0)
+        {
+            if(farsplit <= 0)
+            {
+                if(!curnode->isleaf(faridx))
+                {
+                    curnode = &nodes[curnode->childindex(faridx)];
+                    continue;
+                }
+                else tricollide<C>(tris[curnode->childindex(faridx)], d, dir, cutoff, center, radius, orient, dist, bo, br);
+            }
+        }
+        else if(curnode->isleaf(nearidx))
+        {
+            tricollide<C>(tris[curnode->childindex(nearidx)], d, dir, cutoff, center, radius, orient, dist, bo, br);
+            if(farsplit <= 0)
+            {
+                if(!curnode->isleaf(faridx))
+                {
+                    curnode = &nodes[curnode->childindex(faridx)];
+                    continue;
+                }
+                else tricollide<C>(tris[curnode->childindex(faridx)], d, dir, cutoff, center, radius, orient, dist, bo, br);
+            }
+        }
+        else
+        {
+            if(farsplit <= 0)
+            {
+                if(!curnode->isleaf(faridx))
+                {
+                    if(stacksize < int(sizeof(stack)/sizeof(stack[0])))
+                    {
+                        stack[stacksize++] = &nodes[curnode->childindex(faridx)];
+                    }
+                    else
+                    {
+                        collide<C>(d, dir, cutoff, center, radius, orient, dist, &nodes[curnode->childindex(nearidx)], bo, br);
+                        curnode = &nodes[curnode->childindex(faridx)];
+                        continue;
+                    }
+                }
+                else tricollide<C>(tris[curnode->childindex(faridx)], d, dir, cutoff, center, radius, orient, dist, bo, br);
+            }
+            curnode = &nodes[curnode->childindex(nearidx)];
+            continue;
+        }
+        if(stacksize <= 0) return;
+        curnode = stack[--stacksize];
+    }
+}
+
+bool BIH::ellipsecollide(physent *d, const vec &dir, float cutoff, const vec &o, int yaw, int pitch, int roll, float scale)
+{
+    if(!numnodes) return false;
+
+    vec center(d->o.x, d->o.y, d->o.z + 0.5f*(d->aboveeye - d->eyeheight)),
+        radius(d->radius, d->radius, 0.5f*(d->eyeheight + d->aboveeye));
+    center.sub(o);
+    if(scale != 1) { scale = 1/scale; center.mul(scale); radius.mul(scale); }
+
+    if(center.magnitude() >= radius.magnitude() + BIH::radius) return false;
+
+    matrix3x3 orient;
+    orient.identity();
+    if(yaw) orient.rotate_around_z(sincosmod360(yaw));
+    if(pitch) orient.rotate_around_x(sincosmod360(pitch));
+    if(roll) orient.rotate_around_y(sincosmod360(-roll));
+
+    vec bo = orient.transposedtransform(center), br = orient.abstransposedtransform(radius);
+    if(bo.x + br.x < bbmin.x || bo.y + br.y < bbmin.y || bo.z + br.z < bbmin.z ||
+       bo.x - br.x > bbmax.x || bo.y - br.y > bbmax.y || bo.z - br.z > bbmax.z)
+        return false;
+
+    float dist = -1e10f;
+    collide<COLLIDE_ELLIPSE>(d, dir, cutoff, bo, radius, orient, dist, &nodes[0], bo, br);
+    return dist > -1e9f;
+}
+
+bool BIH::boxcollide(physent *d, const vec &dir, float cutoff, const vec &o, int yaw, int pitch, int roll, float scale)
+{
+    if(!numnodes) return false;
+
+    vec center(d->o.x, d->o.y, d->o.z + 0.5f*(d->aboveeye - d->eyeheight)),
+        radius(d->xradius, d->yradius, 0.5f*(d->eyeheight + d->aboveeye));
+    center.sub(o);
+    if(scale != 1) { scale = 1/scale; center.mul(scale); radius.mul(scale); }
+
+    if(center.magnitude() >= radius.magnitude() + BIH::radius) return false;
+
+    matrix3x3 orient;
+    orient.identity();
+    if(yaw) orient.rotate_around_z(sincosmod360(yaw));
+    if(pitch) orient.rotate_around_x(sincosmod360(pitch));
+    if(roll) orient.rotate_around_y(sincosmod360(-roll));
+
+    vec bo = orient.transposedtransform(center), br = orient.abstransposedtransform(vec(d->radius, d->radius, radius.z));
+    if(bo.x + br.x < bbmin.x || bo.y + br.y < bbmin.y || bo.z + br.z < bbmin.z ||
+       bo.x - br.x > bbmax.x || bo.y - br.y > bbmax.y || bo.z - br.z > bbmax.z)
+        return false;
+
+    matrix3x3 dorient;
+    dorient.setyaw(d->yaw*RAD);
+    orient.mul(dorient);
+
+    float dist = -1e10f;
+    collide<COLLIDE_OBB>(d, dorient.transform(dir).rescale(1), cutoff, center, radius, matrix3x4(orient, dorient.transform(center).neg()), dist, &nodes[0], bo, br);
+    if(dist > -1e9f)
+    {
+        collidewall = dorient.transposedtransform(collidewall);
+        return true;
+    }
+    return false;
+}

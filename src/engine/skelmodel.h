@@ -228,7 +228,7 @@ struct skelmodel : animmodel
             }
         }
 
-        void gentris(Texture *tex, vector<BIH::tri> *out, const matrix3x4 &m)
+        void genBIH(Texture *tex, vector<BIH::tri> *out, const matrix3x4 &m)
         {
             loopj(numtris)
             {
@@ -249,13 +249,14 @@ struct skelmodel : animmodel
             }
         }
 
-        void genshadowmesh(vector<vec> &out, const matrix3x4 &m)
+        void genshadowmesh(vector<triangle> &out, const matrix3x4 &m)
         {
             loopj(numtris)
             {
-                out.add(m.transform(verts[tris[j].vert[0]].pos));
-                out.add(m.transform(verts[tris[j].vert[1]].pos));
-                out.add(m.transform(verts[tris[j].vert[2]].pos));
+                triangle &t = out.add();
+                t.a = m.transform(verts[tris[j].vert[0]].pos);
+                t.b = m.transform(verts[tris[j].vert[1]].pos);
+                t.c = m.transform(verts[tris[j].vert[2]].pos);
             }
         }
 
@@ -1315,13 +1316,13 @@ struct skelmodel : animmodel
                 return;
             }
 
-            static hashtable<const char *, skeleton *> skeletons;
+            static hashnameset<skeleton *> skeletons;
             if(skeletons.access(name)) skel = skeletons[name];
             else
             {
                 skel = new skeleton;
                 skel->name = newstring(name);
-                skeletons[skel->name] = skel;
+                skeletons.add(skel);
             }
             skel->users.add(this);
             skel->shared++;

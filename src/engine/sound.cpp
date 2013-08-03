@@ -241,7 +241,7 @@ void startmusic(char *name, char *cmd)
 
 COMMANDN(music, startmusic, "ss");
 
-static hashtable<const char *, soundsample> samples;
+static hashnameset<soundsample> samples;
 static vector<soundslot> gameslots, mapslots;
 static vector<soundconfig> gamesounds, mapsounds;
 

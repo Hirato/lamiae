@@ -77,7 +77,7 @@ struct vertmodel : animmodel
             }
         }
 
-        void gentris(Texture *tex, vector<BIH::tri> *out, const matrix3x4 &m)
+        void genBIH(Texture *tex, vector<BIH::tri> *out, const matrix3x4 &m)
         {
             loopj(numtris)
             {
@@ -98,13 +98,14 @@ struct vertmodel : animmodel
             }
         }
 
-        void genshadowmesh(vector<vec> &out, const matrix3x4 &m)
+        void genshadowmesh(vector<triangle> &out, const matrix3x4 &m)
         {
             loopj(numtris)
             {
-                out.add(m.transform(verts[tris[j].vert[0]].pos));
-                out.add(m.transform(verts[tris[j].vert[1]].pos));
-                out.add(m.transform(verts[tris[j].vert[2]].pos));
+                triangle &t = out.add();
+                t.a = m.transform(verts[tris[j].vert[0]].pos);
+                t.b = m.transform(verts[tris[j].vert[1]].pos);
+                t.c = m.transform(verts[tris[j].vert[2]].pos);
             }
         }
 

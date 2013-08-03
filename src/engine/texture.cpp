@@ -806,7 +806,8 @@ void create3dtexture(int tnum, int w, int h, int d, const void *pixels, int clam
     glTexImage3D_(target, 0, component, w, h, d, 0, format, type, pixels);
 }
 
-hashtable<char *, Texture> textures;
+
+hashnameset<Texture> textures;
 
 Texture *notexture = NULL; // used as default, ensured to be loaded
 

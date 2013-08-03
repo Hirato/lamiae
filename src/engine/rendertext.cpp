@@ -1,8 +1,6 @@
 #include "engine.h"
 
-static inline bool htcmp(const char *key, const font &f) { return !strcmp(key, f.name); }
-
-static hashset<font> fonts;
+static hashnameset<font> fonts;
 static font *fontdef = NULL;
 static int fontdeftex = 0;
 

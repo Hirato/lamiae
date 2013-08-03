@@ -6,9 +6,9 @@ Shader *Shader::lastshader = NULL;
 
 Shader *nullshader = NULL, *hudshader = NULL, *hudtextshader = NULL, *hudnotextureshader = NULL, *nocolorshader = NULL, *foggedshader = NULL, *foggednotextureshader = NULL, *ldrshader = NULL, *ldrnotextureshader = NULL, *stdworldshader = NULL, *rsmworldshader = NULL;
 
-static hashtable<const char *, GlobalShaderParamState> globalparams(256);
+static hashnameset<GlobalShaderParamState> globalparams(256);
 static hashtable<const char *, int> localparams(256);
-static hashtable<const char *, Shader> shaders(256);
+static hashnameset<Shader> shaders(256);
 static Shader *slotshader = NULL;
 static vector<SlotShaderParam> slotparams;
 static bool standardshader = false, forceshaders = true, loadedshaders = false;
@@ -1176,11 +1176,9 @@ static hashset<const char *> shaderparamnames(256);
 
 const char *getshaderparamname(const char *name)
 {
-    const char **exists = shaderparamnames.access(name);
-    if(exists) return *exists;
-    name = newstring(name);
-    shaderparamnames[name] = name;
-    return name;
+    const char *exists = shaderparamnames.find(name, NULL);
+    if(exists) return exists;
+    return shaderparamnames.add(newstring(name));
 }
 
 void addslotparam(const char *name, float x, float y, float z, float w)

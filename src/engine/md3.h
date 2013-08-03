@@ -177,9 +177,9 @@ struct md3 : vertmodel, vertloader<md3>
 
     bool loaddefaultparts()
     {
-        const char *pname = parentdir(loadname);
+        const char *pname = parentdir(name);
         part &mdl = addpart();
-        defformatstring(name1, "media/models/%s/tris.md3", loadname);
+        defformatstring(name1, "media/models/%s/tris.md3", name);
         mdl.meshes = sharemeshes(path(name1));
         if(!mdl.meshes)
         {
@@ -188,7 +188,7 @@ struct md3 : vertmodel, vertloader<md3>
             if(!mdl.meshes) return false;
         }
         Texture *tex, *masks;
-        loadskin(loadname, pname, tex, masks);
+        loadskin(name, pname, tex, masks);
         mdl.initskins(tex, masks);
         if(tex==notexture) conoutf("could not load model skin for %s", name1);
         return true;
@@ -196,9 +196,8 @@ struct md3 : vertmodel, vertloader<md3>
 
     bool load()
     {
-        if(loaded) return true;
-        formatstring(dir, "media/models/%s", loadname);
-        defformatstring(cfgname, "media/models/%s/md3.cfg", loadname);
+        formatstring(dir, "media/models/%s", name);
+        defformatstring(cfgname, "media/models/%s/md3.cfg", name);
 
         loading = this;
         identflags &= ~IDF_PERSIST;
@@ -216,7 +215,7 @@ struct md3 : vertmodel, vertloader<md3>
         }
         translate.y = -translate.y;
         loopv(parts) parts[i]->meshes->shared++;
-        return loaded = true;
+        return true;
     }
 };
 

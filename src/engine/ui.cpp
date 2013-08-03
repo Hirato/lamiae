@@ -2749,7 +2749,7 @@ namespace UI
             parsepixeloffset(cropx, tex->xs),
             parsepixeloffset(cropy, tex->ys),
             parsepixeloffset(cropw, tex->xs),
-            parsepixeloffset(croph, tex->ys), children));
+            parsepixeloffset(croph, tex->ys)),  children));
 
     ICOMMAND(uiborderedimage, "stfe", (char *texname, tagval *texborder, float *screenborder, uint *children),
         Texture *tex = textureload(texname, 3, true, false);
@@ -2952,14 +2952,10 @@ namespace UI
         updatelater.shrink(0);
 
         if(showchanges && !world->findname(TYPE_WINDOW, NULL, false))
-        {
-            if(identexists("showchanges")) execute("showchanges");
-        }
+            execident("showchanges");
 
-        if(mainmenu && !isconnected(true) && !world->children.length() && identexists("showmain"))
-        {
-            execute("showmain");
-        }
+        if(mainmenu && !isconnected(true) && !world->children.length())
+            execident("showmain");
 
         readyeditors();
         tooltip = NULL;

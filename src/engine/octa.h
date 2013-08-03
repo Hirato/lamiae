@@ -273,6 +273,7 @@ static inline uchar octaboxoverlap(const ivec &o, int size, const ivec &bbmin, c
 }
 
 #define loopoctabox(o, size, bbmin, bbmax) uchar possible = octaboxoverlap(o, size, bbmin, bbmax); loopi(8) if(possible&(1<<i))
+#define loopoctaboxsize(o, size, bborigin, bbsize) uchar possible = octaboxoverlap(o, size, bborigin, ivec(bborigin).add(bbsize)); loopi(8) if(possible&(1<<i))
 
 enum
 {

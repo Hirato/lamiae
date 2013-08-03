@@ -89,14 +89,17 @@ struct vec
     float dot2(const vec &o) const { return x*o.x + y*o.y; }
     float dot(const vec &o) const { return x*o.x + y*o.y + z*o.z; }
     float absdot(const vec &o) const { return fabs(x*o.x) + fabs(y*o.y) + fabs(z*o.z); }
+    float zdot(const vec &o) const { return z*o.z; }
     vec &mul(const vec &o)   { x *= o.x; y *= o.y; z *= o.z; return *this; }
     vec &mul(float f)        { x *= f; y *= f; z *= f; return *this; }
     vec &div(const vec &o)   { x /= o.x; y /= o.y; z /= o.z; return *this; }
     vec &div(float f)        { x /= f; y /= f; z /= f; return *this; }
     vec &add(const vec &o)   { x += o.x; y += o.y; z += o.z; return *this; }
     vec &add(float f)        { x += f; y += f; z += f; return *this; }
+    vec &addz(float f)       { z += f; return *this; }
     vec &sub(const vec &o)   { x -= o.x; y -= o.y; z -= o.z; return *this; }
     vec &sub(float f)        { x -= f; y -= f; z -= f; return *this; }
+    vec &subz(float f)       { z -= f; return *this; }
     vec &neg2()              { x = -x; y = -y; return *this; }
     vec &neg()               { x = -x; y = -y; z = -z; return *this; }
     vec &min(const vec &o)   { x = ::min(x, o.x); y = ::min(y, o.y); z = ::min(z, o.z); return *this; }
@@ -118,6 +121,7 @@ struct vec
     vec &cross(const A &a, const B &b) { x = a.y*b.z-a.z*b.y; y = a.z*b.x-a.x*b.z; z = a.x*b.y-a.y*b.x; return *this; }
     vec &cross(const vec &o, const vec &a, const vec &b) { return cross(vec(a).sub(o), vec(b).sub(o)); }
     float scalartriple(const vec &a, const vec &b) const { return x*(a.y*b.z-a.z*b.y) + y*(a.z*b.x-a.x*b.z) + z*(a.x*b.y-a.y*b.x); }
+    float zscalartriple(const vec &a, const vec &b) const { return z*(a.x*b.y-a.y*b.x); }
     vec &reflectz(float rz) { z = 2*rz - z; return *this; }
     vec &reflect(const vec &n) { float k = 2*dot(n); x -= k*n.x; y -= k*n.y; z -= k*n.z; return *this; }
     vec &project(const vec &n) { float k = dot(n); x -= k*n.x; y -= k*n.y; z -= k*n.z; return *this; }
@@ -615,6 +619,18 @@ struct matrix3x3
         a = vec(axis.x*axis.x*(1-ck)+ck, axis.x*axis.y*(1-ck)-axis.z*sk, axis.x*axis.z*(1-ck)+axis.y*sk);
         b = vec(axis.y*axis.x*(1-ck)+axis.z*sk, axis.y*axis.y*(1-ck)+ck, axis.y*axis.z*(1-ck)-axis.x*sk);
         c = vec(axis.x*axis.z*(1-ck)-axis.y*sk, axis.y*axis.z*(1-ck)+axis.x*sk, axis.z*axis.z*(1-ck)+ck);
+    }
+
+    void setyaw(float ck, float sk)
+    {
+        a = vec(ck, -sk, 0);
+        b = vec(sk, ck, 0);
+        c = vec(0, 0, 1);
+    }
+
+    void setyaw(float angle)
+    {
+        setyaw(cosf(angle), sinf(angle));
     }
 
     bool calcangleaxis(float &angle, vec &axis, float threshold = 1e-9f)
@@ -1558,7 +1574,7 @@ struct glmatrix2x2
 };
 
 extern bool raysphereintersect(const vec &center, float radius, const vec &o, const vec &ray, float &dist);
-extern bool rayrectintersect(const vec &b, const vec &s, const vec &o, const vec &ray, float &dist, int &orient);
+extern bool rayboxintersect(const vec &b, const vec &s, const vec &o, const vec &ray, float &dist, int &orient);
 extern bool linecylinderintersect(const vec &from, const vec &to, const vec &start, const vec &end, float radius, float &dist);
 
 extern const vec2 sincos360[];
