@@ -320,14 +320,11 @@ COMMAND(rdanimjoints, "i");
 // mapmodels
 
 vector<mapmodelinfo> mapmodels;
-static const char * const mmprefix = "mapmodel/";
-static const int mmprefixlen = strlen(mmprefix);
 
 void mapmodel(char *name)
 {
     mapmodelinfo &mmi = mapmodels.add();
-    if(name[0]) formatstring(mmi.name, "%s%s", mmprefix, name);
-    else mmi.name[0] = '\0';
+    copystring(mmi.name, name);
     mmi.m = mmi.collide = NULL;
 }
 
