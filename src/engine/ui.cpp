@@ -2824,7 +2824,7 @@ namespace UI
         {
             cursorx = clamp( cursorx + dx * cursorsensitivity / screenw, 0.f, 1.f);
             cursory = clamp( cursory + dy * cursorsensitivity / screenh, 0.f, 1.f);
-            if(cursormode() == 2)
+            if(editmode || cursormode() == 2)
             {
                 if(cursorx != 1 && cursorx != 0) dx = 0;
                 if(cursory != 1 && cursory != 0) dy = 0;
