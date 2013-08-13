@@ -292,6 +292,7 @@ static void text_color(char c, char *stack, int size, int &sp, bvec colour, int 
             //case 'X': nothing
             case 'Y': colour = bvec(255, 255,  96); break; //yellow
             case 'Z': colour = bvec(224, 192, 160); break; //zinnwaldite
+            default: gle::color(colour, a); return;
         }
         if(textbright != 100) colour.scale(textbright, 100);
         gle::color(colour, a);
