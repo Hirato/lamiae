@@ -2160,6 +2160,34 @@ namespace UI
         }
     };
 
+    struct Font : Object
+    {
+        const char *font;
+
+        Font(const char *f) : font(newstring(f)) {}
+        ~Font() { delete[] font; }
+
+        void layout()
+        {
+            pushfont();
+            setfont(font);
+
+            Object::layout();
+
+            popfont();
+        }
+
+        void draw(float sx, float sy)
+        {
+            pushfont();
+            setfont(font);
+
+            Object::draw(sx, sy);
+
+            popfont();
+        }
+    };
+
     // default size of text in terms of rows per screenful
     VARP(uitextrows, 1, 40, 200);
 
@@ -2764,6 +2792,9 @@ namespace UI
     ICOMMAND(uimodelpreview, "sisffe", (const char *model, int *anim, const char *attach, float *minw, float *minh, uint *children),
         addui(new ModelPreview(*minw, *minh, model, *anim, attach), children);
     )
+
+    ICOMMAND(uifont, "se", (const char *f, uint *children),
+             addui(new Font(f), children));
 
     ICOMMAND(uicolortext, "sffie", (char *text, float *scale, float *wrap, int *c, uint *children),
         addui(new Text(text, *scale <= 0 ? 1 : *scale, *wrap, Color(*c)), children));
