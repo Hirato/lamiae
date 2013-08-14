@@ -2890,7 +2890,7 @@ namespace UI
 
     bool keypress(int code, bool isdown)
     {
-        if(!hascursor()) return false;
+        if(!cursormode()) return false;
         switch(code)
         {
             case -5:
@@ -2907,6 +2907,8 @@ namespace UI
             }
             case -1:
             {
+                if(!hascursor()) return false;
+
                 if(isdown)
                 {
                     selected = world->select(cursorx*world->w, cursory*world->h);
@@ -2943,7 +2945,7 @@ namespace UI
     void renderbackground()
     {
         world = bgworld;
-        execute("showbackground");
+        execident("showbackground");
 
         Object *lasttooltip = tooltip;
         tooltip = NULL;
@@ -2960,7 +2962,7 @@ namespace UI
     void renderprogress()
     {
         world = ldworld;
-        execute("showloading");
+        execident("showloading");
 
         Object *lasttooltip = tooltip;
         tooltip = NULL;

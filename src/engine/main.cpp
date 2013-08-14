@@ -686,7 +686,7 @@ void checkinput()
                 {
                     int dx = event.motion.xrel, dy = event.motion.yrel;
                     checkmousemotion(dx, dy);
-                    if(!UI::movecursor(dx, dy) && !UI::hascursor())
+                    if(!UI::movecursor(dx, dy))
                         mousemove(dx, dy);
                     mousemoved = true;
                 }

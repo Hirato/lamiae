@@ -2339,9 +2339,11 @@ VAR(hidestats, 0, 0, 1);
 VAR(hidehud, 0, 0, 1);
 
 VARP(crosshairsize, 0, 15, 50);
-VARP(cursorsize, 0, 20, 50);
 VARP(crosshaircol, 0, 1, 1);
 VARP(crosshairimg, 0, 1, 1);
+
+SVARP(uicursor, "media/interface/cursor");
+VARP(cursorsize, 5, 20, 50);
 
 vector<Texture *> crosshairs;
 
@@ -2364,14 +2366,7 @@ void loadcrosshair(const char *name, int i)
         crosshairs[i] = textureload(game::defaultcrosshair(i) ? game::defaultcrosshair(i) : "media/crosshairs/default", 3, true);
 }
 
-void loadcrosshair_(const char *name, int *i)
-{
-    loadcrosshair(name, *i);
-}
-
-SVARP(guicursortex, "media/interface/cursor");
-
-COMMANDN(loadcrosshair, loadcrosshair_, "si");
+ICOMMAND(loadcrosshair, "si", (const char *name, int *i), loadcrosshair(name, *i));
 
 ICOMMAND(getcrosshair, "i", (int *i),
     const char *name = "media/crosshairs/default.png";
@@ -2393,12 +2388,9 @@ void writecrosshairs(stream *f)
 
 void drawcrosshair(int w, int h)
 {
-    bool windowhit =
-    UI::hascursor();
+    bool windowhit = UI::hascursor();
 
-    if(!windowhit && hidehud) return; //(hidehud || player->state==CS_SPECTATOR || player->state==CS_DEAD)) return;
-
-    if(!windowhit && UI::mainmenu) return;
+    if(!windowhit && hidehud && !UI::mainmenu) return;
 
     float r = 1, g = 1, b = 1, cx = 0.5f, cy = 0.5f, chsize;
     Texture *crosshair;
@@ -2407,9 +2399,7 @@ void drawcrosshair(int w, int h)
 
     if(windowhit)
     {
-        static Texture *cursor = NULL;
-        cursor = textureload(guicursortex, 3, true);
-        crosshair = cursor;
+        crosshair = textureload(uicursor, 3, true);
         chsize = cursorsize*w/900.0f;
     }
     else
