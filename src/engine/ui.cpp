@@ -79,13 +79,12 @@ namespace UI
     };
 
     static vector<delayedupdate> updatelater;
-    template<class T> static void updateval(char *var, T val, uint *onchange)
+    template<class T> static void updateval(ident *id, T val, uint *onchange)
     {
-        ident *id = writeident(var);
         updatelater.add().schedule(id, val);
         updatelater.add().schedule(onchange);
     }
-    ICOMMAND(updateval, "sse", (char *var, char *value, uint *onchange),
+    ICOMMAND(updateval, "rse", (ident *var, char *value, uint *onchange),
     {
         updateval(var, value, onchange);
     });
@@ -105,34 +104,6 @@ namespace UI
         }
     }
 #endif
-
-    static float getfval(char *var)
-    {
-        ident *id = readident(var);
-        if(!id) return 0;
-        switch(id->type)
-        {
-            case ID_VAR: return *id->storage.i;
-            case ID_FVAR: return *id->storage.f;
-            case ID_SVAR: return parsefloat(*id->storage.s);
-            case ID_ALIAS: return id->getfloat();
-            default: return 0;
-        }
-    }
-
-    static const char *getsval(char *var)
-    {
-        ident *id = readident(var);
-        if(!id) return "";
-        switch(id->type)
-        {
-            case ID_VAR: return intstr(*id->storage.i);
-            case ID_FVAR: return floatstr(*id->storage.f);
-            case ID_SVAR: return *id->storage.s;
-            case ID_ALIAS: return id->getstr();
-            default: return "";
-        }
-    }
 
     struct Object;
 
@@ -830,7 +801,7 @@ namespace UI
         ~Conditional() { freecode(cond); }
 
         int forks() const { return 2; }
-        int choosefork() const { return execute(cond) ? 0 : 1; }
+        int choosefork() const { return executebool(cond) ? 0 : 1; }
     };
 
     struct Button : Object
@@ -1235,9 +1206,21 @@ namespace UI
         }
     };
 
+    static float getfval(ident *id)
+    {
+        switch(id->type)
+        {
+            case ID_VAR: return *id->storage.i;
+            case ID_FVAR: return *id->storage.f;
+            case ID_SVAR: return parsefloat(*id->storage.s);
+            case ID_ALIAS: return id->getfloat();
+            default: return 0;
+        }
+    }
+
     struct Slider : Object
     {
-        char *var;
+        ident *id;
         float vmin, vmax;
         uint *onchange;
         float arrowsize;
@@ -1247,34 +1230,30 @@ namespace UI
         int laststep;
         int arrowdir;
 
-        Slider(char *varname, float min = 0, float max = 0, uint *onchange = NULL, float arrowsize = 0, float stepsize = 1, int steptime = 1000) :
-        var(newstring(varname)), vmin(min), vmax(max), onchange(onchange), arrowsize(arrowsize), stepsize(stepsize), steptime(steptime), laststep(0), arrowdir(0)
+        Slider(ident *id, float min = 0, float max = 0, uint *onchange = NULL, float arrowsize = 0, float stepsize = 1, int steptime = 1000) :
+        id(id), vmin(min), vmax(max), onchange(onchange), arrowsize(arrowsize), stepsize(stepsize), steptime(steptime), laststep(0), arrowdir(0)
         {
             keepcode(onchange);
-            ident *id = readident(varname);
-            if(id && vmin == 0 && vmax == 0)
+            if(vmin == 0 && vmax == 0) switch(id->type)
             {
-                if(id->type == ID_VAR)
-                {
-                    vmin = id->minval;
-                    vmax = id->maxval;
-                }
-                else if(id->type == ID_FVAR)
-                {
-                    vmin = id->minvalf;
-                    vmax = id->maxvalf;
-                }
+                case ID_VAR:
+                    vmin = id->minval; vmax = id->maxval;
+                    break;
+                case ID_FVAR:
+                    vmin = id->minvalf; vmax = id->maxvalf;
+                    break;
+
             }
         }
-        ~Slider() { freecode(onchange); delete[] var; }
+        ~Slider() { freecode(onchange); }
 
         void dostep(int n)
         {
             int maxstep = fabs(vmax - vmin) / stepsize;
-            int curstep = (getfval(var) - min(vmin, vmax)) / stepsize;
+            int curstep = (getfval(id) - min(vmin, vmax)) / stepsize;
             int newstep = clamp(curstep + n, 0, maxstep);
 
-            updateval(var, min(vmax, vmin) + newstep * stepsize, onchange);
+            updateval(id, min(vmax, vmin) + newstep * stepsize, onchange);
         }
 
         void setstep(int n)
@@ -1282,7 +1261,7 @@ namespace UI
             int steps = fabs(vmax - vmin) / stepsize;
             int newstep = clamp(n, 0, steps);
 
-            updateval(var, min(vmax, vmin) + newstep * stepsize, onchange);
+            updateval(id, min(vmax, vmin) + newstep * stepsize, onchange);
         }
 
         bool hoverkey(int code, bool isdown)
@@ -1434,7 +1413,7 @@ namespace UI
 
     struct HorizontalSlider : Slider
     {
-        HorizontalSlider(char *varname, float vmin = 0, float vmax = 0, uint *onchange = NULL, float arrowsize = 0, float stepsize = 1, int steptime = 1000) : Slider(varname, vmin, vmax, onchange, arrowsize, stepsize, steptime) {}
+        HorizontalSlider(ident *id, float vmin = 0, float vmax = 0, uint *onchange = NULL, float arrowsize = 0, float stepsize = 1, int steptime = 1000) : Slider(id, vmin, vmax, onchange, arrowsize, stepsize, steptime) {}
 
         int choosedir(float cx, float cy) const
         {
@@ -1462,7 +1441,7 @@ namespace UI
             if(!button) return;
 
             int steps = fabs(vmax - vmin) / stepsize;
-            int curstep = (getfval(var) - min(vmax, vmin)) / stepsize;
+            int curstep = (getfval(id) - min(vmax, vmin)) / stepsize;
             float width = max(w - 2  *arrowsize, 0.0f);
 
             button->w = max(button->w, width / steps);
@@ -1480,7 +1459,7 @@ namespace UI
 
     struct VerticalSlider : Slider
     {
-        VerticalSlider(char *varname, float vmin = 0, float vmax = 0, uint *onchange = NULL, float arrowsize = 0, float stepsize = 1, int steptime = 1000) : Slider(varname, vmin, vmax, onchange, arrowsize, stepsize, steptime) {}
+        VerticalSlider(ident *id, float vmin = 0, float vmax = 0, uint *onchange = NULL, float arrowsize = 0, float stepsize = 1, int steptime = 1000) : Slider(id, vmin, vmax, onchange, arrowsize, stepsize, steptime) {}
 
         int choosedir(float cx, float cy) const
         {
@@ -1507,7 +1486,7 @@ namespace UI
             if(!button) return;
 
             int steps = (max(vmax, vmin) - min(vmax, vmin)) / stepsize + 1;
-            int curstep = (getfval(var) - min(vmax, vmin)) / stepsize;
+            int curstep = (getfval(id) - min(vmax, vmin)) / stepsize;
             float height = max(h - 2  *arrowsize, 0.0f);
 
             button->h = max(button->h, height / steps);
@@ -2247,8 +2226,10 @@ namespace UI
         float wrap;
         Color color;
 
+        tagval result;
+
         EvalText(uint *cmd, float scale = 1, float wrap = -1, const Color &color = Color(255, 255, 255)) : cmd(cmd), scale(scale), wrap(wrap), color(color) { keepcode(cmd); }
-        ~EvalText() { freecode(cmd); }
+        ~EvalText() { freecode(cmd); result.cleanup(); }
 
         Object *target(float cx, float cy)
         {
@@ -2260,9 +2241,6 @@ namespace UI
 
         void draw(float sx, float sy)
         {
-            tagval result;
-            executeret(cmd, result);
-
             float k = drawscale();
             pushhudmatrix();
             hudmatrix.scale(k, k, 1);
@@ -2274,25 +2252,19 @@ namespace UI
             gle::colorf(1, 1, 1);
 
             Object::draw(sx, sy);
-            result.cleanup();
         }
 
         void layout()
         {
-            tagval result;
             executeret(cmd, result);
             Object::layout();
 
             int tw, th;
             float k = drawscale();
             text_bounds(result.getstr(), tw, th, wrap <= 0 ? -1 : wrap/k);
-            if(wrap <= 0)
-                w = max(w, tw*k);
-            else
-                w = max(w, min(wrap, tw*k));
+            if(wrap <= 0) w = max(w, tw*k);
+            else w = max(w, min(wrap, tw*k));
             h = max(h, th*k);
-
-            result.cleanup();
         }
     };
 
@@ -2440,17 +2412,29 @@ namespace UI
         const int gettype() const { return TYPE_TEXTEDITOR; }
     };
 
+    static const char *getsval(ident *id, const char *val = "")
+    {
+        switch(id->type)
+        {
+            case ID_VAR: val = intstr(*id->storage.i); break;
+            case ID_FVAR: val = floatstr(*id->storage.f); break;
+            case ID_SVAR: val = *id->storage.s; break;
+            case ID_ALIAS: val = id->getstr(); break;
+        }
+        return val;
+    }
+
     struct Field : TextEditor
     {
-        char *var;
+        ident *id;
         uint *onchange;
 
-        Field(const char *var, int length, uint *onchange, float scale = 1, const char *keyfilter = NULL) : TextEditor(var, length, 0, scale, NULL, EDITORFOCUSED, keyfilter), var(newstring(var)), onchange(onchange) { keepcode(onchange); }
-        ~Field() { delete[] var; freecode(onchange); }
+        Field(ident *id, int length, uint *onchange, float scale = 1, const char *keyfilter = NULL) : TextEditor(id->name, length, 0, scale, NULL, EDITORFOCUSED, keyfilter), id(id), onchange(onchange) { keepcode(onchange); }
+        ~Field() { freecode(onchange); }
 
         void commit()
         {
-            updateval(var, edit->lines[0].text, onchange);
+            updateval(id, edit->lines[0].text, onchange);
         }
 
         bool hoverkey(int code, bool isdown)
@@ -2460,7 +2444,7 @@ namespace UI
 
         void resetvalue()
         {
-            const char *str = getsval(var);
+            const char *str = getsval(id);
             if(strcmp(edit->lines[0].text, str)) edit->clear(str);
         }
 
@@ -2712,10 +2696,10 @@ namespace UI
     ICOMMAND(uiscrollbutton, "e", (uint *children),
         addui(new ScrollButton, children));
 
-    ICOMMAND(uihslider, "sffeffie", (char *var, float *vmin, float *vmax, uint *onchange, float *arrowsize, float *stepsize, int *steptime, uint *children),
+    ICOMMAND(uihslider, "rffeffie", (ident *var, float *vmin, float *vmax, uint *onchange, float *arrowsize, float *stepsize, int *steptime, uint *children),
         addui(new HorizontalSlider(var, *vmin, *vmax, onchange, *arrowsize, *stepsize ? *stepsize : 1, *steptime), children));
 
-    ICOMMAND(uivslider, "sffeffie", (char *var, float *vmin, float *vmax, uint *onchange, float *arrowsize, float *stepsize, int *steptime, uint *children),
+    ICOMMAND(uivslider, "rffeffie", (ident *var, float *vmin, float *vmax, uint *onchange, float *arrowsize, float *stepsize, int *steptime, uint *children),
         addui(new VerticalSlider(var, *vmin, *vmax, onchange, *arrowsize, *stepsize ? *stepsize : 1, *steptime), children));
 
     ICOMMAND(uisliderbutton, "e", (uint *children),
@@ -2811,7 +2795,7 @@ namespace UI
     ICOMMAND(uitexteditor, "siifsise", (char *name, int *length, int *height, float *scale, char *initval, int *keep, char *filter, uint *children),
         addui(new TextEditor(name, *length, *height, *scale, initval, *keep ? EDITORFOREVER : EDITORUSED, filter[0] ? filter : NULL), children));
 
-    ICOMMAND(uifield, "siefse", (char *var, int *length, uint *onchange, float *scale, char *filter, uint *children),
+    ICOMMAND(uifield, "riefse", (ident *var, int *length, uint *onchange, float *scale, char *filter, uint *children),
         addui(new Field(var, *length, onchange, *scale, filter[0] ? filter : NULL), children));
 
     ICOMMAND(uivgradient, "iiffe", (int *c, int *c2, float *minw, float *minh, uint *children),
