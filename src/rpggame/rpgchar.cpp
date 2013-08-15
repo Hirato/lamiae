@@ -455,8 +455,6 @@ void rpgchar::doai(equipment *eleft, equipment *eright, equipment *quiver)
 	}
 }
 
-status_generic painmat = status_generic(STATUS_HEALTH, -1, -1, 25, 0);
-VARFR(painmat_strength, -1000, 25, 1000, painmat.strength = painmat_strength;);
 VARP(r_aiperiod, 0, 100, 1000);
 
 void rpgchar::update()
@@ -473,10 +471,6 @@ void rpgchar::update()
 		mana =   min<float>(base.getmaxmp(),   mana + (base.getmpregen() * curtime / 1000.0f));
 		health = min<float>(base.getmaxhp(), health + (base.gethpregen() * curtime / 1000.0f));
 
-		static status_generic painmat(STATUS_HEALTH, -1, -1, -25, 0);
-		int mat = lookupmaterial(o);
-		if(mat & MAT_PAIN)
-			painmat.update(this, NULL, 0, 0);
 
 		if(health < 0)
 			die(NULL);

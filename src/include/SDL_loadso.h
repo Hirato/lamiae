@@ -24,7 +24,7 @@
  *
  *  System dependent library loading routines
  *
- *  Some things to keep in mind:                                        
+ *  Some things to keep in mind:
  *  \li These functions only work on C function names.  Other languages may
  *      have name mangling and intrinsic language support that varies from
  *      compiler to compiler.

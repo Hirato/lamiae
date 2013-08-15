@@ -181,6 +181,16 @@ template<size_t N> inline void formatstring(char (&d)[N], const char *fmt, ...)
     va_end(v);
 }
 
+template<size_t N> inline void concformatstring(char (&d)[N], const char *fmt, ...) PRINTFARGS(2, 3);
+template<size_t N> inline void concformatstring(char (&d)[N], const char *fmt, ...)
+{
+    va_list v;
+    va_start(v, fmt);
+    int len = strlen(d);
+    vformatstring(d + len, fmt, v, int(N) - len);
+    va_end(v);
+}
+
 extern char *tempformatstring(const char *fmt, ...) PRINTFARGS(1, 2);
 
 #define defformatstring(d,...) string d; formatstring(d, __VA_ARGS__)
@@ -333,8 +343,19 @@ struct packetbuf : ucharbuf
 template<class T>
 static inline float heapscore(const T &n) { return n; }
 
-template<class T>
-static inline bool compareless(const T &x, const T &y) { return x < y; }
+struct sortless
+{
+    template<class T> bool operator()(const T &x, const T &y) const { return x < y; }
+    bool operator()(char *x, char *y) const { return strcmp(x, y) < 0; }
+    bool operator()(const char *x, const char *y) const { return strcmp(x, y) < 0; }
+};
+
+struct sortnameless
+{
+    template<class T> bool operator()(const T &x, const T &y) const { return sortless()(x.name, y.name); }
+    template<class T> bool operator()(T *x, T *y) const { return sortless()(x->name, y->name); }
+    template<class T> bool operator()(const T *x, const T *y) const { return sortless()(x->name, y->name); }
+};
 
 template<class T, class F>
 static inline void insertionsort(T *start, T *end, F fun)
@@ -363,7 +384,7 @@ static inline void insertionsort(T *buf, int n, F fun)
 template<class T>
 static inline void insertionsort(T *buf, int n)
 {
-    insertionsort(buf, buf+n, compareless<T>);
+    insertionsort(buf, buf+n, sortless());
 }
 
 template<class T, class F>
@@ -417,7 +438,7 @@ static inline void quicksort(T *buf, int n, F fun)
 template<class T>
 static inline void quicksort(T *buf, int n)
 {
-    quicksort(buf, buf+n, compareless<T>);
+    quicksort(buf, buf+n, sortless());
 }
 
 template<class T> struct isclass
@@ -571,8 +592,8 @@ template <class T> struct vector
     void shrink(int i) { ASSERT(i<=ulen); if(isclass<T>::no) ulen = i; else while(ulen>i) drop(); }
     void setsize(int i) { ASSERT(i<=ulen); ulen = i; }
 
-    void deletecontents() { while(!empty()) delete   pop(); }
-    void deletearrays() { while(!empty()) delete[] pop(); }
+    void deletecontents(int n = 0) { while(ulen > n) delete pop(); }
+    void deletearrays(int n = 0) { while(ulen > n) delete[] pop(); }
 
     T *getbuf() { return buf; }
     const T *getbuf() const { return buf; }
@@ -584,7 +605,8 @@ template <class T> struct vector
         quicksort(&buf[i], n < 0 ? ulen-i : n, fun);
     }
 
-    void sort() { sort(compareless<T>); }
+    void sort() { sort(sortless()); }
+    void sortname() { sort(sortnameless()); }
 
     void growbuf(int sz)
     {
@@ -758,6 +780,28 @@ template <class T> struct vector
         loopi(ulen) if(htcmp(key, buf[i])) return i;
         return -1;
     }
+
+    #define UNIQUE(overwrite, cleanup) \
+        for(int i = 1; i < ulen; i++) if(htcmp(buf[i-1], buf[i])) \
+        { \
+            int n = i; \
+            while(++i < ulen) if(!htcmp(buf[n-1], buf[i])) { overwrite; n++; } \
+            cleanup; \
+            break; \
+        }
+    void unique() // contents must be initially sorted
+    {
+        UNIQUE(buf[n] = buf[i], setsize(n));
+    }
+    void uniquedeletecontents()
+    {
+        UNIQUE(swap(buf[n], buf[i]), deletecontents(n));
+    }
+    void uniquedeletearrays()
+    {
+        UNIQUE(swap(buf[n], buf[i]), deletearrays(n));
+    }
+    #undef UNIQUE
 };
 
 template <class T> struct smallvector
@@ -916,6 +960,28 @@ template <class T> struct smallvector
         loopi(len) if(htcmp(key, buf[i])) return i;
         return -1;
     }
+
+    #define UNIQUE(overwrite, cleanup) \
+        for(int i = 1; i < len; i++) if(htcmp(buf[i-1], buf[i])) \
+        { \
+            int n = i; \
+            while(++i < len) if(!htcmp(buf[n-1], buf[i])) { overwrite; n++; } \
+            cleanup; \
+            break; \
+        }
+    void unique() // contents must be initially sorted
+    {
+        UNIQUE(buf[n] = buf[i], setsize(n));
+    }
+    void uniquedeletecontents()
+    {
+        UNIQUE(swap(buf[n], buf[i]), deletecontents(n));
+    }
+    void uniquedeletearrays()
+    {
+        UNIQUE(swap(buf[n], buf[i]), deletearrays(n));
+    }
+    #undef UNIQUE
 };
 
 template<class H, class E, class K, class T> struct hashbase
@@ -1155,45 +1221,6 @@ struct unionfind
     }
 };
 
-template <class T, int SIZE> struct ringbuf
-{
-    int index, len;
-    T data[SIZE];
-
-    ringbuf() { clear(); }
-
-    void clear()
-    {
-        index = len = 0;
-    }
-
-    bool empty() const { return !len; }
-    int length() const { return len; }
-
-    T &add()
-    {
-        T &t = data[index];
-        index++;
-        if(index >= SIZE) index -= SIZE;
-        if(len < SIZE) len++;
-        return t;
-    }
-
-    T &add(const T &e) { return add() = e; }
-
-    T &operator[](int i)
-    {
-        i += index - len;
-        return data[i < 0 ? i + SIZE : i%SIZE];
-    }
-
-    const T &operator[](int i) const
-    {
-        i += index - len;
-        return data[i < 0 ? i + SIZE : i%SIZE];
-    }
-};
-
 template <class T, int SIZE> struct queue
 {
     int head, tail, len;
@@ -1207,29 +1234,50 @@ template <class T, int SIZE> struct queue
     bool empty() const { return !len; }
     bool full() const { return len == SIZE; }
 
+    bool inrange(size_t i) const { return i<size_t(len); }
+    bool inrange(int i) const { return i>=0 && i<len; }
+
     T &added() { return data[tail > 0 ? tail-1 : SIZE-1]; }
     T &added(int offset) { return data[tail-offset > 0 ? tail-offset-1 : tail-offset-1 + SIZE]; }
     T &adding() { return data[tail]; }
     T &adding(int offset) { return data[tail+offset >= SIZE ? tail+offset - SIZE : tail+offset]; }
     T &add()
     {
-        ASSERT(len < SIZE);
         T &t = data[tail];
-        tail = (tail + 1)%SIZE;
-        len++;
+        tail++;
+        if(tail >= SIZE) tail -= SIZE;
+        if(len < SIZE) len++;
         return t;
+    }
+    T &add(const T &e) { return add() = e; }
+
+    T &pop()
+    {
+        tail--;
+        if(tail < 0) tail += SIZE;
+        len--;
+        return data[tail];
     }
 
     T &removing() { return data[head]; }
     T &removing(int offset) { return data[head+offset >= SIZE ? head+offset - SIZE : head+offset]; }
     T &remove()
     {
-        ASSERT(len > 0);
         T &t = data[head];
-        head = (head + 1)%SIZE;
+        head++;
+        if(head >= SIZE) head -= SIZE;
         len--;
         return t;
     }
+
+    T &operator[](int offset) { return removing(offset); }
+    const T &operator[](int offset) const { return removing(offset); }
+};
+
+template <class T, int SIZE> struct reversequeue : queue<T, SIZE>
+{
+    T &operator[](int offset) { return queue<T, SIZE>::added(offset); }
+    const T &operator[](int offset) const { return queue<T, SIZE>::added(offset); }
 };
 
 inline char *newstring(size_t l)                { return new char[l+1]; }

@@ -32,7 +32,7 @@ enum // cube empty-space materials
     MAT_GAMECLIP = 3 << MATF_CLIP_SHIFT,  // game specific clip material
 
     MAT_DEATH    = 1 << MATF_FLAG_SHIFT,  // force player suicide
-    MAT_PAIN     = 2 << MATF_FLAG_SHIFT,  // damage player when submerged
+    MAT_NOGI     = 2 << MATF_FLAG_SHIFT,  // disable global illumination
     MAT_ALPHA    = 4 << MATF_FLAG_SHIFT   // alpha blended
 };
 
@@ -510,7 +510,13 @@ extern void *genchallenge(void *pubkey, const void *seed, int seedlen, vector<ch
 extern void freechallenge(void *answer);
 extern bool checkchallenge(const char *answerstr, void *correct);
 
-// 3dgui
+// ovr
+namespace ovr
+{
+    extern void reset();
+}
+
+// UI
 struct Texture;
 struct VSlot;
 extern Texture *textureload(const char *name, int clamp = 0, bool mipit = true, bool msg = true);
@@ -519,12 +525,12 @@ extern bool settexture(Texture *&tex);
 extern vector<int> entgroup;
 extern int efocus, enthover, entorient;
 
-//rendergl
-
-#define RENDERPUSHX			8.0f
-#define RENDERPUSHZ			0.1f
-
-extern void renderdir(vec &o, float yaw, float pitch, bool nf = true);
-extern void renderradius(vec &o, float height, float radius, bool nf = true);
-
-//water
+namespace UI
+{
+    extern int numui();
+    extern void hideallui();
+    extern bool hideui(const char *name);
+    extern bool uivisible(const char *name);
+    extern bool toggleui(const char *name);
+    extern void holdui(const char *name, bool on);
+};

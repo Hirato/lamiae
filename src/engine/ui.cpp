@@ -2170,6 +2170,7 @@ namespace UI
 
     // default size of text in terms of rows per screenful
     VARP(uitextrows, 1, 40, 200);
+    FVAR(uitextscale, 1, 0, 0);
 
     struct Text : Object
     {
@@ -2188,7 +2189,7 @@ namespace UI
             return o ? o : this;
         }
 
-        float drawscale() const { return scale / (FONTH * uitextrows); }
+        float drawscale() const { return scale / FONTH * uitextscale; }
 
         void draw(float sx, float sy)
         {
@@ -2238,7 +2239,7 @@ namespace UI
             return o ? o : this;
         }
 
-        float drawscale() const { return scale / (FONTH * uitextrows); }
+        float drawscale() const { return scale / FONTH * uitextscale; }
 
         void draw(float sx, float sy)
         {
@@ -2269,6 +2270,28 @@ namespace UI
         }
     };
 
+    FVAR(uicontextscale, 1, 0, 0);
+
+    struct Console : Filler
+    {
+        Console(float minw = 0, float minh = 0) : Filler(minw, minh) {}
+
+        float drawscale() const { return uicontextscale / FONTH; }
+
+        void draw(float sx, float sy)
+        {
+            Object::draw(sx, sy);
+
+            float k = drawscale();
+            pushhudmatrix();
+            hudmatrix.translate(sx, sy, 0);
+            hudmatrix.scale(k, k, 1);
+            flushhudmatrix();
+            renderfullconsole(w/k, h/k);
+            pophudmatrix();
+        }
+    };
+
     struct TextEditor;
     TextEditor *textediting;
     int refreshrepeat = 0;
@@ -2292,6 +2315,8 @@ namespace UI
             refreshrepeat++;
         }
 
+        float drawscale() const { return scale / FONTH * uitextscale; }
+
         Object *target(float cx, float cy)
         {
             Object *o = Object::target(cx, cy);
@@ -2314,8 +2339,9 @@ namespace UI
         {
             if(isselected(this) && isfocused(this))
             {
-                bool dragged = max(fabs(cx - offsetx), fabs(cy - offsety)) > (FONTH/8.0f)*scale/float(FONTH*uitextrows);
-                edit->hit(int(floor(cx*(FONTH*uitextrows)/scale - FONTW/2)), int(floor(cy*(FONTH*uitextrows)/scale)), dragged);
+                float k = drawscale();
+                bool dragged = max(fabs(cx - offsetx), fabs(cy - offsety)) > (FONTH/8.0f)*k;
+                edit->hit(int(floor(cx/k - FONTW/2)), int(floor(cy/k)), dragged);
             }
         }
 
@@ -2392,15 +2418,15 @@ namespace UI
                 text_bounds(edit->lines[0].text, temp, edit->pixelheight, edit->pixelwidth); //only single line editors can have variable height
             }
 
-            w = max(w, (edit->pixelwidth + FONTW)*scale/float(FONTH*uitextrows));
-            h = max(h, edit->pixelheight*scale/float(FONTH*uitextrows));
+            w = max(w, (edit->pixelwidth + FONTW) * drawscale());
+            h = max(h, edit->pixelheight * drawscale());
         }
 
         void draw(float sx, float sy)
         {
             pushhudmatrix();
             hudmatrix.translate(sx, sy, 0);
-            hudmatrix.scale(scale/(FONTH*uitextrows), scale/(FONTH*uitextrows), 1);
+            hudmatrix.scale(drawscale(), drawscale(), 1);
             flushhudmatrix();
 
             edit->draw(FONTW/2, 0, 0xFFFFFF, isfocused(this));
@@ -2597,7 +2623,7 @@ namespace UI
         return n;
     }
 
-    void clearuis()
+    void hideallui()
     {
         loopv(world->children)
         {
@@ -2610,9 +2636,40 @@ namespace UI
         }
     }
 
-    bool activeui(const char *name)
+    bool uivisible(const char *name)
     {
         return world->findname(TYPE_WINDOW, name, false);
+    }
+
+    bool toggleui(const char *name)
+    {
+        Window *w = (Window *) world->findname(TYPE_WINDOW, name, false);
+        if(w)
+        {
+            w->hidden();
+            world->remove(w);
+            return false;
+        }
+        defformatstring(cmd, "show%s", name);
+        execident(cmd);
+        return true;
+    }
+
+    void holdui(const char *name, bool on)
+    {
+        Window *w = (Window *) world->findname(TYPE_WINDOW, name, false);
+        if(on)
+        {
+            if(w) return;
+            defformatstring(cmd, "show%s", name);
+            execident(cmd);
+        }
+        else if(w)
+        {
+            w->hidden();
+            world->remove(w);
+        }
+
     }
 
     void addui(Object *o, uint *children)
@@ -2632,6 +2689,11 @@ namespace UI
         o->layout();
         if(!build.length()) world->layout();
     }
+
+    COMMAND(hideallui, "");
+    ICOMMAND(uivisible, "s", (const char *name), intret(uivisible(name)));
+    ICOMMAND(holdui, "sD", (const char *name, int *down), holdui(name, *down != 0));
+    ICOMMAND(toggleui, "s", (const char *name), intret(toggleui(name)));
 
     static inline float parsepixeloffset(const tagval *t, int size)
     {
@@ -2794,10 +2856,13 @@ namespace UI
         addui(new EvalText(cmd, *scale <= 0 ? 1 : *scale, *wrap), children));
 
     ICOMMAND(uitexteditor, "siifsise", (char *name, int *length, int *height, float *scale, char *initval, int *keep, char *filter, uint *children),
-        addui(new TextEditor(name, *length, *height, *scale, initval, *keep ? EDITORFOREVER : EDITORUSED, filter[0] ? filter : NULL), children));
+        addui(new TextEditor(name, *length, *height, *scale <= 0 ? 1 : *scale, initval, *keep ? EDITORFOREVER : EDITORUSED, filter[0] ? filter : NULL), children));
 
     ICOMMAND(uifield, "riefse", (ident *var, int *length, uint *onchange, float *scale, char *filter, uint *children),
-        addui(new Field(var, *length, onchange, *scale, filter[0] ? filter : NULL), children));
+        addui(new Field(var, *length, onchange, *scale <= 0 ? 1 : *scale, filter[0] ? filter : NULL), children));
+
+    ICOMMAND(uiconsole, "ffe", (float *minw, float *minh, uint *children),
+        addui(new Console(*minw, *minh), children));
 
     ICOMMAND(uivgradient, "iiffe", (int *c, int *c2, float *minw, float *minh, uint *children),
         addui(new Gradient(Gradient::SOLID, Gradient::VERTICAL, Color(*c), Color(*c2), *minw, *minh), children));
@@ -2913,7 +2978,7 @@ namespace UI
     {
         if(mainmenu && (isconnected() || haslocalclients()))
         {
-            clearuis();
+            hideallui();
             mainmenu = 0;
         }
     }
@@ -2963,6 +3028,16 @@ namespace UI
 
     int showchanges = 0;
 
+    void calctextscale()
+    {
+        uitextscale = 1.0f/uitextrows;
+
+        int tw = hudw, th = hudh;
+        if(forceaspect) tw = int(ceil(th*forceaspect));
+        gettextres(tw, th);
+        uicontextscale = (FONTH*conscale)/th;
+    }
+
     void update()
     {
         loopv(updatelater)
@@ -2977,6 +3052,7 @@ namespace UI
 
         readyeditors();
         tooltip = NULL;
+        calctextscale();
         //world->layout();
 
         if(hascursor())
@@ -3107,33 +3183,3 @@ ICOMMAND(loopchanges, "se", (char *var, uint *body),
 {
     loopv(needsapply) { alias(var, needsapply[i].desc); execute(body); }
 });
-
-HVARP(fullconcolor, 0, 0x4F4F4F, 0xFFFFFF);
-FVARP(fullconblend, 0, .8, 1);
-
-void consolebox(float x1, float y1, float x2, float y2)
-{
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    pushhudmatrix();
-    hudmatrix.translate(x1, y1, 0);
-    flushhudmatrix();
-
-    hudnotextureshader->set();
-
-    float r = ((fullconcolor >> 16) & 0xFF) / 255.f,
-        g = ((fullconcolor >> 8) & 0xFF) / 255.f,
-        b = (fullconcolor & 0xFF) / 255.f;
-    gle::colorf(r, g, b, fullconblend);
-    gle::defvertex(2);
-
-    gle::begin(GL_TRIANGLE_STRIP);
-    gle::attribf(x1, y1);
-    gle::attribf(x2, y1);
-    gle::attribf(x1, y2);
-    gle::attribf(x2, y2);
-    gle::end();
-
-    pophudmatrix();
-    hudshader->set();
-}

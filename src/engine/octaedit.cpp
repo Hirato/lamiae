@@ -87,7 +87,7 @@ ICOMMAND(moving, "b", (int *n),
 {
     if(*n >= 0)
     {
-        if(!*n || (moving<=1 && !pointinsel(sel, cur.tovec().add(1)))) moving = 0;
+        if(!*n || (moving<=1 && !pointinsel(sel, vec(cur).add(1)))) moving = 0;
         else if(!moving) moving = 1;
     }
     intret(moving);
@@ -149,17 +149,17 @@ void toggleedit(bool force)
     keyrepeat(editmode, KR_EDITMODE);
     editing = entediting = editmode;
     if(!force) game::edittoggled(editmode);
+    execident("edittoggled");
 }
 
 bool noedit(bool view, bool msg)
 {
     if(!editmode) { if(msg) conoutf(CON_ERROR, "operation only allowed in edit mode"); return true; }
     if(view || haveselent()) return false;
-    float r = 1.0f;
-    vec o = sel.o.tovec(), s = sel.s.tovec();
-    s.mul(float(sel.grid) / 2.0f);
+    vec o(sel.o), s(sel.s);
+    s.mul(sel.grid / 2.0f);
     o.add(s);
-    r = float(max(s.x, max(s.y, s.z)));
+    float r = max(s.x, s.y, s.z);
     bool viewable = (isvisiblesphere(r, o) != VFC_NOT_VISIBLE);
     if(!viewable && msg) conoutf(CON_ERROR, "selection not in view");
     return !viewable;
@@ -211,7 +211,7 @@ cube &blockcube(int x, int y, int z, const block3 &b, int rgrid) // looks up a w
     ivec s(dim, x*b.grid, y*b.grid, dc*(b.s[dim]-1)*b.grid);
     s.add(b.o);
     if(dc) s[dim] -= z*b.grid; else s[dim] += z*b.grid;
-    return lookupcube(s.x, s.y, s.z, rgrid);
+    return lookupcube(s, rgrid);
 }
 
 #define loopxy(b)        loop(y,(b).s[C[dimension((b).orient)]]) loop(x,(b).s[R[dimension((b).orient)]])
@@ -224,13 +224,15 @@ cube &blockcube(int x, int y, int z, const block3 &b, int rgrid) // looks up a w
 int selchildcount = 0, selchildmat = -1;
 
 ICOMMAND(havesel, "", (), intret(havesel ? selchildcount : 0));
+ICOMMAND(selchildcount, "", (), { if(selchildcount < 0) result(tempformatstring("1/%d", -selchildcount)); else intret(selchildcount); });
+ICOMMAND(selchildmat, "s", (char *prefix), { if(selchildmat > 0) result(getmaterialdesc(selchildmat, prefix)); });
 
 void countselchild(cube *c, const ivec &cor, int size)
 {
     ivec ss = ivec(sel.s).mul(sel.grid);
     loopoctaboxsize(cor, size, sel.o, ss)
     {
-        ivec o(i, cor.x, cor.y, cor.z, size);
+        ivec o(i, cor, size);
         if(c[i].children) countselchild(c[i].children, o, size/2);
         else
         {
@@ -244,13 +246,13 @@ void countselchild(cube *c, const ivec &cor, int size)
     }
 }
 
-void normalizelookupcube(int x, int y, int z)
+void normalizelookupcube(const ivec &o)
 {
     if(lusize>gridsize)
     {
-        lu.x += (x-lu.x)/gridsize*gridsize;
-        lu.y += (y-lu.y)/gridsize*gridsize;
-        lu.z += (z-lu.z)/gridsize*gridsize;
+        lu.x += (o.x-lu.x)/gridsize*gridsize;
+        lu.y += (o.y-lu.y)/gridsize*gridsize;
+        lu.z += (o.z-lu.z)/gridsize*gridsize;
     }
     else if(gridsize>lusize)
     {
@@ -309,12 +311,12 @@ void rendereditcursor()
     if(moving)
     {
         static vec dest, handle;
-        if(editmoveplane(sel.o.tovec(), camdir, od, sel.o[D[od]]+odc*sel.grid*sel.s[D[od]], handle, dest, moving==1))
+        if(editmoveplane(vec(sel.o), camdir, od, sel.o[D[od]]+odc*sel.grid*sel.s[D[od]], handle, dest, moving==1))
         {
             if(moving==1)
             {
                 dest.add(handle);
-                handle = ivec(handle).mask(~(sel.grid-1)).tovec();
+                handle = vec(ivec(handle).mask(~(sel.grid-1)));
                 dest.sub(handle);
                 moving = 2;
             }
@@ -340,7 +342,7 @@ void rendereditcursor()
                        | (passthroughcube==1 ? RAY_PASS : 0), gridsize, entorient, ent);
 
         if((havesel || dragging) && !passthroughsel && !hmapedit)     // now try selecting the selection
-            if(rayboxintersect(sel.o.tovec(), vec(sel.s.tovec()).mul(sel.grid), camera1->o, dir, sdist, orient))
+            if(rayboxintersect(vec(sel.o), vec(sel.s).mul(sel.grid), camera1->o, dir, sdist, orient))
             {   // and choose the nearest of the two
                 if(sdist < wdist)
                 {
@@ -371,11 +373,11 @@ void rendereditcursor()
                     loopi(3) w[i] = clamp(camera1->o[i], 0.0f, float(worldsize));
                 }
             }
-            cube *c = &lookupcube(int(w.x), int(w.y), int(w.z));
+            cube *c = &lookupcube(w);
             if(gridlookup && !dragging && !moving && !havesel && hmapedit!=1) gridsize = lusize;
             int mag = lusize / gridsize;
-            normalizelookupcube(int(w.x), int(w.y), int(w.z));
-            if(sdist == 0 || sdist > wdist) rayboxintersect(lu.tovec(), vec(gridsize), camera1->o, dir, t=0, orient); // just getting orient
+            normalizelookupcube(w);
+            if(sdist == 0 || sdist > wdist) rayboxintersect(vec(lu), vec(gridsize), camera1->o, dir, t=0, orient); // just getting orient
             cur = lu;
             cor = vec(w).mul(2).div(gridsize);
             od = dimension(orient);
@@ -455,7 +457,7 @@ void rendereditcursor()
             gle::colorub(0, hmapsel ? 255 : 40, 0);
         else
             gle::colorub(120,120,120);
-            boxs(orient, lu.tovec(), vec(lusize));
+        boxs(orient, vec(lu), vec(lusize));
     }
 
     // selections
@@ -463,9 +465,9 @@ void rendereditcursor()
     {
         d = dimension(sel.orient);
         gle::colorub(50,50,50);   // grid
-        boxsgrid(sel.orient, sel.o.tovec(), sel.s.tovec(), sel.grid);
+        boxsgrid(sel.orient, vec(sel.o), vec(sel.s), sel.grid);
         gle::colorub(200,0,0);    // 0 reference
-        boxs3D(sel.o.tovec().sub(0.5f*min(gridsize*0.25f, 2.0f)), vec(min(gridsize*0.25f, 2.0f)), 1);
+        boxs3D(vec(sel.o).sub(0.5f*min(gridsize*0.25f, 2.0f)), vec(min(gridsize*0.25f, 2.0f)), 1);
         gle::colorub(200,200,200);// 2D selection box
         vec co(sel.o.v), cs(sel.s.v);
         co[R[d]] += 0.5f*(sel.cx*gridsize);
@@ -478,16 +480,19 @@ void rendereditcursor()
             gle::colorub(0,120,0);
         else
             gle::colorub(0,0,120);
-        boxs3D(sel.o.tovec(), sel.s.tovec(), sel.grid);
+        boxs3D(vec(sel.o), vec(sel.s), sel.grid);
 
         if (showselgrid)
         {
             vec a, b;
             gle::colorub(40, 40, 80);
             //note that vector b is multiplied by g (aka, sel.grid) inside the function, so undo that here
-            (a=sel.o.tovec()).x=0; (b=sel.s.tovec()).x=worldsize/sel.grid; boxs3D(a, b, sel.grid);
-            (a=sel.o.tovec()).y=0; (b=sel.s.tovec()).y=worldsize/sel.grid; boxs3D(a, b, sel.grid);
-            (a=sel.o.tovec()).z=0; (b=sel.s.tovec()).z=worldsize/sel.grid; boxs3D(a, b, sel.grid);
+            loopi(3)
+            {
+                a = vec(sel.o); b = vec(sel.s);
+                a[i] = 0; b[i] = worldsize/sel.grid;
+                boxs3D(a, b, sel.grid);
+            }
         }
     }
 
@@ -511,7 +516,7 @@ void readychanges(const ivec &bbmin, const ivec &bbmax, cube *c, const ivec &cor
 {
     loopoctabox(cor, size, bbmin, bbmax)
     {
-        ivec o(i, cor.x, cor.y, cor.z, size);
+        ivec o(i, cor, size);
         if(c[i].ext)
         {
             if(c[i].ext->va)             // removes va s so that octarender will recreate
@@ -1087,7 +1092,7 @@ namespace hmap
 
     ICOMMAND(hmapcancel, "", (), cancel());
     ICOMMAND(hmapselect, "", (),
-        int t = lookupcube(cur.x, cur.y, cur.z).texture[orient];
+        int t = lookupcube(cur).texture[orient];
         int i = textures.find(t);
         if(i<0)
             textures.add(t);
@@ -1155,7 +1160,7 @@ namespace hmap
     {
         t[d] += dcr*f*gridsize;
         if(t[d] > nz || t[d] < mz) return NULL;
-        cube *c = &lookupcube(t.x, t.y, t.z, gridsize);
+        cube *c = &lookupcube(t, gridsize);
         if(c->children) forcemip(*c, false);
         discardchildren(*c, true);
         if(!isheightmap(sel.orient, d, true, c)) return NULL;
@@ -1990,7 +1995,7 @@ void getcurtex()
 void getseltex()
 {
     if(noedit(true)) return;
-    cube &c = lookupcube(sel.o.x, sel.o.y, sel.o.z, -sel.grid);
+    cube &c = lookupcube(sel.o, -sel.grid);
     if(c.children || isempty(c)) return;
     intret(c.texture[sel.orient]);
 }
@@ -2361,3 +2366,30 @@ void rendertexturepanel(int w, int h)
     }
 }
 
+#define EDITSTAT(name, type, val) \
+    ICOMMAND(editstat##name, "", (), \
+    { \
+        extern int statrate; \
+        static int laststat = 0; \
+        static type prevstat = 0; \
+        static type curstat = 0; \
+        if(totalmillis - laststat >= statrate) \
+        { \
+            prevstat = curstat; \
+            laststat = totalmillis - (totalmillis%statrate); \
+        } \
+        if(prevstat == curstat) curstat = (val); \
+        type##ret(val); \
+    });
+EDITSTAT(wtr, int, wtris/1024);
+EDITSTAT(vtr, int, (vtris*100)/max(wtris, 1));
+EDITSTAT(wvt, int, wverts/1024);
+EDITSTAT(vvt, int, (vverts*100)/max(wverts, 1));
+EDITSTAT(evt, int, xtraverts/1024);
+EDITSTAT(eva, int, xtravertsva/1024);
+EDITSTAT(octa, int, allocnodes*8);
+EDITSTAT(va, int, allocva);
+EDITSTAT(glde, int, glde);
+EDITSTAT(geombatch, int, gbatches);
+EDITSTAT(oq, int, getnumqueries());
+EDITSTAT(pvs, int, getnumviewcells());

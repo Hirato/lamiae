@@ -21,7 +21,7 @@
 
 /**
  *  \file SDL_version.h
- *  
+ *
  *  This header defines the current SDL version.
  */
 
@@ -38,13 +38,13 @@ extern "C" {
 
 /**
  *  \brief Information the version of SDL in use.
- *  
+ *
  *  Represents the library's version as three levels: major revision
  *  (increments with massive changes, additions, and enhancements),
  *  minor revision (increments with backwards-compatible changes to the
  *  major revision), and patchlevel (increments with fixes to the minor
  *  revision).
- *  
+ *
  *  \sa SDL_VERSION
  *  \sa SDL_GetVersion
  */
@@ -63,16 +63,16 @@ typedef struct SDL_version
 
 /**
  *  \brief Macro to determine SDL version program was compiled against.
- *  
+ *
  *  This macro fills in a SDL_version structure with the version of the
  *  library you compiled against. This is determined by what header the
  *  compiler uses. Note that if you dynamically linked the library, you might
  *  have a slightly newer or older version at runtime. That version can be
  *  determined with SDL_GetVersion(), which, unlike SDL_VERSION(),
  *  is not a macro.
- *  
+ *
  *  \param x A pointer to a SDL_version struct to initialize.
- *  
+ *
  *  \sa SDL_version
  *  \sa SDL_GetVersion
  */
@@ -113,11 +113,11 @@ typedef struct SDL_version
  *  current version will be different than the version you compiled against.
  *  This function returns the current version, while SDL_VERSION() is a
  *  macro that tells you what version you compiled with.
- *  
+ *
  *  \code
  *  SDL_version compiled;
  *  SDL_version linked;
- *  
+ *
  *  SDL_VERSION(&compiled);
  *  SDL_GetVersion(&linked);
  *  printf("We compiled against SDL version %d.%d.%d ...\n",
@@ -125,9 +125,9 @@ typedef struct SDL_version
  *  printf("But we linked against SDL version %d.%d.%d.\n",
  *         linked.major, linked.minor, linked.patch);
  *  \endcode
- *  
+ *
  *  This function may be called safely at any time, even before SDL_Init().
- *  
+ *
  *  \sa SDL_VERSION
  */
 extern DECLSPEC void SDLCALL SDL_GetVersion(SDL_version * ver);

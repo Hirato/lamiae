@@ -20,12 +20,14 @@ void cleanup()
     extern void clear_models();  clear_models();
     extern void clear_sound();   clear_sound();
     closelogfile();
+    ovr::destroy();
     SDL_Quit();
 }
 
+extern void writeinitcfg();
+
 void quit()                     // normal exit
 {
-    extern void writeinitcfg();
     writeinitcfg();
     writeservercfg();
     abortconnect();
@@ -65,7 +67,7 @@ void fatal(const char *s, ...)    // failure exit
 }
 
 SDL_Window *screen = NULL;
-int screenw = 0, screenh = 0, renderw = 0, renderh = 0, desktopw = 0, desktoph = 0;
+int screenw = 0, screenh = 0, desktopw = 0, desktoph = 0;
 SDL_GLContext glcontext = NULL;
 
 VAR(curtime, 1, 0, 0);
@@ -140,12 +142,6 @@ Texture *backgroundmapshot = NULL;
 string backgroundmapname = "";
 char *backgroundmapinfo = NULL;
 
-void restorebackground()
-{
-    if(renderedframe) return;
-    renderbackground(backgroundcaption[0] ? backgroundcaption : NULL, backgroundmapshot, backgroundmapname[0] ? backgroundmapname : NULL, backgroundmapinfo, true);
-}
-
 VARP(showversion, 0, 0, 2);
 
 ICOMMAND(bgcaption, "", (), result(backgroundcaption))
@@ -154,14 +150,18 @@ ICOMMAND(bgmapname, "", (), result(backgroundmapname))
 ICOMMAND(bgmapinfo, "", (), result(backgroundmapinfo ? backgroundmapinfo : ""))
 VAR(bgflags, 1, 0, -1);
 
+void renderbackgroundview(int w, int h, const char *caption, Texture *mapshot, const char *mapname, const char *mapinfo)
+{
+    UI::renderbackground();
+}
 
-void renderbackground(const char *caption, Texture *mapshot, const char *mapname, const char *mapinfo, bool restore, bool force)
+void renderbackground(const char *caption, Texture *mapshot, const char *mapname, const char *mapinfo, bool force)
 {
     if(!inbetweenframes && !force) return;
 
     stopsounds();
 
-    if(!restore || force)
+    if(force)
     {
         bgflags = 0;
         if(caption) bgflags |= 1;
@@ -180,43 +180,60 @@ void renderbackground(const char *caption, Texture *mapshot, const char *mapname
         }
     }
 
-    loopi(restore ? 1 : 3)
+    int w = screenw, h = screenh;
+    getbackgroundres(w, h);
+    if(forceaspect) w = int(ceil(h*forceaspect));
+    gettextres(w, h);
+
+    if(force)
     {
-        int w = screenw, h = screenh;
-        getbackgroundres(w, h);
-        if(forceaspect) w = int(ceil(h*forceaspect));
-        gettextres(w, h);
-
-        hudmatrix.ortho(0, w, h, 0, -1, 1);
-        resethudmatrix();
-        hudnotextureshader->set();
-
-        gle::defvertex(2);
-        gle::colorf(0, 0, 0);
-
-        gle::begin(GL_TRIANGLE_STRIP);
-        gle::attribf(0, 0);
-        gle::attribf(w, 0);
-        gle::attribf(0, h);
-        gle::attribf(w, h);
-
-        gle::end();
-        gle::disable();
-
-        UI::renderbackground();
-
-        if(!restore) swapbuffers();
+        renderbackgroundview(w, h, caption, mapshot, mapname, mapinfo);
+        return;
     }
 
-    if(!restore) renderedframe = false;
-    gle::disable();
+    loopi(3)
+    {
+        if(ovr::enabled)
+        {
+            aspect = forceaspect ? forceaspect : hudw/float(hudh);
+            for(viewidx = 0; viewidx < 2; viewidx++, hudx += hudw)
+            {
+                if(!i)
+                {
+                    glBindFramebuffer_(GL_FRAMEBUFFER, ovr::lensfbo[viewidx]);
+                    glViewport(0, 0, hudw, hudh);
+                    glClearColor(0, 0, 0, 0);
+                    glClear(GL_COLOR_BUFFER_BIT);
+                    renderbackgroundview(w, h, caption, mapshot, mapname, mapinfo);
+                }
+                ovr::warp();
+            }
+            viewidx = 0;
+            hudx = 0;
+        }
+        else renderbackgroundview(w, h, caption, mapshot, mapname, mapinfo);
+        swapbuffers();
+    }
+
+    renderedframe = false;
+}
+
+void restorebackground(int w, int h)
+{
+    if(renderedframe) return;
+    renderbackgroundview(w, h, backgroundcaption[0] ? backgroundcaption : NULL, backgroundmapshot, backgroundmapname[0] ? backgroundmapname : NULL, backgroundmapinfo);
 }
 
 FVAR(loadprogress, 1, 0, -1);
 VAR(loadbg, 1, 0, -1);
 const char *loadtext = NULL;
 ICOMMAND(loadtext, "", (), result(loadtext ? loadtext : ""))
-void renderprogress(float bar, const char *text, GLuint tex, bool background)   // also used during loading
+void renderprogressview(int w, int h, float bar, const char *text, GLuint tex)   // also used during loading
+{
+    UI::renderprogress();
+}
+
+void renderprogress(float bar, const char *text, GLuint tex, bool background)
 {
     if(!inbetweenframes || drawtex) return;
 
@@ -226,12 +243,40 @@ void renderprogress(float bar, const char *text, GLuint tex, bool background)   
     interceptkey(SDLK_UNKNOWN); // keep the event queue awake to avoid 'beachball' cursor
     #endif
 
-    if(background) restorebackground();
+    int w = hudw, h = hudh;
+    if(forceaspect) w = int(ceil(h*forceaspect));
+    getbackgroundres(w, h);
+    gettextres(w, h);
+
     loadbg = background;
     loadprogress = bar;
     loadtext = text;
 
-    UI::renderprogress();
+    if(ovr::enabled)
+    {
+        aspect = forceaspect ? forceaspect : hudw/float(hudh);
+        for(viewidx = 0; viewidx < 2; viewidx++, hudx += hudw)
+        {
+            glBindFramebuffer_(GL_FRAMEBUFFER, ovr::lensfbo[viewidx]);
+            glViewport(0, 0, hudw, hudh);
+            if(background)
+            {
+                glClearColor(0, 0, 0, 0);
+                glClear(GL_COLOR_BUFFER_BIT);
+                restorebackground(w, h);
+            }
+            renderprogressview(w, h, bar, text, tex);
+            ovr::warp();
+        }
+        viewidx = 0;
+        hudx = 0;
+    }
+    else
+    {
+        if(background) restorebackground(w, h);
+        renderprogressview(w, h, bar, text, tex);
+    }
+
     loadtext = NULL;
     swapbuffers();
 }
@@ -306,7 +351,9 @@ void setfullscreen(bool enable)
         SDL_SetWindowSize(screen, scr_w, scr_h);
         if(initwindowpos)
         {
-            SDL_SetWindowPosition(screen, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+            int winx = SDL_WINDOWPOS_CENTERED, winy = SDL_WINDOWPOS_CENTERED;
+            if(ovr::enabled) winx = winy = 0;
+            SDL_SetWindowPosition(screen, winx, winy);
             initwindowpos = false;
         }
     }
@@ -326,16 +373,8 @@ void screenres(int w, int h)
     {
         scr_w = min(scr_w, desktopw);
         scr_h = min(scr_h, desktoph);
-        if(SDL_GetWindowFlags(screen) & SDL_WINDOW_FULLSCREEN)
-        {
-            renderw = min(scr_w, screenw);
-            renderh = min(scr_h, screenh);
-            gl_resize();
-        }
-        else
-        {
-            SDL_SetWindowSize(screen, scr_w, scr_h);
-        }
+        if(SDL_GetWindowFlags(screen) & SDL_WINDOW_FULLSCREEN) gl_resize();
+        else SDL_SetWindowSize(screen, scr_w, scr_h);
     }
     else
     {
@@ -398,27 +437,26 @@ void setupscreen()
     scr_w = min(scr_w, desktopw);
     scr_h = min(scr_h, desktoph);
 
-    int winw = scr_w, winh = scr_h, flags = SDL_WINDOW_RESIZABLE;
+    int winx = SDL_WINDOWPOS_UNDEFINED, winy = SDL_WINDOWPOS_UNDEFINED, winw = scr_w, winh = scr_h, flags = SDL_WINDOW_RESIZABLE;
     if(fullscreen)
     {
         winw = desktopw;
         winh = desktoph;
         flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
-#ifdef WIN32
         initwindowpos = true;
-#endif
     }
+    if(ovr::enabled) winx = winy = 0;
 
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);
-    screen = SDL_CreateWindow("Lamiae", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, winw, winh, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS | flags);
+    screen = SDL_CreateWindow("Lamiae", winx, winy, winw, winh, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS | flags);
     if(!screen) fatal("failed to create OpenGL window: %s", SDL_GetError());
 
     SDL_SetWindowMinimumSize(screen, SCR_MINW, SCR_MINH);
     SDL_SetWindowMaximumSize(screen, SCR_MAXW, SCR_MAXH);
 
-    static const struct { int major, minor; } coreversions[] = { { 3, 3 }, { 3, 2 }, { 3, 1 }, { 3, 0 } };
+    static const struct { int major, minor; } coreversions[] = { { 4, 0 }, { 3, 3 }, { 3, 2 }, { 3, 1 }, { 3, 0 } };
     loopi(sizeof(coreversions)/sizeof(coreversions[0]))
     {
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, coreversions[i].major);
@@ -439,9 +477,10 @@ void setupscreen()
     SDL_GetWindowSize(screen, &screenw, &screenh);
     renderw = min(scr_w, screenw);
     renderh = min(scr_h, screenh);
+    hudw = screenw;
+    hudh = screenh;
 
     restorevsync();
-
 }
 
 bool resettextures()
@@ -459,16 +498,6 @@ void resetgl()
     clearchanges(CHANGE_GFX|CHANGE_SHADERS);
     renderbackground("resetting OpenGL");
 
-    extern void cleanupva();
-    extern void cleanupparticles();
-    extern void cleanupdecals();
-    extern void cleanupsky();
-    extern void cleanupmodels();
-    extern void cleanuptextures();
-    extern void cleanupblendmap();
-    extern void cleanuplights();
-    extern void cleanupshaders();
-    extern void cleanupgl();
     recorder::cleanup();
     cleanupva();
     cleanupparticles();
@@ -487,9 +516,6 @@ void resetgl()
 
     gl_init();
 
-    extern void reloadfonts();
-    extern void reloadtextures();
-    extern void reloadshaders();
     inbetweenframes = false;
 
     if(!resettextures())
@@ -674,8 +700,6 @@ void checkinput()
                             scr_w = clamp(screenw, SCR_MINW, SCR_MAXW);
                             scr_h = clamp(screenh, SCR_MINH, SCR_MAXH);
                         }
-                        renderw = min(scr_w, screenw);
-                        renderh = min(scr_h, screenh);
                         gl_resize();
                         break;
                 }
@@ -1084,6 +1108,7 @@ int main(int argc, char **argv)
         updatetime();
 
         checkinput();
+        ovr::update();
         UI::update();
         tryedit();
 
@@ -1106,12 +1131,11 @@ int main(int argc, char **argv)
 
         if(minimized) continue;
 
-        if(!UI::mainmenu) setupframe();
+        gl_setupframe(!UI::mainmenu);
 
         inbetweenframes = false;
 
-        if(UI::mainmenu) gl_drawmainmenu();
-        else gl_drawframe();
+        gl_drawframe();
         swapbuffers();
         renderedframe = inbetweenframes = true;
     }

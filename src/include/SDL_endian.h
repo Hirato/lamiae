@@ -21,7 +21,7 @@
 
 /**
  *  \file SDL_endian.h
- *  
+ *
  *  Functions for reading and writing endian-specific values
  */
 

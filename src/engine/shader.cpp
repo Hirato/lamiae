@@ -107,16 +107,20 @@ static void compileglslshader(Shader &s, GLenum type, GLuint &obj, const char *d
     const char *source = def + strspn(def, " \t\r\n");
     const char *parts[16];
     int numparts = 0;
-    parts[numparts++] =
-        glslversion >= 330 ?
-            "#version 330\n" :
-            (glslversion >= 150 ?
-                "#version 150\n" :
-                (glslversion >= 140 ?
-                    "#version 140\n" :
-                    (glslversion >= 130 ?
-                        "#version 130\n" :
-                        "#version 120\n")));
+    static const struct { int version; const char * const header; } glslversions[] =
+    {
+        { 400, "#version 400\n" },
+        { 330, "#version 330\n" },
+        { 150, "#version 150\n" },
+        { 140, "#version 140\n" },
+        { 130, "#version 130\n" },
+        { 120, "#version 120\n" }
+    };
+    loopi(sizeof(glslversions)/sizeof(glslversions[0])) if(glslversion >= glslversions[i].version)
+    {
+        parts[numparts++] = glslversions[i].header;
+        break;
+    }
     if(glslversion < 130 && hasGPU4)
         parts[numparts++] = "#extension GL_EXT_gpu_shader4 : enable\n";
     if(glslversion >= 150 && glslversion < 330 && hasEAL)

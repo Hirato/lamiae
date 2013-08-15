@@ -26,7 +26,7 @@
 
 /**
  *  \file SDL_main.h
- *  
+ *
  *  Redefine main() on some platforms so that it is called by SDL.
  */
 

@@ -21,7 +21,7 @@
 
 /**
  *  \file SDL_log.h
- *  
+ *
  *  Simple log messages with categories and priorities.
  *
  *  By default logs are quiet, but if you're debugging SDL you might want:
@@ -58,7 +58,7 @@ extern "C" {
  *
  *  By default the application category is enabled at the INFO level,
  *  the assert category is enabled at the WARN level, test is enabled
- *  at the VERBOSE level and all other categories are enabled at the 
+ *  at the VERBOSE level and all other categories are enabled at the
  *  CRITICAL level.
  */
 enum

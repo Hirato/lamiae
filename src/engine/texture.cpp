@@ -1377,11 +1377,12 @@ static bool texturedata(ImageData &d, const char *tname, Slot::Tex *tex = NULL, 
     return true;
 }
 
-void loadalphamask(Texture *t)
+uchar *loadalphamask(Texture *t)
 {
-    if(t->alphamask || (t->type&(Texture::ALPHA|Texture::COMPRESSED)) != Texture::ALPHA) return;
+    if(t->alphamask) return t->alphamask;
+    if((t->type&(Texture::ALPHA|Texture::COMPRESSED)) != Texture::ALPHA) return NULL;
     ImageData s;
-    if(!texturedata(s, t->name, NULL, false) || !s.data || s.compressed) return;
+    if(!texturedata(s, t->name, NULL, false) || !s.data || s.compressed) return NULL;
     t->alphamask = new uchar[s.h * ((s.w+7)/8)];
     uchar *srcrow = s.data, *dst = t->alphamask-1;
     loop(y, s.h)
@@ -1396,6 +1397,7 @@ void loadalphamask(Texture *t)
         }
         srcrow += s.pitch;
     }
+    return t->alphamask;
 }
 
 Texture *textureload(const char *name, int clamp, bool mipit, bool msg)
@@ -1806,9 +1808,9 @@ static void fixinsidefaces(cube *c, const ivec &o, int size, int tex)
 {
     loopi(8)
     {
-        ivec co(i, o.x, o.y, o.z, size);
+        ivec co(i, o, size);
         if(c[i].children) fixinsidefaces(c[i].children, co, size>>1, tex);
-        else loopj(6) if(!visibletris(c[i], j, co.x, co.y, co.z, size))
+        else loopj(6) if(!visibletris(c[i], j, co, size))
             c[i].texture[j] = tex;
     }
 }
@@ -2250,27 +2252,6 @@ Texture *loadthumbnail(Slot &slot)
 
 // environment mapped reflections
 
-void forcecubemapload(GLuint tex)
-{
-    extern int ati_cubemap_bug;
-    if(!ati_cubemap_bug || !tex) return;
-
-    SETSHADER(forcecubemap);
-
-    GLenum depthtest = glIsEnabled(GL_DEPTH_TEST), blend = glIsEnabled(GL_BLEND);
-    if(depthtest) glDisable(GL_DEPTH_TEST);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, tex);
-    if(!blend) glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    gle::defvertex();
-    gle::begin(GL_TRIANGLES);
-    loopi(3) gle::attribf(0, 0, 0);
-    gle::end();
-    gle::disable();
-    if(!blend) glDisable(GL_BLEND);
-    if(depthtest) glEnable(GL_DEPTH_TEST);
-}
-
 extern const cubemapside cubemapsides[6] =
 {
     { GL_TEXTURE_CUBE_MAP_NEGATIVE_X, "lf", false, true,  true  },
@@ -2390,7 +2371,6 @@ Texture *cubemaploadwildcard(Texture *t, const char *name, bool mipit, bool msg,
             createtexture(!i ? t->id : 0, t->w, t->h, s.data, 3, mipit ? 2 : 1, component, side.target, s.w, s.h, s.pitch, false, format, true);
         }
     }
-    forcecubemapload(t->id);
     return t;
 }
 
@@ -2483,10 +2463,9 @@ GLuint genenvmap(const vec &o, int envmapsize, int blur)
         createtexture(tex, texsize, texsize, dst, 3, 2, GL_RGB5, side.target);
     }
     glBindFramebuffer_(GL_FRAMEBUFFER, 0);
-    glViewport(0, 0, screenw, screenh);
+    glViewport(0, 0, hudw, hudh);
     delete[] pixels;
     clientkeepalive();
-    forcecubemapload(tex);
     return tex;
 }
 
@@ -2514,7 +2493,7 @@ void genenvmaps()
     if(envmaps.empty()) return;
     renderprogress(0, "generating environment maps...");
     int lastprogress = SDL_GetTicks();
-    setupframe();
+    gl_setupframe(true);
     loopv(envmaps)
     {
         envmap &em = envmaps[i];
@@ -2546,9 +2525,9 @@ ushort closestenvmap(const vec &o)
     return minemid;
 }
 
-ushort closestenvmap(int orient, int x, int y, int z, int size)
+ushort closestenvmap(int orient, const ivec &co, int size)
 {
-    vec loc(x, y, z);
+    vec loc(co);
     int dim = dimension(orient);
     if(dimcoord(orient)) loc[dim] += size;
     loc[R[dim]] += size/2;
@@ -3128,12 +3107,12 @@ SVARP(screenshotdir, "");
 void screenshot(char *filename, int *x, int *y)
 {
     static string buf;
-    int format = -1;
+    int format = -1, dirlen = 0;
     copystring(buf, screenshotdir);
     if(screenshotdir[0])
     {
-        int len = strlen(buf);
-        if(buf[len] != '/' && buf[len] != '\\' && len+1 < (int)sizeof(buf)) { buf[len] = '/'; buf[len+1] = '\0'; }
+        dirlen = strlen(buf);
+        if(buf[dirlen] != '/' && buf[dirlen] != '\\' && dirlen+1 < (int)sizeof(buf)) { buf[dirlen++] = '/'; buf[dirlen] = '\0'; }
         const char *dir = findfile(buf, "w");
         if(!fileexists(dir, "w")) createdir(dir);
     }
@@ -3162,7 +3141,7 @@ void screenshot(char *filename, int *x, int *y)
             concatstring(buf, ssinfo);
         }
 
-        for(char *s = buf; *s; s++) if(iscubespace(*s)) *s = '-';
+        for(char *s = &buf[dirlen]; *s; s++) if(iscubespace(*s) || *s == '/' || *s == '\\') *s = '-';
     }
     if(format < 0)
     {
@@ -3194,7 +3173,7 @@ void mergenormalmaps(char *heightfile, char *normalfile) // jpg/png/tga + tga ->
     if(!loadimage(heightfile, hs) || !loadimage(normalfile, ns) || hs.w != ns.w || hs.h != ns.h) return;
     ImageData d(ns.w, ns.h, 3);
     read2writetex(d, hs, srch, ns, srcn,
-        *(bvec *)dst = bvec(((bvec *)srcn)->tovec().mul(2).add(((bvec *)srch)->tovec()).normalize());
+        *(bvec *)dst = bvec(((bvec *)srcn)->tonormal().mul(2).add(((bvec *)srch)->tonormal()).normalize());
     );
     saveimage(normalfile, guessimageformat(normalfile, IMG_TGA), d);
 }

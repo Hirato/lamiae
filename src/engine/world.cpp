@@ -63,7 +63,7 @@ void modifyoctaentity(int flags, int id, extentity &e, cube *c, const ivec &cor,
 {
     loopoctabox(cor, size, bo, br)
     {
-        ivec o(i, cor.x, cor.y, cor.z, size);
+        ivec o(i, cor, size);
         vtxarray *va = c[i].ext && c[i].ext->va ? c[i].ext->va : lastva;
         if(c[i].children != NULL && size > leafsize)
             modifyoctaentity(flags, id, e, c[i].children, o, size>>1, bo, br, leafsize, va);
@@ -223,7 +223,7 @@ static inline void findents(cube *c, const ivec &o, int size, const ivec &bo, co
         if(c[i].ext && c[i].ext->ents) findents(*c[i].ext->ents, low, high, notspawned, pos, radius, found);
         if(c[i].children && size > octaentsize)
         {
-            ivec co(i, o.x, o.y, o.z, size);
+            ivec co(i, o, size);
             findents(c[i].children, co, size>>1, bo, br, low, high, notspawned, pos, radius, found);
         }
     }
@@ -236,7 +236,7 @@ void findents(int low, int high, bool notspawned, const vec &pos, const vec &rad
          br = vec(pos).add(radius).add(1);
     int diff = (bo.x^br.x) | (bo.y^br.y) | (bo.z^br.z) | octaentsize,
         scale = worldscale-1;
-    if(diff&~((1<<scale)-1) || uint(bo.x|bo.y|bo.z|(bo.x+br.x)|(bo.y+br.y)|(bo.z+br.z)) >= uint(worldsize))
+    if(diff&~((1<<scale)-1) || uint(bo.x|bo.y|bo.z|br.x|br.y|br.z) >= uint(worldsize))
     {
         findents(worldroot, ivec(0, 0, 0), 1<<scale, bo, br, low, high, notspawned, pos, invradius, found);
         return;
@@ -421,7 +421,7 @@ vec getselpos()
     vector<extentity *> &ents = entities::getents();
     if(entgroup.length() && ents.inrange(entgroup[0])) return ents[entgroup[0]]->o;
     if(ents.inrange(enthover)) return ents[enthover]->o;
-    return sel.o.tovec();
+    return vec(sel.o);
 }
 
 undoblock *copyundoents(undoblock *u)
@@ -904,7 +904,7 @@ bool dropentity(entity &e, int drop = -1)
             cx = (sel.cx ? 1 : -1) * sel.grid / 2;
             cy = (sel.cy ? 1 : -1) * sel.grid / 2;
         }
-        e.o = sel.o.tovec();
+        e.o = vec(sel.o);
         int d = dimension(sel.orient), dc = dimcoord(sel.orient);
         e.o[R[d]] += sel.grid / 2 + cx;
         e.o[C[d]] += sel.grid / 2 + cy;
@@ -1051,7 +1051,7 @@ void entcopy()
     loopv(entgroup)
         entfocus(entgroup[i],
             entitycopy &ec = entcopybuf.add(entitycopy(e));
-            ec.e.o.sub(sel.o.tovec());
+            ec.e.o.sub(vec(sel.o));
             int sz = entities::extraentinfosize();
             if(sz)
             {
@@ -1071,8 +1071,7 @@ void entpaste()
     {
         entitycopy &ec = entcopybuf[i];
         entity &c = ec.e;
-        vec o(c.o);
-        o.mul(m).add(sel.o.tovec());
+        vec o = vec(c.o).mul(m).add(vec(sel.o));
         int idx;
         extentity *e = newentity(true, o, ET_EMPTY, c.attr.getbuf(), idx);
         if(!e) continue;
@@ -1238,18 +1237,19 @@ void findplayerspawn(dynent *d, int forceent, int tag)   // place at random spaw
     }
     if(pick!=-1)
     {
+        const vector<extentity *> &ents = entities::getents();
         d->pitch = 0;
         d->roll = 0;
         for(int attempt = pick;;)
         {
-            d->o = entities::getents()[attempt]->o;
-            d->yaw = entities::getents()[attempt]->attr[0];
+            d->o = ents[attempt]->o;
+            d->yaw = ents[attempt]->attr[0];
             if(entinmap(d, true)) break;
             attempt = findentity(ET_PLAYERSTART, attempt+1, -1, tag);
             if(attempt<0 || attempt==pick)
             {
-                d->o = entities::getents()[attempt]->o;
-                d->yaw = entities::getents()[attempt]->attr[0];
+                d->o = ents[attempt]->o;
+                d->yaw = ents[attempt]->attr[0];
                 entinmap(d);
                 break;
             }
@@ -1261,6 +1261,7 @@ void findplayerspawn(dynent *d, int forceent, int tag)   // place at random spaw
         d->o.z += 1;
         entinmap(d);
     }
+    if(d == player) ovr::reset();
 }
 
 void splitocta(cube *c, int size)
@@ -1295,6 +1296,7 @@ void resetmap()
 void startmap(const char *name)
 {
     game::startmap(name);
+    ovr::reset();
 }
 
 bool emptymap(int scale, bool force, const char *mname, bool usecfg)    // main empty world creation routine
@@ -1391,9 +1393,9 @@ void shrinkmap()
     worldscale--;
     worldsize /= 2;
 
-    ivec offset(octant, 0, 0, 0, worldsize);
+    ivec offset(octant, ivec(0, 0, 0), worldsize);
     vector<extentity *> &ents = entities::getents();
-    loopv(ents) ents[i]->o.sub(offset.tovec());
+    loopv(ents) ents[i]->o.sub(vec(offset));
 
     shrinkblendmap(octant);
 

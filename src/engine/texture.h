@@ -719,6 +719,9 @@ extern void linkslotshader(Slot &s, bool load = true);
 extern void linkvslotshader(VSlot &s, bool load = true);
 extern void linkslotshaders();
 extern const char *getshaderparamname(const char *name);
+extern void setupshaders();
+extern void reloadshaders();
+extern void cleanupshaders();
 
 #define MAXBLURRADIUS 7
 

@@ -181,7 +181,7 @@ extern DECLSPEC int SDLCALL SDL_GameControllerEventState(int state);
 
 /**
  *  Update the current state of the open game controllers.
- *  
+ *
  *  This is called automatically by the event loop if any game controller
  *  events are enabled.
  */

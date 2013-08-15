@@ -167,15 +167,6 @@ extern PFNGLTEXIMAGE3DMULTISAMPLEPROC glTexImage3DMultisample_;
 extern PFNGLGETMULTISAMPLEFVPROC      glGetMultisamplefv_;
 extern PFNGLSAMPLEMASKIPROC           glSampleMaski_;
 
-// GL_ARB_sample_shading
-#ifndef GL_ARB_sample_shading
-#define GL_ARB_sample_shading 1
-#define GL_SAMPLE_SHADING_ARB             0x8C36
-#define GL_MIN_SAMPLE_SHADING_VALUE_ARB   0x8C37
-typedef void (APIENTRYP PFNGLMINSAMPLESHADINGARBPROC) (GLclampf value);
-#endif
-extern PFNGLMINSAMPLESHADINGARBPROC glMinSampleShading_;
-
 // GL_EXT_framebuffer_multisample_blit_scaled
 #ifndef GL_EXT_framebuffer_multisample_blit_scaled
 #define GL_EXT_framebuffer_multisample_blit_scaled 1
@@ -618,6 +609,10 @@ typedef void (APIENTRYP PFNGLUNIFORMBLOCKBINDINGPROC) (GLuint program, GLuint un
 #define GL_R11F_G11F_B10F                 0x8C3A
 #define GL_COMPRESSED_RED                 0x8225
 #define GL_COMPRESSED_RG                  0x8226
+#define GL_QUERY_WAIT                     0x8E13
+#define GL_QUERY_NO_WAIT                  0x8E14
+#define GL_QUERY_BY_REGION_WAIT           0x8E15
+#define GL_QUERY_BY_REGION_NO_WAIT        0x8E16
 typedef void (APIENTRYP PFNGLBINDBUFFERRANGEPROC) (GLenum target, GLuint index, GLuint buffer, GLintptr offset, GLsizeiptr size);
 typedef void (APIENTRYP PFNGLBINDBUFFERBASEPROC) (GLenum target, GLuint index, GLuint buffer);
 typedef void (APIENTRYP PFNGLBINDFRAGDATALOCATIONPROC) (GLuint program, GLuint color, const GLchar *name);
@@ -626,6 +621,8 @@ typedef const GLubyte * (APIENTRYP PFNGLGETSTRINGIPROC) (GLenum name, GLuint ind
 typedef void (APIENTRYP PFNGLCOLORMASKIPROC) (GLuint index, GLboolean r, GLboolean g, GLboolean b, GLboolean a);
 typedef void (APIENTRYP PFNGLENABLEIPROC) (GLenum target, GLuint index);
 typedef void (APIENTRYP PFNGLDISABLEIPROC) (GLenum target, GLuint index);
+typedef void (APIENTRYP PFNGLBEGINCONDITIONALRENDERNVPROC) (GLuint id, GLenum mode);
+typedef void (APIENTRYP PFNGLENDCONDITIONALRENDERNVPROC) (void);
 #elif GL_GLEXT_VERSION < 43
 typedef void (APIENTRYP PFNGLBINDBUFFERRANGEPROC) (GLenum target, GLuint index, GLuint buffer, GLintptr offset, GLsizeiptr size);
 typedef void (APIENTRYP PFNGLBINDBUFFERBASEPROC) (GLenum target, GLuint index, GLuint buffer);
@@ -638,6 +635,10 @@ extern PFNGLBINDFRAGDATALOCATIONPROC glBindFragDataLocation_;
 extern PFNGLCOLORMASKIPROC glColorMaski_;
 extern PFNGLENABLEIPROC glEnablei_;
 extern PFNGLDISABLEIPROC glDisablei_;
+
+// GL_NV_conditional_render
+extern PFNGLBEGINCONDITIONALRENDERPROC glBeginConditionalRender_;
+extern PFNGLENDCONDITIONALRENDERPROC glEndConditionalRender_;
 
 #ifndef GL_VERSION_3_1
 #define GL_VERSION_3_1 1
@@ -674,6 +675,10 @@ extern PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays_;
 extern PFNGLGENVERTEXARRAYSPROC    glGenVertexArrays_;
 extern PFNGLISVERTEXARRAYPROC      glIsVertexArray_;
 
+#ifndef GL_ARB_depth_clamp
+#define GL_DEPTH_CLAMP                    0x864F
+#endif
+
 #ifndef GL_ARB_texture_swizzle
 #define GL_ARB_texture_swizzle 1
 #define GL_TEXTURE_SWIZZLE_R              0x8E42
@@ -683,3 +688,26 @@ extern PFNGLISVERTEXARRAYPROC      glIsVertexArray_;
 #define GL_TEXTURE_SWIZZLE_RGBA           0x8E46
 #endif
 
+#ifndef GL_ARB_occlusion_query2
+#define GL_ANY_SAMPLES_PASSED             0x8C2F
+#endif
+
+#ifndef GL_VERSION_4_0
+#define GL_VERSION_4_0 1
+#define GL_SAMPLE_SHADING                 0x8C36
+#define GL_MIN_SAMPLE_SHADING_VALUE       0x8C37
+typedef void (APIENTRYP PFNGLMINSAMPLESHADINGPROC) (GLfloat value);
+typedef void (APIENTRYP PFNGLBLENDEQUATIONIPROC) (GLuint buf, GLenum mode);
+typedef void (APIENTRYP PFNGLBLENDEQUATIONSEPARATEIPROC) (GLuint buf, GLenum modeRGB, GLenum modeAlpha);
+typedef void (APIENTRYP PFNGLBLENDFUNCIPROC) (GLuint buf, GLenum src, GLenum dst);
+typedef void (APIENTRYP PFNGLBLENDFUNCSEPARATEIPROC) (GLuint buf, GLenum srcRGB, GLenum dstRGB, GLenum srcAlpha, GLenum dstAlpha);
+#endif
+
+// GL_ARB_sample_shading
+extern PFNGLMINSAMPLESHADINGPROC glMinSampleShading_;
+
+// GL_ARB_draw_buffers_blend
+extern PFNGLBLENDEQUATIONIPROC glBlendEquationi_;
+extern PFNGLBLENDEQUATIONSEPARATEIPROC glBlendEquationSeparatei_;
+extern PFNGLBLENDFUNCIPROC glBlendFunci_;
+extern PFNGLBLENDFUNCSEPARATEIPROC glBlendFuncSeparatei_;

@@ -69,33 +69,19 @@ struct vertmodel : animmodel
             loopj(numverts)
             {
                 vec v = m.transform(verts[j].pos);
-                loopi(3)
-                {
-                    bbmin[i] = min(bbmin[i], v[i]);
-                    bbmax[i] = max(bbmax[i], v[i]);
-                }
+                bbmin.min(v);
+                bbmax.max(v);
             }
         }
 
-        void genBIH(Texture *tex, vector<BIH::tri> *out, const matrix3x4 &m)
+        void genBIH(BIH::mesh &m)
         {
-            loopj(numtris)
-            {
-                BIH::tri &t = out[noclip ? 1 : 0].add();
-                t.tex = tex;
-                t.a = m.transform(verts[tris[j].vert[0]].pos);
-                t.b = m.transform(verts[tris[j].vert[1]].pos);
-                t.c = m.transform(verts[tris[j].vert[2]].pos);
-                tcvert &av = tcverts[tris[j].vert[0]],
-                       &bv = tcverts[tris[j].vert[1]],
-                       &cv = tcverts[tris[j].vert[2]];
-                t.tc[0] = av.u;
-                t.tc[1] = av.v;
-                t.tc[2] = bv.u;
-                t.tc[3] = bv.v;
-                t.tc[4] = cv.u;
-                t.tc[5] = cv.v;
-            }
+            m.tris = (const BIH::tri *)tris;
+            m.numtris = numtris;
+            m.pos = (const uchar *)&verts->pos;
+            m.posstride = sizeof(vert);
+            m.tc = (const uchar *)&tcverts->u;
+            m.tcstride = sizeof(tcvert);
         }
 
         void genshadowmesh(vector<triangle> &out, const matrix3x4 &m)
@@ -370,10 +356,10 @@ struct vertmodel : animmodel
             vlen = 0;
             if(numframes>1)
             {
-                loopv(meshes) vlen += ((vertmesh *)meshes[i])->genvbo(idxs, vlen);
+                looprendermeshes(vertmesh, m, vlen += m.genvbo(idxs, vlen));
                 DELETEA(vdata);
                 vdata = new uchar[vlen*vertsize];
-                loopv(meshes) ((vertmesh *)meshes[i])->filltc(vdata, vertsize);
+                looprendermeshes(vertmesh, m, m.filltc(vdata, vertsize));
             }
             else
             {
@@ -382,11 +368,11 @@ struct vertmodel : animmodel
                     do \
                     { \
                         vector<type> vverts; \
-                        loopv(meshes) vlen += ((vertmesh *)meshes[i])->genvbo(idxs, vlen, vverts, htdata, htlen); \
+                        looprendermeshes(vertmesh, m, vlen += m.genvbo(idxs, vlen, vverts, htdata, htlen)); \
                         glBufferData_(GL_ARRAY_BUFFER, vverts.length()*sizeof(type), vverts.getbuf(), GL_STATIC_DRAW); \
                     } while(0)
                 int numverts = 0, htlen = 128;
-                loopv(meshes) numverts += ((vertmesh *)meshes[i])->numverts;
+                looprendermeshes(vertmesh, m, numverts += m.numverts);
                 while(htlen < numverts) htlen *= 2;
                 if(numverts*4 > htlen*3) htlen *= 2;
                 int *htdata = new int[htlen];
@@ -483,11 +469,10 @@ struct vertmodel : animmodel
                 {
                     vc->as = *as;
                     vc->millis = lastmillis;
-                    loopv(meshes)
+                    looprendermeshes(vertmesh, m,
                     {
-                        vertmesh &m = *(vertmesh *)meshes[i];
                         m.interpverts(*as, norms, tangents, vdata + m.voffset*vertsize, p->skins[i]);
-                    }
+                    });
                     glBindBuffer_(GL_ARRAY_BUFFER, vc->vbuf);
                     glBufferData_(GL_ARRAY_BUFFER, vlen*vertsize, vdata, GL_STREAM_DRAW);
                 }
@@ -495,12 +480,11 @@ struct vertmodel : animmodel
             }
 
             bindvbo(as, p, *vc);
-            loopv(meshes)
+            looprendermeshes(vertmesh, m,
             {
-                vertmesh *m = (vertmesh *)meshes[i];
                 p->skins[i].bind(m, as);
-                m->render(as, p->skins[i], *vc);
-            }
+                m.render(as, p->skins[i], *vc);
+            });
 
             loopv(p->links) calctagmatrix(p, p->links[i].tag, *as, p->links[i].matrix);
         }

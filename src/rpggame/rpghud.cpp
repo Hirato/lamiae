@@ -36,12 +36,12 @@ namespace game
 		}
 	}
 
-	int selectcrosshair(float &r, float &g, float &b)
+	int selectcrosshair(vec &color)
 	{
 		if(camera::cutscene) return 2;
 		if(editmode)
 		{
-			r = b = 0.5;
+			color = vec(.5, 1, .5);
 			return 1;
 		}
 		return 0;

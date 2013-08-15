@@ -501,7 +501,7 @@ struct decalrenderer
         {
             vertinfo *verts = cu.ext->verts() + cu.ext->surfaces[orient].verts;
             ivec vo = ivec(o).mask(~0xFFF).shl(3);
-            loopj(numverts) pos[j] = verts[j].getxyz().add(vo).tovec().mul(1/8.0f);
+            loopj(numverts) pos[j] = vec(verts[j].getxyz().add(vo)).mul(1/8.0f);
             planes[0].cross(pos[0], pos[1], pos[2]).normalize();
             if(numverts >= 4 && !(cu.merged&(1<<orient)) && !flataxisface(cu, orient) && faceconvexity(verts, numverts, size))
             {
@@ -510,16 +510,16 @@ struct decalrenderer
             }
         }
         else if(cu.merged&(1<<orient)) return;
-        else if(!vismask || (vismask&0x40 && visibleface(cu, orient, o.x, o.y, o.z, size, MAT_AIR, (cu.material&MAT_ALPHA)^MAT_ALPHA, MAT_ALPHA)))
+        else if(!vismask || (vismask&0x40 && visibleface(cu, orient, o, size, MAT_AIR, (cu.material&MAT_ALPHA)^MAT_ALPHA, MAT_ALPHA)))
         {
             ivec v[4];
             genfaceverts(cu, orient, v);
             int vis = 3, convex = faceconvexity(v, vis), order = convex < 0 ? 1 : 0;
-            vec vo = o.tovec();
-            pos[numverts++] = v[order].tovec().mul(size/8.0f).add(vo);
-            if(vis&1) pos[numverts++] = v[order+1].tovec().mul(size/8.0f).add(vo);
-            pos[numverts++] = v[order+2].tovec().mul(size/8.0f).add(vo);
-            if(vis&2) pos[numverts++] = v[(order+3)&3].tovec().mul(size/8.0f).add(vo);
+            vec vo(o);
+            pos[numverts++] = vec(v[order]).mul(size/8.0f).add(vo);
+            if(vis&1) pos[numverts++] = vec(v[order+1]).mul(size/8.0f).add(vo);
+            pos[numverts++] = vec(v[order+2]).mul(size/8.0f).add(vo);
+            if(vis&2) pos[numverts++] = vec(v[(order+3)&3]).mul(size/8.0f).add(vo);
             planes[0].cross(pos[0], pos[1], pos[2]).normalize();
             if(convex) { planes[1].cross(pos[0], pos[2], pos[3]).normalize(); numplanes++; }
         }
@@ -624,7 +624,7 @@ struct decalrenderer
         {
             if(escaped&(1<<i))
             {
-                ivec co(i, o.x, o.y, o.z, size);
+                ivec co(i, o, size);
                 if(cu[i].children) findescaped(cu[i].children, co, size>>1, cu[i].escaped);
                 else
                 {
@@ -642,7 +642,7 @@ struct decalrenderer
         {
             if(overlap&(1<<i))
             {
-                ivec co(i, o.x, o.y, o.z, size);
+                ivec co(i, o, size);
                 if(cu[i].ext && cu[i].ext->va && cu[i].ext->va->matsurfs)
                     findmaterials(cu[i].ext->va);
                 if(cu[i].children) gentris(cu[i].children, co, size>>1, cu[i].escaped);
@@ -658,7 +658,7 @@ struct decalrenderer
             }
             else if(escaped&(1<<i))
             {
-                ivec co(i, o.x, o.y, o.z, size);
+                ivec co(i, o, size);
                 if(cu[i].children) findescaped(cu[i].children, co, size>>1, cu[i].escaped);
                 else
                 {

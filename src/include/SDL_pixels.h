@@ -21,7 +21,7 @@
 
 /**
  *  \file SDL_pixels.h
- *  
+ *
  *  Header for the enumerated pixel format definitions.
  */
 
@@ -36,7 +36,7 @@ extern "C" {
 
 /**
  *  \name Transparency definitions
- *  
+ *
  *  These define alpha as the opacity of a surface.
  */
 /*@{*/
@@ -299,9 +299,9 @@ extern DECLSPEC const char* SDLCALL SDL_GetPixelFormatName(Uint32 format);
 
 /**
  *  \brief Convert one of the enumerated pixel formats to a bpp and RGBA masks.
- *  
+ *
  *  \return SDL_TRUE, or SDL_FALSE if the conversion wasn't possible.
- *  
+ *
  *  \sa SDL_MasksToPixelFormatEnum()
  */
 extern DECLSPEC SDL_bool SDLCALL SDL_PixelFormatEnumToMasks(Uint32 format,
@@ -313,10 +313,10 @@ extern DECLSPEC SDL_bool SDLCALL SDL_PixelFormatEnumToMasks(Uint32 format,
 
 /**
  *  \brief Convert a bpp and RGBA masks to an enumerated pixel format.
- *  
- *  \return The pixel format, or ::SDL_PIXELFORMAT_UNKNOWN if the conversion 
+ *
+ *  \return The pixel format, or ::SDL_PIXELFORMAT_UNKNOWN if the conversion
  *          wasn't possible.
- *  
+ *
  *  \sa SDL_PixelFormatEnumToMasks()
  */
 extern DECLSPEC Uint32 SDLCALL SDL_MasksToPixelFormatEnum(int bpp,
@@ -336,13 +336,13 @@ extern DECLSPEC SDL_PixelFormat * SDLCALL SDL_AllocFormat(Uint32 pixel_format);
 extern DECLSPEC void SDLCALL SDL_FreeFormat(SDL_PixelFormat *format);
 
 /**
- *  \brief Create a palette structure with the specified number of color 
+ *  \brief Create a palette structure with the specified number of color
  *         entries.
- *  
+ *
  *  \return A new palette, or NULL if there wasn't enough memory.
- *  
+ *
  *  \note The palette entries are initialized to white.
- *  
+ *
  *  \sa SDL_FreePalette()
  */
 extern DECLSPEC SDL_Palette *SDLCALL SDL_AllocPalette(int ncolors);
@@ -355,12 +355,12 @@ extern DECLSPEC int SDLCALL SDL_SetPixelFormatPalette(SDL_PixelFormat * format,
 
 /**
  *  \brief Set a range of colors in a palette.
- *  
+ *
  *  \param palette    The palette to modify.
  *  \param colors     An array of colors to copy into the palette.
  *  \param firstcolor The index of the first palette entry to modify.
  *  \param ncolors    The number of entries to modify.
- *  
+ *
  *  \return 0 on success, or -1 if not all of the colors could be set.
  */
 extern DECLSPEC int SDLCALL SDL_SetPaletteColors(SDL_Palette * palette,
@@ -369,14 +369,14 @@ extern DECLSPEC int SDLCALL SDL_SetPaletteColors(SDL_Palette * palette,
 
 /**
  *  \brief Free a palette created with SDL_AllocPalette().
- *  
+ *
  *  \sa SDL_AllocPalette()
  */
 extern DECLSPEC void SDLCALL SDL_FreePalette(SDL_Palette * palette);
 
 /**
  *  \brief Maps an RGB triple to an opaque pixel value for a given pixel format.
- *  
+ *
  *  \sa SDL_MapRGBA
  */
 extern DECLSPEC Uint32 SDLCALL SDL_MapRGB(const SDL_PixelFormat * format,
@@ -384,7 +384,7 @@ extern DECLSPEC Uint32 SDLCALL SDL_MapRGB(const SDL_PixelFormat * format,
 
 /**
  *  \brief Maps an RGBA quadruple to a pixel value for a given pixel format.
- *  
+ *
  *  \sa SDL_MapRGB
  */
 extern DECLSPEC Uint32 SDLCALL SDL_MapRGBA(const SDL_PixelFormat * format,
@@ -393,7 +393,7 @@ extern DECLSPEC Uint32 SDLCALL SDL_MapRGBA(const SDL_PixelFormat * format,
 
 /**
  *  \brief Get the RGB components from a pixel of the specified format.
- *  
+ *
  *  \sa SDL_GetRGBA
  */
 extern DECLSPEC void SDLCALL SDL_GetRGB(Uint32 pixel,
@@ -402,7 +402,7 @@ extern DECLSPEC void SDLCALL SDL_GetRGB(Uint32 pixel,
 
 /**
  *  \brief Get the RGBA components from a pixel of the specified format.
- *  
+ *
  *  \sa SDL_GetRGB
  */
 extern DECLSPEC void SDLCALL SDL_GetRGBA(Uint32 pixel,

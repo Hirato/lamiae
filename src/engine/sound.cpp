@@ -119,7 +119,7 @@ void stopchannels()
 
 void setmusicvol(int musicvol);
 VARFP(soundvol, 0, 255, 255, if(!soundvol) { stopchannels(); setmusicvol(0); });
-VARFP(musicvol, 0, 128, 255, setmusicvol(soundvol ? musicvol : 0));
+VARFP(musicvol, 0, 60, 255, setmusicvol(soundvol ? musicvol : 0));
 
 char *musicfile = NULL, *musicdonecmd = NULL;
 
@@ -794,8 +794,8 @@ void updatemumble()
     mumbleinfo->timestamp = ++timestamp;
 
     mumbleinfo->pos = mumblevec(player->o, true);
-    mumbleinfo->front = mumblevec(vec(RAD*player->yaw, RAD*player->pitch));
-    mumbleinfo->top = mumblevec(vec(RAD*player->yaw, RAD*(player->pitch+90)));
+    mumbleinfo->front = mumblevec(vec(player->yaw*RAD, player->pitch*RAD));
+    mumbleinfo->top = mumblevec(vec(player->yaw*RAD, (player->pitch+90)*RAD));
 #endif
 }
 

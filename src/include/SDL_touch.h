@@ -21,7 +21,7 @@
 
 /**
  *  \file SDL_touch.h
- *  
+ *
  *  Include file for SDL touch event handling.
  */
 

@@ -21,7 +21,7 @@
 
 /**
  *  \file SDL_mouse.h
- *  
+ *
  *  Include file for SDL mouse event handling.
  */
 
@@ -69,7 +69,7 @@ extern DECLSPEC SDL_Window * SDLCALL SDL_GetMouseFocus(void);
 
 /**
  *  \brief Retrieve the current state of the mouse.
- *  
+ *
  *  The current button state is returned as a button bitmask, which can
  *  be tested using the SDL_BUTTON(X) macros, and x and y are set to the
  *  mouse cursor position relative to the focus window for the currently
@@ -88,11 +88,11 @@ extern DECLSPEC Uint32 SDLCALL SDL_GetRelativeMouseState(int *x, int *y);
 
 /**
  *  \brief Moves the mouse to the given position within the window.
- *  
+ *
  *  \param window The window to move the mouse into, or NULL for the current mouse focus
  *  \param x The x coordinate within the window
  *  \param y The y coordinate within the window
- *  
+ *
  *  \note This function generates a mouse motion event
  */
 extern DECLSPEC void SDLCALL SDL_WarpMouseInWindow(SDL_Window * window,
@@ -100,25 +100,25 @@ extern DECLSPEC void SDLCALL SDL_WarpMouseInWindow(SDL_Window * window,
 
 /**
  *  \brief Set relative mouse mode.
- *  
+ *
  *  \param enabled Whether or not to enable relative mode
  *
  *  \return 0 on success, or -1 if relative mode is not supported.
- *  
+ *
  *  While the mouse is in relative mode, the cursor is hidden, and the
  *  driver will try to report continuous motion in the current window.
  *  Only relative motion events will be delivered, the mouse position
  *  will not change.
- *  
+ *
  *  \note This function will flush any pending mouse motion.
- *  
+ *
  *  \sa SDL_GetRelativeMouseMode()
  */
 extern DECLSPEC int SDLCALL SDL_SetRelativeMouseMode(SDL_bool enabled);
 
 /**
  *  \brief Query whether relative mouse mode is enabled.
- *  
+ *
  *  \sa SDL_SetRelativeMouseMode()
  */
 extern DECLSPEC SDL_bool SDLCALL SDL_GetRelativeMouseMode(void);
@@ -126,19 +126,19 @@ extern DECLSPEC SDL_bool SDLCALL SDL_GetRelativeMouseMode(void);
 /**
  *  \brief Create a cursor, using the specified bitmap data and
  *         mask (in MSB format).
- *  
+ *
  *  The cursor width must be a multiple of 8 bits.
- *  
+ *
  *  The cursor is created in black and white according to the following:
  *  <table>
  *  <tr><td> data </td><td> mask </td><td> resulting pixel on screen </td></tr>
  *  <tr><td>  0   </td><td>  1   </td><td> White </td></tr>
  *  <tr><td>  1   </td><td>  1   </td><td> Black </td></tr>
  *  <tr><td>  0   </td><td>  0   </td><td> Transparent </td></tr>
- *  <tr><td>  1   </td><td>  0   </td><td> Inverted color if possible, black 
+ *  <tr><td>  1   </td><td>  0   </td><td> Inverted color if possible, black
  *                                         if not. </td></tr>
  *  </table>
- *  
+ *
  *  \sa SDL_FreeCursor()
  */
 extern DECLSPEC SDL_Cursor *SDLCALL SDL_CreateCursor(const Uint8 * data,
@@ -148,7 +148,7 @@ extern DECLSPEC SDL_Cursor *SDLCALL SDL_CreateCursor(const Uint8 * data,
 
 /**
  *  \brief Create a color cursor.
- *  
+ *
  *  \sa SDL_FreeCursor()
  */
 extern DECLSPEC SDL_Cursor *SDLCALL SDL_CreateColorCursor(SDL_Surface *surface,
@@ -186,10 +186,10 @@ extern DECLSPEC void SDLCALL SDL_FreeCursor(SDL_Cursor * cursor);
 
 /**
  *  \brief Toggle whether or not the cursor is shown.
- *  
- *  \param toggle 1 to show the cursor, 0 to hide it, -1 to query the current 
+ *
+ *  \param toggle 1 to show the cursor, 0 to hide it, -1 to query the current
  *                state.
- *  
+ *
  *  \return 1 if the cursor is shown, or 0 if the cursor is hidden.
  */
 extern DECLSPEC int SDLCALL SDL_ShowCursor(int toggle);

@@ -506,8 +506,8 @@ static void calcsurfaces(cube &c, const ivec &co, int size, int usefacemask, int
             if(usefaces&2) curlitverts[numverts++].set(v[(order+3)&3].mul(size).add(vo));
         }
 
-        vec pos[MAXFACEVERTS], n[MAXFACEVERTS], po = ivec(co).mask(~0xFFF).tovec();
-        loopj(numverts) pos[j] = curlitverts[j].getxyz().tovec().mul(1.0f/8).add(po);
+        vec pos[MAXFACEVERTS], n[MAXFACEVERTS], po(ivec(co).mask(~0xFFF));
+        loopj(numverts) pos[j] = vec(curlitverts[j].getxyz()).mul(1.0f/8).add(po);
 
         int smooth = vslot.slot->smooth;
         plane planes[2];
@@ -579,7 +579,7 @@ static void calcsurfaces(cube *c, const ivec &co, int size)
 
     loopi(8)
     {
-        ivec o(i, co.x, co.y, co.z, size);
+        ivec o(i, co, size);
         if(c[i].children)
             calcsurfaces(c[i].children, o, size >> 1);
         else if(!isempty(c[i]))
@@ -591,7 +591,7 @@ static void calcsurfaces(cube *c, const ivec &co, int size)
             int usefacemask = 0;
             loopj(6) if(c[i].texture[j] != DEFAULT_SKY && (!(c[i].merged&(1<<j)) || (c[i].ext && c[i].ext->surfaces[j].numverts&MAXFACEVERTS)))
             {
-                usefacemask |= visibletris(c[i], j, o.x, o.y, o.z, size)<<(4*j);
+                usefacemask |= visibletris(c[i], j, o, size)<<(4*j);
             }
             if(usefacemask) calcsurfaces(c[i], o, size, usefacemask);
         }
@@ -603,7 +603,7 @@ static inline bool previewblends(cube &c, const ivec &o, int size)
     if(isempty(c) || c.material&MAT_ALPHA) return false;
     int usefacemask = 0;
     loopj(6) if(c.texture[j] != DEFAULT_SKY && lookupvslot(c.texture[j], false).layer)
-        usefacemask |= visibletris(c, j, o.x, o.y, o.z, size)<<(4*j);
+        usefacemask |= visibletris(c, j, o, size)<<(4*j);
     if(!usefacemask) return false;
     int layer = calcblendlayer(o.x, o.y, o.x + size, o.y + size);
     if(!(layer&LAYER_BOTTOM))
@@ -626,7 +626,7 @@ static bool previewblends(cube *c, const ivec &co, int size, const ivec &bo, con
     bool changed = false;
     loopoctabox(co, size, bo, bs)
     {
-        ivec o(i, co.x, co.y, co.z, size);
+        ivec o(i, co, size);
         cubeext *ext = c[i].ext;
         if(ext && ext->va && ext->va->hasmerges)
         {

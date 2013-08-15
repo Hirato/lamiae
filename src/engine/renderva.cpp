@@ -443,16 +443,21 @@ void rendermapmodels()
             if(!rendered)
             {
                 rendered = true;
-                oe->query = doquery && oe->distance>0 && !(++skipoq%oqmm) ? newquery(oe) : NULL;
-                if(oe->query) startmodelquery(oe->query);
+                if(!viewidx)
+                {
+                    oe->query = doquery && oe->distance>0 && !(++skipoq%oqmm) ? newquery(oe) : NULL;
+                    if(oe->query) startmodelquery(oe->query);
+                }
             }
             rendermapmodel(e);
             e.flags &= ~EF_RENDER;
         }
-        if(rendered && oe->query) endmodelquery();
+        if(rendered && !viewidx && oe->query) endmodelquery();
     }
     rendermapmodelbatches();
     resetmodelbatches();
+
+    if(viewidx) return;
 
     bool queried = false;
     for(octaentities *oe = visiblemms; oe; oe = oe->next) if(oe->distance<0)
@@ -489,7 +494,7 @@ static inline bool bboccluded(const ivec &bo, const ivec &br, cube *c, const ive
 {
     loopoctabox(o, size, bo, br)
     {
-        ivec co(i, o.x, o.y, o.z, size);
+        ivec co(i, o, size);
         if(c[i].ext && c[i].ext->va)
         {
             vtxarray *va = c[i].ext->va;
@@ -632,7 +637,7 @@ void renderblendbrush(GLuint tex, float x, float y, float w, float h)
 
 int calcbbsidemask(const ivec &bbmin, const ivec &bbmax, const vec &lightpos, float lightradius, float bias)
 {
-    vec pmin = bbmin.tovec().sub(lightpos).div(lightradius), pmax = bbmax.tovec().sub(lightpos).div(lightradius);
+    vec pmin = vec(bbmin).sub(lightpos).div(lightradius), pmax = vec(bbmax).sub(lightpos).div(lightradius);
     int mask = 0x3F;
     float dp1 = pmax.x + pmax.y, dn1 = pmax.x - pmin.y, ap1 = fabs(dp1), an1 = fabs(dn1),
           dp2 = pmin.x + pmin.y, dn2 = pmin.x - pmax.y, ap2 = fabs(dp2), an2 = fabs(dn2);
@@ -1607,7 +1612,21 @@ void rendergeom()
     resetbatches();
 
     int blends = 0;
-    if(doOQ)
+    if(viewidx)
+    {
+        for(vtxarray *va = visibleva; va; va = va->next) if(va->texs && va->occluded < OCCLUDE_GEOM)
+        {
+            if(pvsoccluded(va->geommin, va->geommax))
+            {
+                va->occluded = OCCLUDE_GEOM;
+                continue;
+            }
+            blends += va->blends;
+            renderva(cur, va, RENDERPASS_GBUFFER);
+        }
+        if(geombatches.length()) renderbatches(cur, RENDERPASS_GBUFFER);
+    }
+    else if(doOQ)
     {
         for(vtxarray *va = visibleva; va; va = va->next) if(va->texs)
         {
@@ -1667,8 +1686,7 @@ void rendergeom()
         if(geombatches.length()) renderbatches(cur, RENDERPASS_GBUFFER);
         for(vtxarray *va = visibleva; va; va = va->next) if(va->texs && va->occluded >= OCCLUDE_GEOM)
         {
-            if((va->parent && va->parent->occluded >= OCCLUDE_BB) ||
-                    (va->query && checkquery(va->query)))
+            if((va->parent && va->parent->occluded >= OCCLUDE_BB) || (va->query && checkquery(va->query)))
             {
                 va->occluded = OCCLUDE_BB;
                 continue;
@@ -1691,6 +1709,7 @@ void rendergeom()
             va->query = NULL;
             va->occluded = pvsoccluded(va->geommin, va->geommax) ? OCCLUDE_GEOM : OCCLUDE_NOTHING;
             if(va->occluded >= OCCLUDE_GEOM) continue;
+            blends += va->blends;
             renderva(cur, va, RENDERPASS_GBUFFER);
         }
         if(geombatches.length()) renderbatches(cur, RENDERPASS_GBUFFER);
@@ -1723,7 +1742,7 @@ void rendergeom()
 
     cleanupgeom(cur);
 
-    if(!doOQ && drawtex != DRAWTEX_MINIMAP)
+    if((viewidx || !doOQ) && drawtex != DRAWTEX_MINIMAP)
     {
         glFlush();
         if(cur.colormask) { cur.colormask = false; glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); }
@@ -1740,8 +1759,8 @@ int dynamicshadowvabounds(int mask, vec &bbmin, vec &bbmax)
     int vis = 0;
     for(vtxarray *va = shadowva; va; va = va->rnext) if(va->shadowmask&mask && va->dyntexs)
     {
-        bbmin.min(va->geommin.tovec());
-        bbmax.max(va->geommax.tovec());
+        bbmin.min(vec(va->geommin));
+        bbmax.max(vec(va->geommax));
         vis++;
     }
     return vis;

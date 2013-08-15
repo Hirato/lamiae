@@ -1,13 +1,5 @@
 #include "rpggame.h"
 
-namespace UI
-{
-	extern bool hideui(const char *name);
-	extern bool activeui(const char *name);
-	extern int numui();
-	extern void clearuis();
-}
-
 using namespace rpgscript;
 using namespace game;
 
@@ -244,7 +236,7 @@ namespace rpggui
 		}
 
 		if(UI::numui() > 1 && (talker->getent(0) || trader->getent(0)))
-			UI::clearuis();
+			UI::hideallui();
 
 		if((!buystack && trader->getent(0)) || (buystack && buystack->owner != trader->getent(0)))
 		{
@@ -260,17 +252,17 @@ namespace rpggui
 			}
 		}
 
-		if(talker->getent(0) && !UI::activeui("chat"))
+		if(talker->getent(0) && !UI::uivisible("chat"))
 			rpgexecute("showchat");
-		if(trader->getent(0) && !UI::activeui("trade"))
+		if(trader->getent(0) && !UI::uivisible("trade"))
 			trader->setnull(true);
 	}
 
 	void refreshgui()
 	{
-		if(UI::activeui("chat"))
+		if(UI::uivisible("chat"))
 			rpgexecute("refreshchat");
-		else if(UI::activeui("trade"))
+		else if(UI::uivisible("trade"))
 			rpgexecute("refreshtrade");
 	}
 

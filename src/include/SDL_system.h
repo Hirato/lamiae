@@ -21,7 +21,7 @@
 
 /**
  *  \file SDL_system.h
- *  
+ *
  *  Include file for platform specific SDL API functions
  */
 

@@ -21,7 +21,7 @@
 
 /**
  *  \file SDL_joystick.h
- *  
+ *
  *  Include file for SDL joystick event handling
  *
  * The term "device_index" identifies currently plugged in joystick devices between 0 and SDL_NumJoysticks, with the exact joystick
@@ -30,7 +30,7 @@
  * The term "instance_id" is the current instantiation of a joystick device in the system, if the joystick is removed and then re-inserted
  *   then it will get a new instance_id, instance_id's are monotonically increasing identifiers of a joystick plugged in.
  *
- * The term JoystickGUID is a stable 128-bit identifier for a joystick device that does not change over time, it identifies class of 
+ * The term JoystickGUID is a stable 128-bit identifier for a joystick device that does not change over time, it identifies class of
  *   the device (a X360 wired controller for example). This identifier is platform dependent.
  *
  *
@@ -86,11 +86,11 @@ extern DECLSPEC int SDLCALL SDL_NumJoysticks(void);
 extern DECLSPEC const char *SDLCALL SDL_JoystickNameForIndex(int device_index);
 
 /**
- *  Open a joystick for use.  
- *  The index passed as an argument refers tothe N'th joystick on the system.  
+ *  Open a joystick for use.
+ *  The index passed as an argument refers tothe N'th joystick on the system.
  *  This index is the value which will identify this joystick in future joystick
  *  events.
- *  
+ *
  *  \return A joystick identifier, or NULL if an error occurred.
  */
 extern DECLSPEC SDL_Joystick *SDLCALL SDL_JoystickOpen(int device_index);
@@ -100,7 +100,7 @@ extern DECLSPEC SDL_Joystick *SDLCALL SDL_JoystickOpen(int device_index);
  *  If no name can be found, this function returns NULL.
  */
 extern DECLSPEC const char *SDLCALL SDL_JoystickName(SDL_Joystick * joystick);
-	
+
 /**
  *  Return the GUID for the joystick at this index
  */
@@ -139,7 +139,7 @@ extern DECLSPEC int SDLCALL SDL_JoystickNumAxes(SDL_Joystick * joystick);
 
 /**
  *  Get the number of trackballs on a joystick.
- *  
+ *
  *  Joystick trackballs have only relative motion events associated
  *  with them and their state cannot be polled.
  */
@@ -157,7 +157,7 @@ extern DECLSPEC int SDLCALL SDL_JoystickNumButtons(SDL_Joystick * joystick);
 
 /**
  *  Update the current state of the open joysticks.
- *  
+ *
  *  This is called automatically by the event loop if any joystick
  *  events are enabled.
  */
@@ -165,20 +165,20 @@ extern DECLSPEC void SDLCALL SDL_JoystickUpdate(void);
 
 /**
  *  Enable/disable joystick event polling.
- *  
+ *
  *  If joystick events are disabled, you must call SDL_JoystickUpdate()
  *  yourself and check the state of the joystick when you want joystick
  *  information.
- *  
+ *
  *  The state can be one of ::SDL_QUERY, ::SDL_ENABLE or ::SDL_IGNORE.
  */
 extern DECLSPEC int SDLCALL SDL_JoystickEventState(int state);
 
 /**
  *  Get the current state of an axis control on a joystick.
- *  
+ *
  *  The state is a value ranging from -32768 to 32767.
- *  
+ *
  *  The axis indices start at index 0.
  */
 extern DECLSPEC Sint16 SDLCALL SDL_JoystickGetAxis(SDL_Joystick * joystick,
@@ -203,7 +203,7 @@ extern DECLSPEC Sint16 SDLCALL SDL_JoystickGetAxis(SDL_Joystick * joystick,
  *  Get the current state of a POV hat on a joystick.
  *
  *  The hat indices start at index 0.
- *  
+ *
  *  \return The return value is one of the following positions:
  *           - ::SDL_HAT_CENTERED
  *           - ::SDL_HAT_UP
@@ -220,9 +220,9 @@ extern DECLSPEC Uint8 SDLCALL SDL_JoystickGetHat(SDL_Joystick * joystick,
 
 /**
  *  Get the ball axis change since the last poll.
- *  
+ *
  *  \return 0, or -1 if you passed it invalid parameters.
- *  
+ *
  *  The ball indices start at index 0.
  */
 extern DECLSPEC int SDLCALL SDL_JoystickGetBall(SDL_Joystick * joystick,
@@ -230,7 +230,7 @@ extern DECLSPEC int SDLCALL SDL_JoystickGetBall(SDL_Joystick * joystick,
 
 /**
  *  Get the current state of a button on a joystick.
- *  
+ *
  *  The button indices start at index 0.
  */
 extern DECLSPEC Uint8 SDLCALL SDL_JoystickGetButton(SDL_Joystick * joystick,

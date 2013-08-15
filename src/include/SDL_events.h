@@ -21,7 +21,7 @@
 
 /**
  *  \file SDL_events.h
- *  
+ *
  *  Include file for SDL event handling.
  */
 
@@ -303,7 +303,7 @@ typedef struct SDL_JoyHatEvent
                          *   \sa ::SDL_HAT_LEFTUP ::SDL_HAT_UP ::SDL_HAT_RIGHTUP
                          *   \sa ::SDL_HAT_LEFT ::SDL_HAT_CENTERED ::SDL_HAT_RIGHT
                          *   \sa ::SDL_HAT_LEFTDOWN ::SDL_HAT_DOWN ::SDL_HAT_RIGHTDOWN
-                         *   
+                         *
                          *   Note that zero means the POV is centered.
                          */
     Uint8 padding1;
@@ -406,7 +406,7 @@ typedef struct SDL_MultiGestureEvent
     float dTheta;
     float dDist;
     float x;
-    float y;  
+    float y;
     Uint16 numFingers;
     Uint16 padding;
 } SDL_MultiGestureEvent;
@@ -534,9 +534,9 @@ typedef union SDL_Event
 
 /**
  *  Pumps the event loop, gathering events from the input devices.
- *  
+ *
  *  This function updates the event queue and internal input device state.
- *  
+ *
  *  This should only be run in the thread that sets the video mode.
  */
 extern DECLSPEC void SDLCALL SDL_PumpEvents(void);
@@ -551,20 +551,20 @@ typedef enum
 
 /**
  *  Checks the event queue for messages and optionally returns them.
- *  
+ *
  *  If \c action is ::SDL_ADDEVENT, up to \c numevents events will be added to
  *  the back of the event queue.
- *  
+ *
  *  If \c action is ::SDL_PEEKEVENT, up to \c numevents events at the front
  *  of the event queue, within the specified minimum and maximum type,
  *  will be returned and will not be removed from the queue.
- *  
- *  If \c action is ::SDL_GETEVENT, up to \c numevents events at the front 
+ *
+ *  If \c action is ::SDL_GETEVENT, up to \c numevents events at the front
  *  of the event queue, within the specified minimum and maximum type,
  *  will be returned and will be removed from the queue.
- *  
+ *
  *  \return The number of events actually stored, or -1 if there was an error.
- *  
+ *
  *  This function is thread-safe.
  */
 extern DECLSPEC int SDLCALL SDL_PeepEvents(SDL_Event * events, int numevents,
@@ -586,28 +586,28 @@ extern DECLSPEC void SDLCALL SDL_FlushEvents(Uint32 minType, Uint32 maxType);
 
 /**
  *  \brief Polls for currently pending events.
- *  
+ *
  *  \return 1 if there are any pending events, or 0 if there are none available.
- *  
- *  \param event If not NULL, the next event is removed from the queue and 
+ *
+ *  \param event If not NULL, the next event is removed from the queue and
  *               stored in that area.
  */
 extern DECLSPEC int SDLCALL SDL_PollEvent(SDL_Event * event);
 
 /**
  *  \brief Waits indefinitely for the next available event.
- *  
+ *
  *  \return 1, or 0 if there was an error while waiting for events.
- *   
- *  \param event If not NULL, the next event is removed from the queue and 
+ *
+ *  \param event If not NULL, the next event is removed from the queue and
  *               stored in that area.
  */
 extern DECLSPEC int SDLCALL SDL_WaitEvent(SDL_Event * event);
 
 /**
- *  \brief Waits until the specified timeout (in milliseconds) for the next 
+ *  \brief Waits until the specified timeout (in milliseconds) for the next
  *         available event.
- *  
+ *
  *  \return 1, or 0 if there was an error while waiting for events.
  *
  *  \param event If not NULL, the next event is removed from the queue and
@@ -619,8 +619,8 @@ extern DECLSPEC int SDLCALL SDL_WaitEventTimeout(SDL_Event * event,
 
 /**
  *  \brief Add an event to the event queue.
- *  
- *  \return 1 on success, 0 if the event was filtered, or -1 if the event queue 
+ *
+ *  \return 1 on success, 0 if the event was filtered, or -1 if the event queue
  *          was full or there was some other error.
  */
 extern DECLSPEC int SDLCALL SDL_PushEvent(SDL_Event * event);
@@ -637,10 +637,10 @@ typedef int (SDLCALL * SDL_EventFilter) (void *userdata, SDL_Event * event);
  *  \endcode
  *
  *  If the filter returns 1, then the event will be added to the internal queue.
- *  If it returns 0, then the event will be dropped from the queue, but the 
+ *  If it returns 0, then the event will be dropped from the queue, but the
  *  internal state will still be updated.  This allows selective filtering of
  *  dynamically arriving events.
- *  
+ *
  *  \warning  Be very careful of what you do in the event filter function, as
  *            it may run in a different thread!
  *
@@ -689,11 +689,11 @@ extern DECLSPEC void SDLCALL SDL_FilterEvents(SDL_EventFilter filter,
 
 /**
  *  This function allows you to set the state of processing certain events.
- *   - If \c state is set to ::SDL_IGNORE, that event will be automatically 
+ *   - If \c state is set to ::SDL_IGNORE, that event will be automatically
  *     dropped from the event queue and will not event be filtered.
- *   - If \c state is set to ::SDL_ENABLE, that event will be processed 
+ *   - If \c state is set to ::SDL_ENABLE, that event will be processed
  *     normally.
- *   - If \c state is set to ::SDL_QUERY, SDL_EventState() will return the 
+ *   - If \c state is set to ::SDL_QUERY, SDL_EventState() will return the
  *     current processing state of the specified event.
  */
 extern DECLSPEC Uint8 SDLCALL SDL_EventState(Uint32 type, int state);

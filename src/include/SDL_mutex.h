@@ -24,7 +24,7 @@
 
 /**
  *  \file SDL_mutex.h
- *  
+ *
  *  Functions to provide thread synchronization primitives.
  */
 
@@ -80,9 +80,9 @@ extern DECLSPEC int SDLCALL SDL_TryLockMutex(SDL_mutex * mutex);
 
 /**
  *  Unlock the mutex.
- *  
+ *
  *  \return 0, or -1 on error.
- *  
+ *
  *  \warning It is an error to unlock a mutex that has not been locked by
  *           the current thread, and doing so results in undefined behavior.
  */
@@ -117,34 +117,34 @@ extern DECLSPEC SDL_sem *SDLCALL SDL_CreateSemaphore(Uint32 initial_value);
 extern DECLSPEC void SDLCALL SDL_DestroySemaphore(SDL_sem * sem);
 
 /**
- *  This function suspends the calling thread until the semaphore pointed 
- *  to by \c sem has a positive count. It then atomically decreases the 
+ *  This function suspends the calling thread until the semaphore pointed
+ *  to by \c sem has a positive count. It then atomically decreases the
  *  semaphore count.
  */
 extern DECLSPEC int SDLCALL SDL_SemWait(SDL_sem * sem);
 
 /**
  *  Non-blocking variant of SDL_SemWait().
- *  
- *  \return 0 if the wait succeeds, ::SDL_MUTEX_TIMEDOUT if the wait would 
+ *
+ *  \return 0 if the wait succeeds, ::SDL_MUTEX_TIMEDOUT if the wait would
  *          block, and -1 on error.
  */
 extern DECLSPEC int SDLCALL SDL_SemTryWait(SDL_sem * sem);
 
 /**
  *  Variant of SDL_SemWait() with a timeout in milliseconds.
- *  
- *  \return 0 if the wait succeeds, ::SDL_MUTEX_TIMEDOUT if the wait does not 
+ *
+ *  \return 0 if the wait succeeds, ::SDL_MUTEX_TIMEDOUT if the wait does not
  *          succeed in the allotted time, and -1 on error.
- *  
- *  \warning On some platforms this function is implemented by looping with a 
+ *
+ *  \warning On some platforms this function is implemented by looping with a
  *           delay of 1 ms, and so should be avoided if possible.
  */
 extern DECLSPEC int SDLCALL SDL_SemWaitTimeout(SDL_sem * sem, Uint32 ms);
 
 /**
  *  Atomically increases the semaphore's count (not blocking).
- *  
+ *
  *  \return 0, or -1 on error.
  */
 extern DECLSPEC int SDLCALL SDL_SemPost(SDL_sem * sem);
@@ -203,7 +203,7 @@ extern DECLSPEC void SDLCALL SDL_DestroyCond(SDL_cond * cond);
 
 /**
  *  Restart one of the threads that are waiting on the condition variable.
- *  
+ *
  *  \return 0 or -1 on error.
  */
 extern DECLSPEC int SDLCALL SDL_CondSignal(SDL_cond * cond);
@@ -217,11 +217,11 @@ extern DECLSPEC int SDLCALL SDL_CondBroadcast(SDL_cond * cond);
 
 /**
  *  Wait on the condition variable, unlocking the provided mutex.
- *  
+ *
  *  \warning The mutex must be locked before entering this function!
- *  
+ *
  *  The mutex is re-locked once the condition variable is signaled.
- *  
+ *
  *  \return 0 when it is signaled, or -1 on error.
  */
 extern DECLSPEC int SDLCALL SDL_CondWait(SDL_cond * cond, SDL_mutex * mutex);
@@ -231,7 +231,7 @@ extern DECLSPEC int SDLCALL SDL_CondWait(SDL_cond * cond, SDL_mutex * mutex);
  *  variable is signaled, ::SDL_MUTEX_TIMEDOUT if the condition is not
  *  signaled in the allotted time, and -1 on error.
  *
- *  \warning On some platforms this function is implemented by looping with a 
+ *  \warning On some platforms this function is implemented by looping with a
  *           delay of 1 ms, and so should be avoided if possible.
  */
 extern DECLSPEC int SDLCALL SDL_CondWaitTimeout(SDL_cond * cond,

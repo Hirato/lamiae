@@ -160,7 +160,7 @@ void addnormals(cube &c, const ivec &o, int size)
     {
         normalprogress++;
         size >>= 1;
-        loopi(8) addnormals(c.children[i], ivec(i, o.x, o.y, o.z, size), size);
+        loopi(8) addnormals(c.children[i], ivec(i, o, size), size);
         return;
     }
     else if(isempty(c)) return;
@@ -168,7 +168,7 @@ void addnormals(cube &c, const ivec &o, int size)
     vec pos[MAXFACEVERTS];
     int norms[MAXFACEVERTS];
     int tj = usetnormals && c.ext ? c.ext->tjoints : -1, vis;
-    loopi(6) if((vis = visibletris(c, i, o.x, o.y, o.z, size)))
+    loopi(6) if((vis = visibletris(c, i, o, size)))
     {
         CHECK_CALCLIGHT_PROGRESS(return, show_addnormals_progress);
         if(c.texture[i] == DEFAULT_SKY) continue;
@@ -178,7 +178,7 @@ void addnormals(cube &c, const ivec &o, int size)
         if(numverts)
         {
             vertinfo *verts = c.ext->verts() + c.ext->surfaces[i].verts;
-            vec vo = ivec(o).mask(~0xFFF).tovec();
+            vec vo(ivec(o).mask(~0xFFF));
             loopj(numverts)
             {
                 vertinfo &v = verts[j];
@@ -193,11 +193,11 @@ void addnormals(cube &c, const ivec &o, int size)
             genfaceverts(c, i, v);
             if(!flataxisface(c, i)) convex = faceconvexity(v);
             int order = vis&4 || convex < 0 ? 1 : 0;
-            vec vo = o.tovec();
-            pos[numverts++] = v[order].tovec().mul(size/8.0f).add(vo);
-            if(vis&1) pos[numverts++] = v[order+1].tovec().mul(size/8.0f).add(vo);
-            pos[numverts++] = v[order+2].tovec().mul(size/8.0f).add(vo);
-            if(vis&2) pos[numverts++] = v[(order+3)&3].tovec().mul(size/8.0f).add(vo);
+            vec vo(o);
+            pos[numverts++] = vec(v[order]).mul(size/8.0f).add(vo);
+            if(vis&1) pos[numverts++] = vec(v[order+1]).mul(size/8.0f).add(vo);
+            pos[numverts++] = vec(v[order+2]).mul(size/8.0f).add(vo);
+            if(vis&2) pos[numverts++] = vec(v[(order+3)&3]).mul(size/8.0f).add(vo);
         }
 
         if(!flataxisface(c, i))
@@ -232,7 +232,7 @@ void addnormals(cube &c, const ivec &o, int size)
             int origin = int(min(v1[axis], v2[axis])*8)&~0x7FFF,
                 offset1 = (int(v1[axis]*8) - origin) / d[axis],
                 offset2 = (int(v2[axis]*8) - origin) / d[axis];
-            vec o = vec(v1).sub(d.tovec().mul(offset1/8.0f)), n1, n2;
+            vec o = vec(v1).sub(vec(d).mul(offset1/8.0f)), n1, n2;
             float doffset = 1.0f / (offset2 - offset1);
 
             while(tj >= 0)
@@ -240,7 +240,7 @@ void addnormals(cube &c, const ivec &o, int size)
                 tjoint &t = tjoints[tj];
                 if(t.edge != edge) break;
                 float offset = (t.offset - offset1) * doffset;
-                vec tpos = d.tovec().mul(t.offset/8.0f).add(o);
+                vec tpos = vec(d).mul(t.offset/8.0f).add(o);
                 addtnormal(tpos, smooth, offset, norms[e1], norms[e2], v1, v2);
                 tj = t.next;
             }
@@ -253,7 +253,7 @@ void calcnormals(bool lerptjoints)
     usetnormals = lerptjoints;
     if(usetnormals) findtjoints();
     normalprogress = 1;
-    loopi(8) addnormals(worldroot[i], ivec(i, 0, 0, 0, worldsize/2), worldsize/2);
+    loopi(8) addnormals(worldroot[i], ivec(i, ivec(0, 0, 0), worldsize/2), worldsize/2);
 }
 
 void clearnormals()

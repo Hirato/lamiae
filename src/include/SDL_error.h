@@ -21,7 +21,7 @@
 
 /**
  *  \file SDL_error.h
- *  
+ *
  *  Simple error message routines for SDL.
  */
 
@@ -44,8 +44,8 @@ extern DECLSPEC void SDLCALL SDL_ClearError(void);
 
 /**
  *  \name Internal error functions
- *  
- *  \internal 
+ *
+ *  \internal
  *  Private error reporting function - used internally.
  */
 /*@{*/

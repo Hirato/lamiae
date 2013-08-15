@@ -21,21 +21,21 @@
 
 /**
  *  \file SDL.h
- *  
+ *
  *  Main include header for the SDL library
  */
 
 /**
  *  \mainpage Simple DirectMedia Layer (SDL)
- *  
+ *
  *  http://www.libsdl.org/
- *  
+ *
  *  \section intro_sec Introduction
- *  
+ *
  *  This is the Simple DirectMedia Layer, a general API that provides low
  *  level access to audio, keyboard, mouse, joystick, 3D hardware via OpenGL,
  *  and 2D framebuffer across multiple platforms.
- *  
+ *
  *  SDL is written in C, but works with C++ natively, and has bindings to
  *  several other languages, including Ada, C#, Eiffel, Erlang, Euphoria,
  *  Guile, Haskell, Java, Lisp, Lua, ML, Objective C, Pascal, Perl, PHP,
@@ -99,20 +99,21 @@ extern "C" {
 
 /**
  *  \name SDL_INIT_*
- *  
+ *
  *  These are the flags which may be passed to SDL_Init().  You should
  *  specify the subsystems which you will be using in your application.
  */
 /*@{*/
 #define SDL_INIT_TIMER          0x00000001
 #define SDL_INIT_AUDIO          0x00000010
-#define SDL_INIT_VIDEO          0x00000020
-#define SDL_INIT_JOYSTICK       0x00000200
+#define SDL_INIT_VIDEO          0x00000020  /**< SDL_INIT_VIDEO implies SDL_INIT_EVENTS */
+#define SDL_INIT_JOYSTICK       0x00000200  /**< SDL_INIT_JOYSTICK implies SDL_INIT_EVENTS */
 #define SDL_INIT_HAPTIC         0x00001000
-#define SDL_INIT_GAMECONTROLLER 0x00002000      /**< turn on game controller also implicitly does JOYSTICK */
-#define SDL_INIT_NOPARACHUTE    0x00100000      /**< Don't catch fatal signals */
+#define SDL_INIT_GAMECONTROLLER 0x00002000  /**< SDL_INIT_GAMECONTROLLER implies SDL_INIT_JOYSTICK */
+#define SDL_INIT_EVENTS         0x00004000
+#define SDL_INIT_NOPARACHUTE    0x00100000  /**< Don't catch fatal signals */
 #define SDL_INIT_EVERYTHING ( \
-                SDL_INIT_TIMER | SDL_INIT_AUDIO | SDL_INIT_VIDEO | \
+                SDL_INIT_TIMER | SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_EVENTS | \
                 SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC | SDL_INIT_GAMECONTROLLER \
             )
 /*@}*/
@@ -137,7 +138,7 @@ extern DECLSPEC void SDLCALL SDL_QuitSubSystem(Uint32 flags);
 /**
  *  This function returns a mask of the specified subsystems which have
  *  previously been initialized.
- *  
+ *
  *  If \c flags is 0, it returns a mask of all initialized subsystems.
  */
 extern DECLSPEC Uint32 SDLCALL SDL_WasInit(Uint32 flags);

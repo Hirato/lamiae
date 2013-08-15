@@ -24,7 +24,7 @@
 #ifndef _SDL_MIXER_H
 #define _SDL_MIXER_H
 
-#include "SDL_types.h"
+#include "SDL_stdinc.h"
 #include "SDL_rwops.h"
 #include "SDL_audio.h"
 #include "SDL_endian.h"
@@ -217,9 +217,9 @@ extern DECLSPEC void * SDLCALL Mix_GetMusicHookData(void);
 
 /*
  * Add your own callback when a channel has finished playing. NULL
- *  to disable callback. The callback may be called from the mixer's audio 
+ *  to disable callback. The callback may be called from the mixer's audio
  *  callback or it could be called as a result of Mix_HaltChannel(), etc.
- *  do not call SDL_LockAudio() from this callback; you will either be 
+ *  do not call SDL_LockAudio() from this callback; you will either be
  *  inside the audio callback, or SDL_mixer will explicitly lock the audio
  *  before calling your callback.
  */
@@ -300,7 +300,7 @@ typedef void (*Mix_EffectDone_t)(int chan, void *udata);
  *
  * After all these effects have finished processing, the callback registered
  *  through Mix_SetPostMix() runs, and then the stream goes to the audio
- *  device. 
+ *  device.
  *
  * DO NOT EVER call SDL_LockAudio() from your callback function!
  *
@@ -587,7 +587,7 @@ extern DECLSPEC int SDLCALL Mix_PausedMusic(void);
 /* Set the current position in the music stream.
    This returns 0 if successful, or -1 if it failed or isn't implemented.
    This function is only implemented for MOD music formats (set pattern
-   order number) and for OGG, FLAC, MP3_MAD, and MODPLUG music (set 
+   order number) and for OGG, FLAC, MP3_MAD, and MODPLUG music (set
    position in seconds), at the moment.
 */
 extern DECLSPEC int SDLCALL Mix_SetMusicPosition(double position);

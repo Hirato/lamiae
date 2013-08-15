@@ -264,7 +264,7 @@ static void text_color(char c, char *stack, int size, int &sp, bvec colour, int 
             case '5': colour = bvec(192,  64, 192); break; // magenta
             case '6': colour = bvec(255, 128,   0); break; // orange
             case '7': colour = bvec(255, 255, 255); break; // white
-            // provided color: everything else
+            case '8': colour = bvec( 80, 207, 229); break; // "Tesseract Blue"
 
             case 'A': colour = bvec(255, 224, 192); break; //apricot
             case 'B': colour = bvec(192,  96,   0); break; //brown

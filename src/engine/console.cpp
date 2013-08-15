@@ -2,8 +2,9 @@
 
 #include "engine.h"
 
+#define MAXCONLINES 1000
 struct cline { char *line; int type, outtime; };
-vector<cline> conlines;
+reversequeue<cline, MAXCONLINES> conlines;
 
 int commandmillis = -1;
 string commandbuf;
@@ -11,17 +12,17 @@ char *commandaction = NULL, *commandprompt = NULL;
 enum { CF_COMPLETE = 1<<0, CF_EXECUTE = 1<<1 };
 int commandflags = 0, commandpos = -1;
 
-VARFP(maxcon, 10, 200, 1000, { while(conlines.length() > maxcon) delete[] conlines.pop().line; });
+VARFP(maxcon, 10, 200, MAXCONLINES, { while(conlines.length() > maxcon) delete[] conlines.pop().line; });
 
 #define CONSTRLEN 512
 
 void conline(int type, const char *sf)        // add a line to the console buffer
 {
-    cline cl;
-    cl.line = conlines.length()>maxcon ? conlines.pop().line : newstring("", CONSTRLEN-1);   // constrain the buffer size
+    char *buf = conlines.length() >= maxcon ? conlines.remove().line : newstring("", CONSTRLEN-1);
+    cline &cl = conlines.add();
+    cl.line = buf;
     cl.type = type;
-    cl.outtime = totalmillis;                       // for how long to keep line on screen
-    conlines.insert(0, cl);
+    cl.outtime = totalmillis;                // for how long to keep line on screen
     copystring(cl.line, sf, CONSTRLEN);
 }
 
@@ -49,8 +50,17 @@ void conoutf(int type, const char *fmt, ...)
     va_end(args);
 }
 
-VAR(fullconsole, 0, 0, 1);
-ICOMMAND(toggleconsole, "", (), { fullconsole ^= 1; });
+ICOMMAND(fullconsole, "iN$", (int *val, int *numargs, ident *id),
+{
+    if(*numargs > 0) UI::holdui("fullconsole", *val!=0);
+    else
+    {
+        int vis = UI::uivisible("fullconsole") ? 1 : 0;
+        if(*numargs < 0) intret(vis);
+        else printvar(id, vis);
+    }
+});
+ICOMMAND(toggleconsole, "", (), UI::toggleui("fullconsole"));
 
 float rendercommand(float x, float y, float w)
 {
@@ -70,9 +80,9 @@ VARP(miniconwidth, 0, 40, 100);
 VARP(confade, 0, 30, 60);
 VARP(miniconfade, 0, 30, 60);
 VARP(fullconsize, 0, 75, 100);
-HVARP(confilter, 0, 0x7FFFFFF, 0x7FFFFFF);
-HVARP(fullconfilter, 0, 0x7FFFFFF, 0x7FFFFFF);
-HVARP(miniconfilter, 0, 0, 0x7FFFFFF);
+HVARP(confilter, 0, 0xFFFFFF, 0xFFFFFF);
+HVARP(fullconfilter, 0, 0xFFFFFF, 0xFFFFFF);
+HVARP(miniconfilter, 0, 0, 0xFFFFFF);
 
 int conskip = 0, miniconskip = 0;
 
@@ -92,7 +102,7 @@ void setconskip(int &skip, int filter, int n)
     }
 }
 
-ICOMMAND(conskip, "i", (int *n), setconskip(conskip, fullconsole ? fullconfilter : confilter, *n));
+ICOMMAND(conskip, "i", (int *n), setconskip(conskip, UI::uivisible("fullconsole") ? fullconfilter : confilter, *n));
 ICOMMAND(miniconskip, "i", (int *n), setconskip(miniconskip, miniconfilter, *n));
 
 ICOMMAND(clearconsole, "", (), { while(conlines.length()) delete[] conlines.pop().line; });
@@ -138,20 +148,24 @@ float drawconlines(int conskip, int confade, float conwidth, float conheight, fl
     return y+conoff;
 }
 
-float renderconsole(float w, float h, float abovehud)                   // render buffer taking into account time & scrolling
+float renderfullconsole(float w, float h)
 {
-    float conpad = fullconsole ? 0 : FONTH/4,
-          conoff = fullconsole ? FONTH : FONTH/3,
-          conheight = min(fullconsole ? ((h*fullconsize/100)/FONTH)*FONTH : FONTH*consize, h - 2*(conpad + conoff)),
-          conwidth = w - 2*(conpad + conoff) - (fullconsole ? 0 : game::clipconsole(w, h));
+    float conpad = FONTH/2,
+          conheight = h - 2*conpad,
+          conwidth = w - 2*conpad;
+    drawconlines(conskip, 0, conwidth, conheight, conpad, fullconfilter);
+    return conheight + 2*conpad;
+}
 
-    extern void consolebox(float x1, float y1, float x2, float y2);
-    if(fullconsole) consolebox(conpad, conpad, conwidth+conpad+2*conoff, conheight+conpad+2*conoff);
-
-    float y = drawconlines(conskip, fullconsole ? 0 : confade, conwidth, conheight, conpad+conoff, fullconsole ? fullconfilter : confilter);
-    if(!fullconsole && (miniconsize && miniconwidth))
-        drawconlines(miniconskip, miniconfade, (miniconwidth*(w - 2*(conpad + conoff)))/100, min(float(FONTH*miniconsize), abovehud - y), conpad+conoff, miniconfilter, abovehud, -1);
-    return fullconsole ? conheight + 2*(conpad + conoff) : y;
+float renderconsole(float w, float h, float abovehud)
+{
+    float conpad = FONTH/2,
+          conheight = min(float(FONTH*consize), h - 2*conpad),
+          conwidth = w - 2*conpad - game::clipconsole(w, h);
+    float y = drawconlines(conskip, confade, conwidth, conheight, conpad, confilter);
+    if(miniconsize && miniconwidth)
+        drawconlines(miniconskip, miniconfade, (miniconwidth*(w - 2*conpad))/100, min(float(FONTH*miniconsize), abovehud - y), conpad, miniconfilter, abovehud, -1);
+    return y;
 }
 
 // keymap is defined externally in keymap.cfg
@@ -586,17 +600,12 @@ void clear_console()
     keyms.clear();
 }
 
-static inline bool sortbinds(keym *x, keym *y)
-{
-    return strcmp(x->name, y->name) < 0;
-}
-
 void writebinds(stream *f)
 {
     static const char * const cmds[3] = { "bind", "specbind", "editbind" };
     vector<keym *> binds;
     enumerate(keyms, keym, km, binds.add(&km));
-    binds.sort(sortbinds);
+    binds.sortname();
     loopj(3)
     {
         loopv(binds)
@@ -634,14 +643,12 @@ struct filesval
     filesval(int type, const char *dir, const char *ext) : type(type), dir(newstring(dir)), ext(ext && ext[0] ? newstring(ext) : NULL), millis(-1) {}
     ~filesval() { DELETEA(dir); DELETEA(ext); files.deletearrays(); }
 
-    static bool comparefiles(const char *x, const char *y) { return strcmp(x, y) < 0; }
-
     void update()
     {
         if(type!=FILES_DIR || millis >= commandmillis) return;
         files.deletearrays();
         listfiles(dir, ext, files);
-        files.sort(comparefiles);
+        files.sort();
         loopv(files) if(i && !strcmp(files[i], files[i-1])) delete[] files.remove(i--);
         millis = totalmillis;
     }
@@ -766,16 +773,11 @@ void complete(char *s, int maxlen, const char *cmdprefix)
     }
 }
 
-static inline bool sortcompletions(const char *x, const char *y)
-{
-    return strcmp(x, y) < 0;
-}
-
 void writecompletions(stream *f)
 {
     vector<char *> cmds;
     enumeratekt(completions, char *, k, filesval *, v, { if(v) cmds.add(k); });
-    cmds.sort(sortcompletions);
+    cmds.sort();
     loopv(cmds)
     {
         char *k = cmds[i];

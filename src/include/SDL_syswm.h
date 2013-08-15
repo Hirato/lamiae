@@ -21,7 +21,7 @@
 
 /**
  *  \file SDL_syswm.h
- *  
+ *
  *  Include file for SDL custom system window manager hooks.
  */
 
@@ -41,7 +41,7 @@ extern "C" {
 
 /**
  *  \file SDL_syswm.h
- *  
+ *
  *  Your application has access to a special type of event ::SDL_SYSWMEVENT,
  *  which contains window-manager specific information and arrives whenever
  *  an unhandled window event occurs.  This event is ignored by default, but
@@ -93,7 +93,7 @@ typedef struct _UIWindow UIWindow;
 #endif
 #endif
 
-/** 
+/**
  *  These are the various supported windowing subsystems
  */
 typedef enum
@@ -207,19 +207,19 @@ typedef struct SDL_SysWMinfo SDL_SysWMinfo;
 /* Function prototypes */
 /**
  *  \brief This function allows access to driver-dependent window information.
- *  
+ *
  *  \param window The window about which information is being requested
- *  \param info This structure must be initialized with the SDL version, and is 
+ *  \param info This structure must be initialized with the SDL version, and is
  *              then filled in with information about the given window.
- *  
- *  \return SDL_TRUE if the function is implemented and the version member of 
+ *
+ *  \return SDL_TRUE if the function is implemented and the version member of
  *          the \c info struct is valid, SDL_FALSE otherwise.
- *  
+ *
  *  You typically use this function like this:
  *  \code
  *  SDL_SysWMinfo info;
  *  SDL_VERSION(&info.version);
- *  if ( SDL_GetWindowWMInfo(&info) ) { ... }
+ *  if ( SDL_GetWindowWMInfo(window, &info) ) { ... }
  *  \endcode
  */
 extern DECLSPEC SDL_bool SDLCALL SDL_GetWindowWMInfo(SDL_Window * window,

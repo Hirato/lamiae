@@ -45,17 +45,17 @@ extern "C" {
 
 /**
  *  \brief Create a window that can be shaped with the specified position, dimensions, and flags.
- *  
+ *
  *  \param title The title of the window, in UTF-8 encoding.
- *  \param x     The x position of the window, ::SDL_WINDOWPOS_CENTERED, or 
+ *  \param x     The x position of the window, ::SDL_WINDOWPOS_CENTERED, or
  *               ::SDL_WINDOWPOS_UNDEFINED.
- *  \param y     The y position of the window, ::SDL_WINDOWPOS_CENTERED, or 
+ *  \param y     The y position of the window, ::SDL_WINDOWPOS_CENTERED, or
  *               ::SDL_WINDOWPOS_UNDEFINED.
  *  \param w     The width of the window.
  *  \param h     The height of the window.
- *  \param flags The flags for the window, a mask of SDL_WINDOW_BORDERLESS with any of the following: 
+ *  \param flags The flags for the window, a mask of SDL_WINDOW_BORDERLESS with any of the following:
  *               ::SDL_WINDOW_OPENGL,     ::SDL_WINDOW_INPUT_GRABBED,
- *               ::SDL_WINDOW_SHOWN,      ::SDL_WINDOW_RESIZABLE,
+ *               ::SDL_WINDOW_HIDDEN,     ::SDL_WINDOW_RESIZABLE,
  *               ::SDL_WINDOW_MAXIMIZED,  ::SDL_WINDOW_MINIMIZED,
  *       ::SDL_WINDOW_BORDERLESS is always set, and ::SDL_WINDOW_FULLSCREEN is always unset.
  *
@@ -66,7 +66,7 @@ extern "C" {
 extern DECLSPEC SDL_Window * SDLCALL SDL_CreateShapedWindow(const char *title,unsigned int x,unsigned int y,unsigned int w,unsigned int h,Uint32 flags);
 
 /**
- * \brief Return whether the given window is a shaped window. 
+ * \brief Return whether the given window is a shaped window.
  *
  * \param window The window to query for being shaped.
  *

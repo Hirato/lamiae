@@ -1079,7 +1079,7 @@ namespace recorder
                 glReadPixels(0, 0, m.w, m.h, GL_BGRA, GL_UNSIGNED_BYTE, m.video);
             }
             glBindFramebuffer_(GL_FRAMEBUFFER, 0);
-            glViewport(0, 0, screenw, screenh);
+            glViewport(0, 0, hudw, hudh);
 
         }
         else glReadPixels(0, 0, m.w, m.h, GL_BGRA, GL_UNSIGNED_BYTE, m.video);
@@ -1112,7 +1112,7 @@ namespace recorder
 
     void drawhud()
     {
-        int w = screenw, h = screenh;
+        int w = hudw, h = hudh;
         if(forceaspect) w = int(ceil(h*forceaspect));
         gettextres(w, h);
 
