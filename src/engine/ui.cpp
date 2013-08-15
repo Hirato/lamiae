@@ -490,6 +490,7 @@ namespace UI
         {
             loopinchildrenrev(o, cx, cy,
             {
+                if(!o->takesinput()) continue;
                 Object *c = o->hover(ox, oy);
                 if(c == o) { hoverx = ox; hovery = oy; }
                 return c;
@@ -501,6 +502,7 @@ namespace UI
         {
             loopinchildrenrev(o, cx, cy,
             {
+                if(!o->takesinput()) continue;
                 Object *c = o->select(ox, oy);
                 if(c && i < children.length() - 1) { children.removeobj(o); children.add(o); }
                 if(c == o) { selectx = ox; selecty = oy; }
