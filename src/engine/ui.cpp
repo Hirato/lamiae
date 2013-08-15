@@ -2172,7 +2172,7 @@ namespace UI
 
     // default size of text in terms of rows per screenful
     VARP(uitextrows, 1, 40, 200);
-    FVAR(uitextscale, 1, 0, 0);
+    FVAR(uitextscale, 1, 1.f / uitextrows, 0);
 
     struct Text : Object
     {
