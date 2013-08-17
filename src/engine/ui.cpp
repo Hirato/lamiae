@@ -2173,6 +2173,13 @@ namespace UI
     // default size of text in terms of rows per screenful
     VARP(uitextrows, 1, 40, 200);
     FVAR(uitextscale, 1, 1.f / uitextrows, 0);
+    FVAR(uicontextscale, 1, 0, 0);
+
+    enum textstyle
+    {
+        UI = 0,
+        CONSOLE
+    };
 
     struct Text : Object
     {
@@ -2180,9 +2187,10 @@ namespace UI
         float scale;
         float wrap;
         Color color;
+        textstyle style;
 
-        Text(const char *str, float scale = 1, float wrap = -1, const Color &color = Color(255, 255, 255))
-            : str(newstring(str)), scale(scale), wrap(wrap), color(color) {}
+        Text(const char *str, float scale = 1, float wrap = -1, const Color &color = Color(255, 255, 255), textstyle style = UI)
+            : str(newstring(str)), scale(scale), wrap(wrap), color(color), style(style) {}
         ~Text() { delete[] str; }
 
         Object *target(float cx, float cy)
@@ -2191,7 +2199,7 @@ namespace UI
             return o ? o : this;
         }
 
-        float drawscale() const { return scale / FONTH * uitextscale; }
+        float drawscale() const { return scale / FONTH * (style == CONSOLE ? uicontextscale : uitextscale); }
 
         void draw(float sx, float sy)
         {
@@ -2229,10 +2237,11 @@ namespace UI
         float scale;
         float wrap;
         Color color;
+        textstyle style;
 
         tagval result;
 
-        EvalText(uint *cmd, float scale = 1, float wrap = -1, const Color &color = Color(255, 255, 255)) : cmd(cmd), scale(scale), wrap(wrap), color(color) { keepcode(cmd); }
+        EvalText(uint *cmd, float scale = 1, float wrap = -1, const Color &color = Color(255, 255, 255), textstyle style = UI) : cmd(cmd), scale(scale), wrap(wrap), color(color), style(style) { keepcode(cmd); }
         ~EvalText() { freecode(cmd); result.cleanup(); }
 
         Object *target(float cx, float cy)
@@ -2241,7 +2250,7 @@ namespace UI
             return o ? o : this;
         }
 
-        float drawscale() const { return scale / FONTH * uitextscale; }
+        float drawscale() const { return scale / FONTH * (style == CONSOLE ? uicontextscale : uitextscale); }
 
         void draw(float sx, float sy)
         {
@@ -2271,8 +2280,6 @@ namespace UI
             h = max(h, th*k);
         }
     };
-
-    FVAR(uicontextscale, 1, 0, 0);
 
     struct Console : Filler
     {
@@ -2856,6 +2863,14 @@ namespace UI
 
     ICOMMAND(uievaltext, "effe", (uint *cmd, float *scale, float *wrap, uint *children),
         addui(new EvalText(cmd, *scale <= 0 ? 1 : *scale, *wrap), children));
+
+    ICOMMAND(uicontext, "sfe", (char *text, float *wrap, uint *children),
+        Text *o = new Text(text, 1, *wrap); o->style = CONSOLE;
+        addui(o, children));
+
+    ICOMMAND(uievalcontext, "efe", (uint *cmd, float *wrap, uint *children),
+        EvalText *o = new EvalText(cmd, 1, *wrap); o->style = CONSOLE;
+        addui(o, children));
 
     ICOMMAND(uitexteditor, "siifsise", (char *name, int *length, int *height, float *scale, char *initval, int *keep, char *filter, uint *children),
         addui(new TextEditor(name, *length, *height, *scale <= 0 ? 1 : *scale, initval, *keep ? EDITORFOREVER : EDITORUSED, filter[0] ? filter : NULL), children));
