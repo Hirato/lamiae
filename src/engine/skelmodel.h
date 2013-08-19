@@ -100,7 +100,7 @@ struct skelmodel : animmodel
             else
             {
                 int total = 0;
-                loopk(4) total += (v.weights[k] = uchar(weights[k]*255));
+                loopk(4) total += (v.weights[k] = uchar(0.5f + weights[k]*255));
                 while(total > 255)
                 {
                     loopk(4) if(v.weights[k] > 0 && total > 255) { v.weights[k]--; total--; }

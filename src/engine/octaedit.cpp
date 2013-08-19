@@ -2379,7 +2379,7 @@ void rendertexturepanel(int w, int h)
             laststat = totalmillis - (totalmillis%statrate); \
         } \
         if(prevstat == curstat) curstat = (val); \
-        type##ret(val); \
+        type##ret(curstat); \
     });
 EDITSTAT(wtr, int, wtris/1024);
 EDITSTAT(vtr, int, (vtris*100)/max(wtris, 1));

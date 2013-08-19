@@ -118,7 +118,7 @@ static inline bool pvsoccluded(const ivec &bborigin, int size)
 }
 
 // rendergl
-extern bool hasVAO, hasTR, hasTSW, hasFBO, hasAFBO, hasDS, hasTF, hasCBF, hasS3TC, hasFXT1, hasLATC, hasRGTC, hasAF, hasFBB, hasFBMS, hasTMS, hasMSS, hasFBMSBS, hasNVFBMSC, hasNVTMS, hasUBO, hasMBR, hasDB2, hasDBB, hasTG, hasT4, hasTQ, hasPF, hasTRG, hasDBT, hasDC, hasDBGO, hasGPU4, hasGPU5, hasEAL, hasCR, hasOQ2;
+extern bool hasVAO, hasTR, hasTSW, hasFBO, hasAFBO, hasDS, hasTF, hasCBF, hasS3TC, hasFXT1, hasLATC, hasRGTC, hasAF, hasFBB, hasFBMS, hasTMS, hasMSS, hasFBMSBS, hasNVFBMSC, hasNVTMS, hasUBO, hasMBR, hasDB2, hasDBB, hasTG, hasT4, hasTQ, hasPF, hasTRG, hasDBT, hasDC, hasDBGO, hasEGPU4, hasGPU4, hasGPU5, hasEAL, hasCR, hasOQ2;
 extern int glversion, glslversion;
 
 enum { DRAWTEX_NONE = 0, DRAWTEX_ENVMAP, DRAWTEX_MINIMAP, DRAWTEX_MODELPREVIEW };
@@ -537,7 +537,7 @@ extern void cleanupserver();
 extern void serverslice(bool dedicated, uint timeout);
 extern void updatetime();
 
-extern ENetSocket connectmaster();
+extern ENetSocket connectmaster(bool wait);
 extern void localclienttoserver(int chan, ENetPacket *);
 extern void localconnect();
 extern bool serveroption(char *opt);
@@ -613,7 +613,7 @@ extern void renderprogress(float bar, const char *text, GLuint tex = 0, bool bac
 
 extern void getframemillis(float &avg, float &best, float &worst);
 extern void getfps(int &fps, int &bestdiff, int &worstdiff);
-extern void swapbuffers();
+extern void swapbuffers(bool overlay = true);
 extern int getclockmillis();
 
 enum { KR_CONSOLE = 1<<0, KR_GUI = 1<<1, KR_EDITMODE = 1<<2 };
@@ -782,7 +782,7 @@ extern void cleanupblendmap();
 namespace recorder
 {
     extern void stop();
-    extern void capture();
+    extern void capture(bool overlay = true);
     extern void cleanup();
 }
 

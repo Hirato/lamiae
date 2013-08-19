@@ -604,6 +604,8 @@ typedef void (APIENTRYP PFNGLUNIFORMBLOCKBINDINGPROC) (GLuint program, GLuint un
 #define GL_RGB32F                         0x8815
 #define GL_RGBA16F                        0x881A
 #define GL_RGB16F                         0x881B
+#define GL_MIN_PROGRAM_TEXEL_OFFSET       0x8904
+#define GL_MAX_PROGRAM_TEXEL_OFFSET       0x8905
 #define GL_CLAMP_READ_COLOR               0x891C
 #define GL_FIXED_ONLY                     0x891D
 #define GL_R11F_G11F_B10F                 0x8C3A

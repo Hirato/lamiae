@@ -43,6 +43,8 @@ namespace server
 	const char *defaultmaster() {return "";}
 	int masterport() {return 0;}
 	void processmasterinput(const char *cmd, int cmdlen, const char *args) {}
+	void masterconnected() {}
+	void masterdisconnected() {}
 	bool ispaused() {return game::ispaused();}
 	int scaletime(int t) { return t; }
 }

@@ -15,6 +15,10 @@ static bool standardshader = false, forceshaders = true, loadedshaders = false;
 
 VAR(maxvsuniforms, 1, 0, 0);
 VAR(maxfsuniforms, 1, 0, 0);
+VAR(mintexoffset, 1, 0, 0);
+VAR(maxtexoffset, 1, 0, 0);
+VAR(mintexrectoffset, 1, 0, 0);
+VAR(maxtexrectoffset, 1, 0, 0);
 //VAR(dbgshader, 0, 0, 2);
 VAR(dbgshader, 0, 1, 2);
 
@@ -82,16 +86,14 @@ static void showglslinfo(GLenum type, GLuint obj, const char *name, const char *
             if(type) glGetShaderInfoLog_(obj, length, &length, log);
             else glGetProgramInfoLog_(obj, length, &length, log);
             fprintf(l, "%s\n", log);
-            int numlines = 0;
             loopi(numparts)
             {
                 const char *part = parts[i];
-                while(numlines < 1000)
+                loopj(1000)
                 {
                     if(!*part) break;
                     const char *next = strchr(part, '\n');
-                    numlines++;
-                    fprintf(l, "%d: ", numlines);
+                    fprintf(l, "%d: ", j+1);
                     fwrite(part, 1, next ? next - part + 1 : strlen(part), l);
                     if(!next) { fputc('\n', l); break; }
                     part = next + 1;
@@ -121,14 +123,16 @@ static void compileglslshader(Shader &s, GLenum type, GLuint &obj, const char *d
         parts[numparts++] = glslversions[i].header;
         break;
     }
-    if(glslversion < 130 && hasGPU4)
-        parts[numparts++] = "#extension GL_EXT_gpu_shader4 : enable\n";
-    if(glslversion >= 150 && glslversion < 330 && hasEAL)
-        parts[numparts++] = "#extension GL_ARB_explicit_attrib_location : enable\n";
     if(glslversion < 140)
+    {
         parts[numparts++] = "#extension GL_ARB_texture_rectangle : enable\n";
+        if(hasEGPU4)
+            parts[numparts++] = "#extension GL_EXT_gpu_shader4 : enable\n";
+    }
     if(glslversion < 150 && hasTMS)
         parts[numparts++] = "#extension GL_ARB_texture_multisample : enable\n";
+    if(glslversion >= 150 && glslversion < 330 && hasEAL)
+        parts[numparts++] = "#extension GL_ARB_explicit_attrib_location : enable\n";
     if(glslversion >= 130)
     {
         if(type == GL_VERTEX_SHADER) parts[numparts++] =
@@ -144,15 +148,26 @@ static void compileglslshader(Shader &s, GLenum type, GLuint &obj, const char *d
         parts[numparts++] =
             "#define texture1D(sampler, coords) texture(sampler, coords)\n"
             "#define texture2D(sampler, coords) texture(sampler, coords)\n"
+            "#define texture2DOffset(sampler, coords, offset) textureOffset(sampler, coords, offset)\n"
             "#define texture2DProj(sampler, coords) texture(sampler, coords)\n"
+            "#define shadow2D(sampler, coords) texture(sampler, coords)\n"
+            "#define shadow2DOffset(sampler, coords, offset) textureOffset(sampler, coords, offset)\n"
             "#define texture3D(sampler, coords) texture(sampler, coords)\n"
             "#define textureCube(sampler, coords) texture(sampler, coords)\n";
         if(glslversion >= 140) parts[numparts++] =
             "#define texture2DRect(sampler, coords) texture(sampler, coords)\n"
+            "#define texture2DRectOffset(sampler, coords, offset) textureOffset(sampler, coords, offset)\n"
             "#define texture2DRectProj(sampler, coords) textureProj(sampler, coords)\n"
-            "#define shadow2DRect(sampler, coords) texture(sampler, coords)\n";
+            "#define shadow2DRect(sampler, coords) texture(sampler, coords)\n"
+            "#define shadow2DRectOffset(sampler, coords, offset) textureOffset(sampler, coords, offset)\n";
     }
-    else if(type == GL_FRAGMENT_SHADER)
+    if(glslversion < 140 && !hasEGPU4)
+    {
+        parts[numparts++] =
+            "#define texture2DRectOffset(sampler, coords, offset) texture2DRect(sampler, coords + vec2(offset))\n"
+            "#define shadow2DRectOffset(sampler, coords, offset) shadow2DRect(sampler, coords + vec2(offset))\n";
+    }
+    if(glslversion < 130 && type == GL_FRAGMENT_SHADER)
     {
         parts[numparts++] = "#define fragdata(loc, name, type)\n";
         loopv(s.fragdatalocs)
@@ -801,6 +816,20 @@ void setupshaders()
     maxvsuniforms = val/4;
     glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_COMPONENTS, &val);
     maxfsuniforms = val/4;
+    if(glslversion >= 130 || hasGPU4)
+    {
+        glGetIntegerv(GL_MIN_PROGRAM_TEXEL_OFFSET, &val);
+        mintexoffset = val;
+        glGetIntegerv(GL_MAX_PROGRAM_TEXEL_OFFSET, &val);
+        maxtexoffset = val;
+    }
+    else mintexoffset = maxtexoffset = 0;
+    if(glslversion >= 140 || hasEGPU4)
+    {
+        mintexrectoffset = mintexoffset;
+        maxtexrectoffset = maxtexoffset;
+    }
+    else mintexrectoffset = maxtexrectoffset = 0;
 
     standardshader = true;
     nullshader = newshader(0, "<init>null",

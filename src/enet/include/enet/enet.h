@@ -25,7 +25,7 @@ extern "C"
 
 #define ENET_VERSION_MAJOR 1
 #define ENET_VERSION_MINOR 3
-#define ENET_VERSION_PATCH 8
+#define ENET_VERSION_PATCH 9
 #define ENET_VERSION_CREATE(major, minor, patch) (((major)<<16) | ((minor)<<8) | (patch))
 #define ENET_VERSION_GET_MAJOR(version) (((version)>>16)&0xFF)
 #define ENET_VERSION_GET_MINOR(version) (((version)>>8)&0xFF)
@@ -60,7 +60,8 @@ typedef enum _ENetSocketOption
    ENET_SOCKOPT_SNDBUF    = 4,
    ENET_SOCKOPT_REUSEADDR = 5,
    ENET_SOCKOPT_RCVTIMEO  = 6,
-   ENET_SOCKOPT_SNDTIMEO  = 7
+   ENET_SOCKOPT_SNDTIMEO  = 7,
+   ENET_SOCKOPT_ERROR     = 8
 } ENetSocketOption;
 
 typedef enum _ENetSocketShutdown
@@ -70,16 +71,12 @@ typedef enum _ENetSocketShutdown
     ENET_SOCKET_SHUTDOWN_READ_WRITE = 2
 } ENetSocketShutdown;
 
-enum
-{
-   ENET_HOST_ANY       = 0,            /**< specifies the default server host */
-   ENET_HOST_BROADCAST = 0xFFFFFFFF,   /**< specifies a subnet-wide broadcast */
-
-   ENET_PORT_ANY       = 0             /**< specifies that a port should be automatically chosen */
-};
+#define ENET_HOST_ANY       0
+#define ENET_HOST_BROADCAST 0xFFFFFFFFU
+#define ENET_PORT_ANY       0
 
 /**
- * Portable internet address structure. 
+ * Portable internet address structure.
  *
  * The host must be specified in network byte-order, and the port must be in host 
  * byte-order. The constant ENET_HOST_ANY may be used to specify the default 
@@ -385,6 +382,7 @@ typedef struct _ENetHost
    ENetInterceptCallback intercept;                  /**< callback the user can set to intercept received raw UDP packets */
    size_t               connectedPeers;
    size_t               bandwidthLimitedPeers;
+   size_t               duplicatePeers;              /**< optional number of allowed peers from duplicate IPs, defaults to ENET_PROTOCOL_MAXIMUM_PEER_ID */
 } ENetHost;
 
 /**
@@ -491,6 +489,7 @@ ENET_API int        enet_socket_send (ENetSocket, const ENetAddress *, const ENe
 ENET_API int        enet_socket_receive (ENetSocket, ENetAddress *, ENetBuffer *, size_t);
 ENET_API int        enet_socket_wait (ENetSocket, enet_uint32 *, enet_uint32);
 ENET_API int        enet_socket_set_option (ENetSocket, ENetSocketOption, int);
+ENET_API int        enet_socket_get_option (ENetSocket, ENetSocketOption, int *);
 ENET_API int        enet_socket_shutdown (ENetSocket, ENetSocketShutdown);
 ENET_API void       enet_socket_destroy (ENetSocket);
 ENET_API int        enet_socketset_select (ENetSocket, ENetSocketSet *, ENetSocketSet *, enet_uint32);
@@ -549,6 +548,7 @@ ENET_API int        enet_host_compress_with_range_coder (ENetHost * host);
 ENET_API void       enet_host_channel_limit (ENetHost *, size_t);
 ENET_API void       enet_host_bandwidth_limit (ENetHost *, enet_uint32, enet_uint32);
 extern   void       enet_host_bandwidth_throttle (ENetHost *);
+extern  enet_uint32 enet_host_random_seed (void);
 
 ENET_API int                 enet_peer_send (ENetPeer *, enet_uint8, ENetPacket *);
 ENET_API ENetPacket *        enet_peer_receive (ENetPeer *, enet_uint8 * channelID);

@@ -90,15 +90,21 @@ Shader *loadbilateralshader(int pass)
     string opts;
     int optslen = 0;
 
-    bool linear = aoreducedepth && (aoreduce || aoreducedepth > 1), upscale = aoreduce && aobilateralupscale;
-    if(aoreduce && (upscale || (!linear && !aopackdepth))) opts[optslen++] = 'r';
+    bool linear = aoreducedepth && (aoreduce || aoreducedepth > 1),
+         upscale = aoreduce && aobilateralupscale,
+         reduce = aoreduce && (upscale || (!linear && !aopackdepth));
+    if(reduce)
+    {
+        opts[optslen++] = 'r';
+        opts[optslen++] = '0' + aoreduce;
+    }
     if(upscale) opts[optslen++] = 'u';
     else if(linear) opts[optslen++] = 'l';
     if(aopackdepth) opts[optslen++] = 'p';
     opts[optslen] = '\0';
 
     defformatstring(name, "bilateral%c%s%d", 'x' + pass, opts, aobilateral);
-    return generateshader(name, "bilateralshader \"%s\" %d", opts, aobilateral);
+    return generateshader(name, "bilateralshader \"%s\" %d %d", opts, aobilateral, reduce ? aoreduce : 0);
 }
 
 void loadbilateralshaders()
@@ -115,8 +121,7 @@ void setbilateralshader(int radius, int pass, float sigma, float depth)
 {
     bilateralshader[pass]->set();
     sigma *= 2*radius;
-    float step = pass ? float(viewh)/aoh : float(vieww)/aow;
-    LOCALPARAMF(bilateralparams, 1.0f/(2*sigma*sigma), 1.0f/(depth*depth), step);
+    LOCALPARAMF(bilateralparams, 1.0f/(2*sigma*sigma), 1.0f/(depth*depth));
 }
 
 static Shader *ambientobscuranceshader = NULL;

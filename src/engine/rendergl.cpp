@@ -2,7 +2,7 @@
 
 #include "engine.h"
 
-bool hasVAO = false, hasTR = false, hasTSW = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasS3TC = false, hasFXT1 = false, hasLATC = false, hasRGTC = false, hasAF = false, hasFBB = false, hasFBMS = false, hasTMS = false, hasMSS = false, hasFBMSBS = false, hasNVFBMSC = false, hasNVTMS = false, hasUBO = false, hasMBR = false, hasDB2 = false, hasDBB = false, hasTG = false, hasT4 = false, hasTQ = false, hasPF = false, hasTRG = false, hasDBT = false, hasDC = false, hasDBGO = false, hasGPU4 = false, hasGPU5 = false, hasEAL = false, hasCR = false, hasOQ2 = false;
+bool hasVAO = false, hasTR = false, hasTSW = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasS3TC = false, hasFXT1 = false, hasLATC = false, hasRGTC = false, hasAF = false, hasFBB = false, hasFBMS = false, hasTMS = false, hasMSS = false, hasFBMSBS = false, hasNVFBMSC = false, hasNVTMS = false, hasUBO = false, hasMBR = false, hasDB2 = false, hasDBB = false, hasTG = false, hasT4 = false, hasTQ = false, hasPF = false, hasTRG = false, hasDBT = false, hasDC = false, hasDBGO = false, hasEGPU4 = false, hasGPU4 = false, hasGPU5 = false, hasEAL = false, hasCR = false, hasOQ2 = false;
 bool mesa = false, intel = false, ati = false, nvidia = false;
 
 int hasstencil = 0;
@@ -459,7 +459,6 @@ void gl_checkextensions()
     if(glversion >= 300)
     {
         glGetStringi_ =            (PFNGLGETSTRINGIPROC)          getprocaddress("glGetStringi");
-        glBindFragDataLocation_ =  (PFNGLBINDFRAGDATALOCATIONPROC)getprocaddress("glBindFragDataLocation");
     }
 
     const char *glslstr = (const char *)glGetString(GL_SHADING_LANGUAGE_VERSION);
@@ -519,7 +518,16 @@ void gl_checkextensions()
 
     if(glversion >= 300)
     {
-        hasTF = hasTRG = hasRGTC = hasPF = hasGPU4 = true;
+        hasTF = hasTRG = hasRGTC = hasPF = true;
+
+        glBindFragDataLocation_ =  (PFNGLBINDFRAGDATALOCATIONPROC)getprocaddress("glBindFragDataLocation");
+        hasGPU4 = true;
+
+        if(hasext("GL_EXT_gpu_shader4"))
+        {
+            hasEGPU4 = true;
+            if(dbgexts) conoutf(CON_INIT, "Using GL_EXT_gpu_shader4 extension.");
+        }
 
         glClampColor_ = (PFNGLCLAMPCOLORPROC)getprocaddress("glClampColor");
         hasCBF = true;
@@ -558,7 +566,7 @@ void gl_checkextensions()
         if(hasext("GL_EXT_gpu_shader4"))
         {
             glBindFragDataLocation_ = (PFNGLBINDFRAGDATALOCATIONPROC)getprocaddress("glBindFragDataLocationEXT");
-            hasGPU4 = true;
+            hasEGPU4 = hasGPU4 = true;
             if(dbgexts) conoutf(CON_INIT, "Using GL_EXT_gpu_shader4 extension.");
         }
         if(hasext("GL_ARB_color_buffer_float"))

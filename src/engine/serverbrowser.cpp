@@ -176,46 +176,6 @@ bool resolverwait(const char *name, ENetAddress *address)
     return resolved;
 }
 
-SDL_Thread *connthread = NULL;
-SDL_mutex *connmutex = NULL;
-SDL_cond *conncond = NULL;
-
-struct connectdata
-{
-    ENetSocket sock;
-    ENetAddress address;
-    int result;
-};
-
-// do this in a thread to prevent timeouts
-// could set timeouts on sockets, but this is more reliable and gives more control
-int connectthread(void *data)
-{
-    SDL_LockMutex(connmutex);
-    if(!connthread || SDL_GetThreadID(connthread) != SDL_ThreadID())
-    {
-        SDL_UnlockMutex(connmutex);
-        return 0;
-    }
-    connectdata cd = *(connectdata *)data;
-    SDL_UnlockMutex(connmutex);
-
-    int result = enet_socket_connect(cd.sock, &cd.address);
-
-    SDL_LockMutex(connmutex);
-    if(!connthread || SDL_GetThreadID(connthread) != SDL_ThreadID())
-    {
-        enet_socket_destroy(cd.sock);
-        SDL_UnlockMutex(connmutex);
-        return 0;
-    }
-    ((connectdata *)data)->result = result;
-    SDL_CondSignal(conncond);
-    SDL_UnlockMutex(connmutex);
-
-    return 0;
-}
-
 #define CONNLIMIT 20000
 
 int connectwithtimeout(ENetSocket sock, const char *hostname, const ENetAddress &address)
@@ -223,33 +183,30 @@ int connectwithtimeout(ENetSocket sock, const char *hostname, const ENetAddress 
     defformatstring(text, "connecting to %s... (esc to abort)", hostname);
     renderprogress(0, text);
 
-    if(!connmutex) connmutex = SDL_CreateMutex();
-    if(!conncond) conncond = SDL_CreateCond();
-    SDL_LockMutex(connmutex);
-    connectdata cd = { sock, address, -1 };
-    connthread = SDL_CreateThread(connectthread, "connect", &cd);
-
-    int starttime = SDL_GetTicks(), timeout = 0;
-    for(;;)
+    ENetSocketSet readset, writeset;
+    if(!enet_socket_connect(sock, &address)) for(int starttime = SDL_GetTicks(), timeout = 0; timeout <= CONNLIMIT;)
     {
-        if(!SDL_CondWaitTimeout(conncond, connmutex, 250))
+        ENET_SOCKETSET_EMPTY(readset);
+        ENET_SOCKETSET_EMPTY(writeset);
+        ENET_SOCKETSET_ADD(readset, sock);
+        ENET_SOCKETSET_ADD(writeset, sock);
+        int result = enet_socketset_select(sock, &readset, &writeset, 250);
+        if(result < 0) break;
+        else if(result > 0)
         {
-            if(cd.result<0) enet_socket_destroy(sock);
-            break;
+            if(ENET_SOCKETSET_CHECK(readset, sock) || ENET_SOCKETSET_CHECK(writeset, sock))
+            {
+                int error = 0;
+                if(enet_socket_get_option(sock, ENET_SOCKOPT_ERROR, &error) < 0 || error) break;
+                return 0;
+            }
         }
         timeout = SDL_GetTicks() - starttime;
         renderprogress(min(float(timeout)/CONNLIMIT, 1.0f), text);
-        if(interceptkey(SDLK_ESCAPE)) timeout = CONNLIMIT + 1;
-        if(timeout > CONNLIMIT) break;
+        if(interceptkey(SDLK_ESCAPE)) break;
     }
 
-    /* thread will actually timeout eventually if its still trying to connect
-     * so just leave it (and let it destroy socket) instead of causing problems on some platforms by killing it
-     */
-    connthread = NULL;
-    SDL_UnlockMutex(connmutex);
-
-    return cd.result;
+    return -1;
 }
 
 static int currentprotocol = server::protocolversion();
@@ -595,7 +552,7 @@ void clearservers(bool full = false)
 
 void retrieveservers(vector<char> &data)
 {
-    ENetSocket sock = connectmaster();
+    ENetSocket sock = connectmaster(true);
     if(sock == ENET_SOCKET_NULL) return;
 
     extern char *mastername;

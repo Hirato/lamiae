@@ -1134,9 +1134,9 @@ namespace recorder
         glDisable(GL_BLEND);
     }
 
-    void capture()
+    void capture(bool overlay)
     {
-        if(readbuffer()) drawhud();
+        if(readbuffer() && overlay) drawhud();
     }
 }
 
