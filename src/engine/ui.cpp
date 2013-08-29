@@ -295,22 +295,36 @@ namespace UI
             } \
         } while(0)
 
-        #define loopinchildren(o, cx, cy, body) \
+        #define loopinchildren(o, cx, cy, body, inside) \
             loopchildren(o, \
             { \
                 float o##x = cx - o->x; \
                 float o##y = cy - o->y; \
+                if(!inside) \
+                { \
+                    /* clamp ox, oy to o.w, o.h if needed */ \
+                    /* ox = clamp(ox, 0.0f, o.w); */ \
+                    /* oy = clamp(ox, 0.0f, o.h); */ \
+                    body; \
+                } \
                 if(o##x >= 0 && o##x < o->w && o##y >= 0 && o##y < o->h) \
                 { \
                     body; \
                 } \
             })
 
-        #define loopinchildrenrev(o, cx, cy, body) \
+        #define loopinchildrenrev(o, cx, cy, body, inside) \
             loopchildrenrev(o, \
             { \
                 float o##x = cx - o->x; \
                 float o##y = cy - o->y; \
+                if(!inside) \
+                { \
+                    /* clamp ox, oy to o.w, o.h if needed */ \
+                    /* ox = clamp(ox, 0.0f, o.w); */ \
+                    /* oy = clamp(ox, 0.0f, o.h); */ \
+                    body; \
+                } \
                 if(o##x >= 0 && o##x < o->w && o##y >= 0 && o##y < o->h) \
                 { \
                     body; \
@@ -372,7 +386,7 @@ namespace UI
             {
                 Object *c = o->target(ox, oy);
                 if(c) return c;
-            });
+            }, true);
             return NULL;
         }
 
@@ -412,11 +426,24 @@ namespace UI
                 Object *c = o->hover(ox, oy);
                 if(c == o) { hoverx = ox; hovery = oy; }
                 if(c) return c;
-            });
+            }, true);
             return NULL;
         }
 
         virtual void hovering(float cx, float cy)
+        {
+        }
+
+        virtual void hold(float cx, float cy, float &hx, float &hy, Object *c)
+        {
+            loopinchildrenrev(o, cx, cy,
+            {
+                if (o == c) { hx = ox; hy = oy; return; }
+                o->hold(ox, oy, hx, hy, c);
+            }, false);
+        }
+
+        virtual void holding(float cx, float cy)
         {
         }
 
@@ -427,7 +454,7 @@ namespace UI
                 Object *c = o->select(ox, oy);
                 if(c == o) { selectx = ox; selecty = oy; }
                 if(c) return c;
-            });
+            }, true);
             return NULL;
         }
 
@@ -494,8 +521,18 @@ namespace UI
                 Object *c = o->hover(ox, oy);
                 if(c == o) { hoverx = ox; hovery = oy; }
                 return c;
-            });
+            }, true);
             return NULL;
+        }
+
+        virtual void hold(float cx, float cy, float &hx, float &hy, Object *c)
+        {
+            loopinchildrenrev(o, cx, cy,
+            {
+                if(!o->takesinput()) continue;
+                if (o == c) { hx = ox; hy = oy; return; }
+                o->hold(ox, oy, hx, hy, c);
+            }, false);
         }
 
         Object *select(float cx, float cy)
@@ -507,7 +544,7 @@ namespace UI
                 if(c && i < children.length() - 1) { children.removeobj(o); children.add(o); }
                 if(c == o) { selectx = ox; selecty = oy; }
                 return c;
-            });
+            }, true);
             return NULL;
         }
 
@@ -3076,6 +3113,13 @@ namespace UI
         {
             hovering = world->hover(cursorx*world->w, cursory*world->h);
             if(hovering) hovering->hovering(hoverx, hovery);
+            if(selected)
+            {
+                float hx, hy;
+                world->hold(cursorx*world->w, cursory*world->h, hx, hy,
+                    selected);
+                selected->holding(hx, hy);
+            }
         }
         else hovering = selected = NULL;
 
