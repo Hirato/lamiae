@@ -656,7 +656,7 @@ namespace rpgscript
 			if(!tmp) return;
 
 			mapscript *s = mapscripts.access(scr);
-			if(!s)
+			if(s)
 			{
 				if(DEBUG_SCRIPT)
 					DEBUGF("Prepared mapinfo for %s with script %s and flags %i", m, scr, *f);
