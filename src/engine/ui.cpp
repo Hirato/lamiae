@@ -2173,13 +2173,47 @@ namespace UI
         Font(const char *f) : font(newstring(f)) {}
         ~Font() { delete[] font; }
 
+        Object *hover(float cx, float, cy)
+        {
+            pushfont();
+            setfont(font);
+            Object *ret = Object::hover(cx, cy);
+            popfont();
+            return ret;
+        }
+
+        Object *select(float cx, float, cy)
+        {
+            pushfont();
+            setfont(font);
+            Object *ret = Object::select(cx, cy);
+            popfont();
+            return ret;
+        }
+
+        bool key(int code, bool isdown)
+        {
+            pushfont();
+            setfont(font);
+            bool ret = Object::key(code, isdown);
+            popfont();
+            return ret;
+        }
+
+        bool hoverkey(int code, bool isdown)
+        {
+            pushfont();
+            setfont(font);
+            bool ret = Object::hoverkey(code, isdown);
+            popfont();
+            return ret;
+        }
+
         void layout()
         {
             pushfont();
             setfont(font);
-
             Object::layout();
-
             popfont();
         }
 
@@ -2187,9 +2221,7 @@ namespace UI
         {
             pushfont();
             setfont(font);
-
             Object::draw(sx, sy);
-
             popfont();
         }
     };
