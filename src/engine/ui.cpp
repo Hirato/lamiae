@@ -1520,16 +1520,38 @@ namespace UI
 
     struct Rectangle : Filler
     {
-        enum { SOLID = 0, MODULATE };
+        enum { SOLID = 0, BLEND };
 
         int type;
+        uint srcblend, dstblend;
         Color color;
 
-        Rectangle(int type, const Color &color, float minw = 0, float minh = 0) : Filler(minw, minh), type(type), color(color) {}
+        uint getblendtype(uint i)
+        {
+            const uint blends[] = {
+                GL_ZERO, GL_ONE, GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR,
+                GL_DST_COLOR, GL_ONE_MINUS_DST_COLOR, GL_SRC_ALPHA,
+                GL_ONE_MINUS_SRC_ALPHA, GL_DST_ALPHA, GL_ONE_MINUS_DST_ALPHA,
+                GL_CONSTANT_COLOR, GL_ONE_MINUS_CONSTANT_COLOR,
+                GL_CONSTANT_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA,
+                GL_SRC_ALPHA_SATURATE
+            };
+
+            if(i >= sizeof(blends)/sizeof(blends[0])) return GL_ZERO;
+            return blends[i];
+        }
+
+        Rectangle(const Color &color, float minw = 0, float minh = 0) : Filler(minw, minh), type(SOLID), color(color) {}
+
+        Rectangle(const Color &color, int src, int dst, float minw = 0, float minh = 0) : Filler(minw, minh), type(BLEND), color(color)
+        {
+            srcblend = getblendtype(src);
+            dstblend = getblendtype(dst);
+        }
 
         void draw(float sx, float sy)
         {
-            if(type==MODULATE) glBlendFunc(GL_ZERO, GL_SRC_COLOR);
+            if(type == BLEND) glBlendFunc(srcblend, dstblend);
             hudnotextureshader->set();
             color.init();
 
@@ -1547,7 +1569,7 @@ namespace UI
             gle::defvertex(2);
             gle::deftexcoord0();
 
-            if(type==MODULATE) glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            if(type!=SOLID) glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             Object::draw(sx, sy);
         }
     };
@@ -1559,12 +1581,14 @@ namespace UI
         int dir;
         Color color2;
 
-        Gradient(int type, int dir, const Color &color, const Color color2, float minw = 0, float minh = 0) : Rectangle(type, color, minw, minh), dir(dir), color2(color2) {}
+        Gradient(int dir, const Color &color, const Color color2, float minw = 0, float minh = 0) : Rectangle(color, minw, minh), dir(dir), color2(color2) {}
+
+        Gradient(int src, int dst, int dir, const Color &color, const Color color2, float minw = 0, float minh = 0) : Rectangle(color, src, dst, minw, minh), dir(dir), color2(color2) {}
         ~Gradient() {}
 
         void draw(float sx, float sy)
         {
-            if(type==MODULATE) glBlendFunc(GL_ZERO, GL_SRC_COLOR);
+            if(type == BLEND) glBlendFunc(srcblend, dstblend);
             hudnotextureshader->set();
 
             gle::defvertex(2);
@@ -1580,8 +1604,8 @@ namespace UI
             hudshader->set();
             gle::defvertex(2);
             gle::deftexcoord0();
-            if(type==MODULATE) glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+            if(type!=SOLID) glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             Object::draw(sx, sy);
         }
     };
@@ -2819,10 +2843,10 @@ namespace UI
     });
 
     ICOMMAND(uicolor, "iffe", (int *c, float *minw, float *minh, uint *children),
-        addui(new Rectangle(Rectangle::SOLID, Color(*c), *minw, *minh), children));
+        addui(new Rectangle(Color(*c), *minw, *minh), children));
 
-    ICOMMAND(uimodcolor, "iffe", (int *c, float *minw, float *minh, uint *children),
-        addui(new Rectangle(Rectangle::MODULATE, Color(*c), *minw, *minh), children));
+    ICOMMAND(uiblendcolor, "iiiffe", (int *c, int *src, int *dst, float *minw, float *minh, uint *children),
+        addui(new Rectangle(Color(*c), *src, *dst, *minw, *minh), children));
 
     ICOMMAND(uistretchedimage, "sffe", (char *texname, float *minw, float *minh, uint *children),
         addui(new StretchedImage(textureload(texname, 3, true, false), *minw, *minh), children));
@@ -2882,16 +2906,16 @@ namespace UI
         addui(new Console(*minw, *minh), children));
 
     ICOMMAND(uivgradient, "iiffe", (int *c, int *c2, float *minw, float *minh, uint *children),
-        addui(new Gradient(Gradient::SOLID, Gradient::VERTICAL, Color(*c), Color(*c2), *minw, *minh), children));
+        addui(new Gradient(Gradient::VERTICAL, Color(*c), Color(*c2), *minw, *minh), children));
 
-    ICOMMAND(uimodvgradient, "iiffe", (int *c, int *c2, float *minw, float *minh, uint *children),
-        addui(new Gradient(Gradient::MODULATE, Gradient::VERTICAL, Color(*c), Color(*c2), *minw, *minh), children));
+    ICOMMAND(uiblendvgradient, "iiiiffe", (int *c, int *c2, int *src, int *dst, float *minw, float *minh, uint *children),
+        addui(new Gradient(*src, *dst, Gradient::VERTICAL, Color(*c), Color(*c2), *minw, *minh), children));
 
     ICOMMAND(uihgradient, "iiffe", (int *c, int *c2, float *minw, float *minh, uint *children),
-        addui(new Gradient(Gradient::SOLID, Gradient::HORIZONTAL, Color(*c), Color(*c2), *minw, *minh), children));
+        addui(new Gradient(Gradient::HORIZONTAL, Color(*c), Color(*c2), *minw, *minh), children));
 
-    ICOMMAND(uimodhgradient, "iiffe", (int *c, int *c2, float *minw, float *minh, uint *children),
-        addui(new Gradient(Gradient::MODULATE, Gradient::HORIZONTAL, Color(*c), Color(*c2), *minw, *minh), children));
+    ICOMMAND(uiblendhgradient, "iiiiffe", (int *c, int *c2, int *src, int *dst, float *minw, float *minh, uint *children),
+        addui(new Gradient(*src, *dst, Gradient::HORIZONTAL, Color(*c), Color(*c2), *minw, *minh), children));
 
     ICOMMAND(uioutline, "iffe", (int *c, float *minw, float *minh, uint *children),
         addui(new Outline(Color(*c), *minw, *minh), children));
