@@ -113,8 +113,6 @@ bool rpgchar::checkammo(equipment &eq, equipment *&quiver, bool remove)
 		fres = &mana;
 	else if(at->key == reserved::amm_health)
 		fres = &health;
-	else if(at->key == reserved::amm_experience)
-		ires = &base.experience;
 
 	if(fres || ires)
 	{
@@ -671,15 +669,6 @@ void rpgchar::render()
 
 const char *rpgchar::getname() const {return name ? name : "Shirley";}
 
-///Character/AI
-void rpgchar::givexp(int xp)
-{
-	int level = base.level;
-	base.givexp(xp);
-	if(level != base.level)
-		getsignal("level");
-}
-
 void rpgchar::equip(item *it, int u)
 {
 	if(primary || secondary || lastprimary || lastsecondary)
@@ -747,9 +736,6 @@ void rpgchar::die(rpgent *killer)
 		DEBUGF("ent %p killed by %p%s", this, killer, state != CS_ALIVE ? "; already dead?" : "");
 	if(state != CS_ALIVE)
 		return;
-
-	if(killer)
-		killer->givexp((killer == this ? -100 : 25) * base.level);
 
 	state = CS_DEAD;
 	health = 0;

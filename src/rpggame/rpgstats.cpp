@@ -1,19 +1,8 @@
 #include "rpggame.h"
 
-void stats::givexp(int xp)
-{
-	experience = max(0, experience + xp);
-	while(experience >= neededexp(level))
-	{
-		level++;
-		skillpoints += 10;
-		statpoints += 1;
-	}
-}
-
 int stats::getmaxhp() const
 {
-	int amnt = bonushealth + deltahealth + (getattr(STAT_ENDURANCE) * 4 + getattr(STAT_STRENGTH) * 2) * (25 + level) / 40.0f;
+	int amnt = bonushealth + deltahealth + (getattr(STAT_ENDURANCE) * 6 + getattr(STAT_STRENGTH) * 3) / 40.0f;
 	return amnt;
 }
 
@@ -24,7 +13,7 @@ float stats::gethpregen() const
 
 int stats::getmaxmp() const
 {
-	int amnt = bonusmana + deltamana + (getattr(STAT_INTELLIGENCE) * 2 + getattr(STAT_WISDOM) * 4) * (25 + level) / 40.0f;
+	int amnt = bonusmana + deltamana + (getattr(STAT_INTELLIGENCE) * 3 + getattr(STAT_WISDOM) * 6) / 40.0f;
 	return max(0, amnt);
 }
 

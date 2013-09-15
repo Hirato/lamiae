@@ -299,6 +299,8 @@ namespace rpgscript
 	reference *trader = NULL;
 	reference *config = NULL; //dummy for creation and initialisation.
 
+	VARP(debugreference, 0, 1, 1);
+
 	void pushstack()
 	{
 		if(DEBUG_VSCRIPT) DEBUGF("pushing new stack...");
@@ -626,6 +628,7 @@ namespace rpgscript
 		if(!name || !(cond)) \
 		{ \
 			ERRORF(#fun "; invalid reference \"%s\" or of incompatible type", var); \
+			if(name && debugreference) name->dump(); \
 			fail; return; \
 		}
 
@@ -1139,7 +1142,7 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_local_set, "sss", (const char *ref, const char *name, const char *val),
-		getreference(ref, gen, gen->getinv(genidx) || gen->getent(genidx) || gen->getmap(genidx), , r_local_get)
+		getreference(ref, gen, gen->getinv(genidx) || gen->getent(genidx) || gen->getmap(genidx), , r_local_set)
 
 		int *li = NULL;
 
@@ -1745,11 +1748,6 @@ namespace rpgscript
 		intret(ent->getchar(entidx)->base.getthreshold(*elem));
 	)
 
-	ICOMMAND(r_get_neededexp, "s", (const char *ref),
-		getreference(ref, ent, ent->getchar(entidx), intret(0), r_get_neededexp)
-		intret(stats::neededexp(ent->getchar(entidx)->base.level));
-	)
-
 	ICOMMAND(r_get_maxweight, "s", (const char *ref),
 		getreference(ref, ent, ent->getchar(entidx), intret(0), r_get_maxweight)
 		intret(ent->getchar(entidx)->base.getmaxcarry());
@@ -1767,29 +1765,6 @@ namespace rpgscript
 		float spd; float jmp;
 		ent->getchar(entidx)->base.setspeeds(spd, jmp);
 		floatret(jmp);
-	)
-
-	ICOMMAND(r_invest_attr, "si", (const char *ref, int *attr),
-		if(*attr < 0 || *attr >= STAT_MAX) return;
-		getreference(ref, ent, ent->getchar(entidx), , r_invest_attr)
-		if(ent->getchar(entidx)->base.statpoints <= 0 || ent->getchar(entidx)->base.baseattrs[*attr] >= 100) return;
-
-		ent->getchar(entidx)->base.statpoints--;
-		ent->getchar(entidx)->base.baseattrs[*attr]++;
-	)
-
-	ICOMMAND(r_invest_skill, "si", (const char *ref, int *skill),
-		if(*skill < 0 || *skill >= SKILL_MAX) return;
-		getreference(ref, ent, ent->getchar(entidx), , r_invest_skill)
-		if(ent->getchar(entidx)->base.skillpoints <= 0 || ent->getchar(entidx)->base.baseskills[*skill] >= 100) return;
-
-		ent->getchar(entidx)->base.skillpoints--;
-		ent->getchar(entidx)->base.baseskills[*skill]++;
-	)
-
-	ICOMMAND(r_givexp, "si", (const char *ref, int *n),
-		getreference(ref, ent, ent->getchar(entidx), , r_givexp)
-		ent->getchar(entidx)->givexp(*n);
 	)
 
 	ICOMMAND(r_get_lastaction, "s", (const char *ref),

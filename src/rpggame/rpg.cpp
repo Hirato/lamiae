@@ -251,18 +251,18 @@ namespace game
 
 		rpgscript::clean();
 
+		//We reset the player here so he has a clean slate on a new game.
+		//we do it here so his locals are freed cleanly.
+		player1->~rpgchar();
+		new (player1) rpgchar();
+
 		if(DEBUG_WORLD)
 			DEBUGF("Clearing hashpool of %i entries", hashpool.length());
 		enumerate(hashpool, const char *, str,
 			if(DEBUG_VWORLD) conoutf("freeing hashpool[%s]...", str);
 			delete[] str;
 		)
-
 		hashpool.clear();
-
-		//We reset the player here so he has a clean slate on a new game.
-		player1->~rpgchar();
-		new (player1) rpgchar();
 	}
 
 	template<class T>
@@ -431,10 +431,7 @@ namespace game
 		if(!definitions)
 		{
 			if(DEBUG_WORLD) DEBUGF("loading player");
-			loadingrpgchar = player1;
-			formatstring(pth, "%s/player.cfg", dir);
-			rpgexecfile(pth);
-			loadingrpgchar = NULL;
+			player1->init("../player");
 
 			if(!player1->validate())
 			{

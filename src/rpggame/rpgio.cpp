@@ -4,8 +4,8 @@ extern bool reloadtexture(const char *name); //texture.cpp
 
 namespace rpgio
 {
-	#define SAVE_VERSION 44
-	#define COMPAT_VERSION 44
+	#define SAVE_VERSION 44 + 1
+	#define COMPAT_VERSION 44 + 1
 	#define SAVE_MAGIC "RPGS"
 
 	/**
@@ -484,10 +484,6 @@ namespace rpgio
 
 				#define x(var, type) loading->base.var = f->getlil<type>();
 
-				x(experience, int)
-				x(level, int)
-				x(statpoints, int)
-				x(skillpoints, int)
 				loopi(STAT_MAX) x(baseattrs[i], short)
 				loopi(SKILL_MAX) x(baseskills[i], short)
 				loopi(STAT_MAX) x(deltaattrs[i], short)
@@ -776,10 +772,6 @@ namespace rpgio
 
 				#define x(var) f->putlil(saving->base.var);
 
-				x(experience)
-				x(level)
-				x(statpoints)
-				x(skillpoints)
 				loopi(STAT_MAX) x(baseattrs[i])
 				loopi(SKILL_MAX) x(baseskills[i])
 				loopi(STAT_MAX) x(deltaattrs[i])

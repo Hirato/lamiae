@@ -404,10 +404,6 @@ namespace game
 		INTN(var ## _craft, var.skills[SKILL_CRAFT], 0, 100)
 
 	#define STATS(var) \
-		INTN(var ## _level, var.level, 1, 1000) \
-		INTN(var ## _experience, var.experience, 0, 0x7FFFFFFF) \
-		INTN(var ## _statpoints, var.statpoints, 0, 500) \
-		INTN(var ## _skillpoints, var.skillpoints, 0, 500) \
 		INTN(var ## _strength, var.baseattrs[STAT_STRENGTH], 1, 100) \
 		INTN(var ## _endurance, var.baseattrs[STAT_ENDURANCE], 1, 100) \
 		INTN(var ## _agility, var.baseattrs[STAT_AGILITY], 1, 100) \

@@ -138,7 +138,7 @@ namespace ai
 
 namespace reserved
 {
-	extern const char *amm_mana, *amm_health, *amm_experience;
+	extern const char *amm_mana, *amm_health;
 
 	extern void load();
 }
@@ -860,7 +860,6 @@ struct rpgent : dynent
 	virtual void getsignal(const char *sig, bool prop = true, rpgent *sender = NULL);
 
 	///character/AI
-	virtual void givexp(int xp) {}
 	virtual void equip(item *it, int u = 0) {}
 	virtual bool dequip(const char *base, int slots = 0) {return false;}
 	virtual void die(rpgent *killer = NULL) {}
@@ -919,9 +918,6 @@ enum
 struct stats
 {
 	rpgchar *parent;
-	//note delta vars are for spell effects
-	///SPECIAL
-	int experience, level, statpoints, skillpoints;
 
 	///PRIMARY STATS
 	short baseattrs[STAT_MAX];
@@ -936,19 +932,18 @@ struct stats
 	int bonushealth, bonusmana, bonusmovespeed, bonusjumpvel, bonuscarry, bonuscrit;
 	float bonushregen, bonusmregen;
 
+	//note delta vars are for spell effects
 	short deltathresh[ATTACK_MAX];
 	short deltaresist[ATTACK_MAX];
 	int deltahealth, deltamana, deltamovespeed, deltajumpvel, deltacarry, deltacrit;
 	float deltahregen, deltamregen;
 
 	///QUERIES
-	//no safety checks are done for these 3, make sure to use the ENUM!!
+	//no safety checks are done for these 2, make sure to use the ENUM!!
 	inline int getattr(int n) const {return max(0, baseattrs[n] + deltaattrs[n]);}
 	inline int getskill(int n) const {return max(0, baseskills[n] + deltaskills[n]);}
 	inline int critchance() const {return bonuscrit + deltacrit + getattr(STAT_LUCK) / 10;}
 
-	static int neededexp(int level) { return level * (level + 1) * 500; } //standard EXP formula, 0... 1000.... 3000.... 6000.... 10000....
-	void givexp(int xp);
 	int getmaxhp() const;
 	float gethpregen() const;
 	int getmaxmp() const;
@@ -960,7 +955,7 @@ struct stats
 	void setspeeds(float &maxspeed, float &jumpvel) const;
 	void resetdeltas();
 
-	stats(rpgchar *p) : parent(p), experience(0), level(1), statpoints(0), skillpoints(0)
+	stats(rpgchar *p) : parent(p)
 	{
 		loopi(STAT_MAX)
 			baseattrs[i] = 30;
@@ -1342,7 +1337,6 @@ struct rpgobstacle : rpgent
 	bool validate();
 
 	///character/AI
-	void givexp(int xp) {}
 	void die(rpgent *killer = NULL) {}
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
 
@@ -1373,7 +1367,6 @@ struct rpgcontainer : rpgent
 	//void getsignal(const char *sig, bool prop = true, rpgent *sender = NULL) {}
 
 	///character/AI
-	void givexp(int xp) {}
 	void die(rpgent *killer = NULL) {}
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
 
@@ -1424,7 +1417,6 @@ struct rpgplatform : rpgent
 	bool validate();
 
 	///character/AI
-	void givexp(int xp) {}
 	void die(rpgent *killer = NULL) {}
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
 
@@ -1457,7 +1449,6 @@ struct rpgtrigger : rpgent
 	bool validate();
 
 	///character/AI
-	void givexp(int xp) {}
 	void die(rpgent *killer = NULL) {}
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
 
@@ -1603,7 +1594,6 @@ struct rpgchar : rpgent
 	bool validate();
 
 	///character/AI
-	void givexp(int xp);
 	void equip(item *it, int u = 0);
 	bool dequip(const char *base, int slots = 0);
 	void die(rpgent *killer);
@@ -1889,6 +1879,14 @@ struct reference
 	const char *name;
 	bool immutable;
 	vector<ref> list;
+
+	void dump()
+	{
+		DEBUGF("Reference %p: %s", this, name);
+		DEBUGF("immutable: %i - %i items", immutable, list.length());
+		loopv(list)
+			DEBUGF("item %i: type %i - ptr %p", i, list[i].type, list[i].ptr);
+	}
 
 	inline bool canset(bool force = false)
 	{

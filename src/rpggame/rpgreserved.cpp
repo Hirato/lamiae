@@ -34,15 +34,6 @@ namespace reserved
 			am->key = amm_health;
 			am->name = newstring("health");
 		}
-
-		am = &ammotypes[amm_experience];
-		am->reserved = true;
-		if (!am->key)
-		{
-			WARNINGF("experience ammotype declared implicitly!");
-			am->key = amm_experience;
-			am->name = newstring("experience");
-		}
 	}
 
 	void loadscripts()
