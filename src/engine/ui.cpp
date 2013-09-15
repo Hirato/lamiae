@@ -2173,7 +2173,7 @@ namespace UI
         Font(const char *f) : font(newstring(f)) {}
         ~Font() { delete[] font; }
 
-        Object *hover(float cx, float, cy)
+        Object *hover(float cx, float cy)
         {
             pushfont();
             setfont(font);
@@ -2182,7 +2182,7 @@ namespace UI
             return ret;
         }
 
-        Object *select(float cx, float, cy)
+        Object *select(float cx, float cy)
         {
             pushfont();
             setfont(font);
