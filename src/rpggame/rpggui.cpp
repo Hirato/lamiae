@@ -223,7 +223,7 @@ namespace rpggui
 
 	bool open()
 	{
-		return !editmode && connected && curmap && UI::numui();
+		return !editmode && connected && curmap && UI::numui() && UI::hascursor();
 	}
 
 	void forcegui()

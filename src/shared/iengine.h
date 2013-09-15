@@ -532,6 +532,7 @@ extern int efocus, enthover, entorient;
 namespace UI
 {
     extern int numui();
+    extern bool hascursor();
     extern void hideallui();
     extern bool hideui(const char *name);
     extern bool uivisible(const char *name);
