@@ -721,7 +721,6 @@ namespace UI
 {
     extern void resetcursor();
     extern bool movecursor(int &dx, int &dy);
-    extern bool hascursor();
     extern void getcursorpos(float &x, float &y);
     extern bool keypress(int code, bool isdown);
     extern bool input(const char *str, int len);

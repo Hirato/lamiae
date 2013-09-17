@@ -249,12 +249,12 @@ namespace game
 		categories.deletearrays();
 		tips.deletearrays();
 
-		rpgscript::clean();
-
 		//We reset the player here so he has a clean slate on a new game.
 		//we do it here so his locals are freed cleanly.
 		player1->~rpgchar();
 		new (player1) rpgchar();
+
+		rpgscript::clean();
 
 		if(DEBUG_WORLD)
 			DEBUGF("Clearing hashpool of %i entries", hashpool.length());

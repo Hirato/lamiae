@@ -2,7 +2,7 @@
 
 int stats::getmaxhp() const
 {
-	int amnt = bonushealth + deltahealth + (getattr(STAT_ENDURANCE) * 6 + getattr(STAT_STRENGTH) * 3) / 40.0f;
+	int amnt = bonushealth + deltahealth + (getattr(STAT_ENDURANCE) * 6 + getattr(STAT_STRENGTH) * 3) * 25 / 40.0f;
 	return amnt;
 }
 
@@ -13,7 +13,7 @@ float stats::gethpregen() const
 
 int stats::getmaxmp() const
 {
-	int amnt = bonusmana + deltamana + (getattr(STAT_INTELLIGENCE) * 3 + getattr(STAT_WISDOM) * 6) / 40.0f;
+	int amnt = bonusmana + deltamana + (getattr(STAT_INTELLIGENCE) * 3 + getattr(STAT_WISDOM) * 6) * 25 / 40.0f;
 	return max(0, amnt);
 }
 
