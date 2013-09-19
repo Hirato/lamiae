@@ -2251,6 +2251,14 @@ void texture(char *type, char *name, int *rot, int *xoffset, int *yoffset, float
 }
 COMMAND(texture, "ssiiif");
 
+
+#define GETTEXPROP(name, success, fail) \
+    ICOMMAND(gettex ## name, "i", (int *i), \
+        if (slots.inrange(*i)) { Slot &s = *slots[*i]; success; } \
+        else { fail; })
+
+GETTEXPROP(shader, result(s.shader->name), result("stdworld"))
+
 void texgrass(char *name)
 {
     if(!defslot) return;
@@ -2262,6 +2270,7 @@ void texgrass(char *name)
     ) : NULL;
 }
 COMMAND(texgrass, "s");
+GETTEXPROP(texgrass, result(s.grass ? s.grass : ""), )
 
 void texscroll(float *scrollS, float *scrollT)
 {
@@ -2271,6 +2280,9 @@ void texscroll(float *scrollS, float *scrollT)
     propagatevslot(s.variants, 1<<VSLOT_SCROLL);
 }
 COMMAND(texscroll, "ff");
+GETTEXPROP(scroll,
+           defformatstring(tmp, "%g %g", s.variants->scroll.x * 1000, s.variants->scroll.y * 1000);
+           result(tmp), result("0 0"))
 
 void texoffset_(int *xoffset, int *yoffset)
 {
@@ -2280,6 +2292,9 @@ void texoffset_(int *xoffset, int *yoffset)
     propagatevslot(s.variants, 1<<VSLOT_OFFSET);
 }
 COMMANDN(texoffset, texoffset_, "ii");
+GETTEXPROP(offset,
+           defformatstring(tmp, "%d %d", s.variants->offset.x, s.variants->offset.y);
+           result(tmp), result("0 0"))
 
 void texrotate_(int *rot)
 {
@@ -2289,6 +2304,7 @@ void texrotate_(int *rot)
     propagatevslot(s.variants, 1<<VSLOT_ROTATION);
 }
 COMMANDN(texrotate, texrotate_, "i");
+GETTEXPROP(rotate, intret(s.variants->rotation), intret(0))
 
 void texscale(float *scale)
 {
@@ -2298,6 +2314,7 @@ void texscale(float *scale)
     propagatevslot(s.variants, 1<<VSLOT_SCALE);
 }
 COMMAND(texscale, "f");
+GETTEXPROP(scale, intret(s.variants->scale), intret(0))
 
 void texlayer(int *layer)
 {
@@ -2307,6 +2324,7 @@ void texlayer(int *layer)
     propagatevslot(s.variants, 1<<VSLOT_LAYER);
 }
 COMMAND(texlayer, "i");
+GETTEXPROP(layer, intret(s.variants->layer), intret(0))
 
 void texdetail(int *detail)
 {
@@ -2316,6 +2334,7 @@ void texdetail(int *detail)
     propagatevslot(s.variants, 1<<VSLOT_DETAIL);
 }
 COMMAND(texdetail, "i");
+GETTEXPROP(detail, intret(s.variants->detail), intret(0))
 
 void texalpha(float *front, float *back)
 {
@@ -2326,6 +2345,9 @@ void texalpha(float *front, float *back)
     propagatevslot(s.variants, 1<<VSLOT_ALPHA);
 }
 COMMAND(texalpha, "ff");
+GETTEXPROP(alpha,
+           defformatstring(tmp, "%g %g", s.variants->alphafront, s.variants->alphaback);
+           result(tmp), result("0.5 0.5"))
 
 void texcolor(float *r, float *g, float *b)
 {
@@ -2335,6 +2357,9 @@ void texcolor(float *r, float *g, float *b)
     propagatevslot(s.variants, 1<<VSLOT_COLOR);
 }
 COMMAND(texcolor, "fff");
+GETTEXPROP(color,
+           defformatstring(tmp, "%g %g %g", s.variants->colorscale.x, s.variants->colorscale.y, s.variants->colorscale.z);
+           result(tmp), result("1 1 1"))
 
 void texrefract(float *k, float *r, float *g, float *b)
 {
@@ -2348,6 +2373,9 @@ void texrefract(float *k, float *r, float *g, float *b)
     propagatevslot(s.variants, 1<<VSLOT_REFRACT);
 }
 COMMAND(texrefract, "ffff");
+GETTEXPROP(refract,
+           defformatstring(tmp, "%g %g %g %g", s.variants->refractscale, s.variants->refractcolor.x, s.variants->refractcolor.y, s.variants->refractcolor.z);
+           result(tmp), result("0 1 1 1"))
 
 void texsmooth(int *id, int *angle)
 {
@@ -2365,6 +2393,39 @@ void decaldepth(float *depth, float *fade)
     s.fade = clamp(*fade, 0.0f, s.depth);
 }
 COMMAND(decaldepth, "ff");
+
+ICOMMAND(loopshaderparams, "irre", (int *slot, ident *param, ident *val, uint *body),
+    if(!slots.inrange(*slot)) return;
+
+    Slot &s = *slots[*slot];
+    identstack stack; identstack stack2;
+    string vals;
+
+    loopv(s.params)
+    {
+        formatstring(vals, "%g %g %g %g", s.params[i].val[0], s.params[i].val[1], s.params[i].val[2], s.params[i].val[3]);
+
+        loopiter(param, stack, s.params[i].name);
+        loopiter(val, stack2, vals);
+        execute(body);
+    }
+    if(s.params.length()) { poparg(*param); poparg(*val); }
+)
+
+ICOMMAND(looptexslots, "irre", (int *slot, ident *type, ident *tex, uint *body),
+    if(!slots.inrange(*slot)) return;
+
+    Slot &s = *slots[*slot];
+    identstack stack; identstack stack2;
+
+    loopv(s.sts)
+    {
+        loopiter(type, stack, textypename(s.sts[i].type));
+        loopiter(tex, stack2, s.sts[i].name);
+        execute(body);
+    }
+    if(s.sts.length()) { poparg(*type); poparg(*tex); }
+)
 
 static void addglow(ImageData &c, ImageData &g, const vec &glowcolor)
 {
