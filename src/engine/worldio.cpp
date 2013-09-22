@@ -815,6 +815,7 @@ bool save_world(const char *mname, bool nolms, bool octa)
 
     delete f;
     conoutf("wrote map file %s", ogzname);
+    writemapcfg();
     return true;
 }
 
