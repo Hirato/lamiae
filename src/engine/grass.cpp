@@ -29,7 +29,8 @@ static struct grasswedge
 struct grassvert
 {
     vec pos;
-    uchar color[4];
+    bvec color;
+    uchar alpha;
     float u, v;
 };
 
@@ -66,7 +67,7 @@ bvec grasscolor(255, 255, 255);
 HVARFR(grasscolour, 0, 0xFFFFFF, 0xFFFFFF,
 {
     if(!grasscolour) grasscolour = 0xFFFFFF;
-    grasscolor = bvec((grasscolour>>16)&0xFF, (grasscolour>>8)&0xFF, grasscolour&0xFF);
+    grasscolor = bvec::hexcolor(grasscolour);
 });
 FVARR(grasstest, 0, 0.6f, 1);
 
@@ -182,7 +183,7 @@ static void gengrassquads(grassgroup *&group, const grasswedge &w, const grasstr
         #define GRASSVERT(n, tcv, modify) { \
             grassvert &gv = grassverts.add(); \
             gv.pos = p##n; \
-            memcpy(gv.color, color, sizeof(color)); \
+            memcpy(gv.color.v, color, sizeof(color)); \
             gv.u = tc##n; gv.v = tcv; \
             modify; \
         }
@@ -265,7 +266,7 @@ void rendergrass()
 
     const grassvert *ptr = 0;
     gle::vertexpointer(sizeof(grassvert), ptr->pos.v);
-    gle::colorpointer(sizeof(grassvert), ptr->color);
+    gle::colorpointer(sizeof(grassvert), ptr->color.v);
     gle::texcoord0pointer(sizeof(grassvert), &ptr->u);
     gle::enablevertex();
     gle::enablecolor();

@@ -114,12 +114,21 @@ void fontalias(const char *dst, const char *src)
     d->defaultw = s->defaultw;
     d->defaulth = s->defaulth;
     d->scale = s->scale;
+    d->bordermin = s->bordermin;
+    d->bordermax = s->bordermax;
+    d->outlinemin = s->outlinemin;
+    d->outlinemax = s->outlinemax;
 
     fontdef = d;
     fontdeftex = d->texs.length()-1;
 }
 
 COMMAND(fontalias, "ss");
+
+font *findfont(const char *name)
+{
+    return fonts.access(name);
+}
 
 bool setfont(const char *name)
 {
@@ -195,7 +204,7 @@ void draw_textf(const char *fstr, float left, float top, ...)
     draw_text(str, left, top);
 }
 
-const matrix3x4 *textmatrix = NULL;
+const matrix4x3 *textmatrix = NULL;
 float textscale = 1;
 
 static float draw_char(Texture *&tex, int c, float x, float y, float scale)
@@ -322,13 +331,12 @@ static void text_color(char c, char *stack, int size, int &sp, bvec colour, int 
                 {\
                     int c = uchar(str[i+1]);\
                     if(c=='\f') { if(str[i+2]) i++; continue; }\
-                    if(i-j > 16) break;\
                     if(!curfont->chars.inrange(c-curfont->charoffset)) break;\
                     float cw = scale*curfont->chars[c-curfont->charoffset].advance;\
                     if(cw <= 0 || w + cw > maxwidth) break;\
                     w += cw;\
                 }\
-                if(x + w > maxwidth && x > 0) { TEXTLINE(j-1) x = 0; y += FONTH; }\
+                if(x + w > maxwidth && x > 0) { (void)j; TEXTLINE(j-1) x = 0; y += FONTH; }\
                 TEXTWORD\
             }\
             else\

@@ -83,7 +83,7 @@ namespace tiger
         chunk state[3] = { 0x0123456789ABCDEFULL, 0xFEDCBA9876543210ULL, 0xF096A5B4C3B2E187ULL };
         uchar temp[64];
 
-        if(!*(const uchar *)&islittleendian) loopj(64) temp[j^7] = str[j];
+        if(!islittleendian()) loopj(64) temp[j^7] = str[j];
         else loopj(64) temp[j] = str[j];
         loopi(1024) loop(col, 8) ((uchar *)&sboxes[i])[col] = i&0xFF;
 
@@ -115,7 +115,7 @@ namespace tiger
         int i = length;
         for(; i >= 64; i -= 64, str += 64)
         {
-            if(!*(const uchar *)&islittleendian)
+            if(!islittleendian())
             {
                 loopj(64) temp[j^7] = str[j];
                 compress((chunk *)temp, val.chunks);
@@ -124,7 +124,7 @@ namespace tiger
         }
 
         int j;
-        if(!*(const uchar *)&islittleendian)
+        if(!islittleendian())
         {
             for(j = 0; j < i; j++) temp[j^7] = str[j];
             temp[j^7] = 0x01;
@@ -146,7 +146,7 @@ namespace tiger
         while(j < 56) temp[j++] = 0;
         *(chunk *)(temp+56) = (chunk)length<<3;
         compress((chunk *)temp, val.chunks);
-        if(!*(const uchar *)&islittleendian)
+        if(!islittleendian())
         {
             loopk(3)
             {

@@ -42,7 +42,7 @@ namespace ovr
     void reset() {}
     void update() {}
     void warp() {}
-    void ortho(glmatrix &m, float dist, float fov) {}
+    void ortho(matrix4 &m, float dist, float fov) {}
 #else
     using namespace OVR;
 
@@ -70,7 +70,7 @@ namespace ovr
                      r2*hmdinfo.DistortionK[3])));
     }
 
-    void ortho(glmatrix &m, float dist, float fov)
+    void ortho(matrix4 &m, float dist, float fov)
     {
         if(dist <= 0) dist = ovrhuddist;
         if(fov <= 0) fov = ovrhudfov;

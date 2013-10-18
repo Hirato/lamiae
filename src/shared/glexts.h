@@ -208,6 +208,7 @@ extern PFNGLTEXTUREIMAGE3DMULTISAMPLECOVERAGENVPROC glTextureImage3DMultisampleC
 #ifndef GL_ARB_texture_rg
 #define GL_ARB_texture_rg 1
 #define GL_RG                             0x8227
+#define GL_RG_INTEGER                     0x8228
 #define GL_R8                             0x8229
 #define GL_R16                            0x822A
 #define GL_RG8                            0x822B
@@ -216,6 +217,18 @@ extern PFNGLTEXTUREIMAGE3DMULTISAMPLECOVERAGENVPROC glTextureImage3DMultisampleC
 #define GL_R32F                           0x822E
 #define GL_RG16F                          0x822F
 #define GL_RG32F                          0x8230
+#define GL_R8I                            0x8231
+#define GL_R8UI                           0x8232
+#define GL_R16I                           0x8233
+#define GL_R16UI                          0x8234
+#define GL_R32I                           0x8235
+#define GL_R32UI                          0x8236
+#define GL_RG8I                           0x8237
+#define GL_RG8UI                          0x8238
+#define GL_RG16I                          0x8239
+#define GL_RG16UI                         0x823A
+#define GL_RG32I                          0x823B
+#define GL_RG32UI                         0x823C
 #endif
 
 #ifndef GL_EXT_texture_compression_latc
@@ -609,6 +622,28 @@ typedef void (APIENTRYP PFNGLUNIFORMBLOCKBINDINGPROC) (GLuint program, GLuint un
 #define GL_CLAMP_READ_COLOR               0x891C
 #define GL_FIXED_ONLY                     0x891D
 #define GL_R11F_G11F_B10F                 0x8C3A
+#define GL_RGBA32UI                       0x8D70
+#define GL_RGB32UI                        0x8D71
+#define GL_RGBA16UI                       0x8D76
+#define GL_RGB16UI                        0x8D77
+#define GL_RGBA8UI                        0x8D7C
+#define GL_RGB8UI                         0x8D7D
+#define GL_RGBA32I                        0x8D82
+#define GL_RGB32I                         0x8D83
+#define GL_RGBA16I                        0x8D88
+#define GL_RGB16I                         0x8D89
+#define GL_RGBA8I                         0x8D8E
+#define GL_RGB8I                          0x8D8F
+#define GL_RED_INTEGER                    0x8D94
+#define GL_GREEN_INTEGER                  0x8D95
+#define GL_BLUE_INTEGER                   0x8D96
+#define GL_RGB_INTEGER                    0x8D98
+#define GL_RGBA_INTEGER                   0x8D99
+#define GL_BGR_INTEGER                    0x8D9A
+#define GL_UNSIGNED_INT_VEC2              0x8DC6
+#define GL_UNSIGNED_INT_VEC3              0x8DC7
+#define GL_UNSIGNED_INT_VEC4              0x8DC8
+#define GL_BGRA_INTEGER                   0x8D9B
 #define GL_COMPRESSED_RED                 0x8225
 #define GL_COMPRESSED_RG                  0x8226
 #define GL_QUERY_WAIT                     0x8E13
@@ -625,6 +660,22 @@ typedef void (APIENTRYP PFNGLENABLEIPROC) (GLenum target, GLuint index);
 typedef void (APIENTRYP PFNGLDISABLEIPROC) (GLenum target, GLuint index);
 typedef void (APIENTRYP PFNGLBEGINCONDITIONALRENDERNVPROC) (GLuint id, GLenum mode);
 typedef void (APIENTRYP PFNGLENDCONDITIONALRENDERNVPROC) (void);
+typedef void (APIENTRYP PFNGLUNIFORM1UIPROC) (GLint location, GLuint v0);
+typedef void (APIENTRYP PFNGLUNIFORM2UIPROC) (GLint location, GLuint v0, GLuint v1);
+typedef void (APIENTRYP PFNGLUNIFORM3UIPROC) (GLint location, GLuint v0, GLuint v1, GLuint v2);
+typedef void (APIENTRYP PFNGLUNIFORM4UIPROC) (GLint location, GLuint v0, GLuint v1, GLuint v2, GLuint v3);
+typedef void (APIENTRYP PFNGLUNIFORM1UIVPROC) (GLint location, GLsizei count, const GLuint *value);
+typedef void (APIENTRYP PFNGLUNIFORM2UIVPROC) (GLint location, GLsizei count, const GLuint *value);
+typedef void (APIENTRYP PFNGLUNIFORM3UIVPROC) (GLint location, GLsizei count, const GLuint *value);
+typedef void (APIENTRYP PFNGLUNIFORM4UIVPROC) (GLint location, GLsizei count, const GLuint *value);
+typedef void (APIENTRYP PFNGLTEXPARAMETERIIVPROC) (GLenum target, GLenum pname, const GLint *params);
+typedef void (APIENTRYP PFNGLTEXPARAMETERIUIVPROC) (GLenum target, GLenum pname, const GLuint *params);
+typedef void (APIENTRYP PFNGLGETTEXPARAMETERIIVPROC) (GLenum target, GLenum pname, GLint *params);
+typedef void (APIENTRYP PFNGLGETTEXPARAMETERIUIVPROC) (GLenum target, GLenum pname, GLuint *params);
+typedef void (APIENTRYP PFNGLCLEARBUFFERIVPROC) (GLenum buffer, GLint drawbuffer, const GLint *value);
+typedef void (APIENTRYP PFNGLCLEARBUFFERUIVPROC) (GLenum buffer, GLint drawbuffer, const GLuint *value);
+typedef void (APIENTRYP PFNGLCLEARBUFFERFVPROC) (GLenum buffer, GLint drawbuffer, const GLfloat *value);
+typedef void (APIENTRYP PFNGLCLEARBUFFERFIPROC) (GLenum buffer, GLint drawbuffer, GLfloat depth, GLint stencil);
 #elif GL_GLEXT_VERSION < 43
 typedef void (APIENTRYP PFNGLBINDBUFFERRANGEPROC) (GLenum target, GLuint index, GLuint buffer, GLintptr offset, GLsizeiptr size);
 typedef void (APIENTRYP PFNGLBINDBUFFERBASEPROC) (GLenum target, GLuint index, GLuint buffer);
@@ -632,6 +683,18 @@ typedef void (APIENTRYP PFNGLBINDBUFFERBASEPROC) (GLenum target, GLuint index, G
 
 extern PFNGLGETSTRINGIPROC glGetStringi_;
 extern PFNGLBINDFRAGDATALOCATIONPROC glBindFragDataLocation_;
+extern PFNGLUNIFORM1UIPROC glUniform1ui_;
+extern PFNGLUNIFORM2UIPROC glUniform2ui_;
+extern PFNGLUNIFORM3UIPROC glUniform3ui_;
+extern PFNGLUNIFORM4UIPROC glUniform4ui_;
+extern PFNGLUNIFORM1UIVPROC glUniform1uiv_;
+extern PFNGLUNIFORM2UIVPROC glUniform2uiv_;
+extern PFNGLUNIFORM3UIVPROC glUniform3uiv_;
+extern PFNGLUNIFORM4UIVPROC glUniform4uiv_;
+extern PFNGLCLEARBUFFERIVPROC glClearBufferiv_;
+extern PFNGLCLEARBUFFERUIVPROC glClearBufferuiv_;
+extern PFNGLCLEARBUFFERFVPROC glClearBufferfv_;
+extern PFNGLCLEARBUFFERFIPROC glClearBufferfi_;
 
 // GL_EXT_draw_buffers2
 extern PFNGLCOLORMASKIPROC glColorMaski_;
@@ -641,6 +704,24 @@ extern PFNGLDISABLEIPROC glDisablei_;
 // GL_NV_conditional_render
 extern PFNGLBEGINCONDITIONALRENDERPROC glBeginConditionalRender_;
 extern PFNGLENDCONDITIONALRENDERPROC glEndConditionalRender_;
+
+// GL_EXT_texture_integer
+#ifndef GL_EXT_texture_integer
+#define GL_EXT_texture_integer 1
+typedef void (APIENTRYP PFNGLCLEARCOLORIIEXTPROC) (GLint red, GLint green, GLint blue, GLint alpha);
+typedef void (APIENTRYP PFNGLCLEARCOLORIUIEXTPROC) (GLuint red, GLuint green, GLuint blue, GLuint alpha);
+#endif
+extern PFNGLTEXPARAMETERIIVPROC glTexParameterIiv_;
+extern PFNGLTEXPARAMETERIUIVPROC glTexParameterIuiv_;
+extern PFNGLGETTEXPARAMETERIIVPROC glGetTexParameterIiv_;
+extern PFNGLGETTEXPARAMETERIUIVPROC glGetTexParameterIuiv_;
+extern PFNGLCLEARCOLORIIEXTPROC glClearColorIi_;
+extern PFNGLCLEARCOLORIUIEXTPROC glClearColorIui_;
+
+#ifndef GL_ARB_half_float_vertex
+#define GL_ARB_half_float_vertex 1
+#define GL_HALF_FLOAT                     0x140B
+#endif
 
 #ifndef GL_VERSION_3_1
 #define GL_VERSION_3_1 1

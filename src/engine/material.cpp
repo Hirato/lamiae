@@ -74,7 +74,7 @@ struct QuadNode
 
 static void drawmaterial(const materialsurface &m, float offset)
 {
-    if(gle::data.empty())
+    if(gle::attribbuf.empty())
     {
         gle::defvertex();
         gle::begin(GL_QUADS);
@@ -465,7 +465,7 @@ static inline bool editmatcmp(const materialsurface &x, const materialsurface &y
 void sorteditmaterials()
 {
     sortorigin = ivec(camera1->o);
-    vec dir(fabs(camdir.x), fabs(camdir.y), fabs(camdir.z));
+    vec dir = vec(camdir).abs();
     loopi(3) sortdim[i] = i;
     if(dir[sortdim[2]] > dir[sortdim[1]]) swap(sortdim[2], sortdim[1]);
     if(dir[sortdim[1]] > dir[sortdim[0]]) swap(sortdim[1], sortdim[0]);
@@ -512,7 +512,7 @@ static float glassxscale = 0, glassyscale = 0;
 
 static void drawglass(const materialsurface &m, float offset, const vec *normal = NULL)
 {
-    if(gle::data.empty())
+    if(gle::attribbuf.empty())
     {
         gle::defvertex();
         if(normal) gle::defnormal();
@@ -777,9 +777,9 @@ void rendereditmaterials()
 
     glDisable(GL_CULL_FACE);
 
-    foggednotextureshader->set();
-
     zerofogcolor();
+
+    foggednotextureshader->set();
 
     glBlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
     glEnable(GL_BLEND);

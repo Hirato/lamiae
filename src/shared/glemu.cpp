@@ -22,12 +22,15 @@ namespace gle
     };
 
     extern const char * const attribnames[MAXATTRIBS] = { "vvertex", "vcolor", "vtexcoord0", "vtexcoord1", "vnormal", "vtangent", "vboneweight", "vboneindex" };
-    vector<uchar> data;
+    ucharbuf attribbuf;
+    static uchar *attribdata;
     static attribinfo attribdefs[MAXATTRIBS], lastattribs[MAXATTRIBS];
     static int enabled = 0, numattribs = 0, attribmask = 0, numlastattribs = 0, lastattribmask = 0, vertexsize = 0, lastvertexsize = 0;
     static GLenum primtype = GL_TRIANGLES;
     static uchar *lastbuf = NULL;
     static bool changedattribs = false;
+    static vector<GLint> multidrawstart;
+    static vector<GLsizei> multidrawcount;
 
     #define MAXQUADS (0x10000/4)
     static GLuint quadindexes = 0;
@@ -81,11 +84,6 @@ namespace gle
             count = MAXQUADS - offset;
         }
         glDrawRangeElements_(GL_TRIANGLES, offset*4, (offset + count)*4-1, count*6, GL_UNSIGNED_SHORT, (ushort *)0 + offset*6);
-    }
-
-    void begin(GLenum mode)
-    {
-        primtype = mode;
     }
 
     void defattrib(int type, int size, int format)
@@ -169,32 +167,8 @@ namespace gle
         enabled &= ~(1<<a.type);
     }
 
-    int end()
+    static inline void setattribs(uchar *buf)
     {
-        if(data.empty()) return 0;
-        uchar *buf = data.getbuf();
-        int start = 0;
-        if(glversion >= 300)
-        {
-            if(vbooffset + data.length() >= MAXVBOSIZE)
-            {
-                if(!vbo) glGenBuffers_(1, &vbo);
-                glBindBuffer_(GL_ARRAY_BUFFER, vbo);
-                glBufferData_(GL_ARRAY_BUFFER, MAXVBOSIZE, NULL, GL_STREAM_DRAW);
-                vbooffset = 0;
-            }
-            else if(!lastvertexsize) glBindBuffer_(GL_ARRAY_BUFFER, vbo);
-            glBufferSubData_(GL_ARRAY_BUFFER, vbooffset, data.length(), data.getbuf());
-            buf = (uchar *)0 + vbooffset;
-            if(vertexsize == lastvertexsize && buf >= lastbuf)
-            {
-                start = int(buf - lastbuf)/vertexsize;
-                if(primtype == GL_QUADS && (start%4 || start + data.length()/vertexsize >= 4*MAXQUADS))
-                    start = 0;
-                else buf = lastbuf;
-            }
-            vbooffset += data.length();
-        }
         bool forceattribs = numattribs != numlastattribs || vertexsize != lastvertexsize || buf != lastbuf;
         if(forceattribs || changedattribs)
         {
@@ -221,7 +195,90 @@ namespace gle
             lastvertexsize = vertexsize;
             changedattribs = false;
         }
-        int numvertexes = data.length()/vertexsize;
+    }
+
+    void begin(GLenum mode)
+    {
+        primtype = mode;
+    }
+
+    void begin(GLenum mode, int numverts)
+    {
+        primtype = mode;
+        if(glversion >= 300)
+        {
+            int len = numverts * vertexsize;
+            if(vbooffset + len >= MAXVBOSIZE)
+            {
+                len = min(len, MAXVBOSIZE);
+                if(!vbo) glGenBuffers_(1, &vbo);
+                glBindBuffer_(GL_ARRAY_BUFFER, vbo);
+                glBufferData_(GL_ARRAY_BUFFER, MAXVBOSIZE, NULL, GL_STREAM_DRAW);
+                vbooffset = 0;
+            }
+            else if(!lastvertexsize) glBindBuffer_(GL_ARRAY_BUFFER, vbo);
+            void *buf = glMapBufferRange_(GL_ARRAY_BUFFER, vbooffset, len, GL_MAP_WRITE_BIT|GL_MAP_INVALIDATE_RANGE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
+            if(buf) attribbuf.reset((uchar *)buf, len);
+        }
+    }
+
+    void multidraw()
+    {
+        int start = multidrawstart.length() ? multidrawstart.last() + multidrawcount.last() : 0,
+            count = attribbuf.length()/vertexsize - start;
+        if(count > 0)
+        {
+            multidrawstart.add(start);
+            multidrawcount.add(count);
+        }
+    }
+
+    int end()
+    {
+        uchar *buf = attribbuf.getbuf();
+        if(attribbuf.empty())
+        {
+            if(buf != attribdata)
+            {
+                glUnmapBuffer_(GL_ARRAY_BUFFER);
+                attribbuf.reset(attribdata, MAXVBOSIZE);
+            }
+            return 0;
+        }
+        int start = 0;
+        if(glversion >= 300)
+        {
+            if(buf == attribdata)
+            {
+                if(vbooffset + attribbuf.length() >= MAXVBOSIZE)
+                {
+                    if(!vbo) glGenBuffers_(1, &vbo);
+                    glBindBuffer_(GL_ARRAY_BUFFER, vbo);
+                    glBufferData_(GL_ARRAY_BUFFER, MAXVBOSIZE, NULL, GL_STREAM_DRAW);
+                    vbooffset = 0;
+                }
+                else if(!lastvertexsize) glBindBuffer_(GL_ARRAY_BUFFER, vbo);
+                void *dst = glMapBufferRange_(GL_ARRAY_BUFFER, vbooffset, attribbuf.length(), GL_MAP_WRITE_BIT|GL_MAP_INVALIDATE_RANGE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
+                if(dst)
+                {
+                    memcpy(dst, attribbuf.getbuf(), attribbuf.length());
+                    glUnmapBuffer_(GL_ARRAY_BUFFER);
+                }
+                else glBufferSubData_(GL_ARRAY_BUFFER, vbooffset, attribbuf.length(), attribbuf.getbuf());
+            }
+            else glUnmapBuffer_(GL_ARRAY_BUFFER);
+            buf = (uchar *)0 + vbooffset;
+            if(vertexsize == lastvertexsize && buf >= lastbuf)
+            {
+                start = int(buf - lastbuf)/vertexsize;
+                if(primtype == GL_QUADS && (start%4 || start + attribbuf.length()/vertexsize >= 4*MAXQUADS))
+                    start = 0;
+                else buf = lastbuf;
+            }
+            vbooffset += attribbuf.length();
+        }
+        setattribs(buf);
+        int numvertexes = attribbuf.length()/vertexsize;
         if(primtype == GL_QUADS)
         {
             if(!quadsenabled) enablequads();
@@ -229,9 +286,17 @@ namespace gle
         }
         else
         {
-            glDrawArrays(primtype, start, numvertexes);
+            if(multidrawstart.length())
+            {
+                multidraw();
+                if(start) loopv(multidrawstart) multidrawstart[i] += start;
+                glMultiDrawArrays_(primtype, multidrawstart.getbuf(), multidrawcount.getbuf(), multidrawstart.length());
+                multidrawstart.setsize(0);
+                multidrawcount.setsize(0);
+            }
+            else glDrawArrays(primtype, start, numvertexes);
         }
-        data.setsize(0);
+        attribbuf.reset(attribdata, MAXVBOSIZE);
         return numvertexes;
     }
 
@@ -252,6 +317,8 @@ namespace gle
             if(!defaultvao) glGenVertexArrays_(1, &defaultvao);
             glBindVertexArray_(defaultvao);
         }
+        attribdata = new uchar[MAXVBOSIZE];
+        attribbuf.reset(attribdata, MAXVBOSIZE);
     }
 
     void cleanup()

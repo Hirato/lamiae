@@ -108,10 +108,9 @@ static inline T clamp(T a, U b, U c) //val min max
 #define DELETEP(p) if(p) { delete   p; p = 0; }
 #define DELETEA(p) if(p) { delete[] p; p = 0; }
 
-#define PI  (3.1415927f)
-#define PI2 (2*PI)
-#define SQRT2 (1.4142136f)
-#define SQRT3 (1.7320508f)
+#define PI (3.14159265358979f)
+#define SQRT2 (1.4142135623731f)
+#define SQRT3 (1.73205080756888f)
 #define RAD (PI / 180.0f)
 
 #ifdef WIN32
@@ -221,9 +220,22 @@ struct databuf
     template<class U>
     databuf(T *buf, U maxlen) : buf(buf), len(0), maxlen((int)maxlen), flags(0) {}
 
+    void reset()
+    {
+        len = 0;
+        flags = 0;
+    }
+
+    void reset(T *buf_, int maxlen_)
+    {
+        reset();
+        buf = buf_;
+        maxlen = maxlen_;
+    }
+
     const T &get()
     {
-        static T overreadval = 0;
+        static const T overreadval = 0;
         if(len<maxlen) return buf[len++];
         flags |= OVERREAD;
         return overreadval;
@@ -236,6 +248,13 @@ struct databuf
         return databuf(&buf[len-sz], sz);
     }
 
+    T *pad(int numvals)
+    {
+        T *vals = &buf[len];
+        len += min(numvals, maxlen-len);
+        return vals;
+    }
+
     void put(const T &val)
     {
         if(len<maxlen) buf[len++] = val;
@@ -244,18 +263,25 @@ struct databuf
 
     void put(const T *vals, int numvals)
     {
-        if(maxlen-len<numvals) flags |= OVERWROTE;
-        memcpy(&buf[len], (const void *)vals, min(maxlen-len, numvals)*sizeof(T));
-        len += min(maxlen-len, numvals);
+        if(maxlen - len < numvals)
+        {
+            numvals = maxlen - len;
+            flags |= OVERWROTE;
+        }
+        memcpy(&buf[len], (const void *)vals, numvals*sizeof(T));
+        len += numvals;
     }
 
     int get(T *vals, int numvals)
     {
-        int read = min(maxlen-len, numvals);
-        if(read<numvals) flags |= OVERREAD;
-        memcpy(vals, (void *)&buf[len], read*sizeof(T));
-        len += read;
-        return read;
+        if(maxlen - len < numvals)
+        {
+            numvals = maxlen - len;
+            flags |= OVERREAD;
+        }
+        memcpy(vals, (void *)&buf[len], numvals*sizeof(T));
+        len += numvals;
+        return numvals;
     }
 
     void offset(int n)
@@ -266,11 +292,14 @@ struct databuf
         len = max(len-n, 0);
     }
 
+    T *getbuf() const { return buf; }
     bool empty() const { return len==0; }
     int length() const { return len; }
     int remaining() const { return maxlen-len; }
     bool overread() const { return (flags&OVERREAD)!=0; }
     bool overwrote() const { return (flags&OVERWROTE)!=0; }
+
+    bool check(int n) { return remaining() >= n; }
 
     void forceoverread()
     {
@@ -1114,6 +1143,26 @@ template<class H, class E, class K, class T> struct hashbase
         return false;
     }
 
+    void recycle()
+    {
+        if(!numelems) return;
+        loopi(size)
+        {
+            chain *c = chains[i];
+            if(!c) continue;
+            for(;;)
+            {
+                htrecycle(c->elem);
+                if(!c->next) break;
+                c = c->next;
+            }
+            c->next = unused;
+            unused = chains[i];
+            chains[i] = NULL;
+        }
+        numelems = 0;
+    }
+
     void deletechunks()
     {
         for(chainchunk *nextchunk; chunks; chunks = nextchunk)
@@ -1136,6 +1185,8 @@ template<class H, class E, class K, class T> struct hashbase
     static inline K &enumkey(void *i) { return H::getkey(((chain *)i)->elem); }
     static inline T &enumdata(void *i) { return H::getdata(((chain *)i)->elem); }
 };
+
+template<class T> static inline void htrecycle(const T &) {}
 
 template<class T> struct hashset : hashbase<hashset<T>, T, T, T>
 {
@@ -1165,6 +1216,13 @@ template<class K, class T> struct hashtableentry
     K key;
     T data;
 };
+
+template<class K, class T>
+static inline void htrecycle(hashtableentry<K, T> &entry)
+{
+    htrecycle(entry.key);
+    htrecycle(entry.data);
+}
 
 template<class K, class T> struct hashtable : hashbase<hashtable<K, T>, hashtableentry<K, T>, K, T>
 {
@@ -1296,7 +1354,7 @@ inline char *newconcatstring(const char *s, const char *t)
     return r;
 }
 
-const int islittleendian = 1;
+static inline bool islittleendian() { union { int i; uchar b[sizeof(int)]; } conv; conv.i = 1; return conv.b[0] != 0; }
 #ifdef SDL_BYTEORDER
 #define endianswap16 SDL_Swap16
 #define endianswap32 SDL_Swap32
@@ -1326,10 +1384,10 @@ template<class T> inline void endiansame(T *buf, int len) {}
 #define bigswap endiansame
 #endif
 #else
-template<class T> inline T lilswap(T n) { return *(const uchar *)&islittleendian ? n : endianswap(n); }
-template<class T> inline void lilswap(T *buf, int len) { if(!*(const uchar *)&islittleendian) endianswap(buf, len); }
-template<class T> inline T bigswap(T n) { return *(const uchar *)&islittleendian ? endianswap(n) : n; }
-template<class T> inline void bigswap(T *buf, int len) { if(*(const uchar *)&islittleendian) endianswap(buf, len); }
+template<class T> inline T lilswap(T n) { return islittleendian() ? n : endianswap(n); }
+template<class T> inline void lilswap(T *buf, int len) { if(!islittleendian()) endianswap(buf, len); }
+template<class T> inline T bigswap(T n) { return islittleendian() ? endianswap(n) : n; }
+template<class T> inline void bigswap(T *buf, int len) { if(islittleendian()) endianswap(buf, len); }
 #endif
 
 /* workaround for some C platforms that have these two functions as macros - not used anywhere */

@@ -5,16 +5,18 @@ extern void cleanuptqaa();
 VARFP(tqaa, 0, 0, 1, cleanupaa());
 FVAR(tqaareproject, 0, 300, 1e3f);
 FVAR(tqaareprojectscale, 0, 4, 1e3f);
-VARFP(tqaamovemask, 0, 1, 1, cleanuptqaa());
+VARFP(tqaamovemask, 0, 0, 1, cleanuptqaa());
 VARFP(tqaamovemaskreduce, 0, 0, 2, cleanuptqaa());
 VARFP(tqaamovemaskprec, 0, 1, 1, cleanuptqaa());
 VARP(tqaaquincunx, 0, 1, 1);
+FVAR(tqaacolorweightscale, 0, 0.25f, 1e3f);
+FVAR(tqaacolorweightbias, 0, 0.01f, 1);
 
 struct tqaaview
 {
     int frame;
     GLuint prevtex, curtex, masktex, fbo[3];
-    glmatrix prevmvp;
+    matrix4 prevmvp;
 
     tqaaview() : frame(0), prevtex(0), curtex(0), masktex(0)
     {
@@ -68,7 +70,7 @@ struct tqaaview
         if(tmu!=GL_TEXTURE0) glActiveTexture_(tmu);
         if(msaasamples) glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, msdepthtex);
         else glBindTexture(GL_TEXTURE_RECTANGLE, gdepthtex);
-        glmatrix reproject;
+        matrix4 reproject;
         reproject.mul(frame ? prevmvp : screenmatrix, worldmatrix);
         vec2 jitter = frame&1 ? vec2(0.5f, 0.5f) : vec2(-0.5f, -0.5f);
         if(multisampledaa()) { jitter.x *= 0.5f; jitter.y *= -0.5f; }
@@ -124,7 +126,11 @@ struct tqaaview
             SETSHADER(tqaaresolvemasked);
             LOCALPARAMF(movemaskscale, 1/float(1<<tqaamovemaskreduce));
         }
-        else SETSHADER(tqaaresolve);
+        else
+        {
+            SETSHADER(tqaaresolve);
+            LOCALPARAMF(colorweight, tqaacolorweightscale, -tqaacolorweightbias*tqaacolorweightscale);
+        }
         glBindTexture(GL_TEXTURE_RECTANGLE, curtex);
         glActiveTexture_(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_RECTANGLE, frame ? prevtex : curtex);
@@ -365,6 +371,14 @@ static inline vec2 areaortho(float p1x, float p1y, float p2x, float p2y, float l
     return areaunderortho(vec2(p1x, p1y), vec2(p2x, p2y), left);
 }
 
+static inline void smootharea(float d, vec2 &a1, vec2 &a2)
+{
+    vec2 b1(sqrtf(a1.x*2)*0.5f, sqrtf(a1.y*2)*0.5f), b2(sqrtf(a2.x*2)*0.5f, sqrtf(a2.y*2)*0.5f);
+    float p = clamp(d / 32.0f, 0.0f, 1.0f);
+    a1.lerp(b1, a1, p);
+    a2.lerp(b2, a2, p);
+}
+
 vec2 areaortho(int pattern, float left, float right, float offset)
 {
     float d = left + right + 1, o1 = offset + 0.5f, o2 = offset - 0.5f;
@@ -373,7 +387,12 @@ vec2 areaortho(int pattern, float left, float right, float offset)
         case 0: return vec2(0, 0);
         case 1: return left <= right ? areaortho(0, o2, d/2, 0, left) : vec2(0, 0);
         case 2: return left >= right ? areaortho(d/2, 0, d, o2, left) : vec2(0, 0);
-        case 3: return areaortho(0, o2, d/2, 0, left).add(areaortho(d/2, 0, d, o2, left));
+        case 3:
+        {
+            vec2 a1 = areaortho(0, o2, d/2, 0, left), a2 = areaortho(d/2, 0, d, o2, left);
+            smootharea(d, a1, a2);
+            return a1.add(a2);
+        }
         case 4: return left <= right ? areaortho(0, o1, d/2, 0, left) : vec2(0, 0);
         case 5: return vec2(0, 0);
         case 6:
@@ -392,7 +411,12 @@ vec2 areaortho(int pattern, float left, float right, float offset)
         }
         case 10: return vec2(0, 0);
         case 11: return areaortho(0, o2, d, o1, left);
-        case 12: return areaortho(0, o1, d/2, 0, left).add(areaortho(d/2, 0, d, o1, left));
+        case 12:
+        {
+            vec2 a1 = areaortho(0, o1, d/2, 0, left), a2 = areaortho(d/2, 0, d, o1, left);
+            smootharea(d, a1, a2);
+            return a1.add(a2);
+        }
         case 13: return areaortho(0, o2, d, o1, left);
         case 14: return areaortho(0, o1, d, o2, left);
         case 15: return vec2(0, 0);
@@ -403,18 +427,13 @@ vec2 areaortho(int pattern, float left, float right, float offset)
 float areaunderdiag(const vec2 &p1, const vec2 &p2, const vec2 &p)
 {
     vec2 d(p2.y - p1.y, p1.x - p2.x);
-    float dp = d.dot(vec2(p1).avg(p2).sub(p));
+    float dp = d.dot(vec2(p1).sub(p));
     if(!d.x)
     {
-        if(!d.y) return 0 > dp;
-        if(d.y < dp) return 0;
-        return 1 - dp/d.y;
+        if(!d.y) return 1;
+        return clamp(d.y > 0 ? 1 - dp/d.y : dp/d.y, 0.0f, 1.0f);
     }
-    if(!d.y)
-    {
-        if(d.x < dp) return 0;
-        return 1 - dp/d.x;
-    }
+    if(!d.y) return clamp(d.x > 0 ? 1 - dp/d.x : dp/d.x, 0.0f, 1.0f);
     float l = dp/d.y, r = (dp-d.x)/d.y, b = dp/d.x, t = (dp-d.y)/d.x;
     if(0 <= dp)
     {
@@ -437,7 +456,7 @@ float areaunderdiag(const vec2 &p1, const vec2 &p2, const vec2 &p)
     }
     if(d.y <= dp)
     {
-        if(d.x <= dp) return l*b;
+        if(d.x <= dp) return 0.5f*l*b;
         if(d.y+d.x <= dp) return min(l, r) + 0.5f*fabs(r-l);
         return 1 - 0.5f*(1-l)*t;
     }
@@ -737,7 +756,7 @@ void setupaa(int w, int h)
     if(tqaa && !tqaaviews[0].fbo[0]) setuptqaa(w, h);
 }
 
-glmatrix nojittermatrix, aamaskmatrix;
+matrix4 nojittermatrix, aamaskmatrix;
 int aamask = -1;
 
 void jitteraa(bool init)
@@ -771,7 +790,7 @@ void setaamask(bool on)
 
 bool multisampledaa()
 {
-    return smaa && smaaspatial && msaasamples == 2 && hasMSS;
+    return smaa && smaaspatial && msaasamples == 2;
 }
 
 bool maskedaa()

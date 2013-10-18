@@ -10,7 +10,7 @@ static inline double det3x3(double a1, double a2, double a3,
          + c1 * det2x2(a2, a3, b2, b3);
 }
 
-bool glmatrix::invert(const glmatrix &m, double mindet)
+bool matrix4::invert(const matrix4 &m, double mindet)
 {
     double a1 = m.a.x, a2 = m.a.y, a3 = m.a.z, a4 = m.a.w,
            b1 = m.b.x, b2 = m.b.y, b3 = m.b.z, b4 = m.b.w,

@@ -4,7 +4,7 @@ bvec ambientcolor(0x19, 0x19, 0x19);
 HVARFR(ambient, 1, 0x191919, 0xFFFFFF,
 {
     if(ambient <= 255) ambient |= (ambient<<8) | (ambient<<16);
-    ambientcolor = bvec((ambient>>16)&0xFF, (ambient>>8)&0xFF, ambient&0xFF);
+    ambientcolor = bvec::hexcolor(ambient);
 });
 FVARR(ambientscale, 0, 1, 16);
 
@@ -12,7 +12,7 @@ bvec skylightcolor(0, 0, 0);
 HVARFR(skylight, 0, 0, 0xFFFFFF,
 {
     if(skylight <= 255) skylight |= (skylight<<8) | (skylight<<16);
-    skylightcolor = bvec((skylight>>16)&0xFF, (skylight>>8)&0xFF, skylight&0xFF);
+    skylightcolor = bvec::hexcolor(skylight);
 });
 FVARR(skylightscale, 0, 1, 16);
 
@@ -21,7 +21,7 @@ bvec sunlightcolor(0, 0, 0);
 HVARFR(sunlight, 0, 0, 0xFFFFFF,
 {
     if(sunlight <= 255) sunlight |= (sunlight<<8) | (sunlight<<16);
-    sunlightcolor = bvec((sunlight>>16)&0xFF, (sunlight>>8)&0xFF, sunlight&0xFF);
+    sunlightcolor = bvec::hexcolor(sunlight);
     setupsunlight();
     cleardeferredlightshaders();
     clearshadowcache();
@@ -752,7 +752,7 @@ void lightreaching(const vec &target, vec &color, vec &dir, bool fast, extentity
         if(e.attached && e.attached->type==ET_SPOTLIGHT)
         {
             vec spot = vec(e.attached->o).sub(e.o).normalize();
-            float maxatten = sincos360[clamp(int(e.attached->attr[0]), 1, 89)].x, spotatten = (ray.dot(spot) - maxatten) / (1 - maxatten);
+            float spotatten = 1 - (1 - ray.dot(spot)) / (1 - cos360(clamp(int(e.attached->attr1), 1, 89)));
             if(spotatten <= 0) continue;
             intensity *= spotatten;
         }
@@ -768,7 +768,7 @@ void lightreaching(const vec &target, vec &color, vec &dir, bool fast, extentity
     }
     if(sunlight && shadowray(target, sunlightdir, 1e16f, RAY_SHADOW | RAY_POLY, t) > 1e15f)
     {
-        vec lightcol = vec(sunlightcolor.x, sunlightcolor.y, sunlightcolor.z).mul(sunlightscale/255);
+        vec lightcol = sunlightcolor.tocolor().mul(sunlightscale);
         color.add(lightcol);
         dir.add(vec(sunlightdir).mul(lightcol.x*lightcol.y*lightcol.z));
     }

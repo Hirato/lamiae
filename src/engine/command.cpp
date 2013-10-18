@@ -3186,38 +3186,49 @@ static inline void setiter(ident &id, int i, identstack &stack)
     }
 }
 
-ICOMMAND(loop, "rie", (ident *id, int *n, uint *body),
+static inline void doloop(ident &id, int offset, int n, int step, uint *body)
 {
-    if(*n <= 0 || id->type!=ID_ALIAS) return;
+    if(n <= 0 || id.type != ID_ALIAS) return;
     identstack stack;
-    loopi(*n)
+    loopi(n)
     {
-        setiter(*id, i, stack);
+        setiter(id, offset + i*step, stack);
         execute(body);
     }
-    poparg(*id);
-});
-ICOMMAND(loopwhile, "riee", (ident *id, int *n, uint *cond, uint *body),
+    poparg(id);
+}
+ICOMMAND(loop, "rie", (ident *id, int *n, uint *body), doloop(*id, 0, *n, 1, body));
+ICOMMAND(loop+, "riie", (ident *id, int *offset, int *n, uint *body), doloop(*id, *offset, *n, 1, body));
+ICOMMAND(loop*, "riie", (ident *id, int *step, int *n, uint *body), doloop(*id, 0, *n, *step, body));
+ICOMMAND(loop+*, "riiie", (ident *id, int *offset, int *step, int *n, uint *body), doloop(*id, *offset, *n, *step, body));
+
+static inline void loopwhile(ident &id, int offset, int n, int step, uint *cond, uint *body)
 {
-    if(*n <= 0 || id->type!=ID_ALIAS) return;
+    if(n <= 0 || id.type!=ID_ALIAS) return;
     identstack stack;
-    loopi(*n)
+    loopi(n)
     {
-        setiter(*id, i, stack);
+        setiter(id, offset + i*step, stack);
         if(!executebool(cond)) break;
         execute(body);
     }
-    poparg(*id);
-});
+    poparg(id);
+}
+ICOMMAND(loopwhile, "riee", (ident *id, int *n, uint *cond, uint *body), loopwhile(*id, 0, *n, 1, cond, body));
+ICOMMAND(loopwhile+, "riiee", (ident *id, int *offset, int *n, uint *cond, uint *body), loopwhile(*id, *offset, *n, 1, cond, body));
+ICOMMAND(loopwhile*, "riiee", (ident *id, int *step, int *n, uint *cond, uint *body), loopwhile(*id, 0, *n, *step, cond, body));
+ICOMMAND(loopwhile+*, "riiiee", (ident *id, int *offset, int *step, int *n, uint *cond, uint *body), loopwhile(*id, *offset, *n, *step, cond, body));
+
 ICOMMAND(while, "ee", (uint *cond, uint *body), while(executebool(cond)) execute(body));
 
-char *loopconc(ident *id, int n, uint *body, bool space)
+static inline void loopconc(ident &id, int offset, int n, int step, uint *body, bool space)
 {
+    if(n <= 0 || id.type != ID_ALIAS) return;
     identstack stack;
     vector<char> s;
     loopi(n)
     {
-        setiter(*id, i, stack);
+        setiter(id, offset + i*step, stack);
         tagval v;
         executeret(body, v);
         const char *vstr = v.getstr();
@@ -3226,20 +3237,18 @@ char *loopconc(ident *id, int n, uint *body, bool space)
         s.put(vstr, len);
         freearg(v);
     }
-    if(n > 0) poparg(*id);
+    if(n > 0) poparg(id);
     s.add('\0');
-    return newstring(s.getbuf(), s.length()-1);
+    commandret->setstr(newstring(s.getbuf(), s.length()-1));
 }
-
-ICOMMAND(loopconcat, "rie", (ident *id, int *n, uint *body),
-{
-    if(*n > 0 && id->type==ID_ALIAS) commandret->setstr(loopconc(id, *n, body, true));
-});
-
-ICOMMAND(loopconcatword, "rie", (ident *id, int *n, uint *body),
-{
-    if(*n > 0 && id->type==ID_ALIAS) commandret->setstr(loopconc(id, *n, body, false));
-});
+ICOMMAND(loopconcat, "rie", (ident *id, int *n, uint *body), loopconc(*id, 0, *n, 1, body, true));
+ICOMMAND(loopconcat+, "riie", (ident *id, int *offset, int *n, uint *body), loopconc(*id, *offset, *n, 1, body, true));
+ICOMMAND(loopconcat*, "riie", (ident *id, int *step, int *n, uint *body), loopconc(*id, 0, *n, *step, body, true));
+ICOMMAND(loopconcat+*, "riiie", (ident *id, int *offset, int *step, int *n, uint *body), loopconc(*id, *offset, *n, *step, body, true));
+ICOMMAND(loopconcatword, "rie", (ident *id, int *n, uint *body), loopconc(*id, 0, *n, 1, body, false));
+ICOMMAND(loopconcatword+, "riie", (ident *id, int *offset, int *n, uint *body), loopconc(*id, *offset, *n, 1, body, false));
+ICOMMAND(loopconcatword*, "riie", (ident *id, int *step, int *n, uint *body), loopconc(*id, 0, *n, *step, body, false));
+ICOMMAND(loopconcatword+*, "riiie", (ident *id, int *offset, int *step, int *n, uint *body), loopconc(*id, *offset, *n, *step, body, false));
 
 void concat(tagval *v, int n)
 {
@@ -3720,7 +3729,13 @@ ICOMMAND(loopdir, "rse", (ident *id, char *dir, uint *body),
     if(files.length()) poparg(*id);
 });
 
-ICOMMAND(findfile, "s", (char *name), intret(findfile(name, "e") ? 1 : 0));
+ICOMMAND(findfile, "s", (char *name),
+{
+    string fname;
+    copystring(fname, name);
+    path(fname);
+    intret(fileexists(fname, "e") || findfile(fname, "e") ? 1 : 0);
+});
 
 struct sortitem
 {
@@ -3752,7 +3767,7 @@ void sortlist(char *list, ident *x, ident *y, uint *body, uint *unique)
 
     vector<sortitem> items;
     int clen = strlen(list), total = 0;
-    char *cstr = newstring(clen);
+    char *cstr = newstring(list, clen);
     const char *curlist = list, *start, *end, *quotestart, *quoteend;
     while(parselist(curlist, start, end, quotestart, quoteend))
     {
@@ -3762,25 +3777,51 @@ void sortlist(char *list, ident *x, ident *y, uint *body, uint *unique)
         total += item.quotelength();
     }
 
+    if(items.empty())
+    {
+        commandret->setstr(cstr);
+        return;
+    }
+
     identstack xstack, ystack;
     pusharg(*x, nullval, xstack); x->flags &= ~IDF_UNKNOWN;
     pusharg(*y, nullval, ystack); y->flags &= ~IDF_UNKNOWN;
 
-    sortfun f = { x, y, body };
-    items.sort(f);
-
     int totalunique = total, numunique = items.length();
-    if(items.length() && (*unique&CODE_OP_MASK) != CODE_EXIT)
+    if(body)
     {
+        sortfun f = { x, y, body };
+        items.sort(f);
+        if((*unique&CODE_OP_MASK) != CODE_EXIT)
+        {
+            f.body = unique;
+            totalunique = items[0].quotelength();
+            numunique = 1;
+            for(int i = 1; i < items.length(); i++)
+            {
+                sortitem &item = items[i];
+                if(f(items[i-1], item)) item.quotestart = NULL;
+                else { totalunique += item.quotelength(); numunique++; }
+            }
+        }
+    }
+    else
+    {
+        sortfun f = { x, y, unique };
         totalunique = items[0].quotelength();
         numunique = 1;
         for(int i = 1; i < items.length(); i++)
         {
             sortitem &item = items[i];
-            if(f(items[i-1], item)) item.quotestart = NULL;
-            else { totalunique += item.quotelength(); numunique++; }
+            loopj(i)
+            {
+                sortitem &prev = items[j];
+                if(prev.quotestart && f(item, prev)) { item.quotestart = NULL; break; }
+            }
+            if(item.quotestart) { totalunique += item.quotelength(); numunique++; }
         }
     }
+
     poparg(*x);
     poparg(*y);
 
@@ -3806,8 +3847,8 @@ void sortlist(char *list, ident *x, ident *y, uint *body, uint *unique)
 
     commandret->setstr(sorted);
 }
-
 COMMAND(sortlist, "srree");
+ICOMMAND(uniquelist, "srre", (char *list, ident *x, ident *y, uint *body), sortlist(list, x, y, NULL, body));
 
 #define MATHCMD(name, fmt, type, op, initval, unaryop) \
     ICOMMANDS(name, #fmt "1V", (tagval *args, int numargs), \

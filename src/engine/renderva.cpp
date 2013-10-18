@@ -95,7 +95,7 @@ static inline float vadist(vtxarray *va, const vec &p)
 
 static vtxarray *vasort[VASORTSIZE];
 
-void addvisibleva(vtxarray *va)
+static inline void addvisibleva(vtxarray *va)
 {
     float dist = vadist(va, camera1->o);
     va->distance = int(dist); /*cv.dist(camera1->o) - va->size*SQRT3/2*/
@@ -126,26 +126,37 @@ void sortvisiblevas()
     }
 }
 
-void findvisiblevas(vector<vtxarray *> &vas, bool resetocclude = false)
+template<bool fullvis, bool resetocclude>
+static inline void findvisiblevas(vector<vtxarray *> &vas)
 {
     loopv(vas)
     {
         vtxarray &v = *vas[i];
-        int prevvfc = resetocclude ? VFC_NOT_VISIBLE : v.curvfc;
-        v.curvfc = isvisiblecube(v.o, v.size);
-        if(v.curvfc!=VFC_NOT_VISIBLE)
+        int prevvfc = v.curvfc;
+        v.curvfc = fullvis ? VFC_FULL_VISIBLE : isvisiblecube(v.o, v.size);
+        if(v.curvfc != VFC_NOT_VISIBLE)
         {
             if(pvsoccluded(v.o, v.size))
             {
                 v.curvfc += PVS_FULL_VISIBLE - VFC_FULL_VISIBLE;
                 continue;
             }
-            addvisibleva(&v);
-            if(v.children.length()) findvisiblevas(v.children, prevvfc>=VFC_NOT_VISIBLE);
-            if(prevvfc>=VFC_NOT_VISIBLE)
+            bool resetchildren = prevvfc >= VFC_NOT_VISIBLE || resetocclude;
+            if(resetchildren)
             {
                 v.occluded = !v.texs ? OCCLUDE_GEOM : OCCLUDE_NOTHING;
                 v.query = NULL;
+            }
+            addvisibleva(&v);
+            if(v.children.length())
+            {
+                if(fullvis || v.curvfc == VFC_FULL_VISIBLE)
+                {
+                    if(resetchildren) findvisiblevas<true, true>(v.children);
+                    else findvisiblevas<true, false>(v.children);
+                }
+                else if(resetchildren) findvisiblevas<false, true>(v.children);
+                else findvisiblevas<false, false>(v.children);
             }
         }
     }
@@ -154,7 +165,7 @@ void findvisiblevas(vector<vtxarray *> &vas, bool resetocclude = false)
 void findvisiblevas()
 {
     memset(vasort, 0, sizeof(vasort));
-    findvisiblevas(varoot);
+    findvisiblevas<false, false>(varoot);
     sortvisiblevas();
 }
 
@@ -171,14 +182,14 @@ void calcvfcD()
 
 void setvfcP(const vec &bbmin, const vec &bbmax)
 {
-    vec4 px = camprojmatrix.getrow(0), py = camprojmatrix.getrow(1), pz = camprojmatrix.getrow(2), pw = camprojmatrix.getrow(3);
+    vec4 px = camprojmatrix.rowx(), py = camprojmatrix.rowy(), pz = camprojmatrix.rowz(), pw = camprojmatrix.roww();
     vfcP[0] = plane(vec4(pw).mul(-bbmin.x).add(px)).normalize(); // left plane
     vfcP[1] = plane(vec4(pw).mul(bbmax.x).sub(px)).normalize(); // right plane
     vfcP[2] = plane(vec4(pw).mul(-bbmin.y).add(py)).normalize(); // bottom plane
     vfcP[3] = plane(vec4(pw).mul(bbmax.y).sub(py)).normalize(); // top plane
     vfcP[4] = plane(vec4(pw).add(pz)).normalize(); // near/far planes
 
-    vfcDfog = fog;
+    vfcDfog = min(calcfogcull(), float(farplane));
     calcvfcD();
 }
 
@@ -205,7 +216,7 @@ void visiblecubes(bool cull)
     else
     {
         memset(vfcP, 0, sizeof(vfcP));
-        vfcDfog = 1000000;
+        vfcDfog = farplane;
         memset(vfcDnear, 0, sizeof(vfcDnear));
         memset(vfcDfar, 0, sizeof(vfcDfar));
         visibleva = NULL;
@@ -1420,6 +1431,7 @@ static inline void changeshader(renderstate &cur, int pass, geombatch &b)
     Slot &slot = *vslot.slot;
     if(pass == RENDERPASS_RSM)
     {
+        extern Shader *rsmworldshader;
         if(b.es.layer&LAYER_BOTTOM) rsmworldshader->setvariant(0, 0, slot, vslot);
         else rsmworldshader->set(slot, vslot);
     }
@@ -1673,7 +1685,6 @@ void rendergeom()
         collectlights();
         if(!cur.colormask) { cur.colormask = true; glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE); }
         if(!cur.depthmask) { cur.depthmask = true; glDepthMask(GL_TRUE); }
-        glFlush();
 
         if(!multipassing) { multipassing = true; glDepthFunc(GL_LEQUAL); }
         cur.texgenorient = -1;
@@ -1683,7 +1694,7 @@ void rendergeom()
             blends += va->blends;
             renderva(cur, va, RENDERPASS_GBUFFER);
         }
-        if(geombatches.length()) renderbatches(cur, RENDERPASS_GBUFFER);
+        if(geombatches.length()) { renderbatches(cur, RENDERPASS_GBUFFER); glFlush(); }
         for(vtxarray *va = visibleva; va; va = va->next) if(va->texs && va->occluded >= OCCLUDE_GEOM)
         {
             if((va->parent && va->parent->occluded >= OCCLUDE_BB) || (va->query && checkquery(va->query)))
@@ -1750,7 +1761,6 @@ void rendergeom()
         collectlights();
         if(!cur.colormask) { cur.colormask = true; glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE); }
         if(!cur.depthmask) { cur.depthmask = true; glDepthMask(GL_TRUE); }
-        glFlush();
     }
 }
 
@@ -2147,7 +2157,7 @@ static void genshadowmeshmapmodels(shadowmesh &m, int sides, shadowdrawinfo draw
         model *mm = loadmapmodel(e.attr[0]);
         if(!mm || !mm->shadow || mm->animated() || (mm->alphashadow && mm->alphatested())) continue;
 
-        matrix3x4 orient;
+        matrix4x3 orient;
         orient.identity();
         if(e.attr[1]) orient.rotate_around_z(sincosmod360(e.attr[1]));
         if(e.attr[2]) orient.rotate_around_x(sincosmod360(e.attr[2]));

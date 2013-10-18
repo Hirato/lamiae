@@ -4,7 +4,7 @@
 
 Shader *Shader::lastshader = NULL;
 
-Shader *nullshader = NULL, *hudshader = NULL, *hudtextshader = NULL, *hudnotextureshader = NULL, *nocolorshader = NULL, *foggedshader = NULL, *foggednotextureshader = NULL, *ldrshader = NULL, *ldrnotextureshader = NULL, *stdworldshader = NULL, *rsmworldshader = NULL;
+Shader *nullshader = NULL, *hudshader = NULL, *hudtextshader = NULL, *hudnotextureshader = NULL, *nocolorshader = NULL, *foggedshader = NULL, *foggednotextureshader = NULL, *ldrshader = NULL, *ldrnotextureshader = NULL, *stdworldshader = NULL;
 
 static hashnameset<GlobalShaderParamState> globalparams(256);
 static hashtable<const char *, int> localparams(256);
@@ -42,7 +42,6 @@ void loadshaders()
     foggednotextureshader = lookupshaderbyname("foggednotexture");
     ldrshader = lookupshaderbyname("ldr");
     ldrnotextureshader = lookupshaderbyname("ldrnotexture");
-    rsmworldshader = lookupshaderbyname("rsmworld");
 
     nullshader->set();
 
@@ -86,20 +85,63 @@ static void showglslinfo(GLenum type, GLuint obj, const char *name, const char *
             if(type) glGetShaderInfoLog_(obj, length, &length, log);
             else glGetProgramInfoLog_(obj, length, &length, log);
             fprintf(l, "%s\n", log);
+            bool partlines = log[0] != '0';
+            int line = 0;
             loopi(numparts)
             {
                 const char *part = parts[i];
-                loopj(1000)
+                int startline = line;
+                while(*part)
                 {
-                    if(!*part) break;
                     const char *next = strchr(part, '\n');
-                    fprintf(l, "%d: ", j+1);
+                    if(++line > 1000) goto done;
+                    if(partlines) fprintf(l, "%d(%d): ", i, line - startline); else fprintf(l, "%d: ", line);
                     fwrite(part, 1, next ? next - part + 1 : strlen(part), l);
                     if(!next) { fputc('\n', l); break; }
                     part = next + 1;
                 }
             }
+        done:
             delete[] log;
+        }
+    }
+}
+
+static const char *finddecls(const char *line)
+{
+    for(;;)
+    {
+        const char *start = line + strspn(line, " \t\r");
+        switch(*start)
+        {
+            case '\n':
+                line = start + 1;
+                continue;
+            case '#':
+                do
+                {
+                    start = strchr(start + 1, '\n');
+                    if(!start) return NULL;
+                } while(start[-1] == '\\');
+                line = start + 1;
+                continue;
+            case '/':
+                switch(start[1])
+                {
+                    case '/':
+                        start = strchr(start + 2, '\n');
+                        if(!start) return NULL;
+                        line = start + 1;
+                        continue;
+                    case '*':
+                        start = strstr(start + 2, "*/");
+                        if(!start) return NULL;
+                        line = start + 2;
+                        continue;
+                }
+                // fall-through
+            default:
+                return line;
         }
     }
 }
@@ -107,6 +149,7 @@ static void showglslinfo(GLenum type, GLuint obj, const char *name, const char *
 static void compileglslshader(Shader &s, GLenum type, GLuint &obj, const char *def, const char *name, bool msg = true)
 {
     const char *source = def + strspn(def, " \t\r\n");
+    char *modsource = NULL;
     const char *parts[16];
     int numparts = 0;
     static const struct { int version; const char * const header; } glslversions[] =
@@ -144,6 +187,25 @@ static void compileglslshader(Shader &s, GLenum type, GLuint &obj, const char *d
             parts[numparts++] = glslversion >= 330 || (glslversion >= 150 && hasEAL) ?
                 "#define fragdata(loc, name, type) layout(location = loc) out type name;\n" :
                 "#define fragdata(loc, name, type) out type name;\n";
+            if(glslversion < 150)
+            {
+                const char *decls = finddecls(source);
+                if(decls)
+                {
+                    static const char * const prec = "precision highp float;\n";
+                    if(decls != source)
+                    {
+                        static const int preclen = strlen(prec);
+                        int beforelen = int(decls-source), afterlen = strlen(decls);
+                        modsource = newstring(beforelen + preclen + afterlen);
+                        memcpy(modsource, source, beforelen);
+                        memcpy(&modsource[beforelen], prec, preclen);
+                        memcpy(&modsource[beforelen + preclen], decls, afterlen);
+                        modsource[beforelen + preclen + afterlen] = '\0';
+                    }
+                    else parts[numparts++] = prec;
+                }
+            }
         }
         parts[numparts++] =
             "#define texture1D(sampler, coords) texture(sampler, coords)\n"
@@ -161,7 +223,8 @@ static void compileglslshader(Shader &s, GLenum type, GLuint &obj, const char *d
             "#define shadow2DRect(sampler, coords) texture(sampler, coords)\n"
             "#define shadow2DRectOffset(sampler, coords, offset) textureOffset(sampler, coords, offset)\n";
     }
-    if(glslversion < 140 && !hasEGPU4)
+    if(glslversion < 130 && hasEGPU4) parts[numparts++] = "#define uint unsigned int\n";
+    else if(glslversion < 140 && !hasEGPU4)
     {
         parts[numparts++] =
             "#define texture2DRectOffset(sampler, coords, offset) texture2DRect(sampler, coords + vec2(offset))\n"
@@ -178,15 +241,21 @@ static void compileglslshader(Shader &s, GLenum type, GLuint &obj, const char *d
             const char *swizzle = "";
             switch(d.format)
             {
+                case GL_UNSIGNED_INT_VEC2:
+                case GL_INT_VEC2:
                 case GL_FLOAT_VEC2: swizzle = ".rg"; break;
+                case GL_UNSIGNED_INT_VEC3:
+                case GL_INT_VEC3:
                 case GL_FLOAT_VEC3: swizzle = ".rgb"; break;
+                case GL_UNSIGNED_INT:
+                case GL_INT:
                 case GL_FLOAT: swizzle = ".r"; break;
             }
             formatstring(defs[i], "#define %s gl_FragData[%d]%s\n", d.name, d.loc, swizzle);
             parts[numparts++] = defs[i];
         }
     }
-    parts[numparts++] = source;
+    parts[numparts++] = modsource ? modsource : source;
 
     obj = glCreateShader_(type);
     glShaderSource_(obj, numparts, (const GLchar **)parts, NULL);
@@ -200,6 +269,8 @@ static void compileglslshader(Shader &s, GLenum type, GLuint &obj, const char *d
         obj = 0;
     }
     else if(dbgshader > 1 && msg) showglslinfo(type, obj, name, parts, numparts);
+
+    if(modsource) delete[] modsource;
 }
 
 VAR(dbgubo, 0, 0, 1);
@@ -324,6 +395,14 @@ void findfragdatalocs(Shader &s, const char *psstr)
             if(!strncmp(type, "vec3", ps-type)) format = GL_FLOAT_VEC3;
             else if(!strncmp(type, "vec2", ps-type)) format = GL_FLOAT_VEC2;
             else if(!strncmp(type, "float", ps-type)) format = GL_FLOAT;
+            else if(!strncmp(type, "ivec4", ps-type)) format = GL_INT_VEC4;
+            else if(!strncmp(type, "ivec3", ps-type)) format = GL_INT_VEC3;
+            else if(!strncmp(type, "ivec2", ps-type)) format = GL_INT_VEC2;
+            else if(!strncmp(type, "int", ps-type)) format = GL_INT;
+            else if(!strncmp(type, "uvec4", ps-type)) format = GL_UNSIGNED_INT_VEC4;
+            else if(!strncmp(type, "uvec3", ps-type)) format = GL_UNSIGNED_INT_VEC3;
+            else if(!strncmp(type, "uvec2", ps-type)) format = GL_UNSIGNED_INT_VEC2;
+            else if(!strncmp(type, "uint", ps-type)) format = GL_UNSIGNED_INT;
         }
 
         s.fragdatalocs.add(FragDataLoc(getshaderparamname(name), loc, format));
@@ -389,6 +468,10 @@ static void setglsluniformformat(Shader &s, const char *name, GLenum format, int
         case GL_INT_VEC2:
         case GL_INT_VEC3:
         case GL_INT_VEC4:
+        case GL_UNSIGNED_INT:
+        case GL_UNSIGNED_INT_VEC2:
+        case GL_UNSIGNED_INT_VEC3:
+        case GL_UNSIGNED_INT_VEC4:
         case GL_BOOL:
         case GL_BOOL_VEC2:
         case GL_BOOL_VEC3:
@@ -487,6 +570,10 @@ static inline void setslotparam(SlotShaderParamState &l, uint &mask, int i, cons
             case GL_INT_VEC2: glUniform2i_(l.loc, int(val[0]), int(val[1])); break;
             case GL_INT_VEC3: glUniform3i_(l.loc, int(val[0]), int(val[1]), int(val[2])); break;
             case GL_INT_VEC4: glUniform4i_(l.loc, int(val[0]), int(val[1]), int(val[2]), int(val[3])); break;
+            case GL_UNSIGNED_INT:      glUniform1ui_(l.loc, uint(val[0])); break;
+            case GL_UNSIGNED_INT_VEC2: glUniform2ui_(l.loc, uint(val[0]), uint(val[1])); break;
+            case GL_UNSIGNED_INT_VEC3: glUniform3ui_(l.loc, uint(val[0]), uint(val[1]), uint(val[2])); break;
+            case GL_UNSIGNED_INT_VEC4: glUniform4ui_(l.loc, uint(val[0]), uint(val[1]), uint(val[2]), uint(val[3])); break;
         }
     }
 }
@@ -761,14 +848,18 @@ static void genfogshader(vector<char> &vsbuf, vector<char> &psbuf, const char *v
             const char *foginterp = "\nvarying float lineardepth;\n";
             psbuf.put(foginterp, strlen(foginterp));
         }
-        const char *fogparams = "\nuniform vec3 fogcolor, fogparams;\n";
+        const char *fogparams =
+            "\nuniform vec3 fogcolor;\n"
+            "uniform vec2 fogdensity;\n"
+            "uniform vec4 radialfogscale;\n"
+            "#define fogcoord lineardepth*length(vec3(gl_FragCoord.xy*radialfogscale.xy + radialfogscale.zw, 1.0))\n";
         psbuf.put(fogparams, strlen(fogparams));
         psbuf.put(psmain, psend - psmain);
         const char *psdef = "\n#define FOG_COLOR ";
         const char *psfog =
             pspragma && !strncmp(pspragma+pragmalen, "rgba", 4) ?
-                "\nfragcolor = mix((FOG_COLOR), fragcolor, clamp((fogparams.y - lineardepth)*fogparams.z, 0.0, 1.0));\n" :
-                "\nfragcolor.rgb = mix((FOG_COLOR).rgb, fragcolor.rgb, clamp((fogparams.y - lineardepth)*fogparams.z, 0.0, 1.0));\n";
+                "\nfragcolor = mix((FOG_COLOR), fragcolor, clamp(exp2(fogcoord*-fogdensity.x)*fogdensity.y, 0.0, 1.0));\n" :
+                "\nfragcolor.rgb = mix((FOG_COLOR).rgb, fragcolor.rgb, clamp(exp2(fogcoord*-fogdensity.x)*fogdensity.y, 0.0, 1.0));\n";
         int clen = 0;
         if(pspragma)
         {
@@ -1477,11 +1568,12 @@ void resetshaders()
 }
 COMMAND(resetshaders, "");
 
-void setupblurkernel(int radius, float sigma, float *weights, float *offsets)
+FVAR(blursigma, 0.005f, 0.5f, 2.0f);
+
+void setupblurkernel(int radius, float *weights, float *offsets)
 {
     if(radius<1 || radius>MAXBLURRADIUS) return;
-    sigma *= 2*radius;
-    float total = 1.0f/sigma;
+    float sigma = blursigma*2*radius, total = 1.0f/sigma;
     weights[0] = total;
     offsets[0] = 0;
     // rely on bilinear filtering to sample 2 pixels at once

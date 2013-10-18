@@ -74,6 +74,7 @@ struct obj : vertmodel, vertloader<obj>
                     if(smooth <= 1) curmesh->smoothnorms(smooth); \
                     else curmesh->buildnorms(); \
                 } \
+                curmesh->calctangents(); \
             } while(0)
 
             string meshname = "";
@@ -133,8 +134,7 @@ struct obj : vertmodel, vertloader<obj>
                                 v.norm = vkey.z < 0 ? vec(0, 0, 0) : attrib[2][vkey.z];
                                 v.norm = vec(v.norm.z, -v.norm.x, v.norm.y);
                                 tcvert &tcv = tcverts.add();
-                                if(vkey.y < 0) tcv.u = tcv.v = 0;
-                                else { tcv.u = attrib[1][vkey.y].x; tcv.v = 1-attrib[1][vkey.y].y; }
+                                tcv.tc = vkey.y < 0 ? vec2(0, 0) : vec2(attrib[1][vkey.y].x, 1-attrib[1][vkey.y].y);
                             }
                             if(v0 < 0) v0 = *index;
                             else if(v1 < 0) v1 = *index;
@@ -160,23 +160,18 @@ struct obj : vertmodel, vertloader<obj>
         }
     };
 
-    meshgroup *loadmeshes(const char *name, va_list args)
-    {
-        objmeshgroup *group = new objmeshgroup;
-        if(!group->load(name, va_arg(args, double))) { delete group; return NULL; }
-        return group;
-    }
+    vertmeshgroup *newmeshes() { return new objmeshgroup; }
 
     bool loaddefaultparts()
     {
         part &mdl = addpart();
         const char *pname = parentdir(name);
         defformatstring(name1, "media/models/%s/tris.obj", name);
-        mdl.meshes = sharemeshes(path(name1), 2.0);
+        mdl.meshes = sharemeshes(path(name1));
         if(!mdl.meshes)
         {
             defformatstring(name2, "media/models/%s/tris.obj", pname);    // try obj in parent folder (vert sharing)
-            mdl.meshes = sharemeshes(path(name2), 2.0);
+            mdl.meshes = sharemeshes(path(name2));
             if(!mdl.meshes) return false;
         }
         Texture *tex, *masks;

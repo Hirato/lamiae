@@ -132,6 +132,7 @@ struct smd : skelmodel, skelloader<smd>
                 memcpy(&mtris[mesh->numtris], tris.getbuf(), tris.length()*sizeof(tri));
                 mesh->numtris += tris.length();
                 mesh->tris = mtris;
+                mesh->calctangents();
             }
         };
 
@@ -178,11 +179,11 @@ struct smd : skelmodel, skelloader<smd>
                     } while(skipcomment(curbuf));
                     smdvertkey key(curmesh);
                     int parent = -1, numlinks = 0, len = 0;
-                    if(sscanf(curbuf, " %d %f %f %f %f %f %f %f %f %d%n", &parent, &key.pos.x, &key.pos.y, &key.pos.z, &key.norm.x, &key.norm.y, &key.norm.z, &key.u, &key.v, &numlinks, &len) < 9) goto endsection;
+                    if(sscanf(curbuf, " %d %f %f %f %f %f %f %f %f %d%n", &parent, &key.pos.x, &key.pos.y, &key.pos.z, &key.norm.x, &key.norm.y, &key.norm.z, &key.tc.x, &key.tc.y, &numlinks, &len) < 9) goto endsection;
                     curbuf += len;
                     key.pos.y = -key.pos.y;
                     key.norm.y = -key.norm.y;
-                    key.v = 1 - key.v;
+                    key.tc.y = 1 - key.tc.y;
                     blendcombo c;
                     int sorted = 0;
                     float pweight = 0, tweight = 0;
@@ -396,23 +397,15 @@ struct smd : skelmodel, skelloader<smd>
             return sa;
         }
 
-        bool load(const char *meshfile)
+        bool load(const char *meshfile, float smooth)
         {
             name = newstring(meshfile);
 
-            if(!loadmesh(meshfile)) return false;
-
-            return true;
+            return loadmesh(meshfile);
         }
     };
 
-    meshgroup *loadmeshes(const char *name, va_list args)
-    {
-        smdmeshgroup *group = new smdmeshgroup;
-        group->shareskeleton(va_arg(args, char *));
-        if(!group->load(name)) { delete group; return NULL; }
-        return group;
-    }
+    skelmeshgroup *newmeshes() { return new smdmeshgroup; }
 
     bool loaddefaultparts()
     {
@@ -422,7 +415,7 @@ struct smd : skelmodel, skelloader<smd>
         do --fname; while(fname >= name && *fname!='/' && *fname!='\\');
         fname++;
         defformatstring(meshname, "media/models/%s/%s.smd", name, fname);
-        mdl.meshes = sharemeshes(path(meshname), NULL);
+        mdl.meshes = sharemeshes(path(meshname));
         if(!mdl.meshes) return false;
         mdl.initanimparts();
         mdl.initskins();
@@ -472,7 +465,7 @@ static inline bool htcmp(const smd::smdmeshgroup::smdvertkey &k, int index)
     if(!k.mesh->verts.inrange(index)) return false;
     const smd::vert &v = k.mesh->verts[index];
 
-    return k.pos == v.pos && k.norm == v.norm && k.u == v.u && k.v == v.v && k.blend == v.blend;
+    return k.pos == v.pos && k.norm == v.norm && k.tc == v.tc && k.blend == v.blend;
 }
 
 skelcommands<smd> smdcommands;

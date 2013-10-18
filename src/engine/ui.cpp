@@ -3108,7 +3108,7 @@ namespace UI
         int tw = hudw, th = hudh;
         if(forceaspect) tw = int(ceil(th*forceaspect));
         gettextres(tw, th);
-        uicontextscale = (FONTH*conscale)/th;
+        uicontextscale = conscale/th;
     }
 
     void update()

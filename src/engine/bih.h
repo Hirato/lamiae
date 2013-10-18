@@ -24,8 +24,8 @@ struct BIH
 
     struct mesh
     {
-        matrix3x4 xform, invxform;
-        matrix3x3 xformnorm, invxformnorm;
+        matrix4x3 xform, invxform;
+        matrix3 xformnorm, invxformnorm;
         float scale, invscale;
         node *nodes;
         int numnodes;
@@ -67,9 +67,9 @@ struct BIH
     bool ellipsecollide(physent *d, const vec &dir, float cutoff, const vec &o, int yaw, int pitch, int roll, float scale = 1);
 
     template<int C>
-    void collide(const mesh &m, physent *d, const vec &dir, float cutoff, const vec &center, const vec &radius, const matrix3x4 &orient, float &dist, node *curnode, const ivec &bo, const ivec &br);
+    void collide(const mesh &m, physent *d, const vec &dir, float cutoff, const vec &center, const vec &radius, const matrix4x3 &orient, float &dist, node *curnode, const ivec &bo, const ivec &br);
     template<int C>
-    void tricollide(const mesh &m, int tidx, physent *d, const vec &dir, float cutoff, const vec &center, const vec &radius, const matrix3x4 &orient, float &dist, const ivec &bo, const ivec &br);
+    void tricollide(const mesh &m, int tidx, physent *d, const vec &dir, float cutoff, const vec &center, const vec &radius, const matrix4x3 &orient, float &dist, const ivec &bo, const ivec &br);
 
     void preload();
 };

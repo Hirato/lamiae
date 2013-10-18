@@ -15,7 +15,7 @@ struct md5weight
 
 struct md5vert
 {
-    float u, v;
+    vec2 tc;
     ushort start, count;
 };
 
@@ -70,8 +70,7 @@ struct md5 : skelmodel, skelloader<md5>
                 }
                 vert &vv = verts[i];
                 vv.pos = pos;
-                vv.u = v.u;
-                vv.v = v.v;
+                vv.tc = v.tc;
 
                 blendcombo c;
                 int sorted = 0;
@@ -134,7 +133,7 @@ struct md5 : skelmodel, skelloader<md5>
                     numweights = max(numweights, 0);
                     if(numweights) weightinfo = new md5weight[numweights];
                 }
-                else if(sscanf(buf, " vert %d ( %f %f ) %hu %hu", &index, &v.u, &v.v, &v.start, &v.count)==5)
+                else if(sscanf(buf, " vert %d ( %f %f ) %hu %hu", &index, &v.tc.x, &v.tc.y, &v.start, &v.count)==5)
                 {
                     if(index>=0 && index<numverts) vertinfo[index] = v;
                 }
@@ -252,6 +251,7 @@ struct md5 : skelmodel, skelloader<md5>
                 m.buildverts(basejoints);
                 if(smooth <= 1) m.smoothnorms(smooth);
                 else m.buildnorms();
+                m.calctangents();
                 m.cleanup();
             }
 
@@ -389,13 +389,7 @@ struct md5 : skelmodel, skelloader<md5>
         }
     };
 
-    meshgroup *loadmeshes(const char *name, va_list args)
-    {
-        md5meshgroup *group = new md5meshgroup;
-        group->shareskeleton(va_arg(args, char *));
-        if(!group->load(name, va_arg(args, double))) { delete group; return NULL; }
-        return group;
-    }
+    skelmeshgroup *newmeshes() { return new md5meshgroup; }
 
     bool loaddefaultparts()
     {
@@ -405,7 +399,7 @@ struct md5 : skelmodel, skelloader<md5>
         do --fname; while(fname >= name && *fname!='/' && *fname!='\\');
         fname++;
         defformatstring(meshname, "media/models/%s/%s.md5mesh", name, fname);
-        mdl.meshes = sharemeshes(path(meshname), NULL, 2.0);
+        mdl.meshes = sharemeshes(path(meshname));
         if(!mdl.meshes) return false;
         mdl.initanimparts();
         mdl.initskins();

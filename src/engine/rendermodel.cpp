@@ -45,15 +45,20 @@ void mdlcullface(int *cullface)
     checkmdl;
     loadingmodel->setcullface(*cullface!=0);
 }
-
 COMMAND(mdlcullface, "i");
+
+void mdlcolor(float *r, float *g, float *b)
+{
+    checkmdl;
+    loadingmodel->setcolor(vec(*r, *g, *b));
+}
+COMMAND(mdlcolor, "fff");
 
 void mdlcollide(int *collide)
 {
     checkmdl;
     loadingmodel->collide = *collide!=0 ? (loadingmodel->collide ? loadingmodel->collide : COLLIDE_OBB) : COLLIDE_NONE;
 }
-
 COMMAND(mdlcollide, "i");
 
 void mdlellipsecollide(int *collide)
@@ -61,7 +66,6 @@ void mdlellipsecollide(int *collide)
     checkmdl;
     loadingmodel->collide = *collide!=0 ? COLLIDE_ELLIPSE : COLLIDE_NONE;
 }
-
 COMMAND(mdlellipsecollide, "i");
 
 void mdltricollide(char *collide)
@@ -73,7 +77,6 @@ void mdltricollide(char *collide)
     if(*end) { val = 1; loadingmodel->collidemodel = newstring(collide); }
     loadingmodel->collide = val ? COLLIDE_TRI : COLLIDE_NONE;
 }
-
 COMMAND(mdltricollide, "s");
 
 void mdlspec(float *percent)
@@ -82,7 +85,6 @@ void mdlspec(float *percent)
     float spec = *percent > 0 ? *percent/100.0f : 0.0f;
     loadingmodel->setspec(spec);
 }
-
 COMMAND(mdlspec, "f");
 
 void mdlambient(float *percent)
@@ -91,7 +93,6 @@ void mdlambient(float *percent)
     float ambient = *percent > 0 ? *percent/100.0f : 0.0f;
     loadingmodel->setambient(ambient);
 }
-
 COMMAND(mdlambient, "f");
 
 void mdlalphatest(float *cutoff)
@@ -99,7 +100,6 @@ void mdlalphatest(float *cutoff)
     checkmdl;
     loadingmodel->setalphatest(max(0.0f, min(1.0f, *cutoff)));
 }
-
 COMMAND(mdlalphatest, "f");
 
 void mdldepthoffset(int *offset)
@@ -107,7 +107,6 @@ void mdldepthoffset(int *offset)
     checkmdl;
     loadingmodel->depthoffset = *offset!=0;
 }
-
 COMMAND(mdldepthoffset, "i");
 
 void mdlglow(float *percent, float *delta, float *pulse)
@@ -117,7 +116,6 @@ void mdlglow(float *percent, float *delta, float *pulse)
     glowdelta -= glow;
     loadingmodel->setglow(glow, glowdelta, glowpulse);
 }
-
 COMMAND(mdlglow, "fff");
 
 void mdlenvmap(float *envmapmax, float *envmapmin, char *envmap)
@@ -125,7 +123,6 @@ void mdlenvmap(float *envmapmax, float *envmapmin, char *envmap)
     checkmdl;
     loadingmodel->setenvmap(*envmapmin, *envmapmax, envmap[0] ? cubemapload(envmap) : NULL);
 }
-
 COMMAND(mdlenvmap, "ffs");
 
 void mdlfullbright(float *fullbright)
@@ -133,7 +130,6 @@ void mdlfullbright(float *fullbright)
     checkmdl;
     loadingmodel->setfullbright(*fullbright);
 }
-
 COMMAND(mdlfullbright, "f");
 
 void mdlshader(char *shader)
@@ -141,7 +137,6 @@ void mdlshader(char *shader)
     checkmdl;
     loadingmodel->setshader(lookupshaderbyname(shader));
 }
-
 COMMAND(mdlshader, "s");
 
 void mdlspin(float *yaw, float *pitch, float *roll)
@@ -151,7 +146,6 @@ void mdlspin(float *yaw, float *pitch, float *roll)
     loadingmodel->spinpitch = *pitch;
     loadingmodel->spinroll = *roll;
 }
-
 COMMAND(mdlspin, "fff");
 
 void mdlscale(float *percent)
@@ -160,7 +154,6 @@ void mdlscale(float *percent)
     float scale = *percent > 0 ? *percent/100.0f : 1.0f;
     loadingmodel->scale = scale;
 }
-
 COMMAND(mdlscale, "f");
 
 void mdltrans(float *x, float *y, float *z)
@@ -168,7 +161,6 @@ void mdltrans(float *x, float *y, float *z)
     checkmdl;
     loadingmodel->translate = vec(*x, *y, *z);
 }
-
 COMMAND(mdltrans, "fff");
 
 void mdlyaw(float *angle)
@@ -176,7 +168,6 @@ void mdlyaw(float *angle)
     checkmdl;
     loadingmodel->offsetyaw = *angle;
 }
-
 COMMAND(mdlyaw, "f");
 
 void mdlpitch(float *angle)
@@ -184,7 +175,6 @@ void mdlpitch(float *angle)
     checkmdl;
     loadingmodel->offsetpitch = *angle;
 }
-
 COMMAND(mdlpitch, "f");
 
 void mdlroll(float *angle)
@@ -192,7 +182,6 @@ void mdlroll(float *angle)
     checkmdl;
     loadingmodel->offsetroll = *angle;
 }
-
 COMMAND(mdlroll, "f");
 
 void mdlshadow(int *shadow)
@@ -200,7 +189,6 @@ void mdlshadow(int *shadow)
     checkmdl;
     loadingmodel->shadow = *shadow!=0;
 }
-
 COMMAND(mdlshadow, "i");
 
 void mdlalphashadow(int *alphashadow)
@@ -208,7 +196,6 @@ void mdlalphashadow(int *alphashadow)
     checkmdl;
     loadingmodel->alphashadow = *alphashadow!=0;
 }
-
 COMMAND(mdlalphashadow, "i");
 
 void mdlbb(float *rad, float *h, float *eyeheight)
@@ -218,7 +205,6 @@ void mdlbb(float *rad, float *h, float *eyeheight)
     loadingmodel->collideheight = *h;
     loadingmodel->eyeheight = *eyeheight;
 }
-
 COMMAND(mdlbb, "fff");
 
 void mdlextendbb(float *x, float *y, float *z)
@@ -226,7 +212,6 @@ void mdlextendbb(float *x, float *y, float *z)
     checkmdl;
     loadingmodel->bbextend = vec(*x, *y, *z);
 }
-
 COMMAND(mdlextendbb, "fff");
 
 void mdlname()
@@ -234,7 +219,6 @@ void mdlname()
     checkmdl;
     result(loadingmodel->name);
 }
-
 COMMAND(mdlname, "");
 
 #define checkragdoll \
@@ -306,7 +290,7 @@ void rdlimitrot(int *t1, int *t2, float *maxangle, float *qx, float *qy, float *
     r.tri[0] = *t1;
     r.tri[1] = *t2;
     r.maxangle = *maxangle * RAD;
-    r.middle = matrix3x3(quat(*qx, *qy, *qz, *qw));
+    r.middle = matrix3(quat(*qx, *qy, *qz, *qw));
 }
 COMMAND(rdlimitrot, "iifffff");
 
@@ -491,7 +475,8 @@ bool modeloccluded(const vec &center, float radius)
 struct batchedmodel
 {
     vec pos, center;
-    float radius, yaw, pitch, roll, sizescale, transparent;
+    float radius, yaw, pitch, roll, sizescale;
+    vec4 colorscale;
     int anim, basetime, basetime2, flags, attached;
     union
     {
@@ -548,7 +533,7 @@ static inline void renderbatchedmodel(model *m, batchedmodel &b)
         if(b.flags&MDL_FULLBRIGHT) anim |= ANIM_FULLBRIGHT;
     }
 
-    m->render(anim, b.basetime, b.basetime2, b.pos, b.yaw, b.pitch, b.roll, b.d, a, b.sizescale, b.transparent);
+    m->render(anim, b.basetime, b.basetime2, b.pos, b.yaw, b.pitch, b.roll, b.d, a, b.sizescale, b.colorscale);
 }
 
 VARP(maxmodelradiusdistance, 10, 200, 1000);
@@ -624,7 +609,7 @@ void shadowmaskbatchedmodels(bool dynshadow)
     loopv(batchedmodels)
     {
         batchedmodel &b = batchedmodels[i];
-        if(b.flags&MDL_MAPMODEL || b.transparent < 1) break;
+        if(b.flags&MDL_MAPMODEL || b.colorscale.a < 1) break;
         b.visible = dynshadow ? shadowmaskmodel(b.center, b.radius) : 0;
     }
 }
@@ -755,7 +740,7 @@ void rendermodelbatches()
             j = bm.next;
             bm.culled = cullmodel(b.m, bm.center, bm.radius, bm.flags, bm.d);
             if(bm.culled) continue;
-            if(bm.transparent < 1)
+            if(bm.colorscale.a < 1)
             {
                 float sx1, sy1, sx2, sy2;
                 if(calcbbscissor(vec(bm.center).sub(bm.radius), vec(bm.center).add(bm.radius+1), sx1, sy1, sx2, sy2))
@@ -818,7 +803,7 @@ void rendertransparentmodelbatches()
             batchedmodel &bm = batchedmodels[j];
             j = bm.next;
             bm.culled = cullmodel(b.m, bm.center, bm.radius, bm.flags, bm.d);
-            if(bm.culled || bm.transparent >= 1) continue;
+            if(bm.culled || bm.colorscale.a >= 1) continue;
             if(!rendered)
             {
                 b.m->startrender();
@@ -948,7 +933,7 @@ void rendermapmodel(int idx, int anim, const vec &o, float yaw, float pitch, flo
     b.basetime = basetime;
     b.basetime2 = 0;
     b.sizescale = size;
-    b.transparent = 1;
+    b.colorscale = vec4(1, 1, 1, 1);
     b.flags = flags | MDL_MAPMODEL;
     b.visible = visible;
     b.d = NULL;
@@ -956,7 +941,7 @@ void rendermapmodel(int idx, int anim, const vec &o, float yaw, float pitch, flo
     addbatchedmodel(m, b, batchedmodels.length()-1);
 }
 
-void rendermodel(const char *mdl, int anim, const vec &o, float yaw, float pitch, float roll, int flags, dynent *d, modelattach *a, int basetime, int basetime2, float size, float trans)
+void rendermodel(const char *mdl, int anim, const vec &o, float yaw, float pitch, float roll, int flags, dynent *d, modelattach *a, int basetime, int basetime2, float size, const vec4 &color)
 {
     model *m = loadmodel(mdl);
     if(!m) return;
@@ -1037,7 +1022,7 @@ hasboundbox:
     b.basetime = basetime;
     b.basetime2 = basetime2;
     b.sizescale = size;
-    b.transparent = trans;
+    b.colorscale = color;
     b.flags = flags;
     b.visible = 0;
     b.d = d;

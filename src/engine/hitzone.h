@@ -67,8 +67,8 @@ struct skelbih
         Texture *tex = s[t.mesh].tex; \
         if((tex->type&(Texture::ALPHA|Texture::COMPRESSED)) == Texture::ALPHA && (tex->alphamask || loadalphamask(tex))) \
         { \
-            int si = clamp(int(tex->xs * (va.u + u*(vb.u - va.u) + v*(vc.u - va.u))), 0, tex->xs-1), \
-                ti = clamp(int(tex->ys * (va.v + u*(vb.v - va.v) + v*(vc.v - va.v))), 0, tex->ys-1); \
+            int si = clamp(int(tex->xs * (va.tc.x + u*(vb.tc.x - va.tc.x) + v*(vc.tc.x - va.tc.x))), 0, tex->xs-1), \
+                ti = clamp(int(tex->ys * (va.tc.y + u*(vb.tc.y - va.tc.y) + v*(vc.tc.y - va.tc.y))), 0, tex->ys-1); \
             if(!(tex->alphamask[ti*((tex->xs+7)/8) + si/8] & (1<<(si%8)))) return false; \
         } \
     } \
@@ -327,8 +327,7 @@ struct skelhitzone
         else { DELETEA(tris); }
     }
 
-    template<class B>
-    static bool triintersect(skelmodel::skelmeshgroup *m, skelmodel::skin *s, const B *bdata1, const B *bdata2, int numblends, const tri &t, const vec &o, const vec &ray);
+    static bool triintersect(skelmodel::skelmeshgroup *m, skelmodel::skin *s, const dualquat *bdata1, const dualquat *bdata2, int numblends, const tri &t, const vec &o, const vec &ray);
 
     bool shellintersect(const vec &o, const vec &ray)
     {
@@ -342,14 +341,13 @@ struct skelhitzone
         return v < 0 || d >= v*v;
     }
 
-    template<class B>
-    void intersect(skelmodel::skelmeshgroup *m, skelmodel::skin *s, const B *bdata1, const B *bdata2, int numblends, const vec &o, const vec &ray)
+    void intersect(skelmodel::skelmeshgroup *m, skelmodel::skin *s, const dualquat *bdata1, const dualquat *bdata2, int numblends, const vec &o, const vec &ray)
     {
         if(!numchildren)
         {
             if(bih)
             {
-                const B &b = blend < numblends ? bdata2[blend] : bdata1[m->skel->bones[blend - numblends].interpindex];
+                const dualquat &b = blend < numblends ? bdata2[blend] : bdata1[m->skel->bones[blend - numblends].interpindex];
                 vec bo = b.transposedtransform(o), bray = b.transposedtransformnormal(ray);
                 bih->intersect(m, s, bo, bray);
             }
@@ -365,12 +363,11 @@ struct skelhitzone
         }
     }
 
-    template<class B>
-    void propagate(skelmodel::skelmeshgroup *m, const B *bdata1, const B *bdata2, int numblends)
+    void propagate(skelmodel::skelmeshgroup *m, const dualquat *bdata1, const dualquat *bdata2, int numblends)
     {
         if(!numchildren)
         {
-            const B &b = blend < numblends ? bdata2[blend] : bdata1[m->skel->bones[blend - numblends].interpindex];
+            const dualquat &b = blend < numblends ? bdata2[blend] : bdata1[m->skel->bones[blend - numblends].interpindex];
             animcenter = b.transform(center);
         }
         else
@@ -399,8 +396,7 @@ struct skelhitzone
     }
 };
 
-template<class B>
-bool skelhitzone::triintersect(skelmodel::skelmeshgroup *m, skelmodel::skin *s, const B *bdata1, const B *bdata2, int numblends, const tri &t, const vec &o, const vec &ray)
+bool skelhitzone::triintersect(skelmodel::skelmeshgroup *m, skelmodel::skin *s, const dualquat *bdata1, const dualquat *bdata2, int numblends, const tri &t, const vec &o, const vec &ray)
 {
     skelmodel::skelmesh *tm = (skelmodel::skelmesh *)m->meshes[t.mesh];
     const skelmodel::vert &va = tm->verts[t.vert[0]], &vb = tm->verts[t.vert[1]], &vc = tm->verts[t.vert[2]];
@@ -563,12 +559,7 @@ struct skelhitdata
         DELETEA(zones);
         DELETEA(links);
         DELETEA(tris);
-        if(blendcache.bdata)
-        {
-            delete[] (uchar *)blendcache.bdata;
-            blendcache.bdata = NULL;
-            blendcache.mdata = NULL;
-        }
+        DELETEA(blendcache.bdata);
     }
 
     uchar chooseid(skelmodel::skelmeshgroup *g, skelmodel::skelmesh *m, const skelmodel::tri &t, const uchar *ids);
@@ -579,8 +570,7 @@ struct skelhitdata
         blendcache.owner = -1;
     }
 
-    template<class B>
-    void propagate(skelmodel::skelmeshgroup *m, const B *bdata1, B *bdata2)
+    void propagate(skelmodel::skelmeshgroup *m, const dualquat *bdata1, dualquat *bdata2)
     {
         visited = 0;
         loopi(numzones)
@@ -590,8 +580,7 @@ struct skelhitdata
         }
     }
 
-    template<class B>
-    void intersect(skelmodel::skelmeshgroup *m, skelmodel::skin *s, const B *bdata1, B *bdata2, const vec &o, const vec &ray)
+    void intersect(skelmodel::skelmeshgroup *m, skelmodel::skin *s, const dualquat *bdata1, dualquat *bdata2, const vec &o, const vec &ray)
     {
         if(++visited < 0)
         {
@@ -625,19 +614,10 @@ void skelmodel::skelmeshgroup::intersect(skelhitdata *z, part *p, const skelmode
         bc.owner = owner;
         bc.millis = lastmillis;
         (animcacheentry &)bc = sc;
-        if(skel->usematskel)
-        {
-            blendbones(sc.mdata, bc.mdata, blendcombos.getbuf(), z->numblends);
-            z->propagate(this, sc.mdata, bc.mdata);
-        }
-        else
-        {
-            blendbones(sc.bdata, bc.bdata, blendcombos.getbuf(), z->numblends);
-            z->propagate(this, sc.bdata, bc.bdata);
-        }
+        blendbones(sc.bdata, bc.bdata, blendcombos.getbuf(), z->numblends);
+        z->propagate(this, sc.bdata, bc.bdata);
     }
-    if(skel->usematskel) z->intersect(this, p->skins.getbuf(), sc.mdata, bc.mdata, o, ray);
-    else z->intersect(this, p->skins.getbuf(), sc.bdata, bc.bdata, o, ray);
+    z->intersect(this, p->skins.getbuf(), sc.bdata, bc.bdata, o, ray);
 }
 
 uchar skelhitdata::chooseid(skelmodel::skelmeshgroup *g, skelmodel::skelmesh *m, const skelmodel::tri &t, const uchar *ids)
@@ -678,9 +658,7 @@ void skelhitdata::build(skelmodel::skelmeshgroup *g, const uchar *ids)
     skelzonebounds *bounds = new skelzonebounds[g->skel->numbones];
     numblends = g->blendcombos.length();
     loopv(g->blendcombos) if(!g->blendcombos[i].weights[1]) { numblends = i; break; }
-    uchar *cdata = numblends > 0 ? new uchar[numblends*max(sizeof(dualquat), sizeof(matrix3x4))] : NULL;
-    blendcache.bdata = (dualquat *)cdata;
-    blendcache.mdata = (matrix3x4 *)cdata;
+    blendcache.bdata = numblends > 0 ? new dualquat[numblends] : NULL;
     loopi(min(g->meshes.length(), 0x100))
     {
         skelmodel::skelmesh *m = (skelmodel::skelmesh *)g->meshes[i];

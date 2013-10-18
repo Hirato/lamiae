@@ -10,7 +10,7 @@ struct md3frame
 struct md3tag
 {
     char name[64];
-    vec pos;
+    float translation[3];
     float rotation[3][3];
 };
 
@@ -53,7 +53,7 @@ struct md3 : vertmodel, vertloader<md3>
 
     struct md3meshgroup : vertmeshgroup
     {
-        bool load(const char *path)
+        bool load(const char *path, float smooth)
         {
             stream *f = openfile(path, "rb");
             if(!f) return false;
@@ -101,7 +101,7 @@ struct md3 : vertmodel, vertloader<md3>
                 m.tcverts = new tcvert[m.numverts];
                 f->seek(mesh_offset + mheader.ofs_uv , SEEK_SET);
                 f->read(m.tcverts, m.numverts*2*sizeof(float)); // read the UV data
-                lilswap(&m.tcverts[0].u, 2*m.numverts);
+                lilswap(&m.tcverts[0].tc.x, 2*m.numverts);
 
                 m.verts = new vert[numframes*m.numverts];
                 f->seek(mesh_offset + mheader.ofs_vertices, SEEK_SET);
@@ -111,16 +111,14 @@ struct md3 : vertmodel, vertloader<md3>
                     f->read(&v, sizeof(md3vertex)); // read the vertices
                     lilswap(v.vertex, 4);
 
-                    m.verts[j].pos.x = v.vertex[0]/64.0f;
-                    m.verts[j].pos.y = -v.vertex[1]/64.0f;
-                    m.verts[j].pos.z = v.vertex[2]/64.0f;
+                    m.verts[j].pos = vec(v.vertex[0]/64.0f, -v.vertex[1]/64.0f, v.vertex[2]/64.0f);
 
-                    float lng = (v.normal&0xFF)*PI2/255.0f; // decode vertex normals
-                    float lat = ((v.normal>>8)&0xFF)*PI2/255.0f;
-                    m.verts[j].norm.x = cosf(lat)*sinf(lng);
-                    m.verts[j].norm.y = -sinf(lat)*sinf(lng);
-                    m.verts[j].norm.z = cosf(lng);
+                    float lng = (v.normal&0xFF)*2*M_PI/255.0f; // decode vertex normals
+                    float lat = ((v.normal>>8)&0xFF)*2*M_PI/255.0f;
+                    m.verts[j].norm = vec(cosf(lat)*sinf(lng), -sinf(lat)*sinf(lng), cosf(lng));
                 }
+
+                m.calctangents();
 
                 mesh_offset += mheader.meshsize;
             }
@@ -135,31 +133,18 @@ struct md3 : vertmodel, vertloader<md3>
                 loopi(header.numframes*header.numtags)
                 {
                     f->read(&tag, sizeof(md3tag));
-                    lilswap(&tag.pos.x, 12);
+                    lilswap(tag.translation, 12);
                     if(tag.name[0] && i<header.numtags) tags[i].name = newstring(tag.name);
-                    matrix3x4 &m = tags[i].matrix;
-                    tag.pos.y *= -1;
+                    matrix4x3 &m = tags[i].matrix;
+                    tag.translation[1] *= -1;
                     // undo the -y
                     loopj(3) tag.rotation[1][j] *= -1;
                     // then restore it
                     loopj(3) tag.rotation[j][1] *= -1;
-                    m.a.w = tag.pos.x;
-                    m.b.w = tag.pos.y;
-                    m.c.w = tag.pos.z;
-                    loopj(3)
-                    {
-                        m.a[j] = tag.rotation[j][0];
-                        m.b[j] = tag.rotation[j][1];
-                        m.c[j] = tag.rotation[j][2];
-                    }
-#if 0
-                    tags[i].pos = vec(tag.pos.x, -tag.pos.y, tag.pos.z);
-                    memcpy(tags[i].transform, tag.rotation, sizeof(tag.rotation));
-                    // undo the -y
-                    loopj(3) tags[i].transform[1][j] *= -1;
-                    // then restore it
-                    loopj(3) tags[i].transform[j][1] *= -1;
-#endif
+                    m.a = vec(tag.rotation[0]);
+                    m.b = vec(tag.rotation[1]);
+                    m.c = vec(tag.rotation[2]);
+                    m.d = vec(tag.translation);
                 }
             }
 
@@ -168,12 +153,7 @@ struct md3 : vertmodel, vertloader<md3>
         }
     };
 
-    meshgroup *loadmeshes(const char *name, va_list args)
-    {
-        md3meshgroup *group = new md3meshgroup;
-        if(!group->load(name)) { delete group; return NULL; }
-        return group;
-    }
+    vertmeshgroup *newmeshes() { return new md3meshgroup; }
 
     bool loaddefaultparts()
     {

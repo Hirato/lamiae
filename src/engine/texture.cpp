@@ -39,7 +39,7 @@ static void scaletexture(uchar *src, uint sw, uint sh, uint bpp, uint pitch, uch
             case 4: return halvetexture4(src, sw, sh, pitch, dst);
         }
     }
-    else if(sw < dw || sh < dh || sw&(sw-1) || sh&(sh-1))
+    else if(sw < dw || sh < dh || sw&(sw-1) || sh&(sh-1) || dw&(dw-1) || dh&(dh-1))
     {
         switch(bpp)
         {
@@ -472,9 +472,12 @@ GLenum compressedformat(GLenum format, int w, int h, int force = 0)
 {
     if(usetexcompress && texcompress && force >= 0 && (force || max(w, h) >= texcompress)) switch(format)
     {
+        case GL_RGB4:
         case GL_RGB5:
         case GL_RGB8:
         case GL_RGB: return usetexcompress > 1 ? GL_COMPRESSED_RGB_S3TC_DXT1_EXT : GL_COMPRESSED_RGB;
+        case GL_RGB5_A1: return usetexcompress > 1 ? GL_COMPRESSED_RGBA_S3TC_DXT1_EXT : GL_COMPRESSED_RGBA;
+        case GL_RGBA4:
         case GL_RGBA: return usetexcompress > 1 ? GL_COMPRESSED_RGBA_S3TC_DXT5_EXT : GL_COMPRESSED_RGBA;
         case GL_RED:
         case GL_R8: return hasRGTC ? (usetexcompress > 1 ? GL_COMPRESSED_RED_RGTC1 : GL_COMPRESSED_RED) : (usetexcompress > 1 ? GL_COMPRESSED_RGB_S3TC_DXT1_EXT : GL_COMPRESSED_RGB);
@@ -503,7 +506,7 @@ int formatsize(GLenum format)
     }
 }
 
-VARFP(usenp2, 0, 0, 1, initwarning("texture quality", INIT_LOAD));
+VARFP(usenp2, 0, 1, 1, initwarning("texture quality", INIT_LOAD));
 
 void resizetexture(int w, int h, bool mipmap, bool canreduce, GLenum target, int compress, int &tw, int &th)
 {
@@ -572,8 +575,11 @@ void uploadtexture(GLenum target, GLenum internal, int tw, int th, GLenum format
         int srcw = tw, srch = th;
         if(tw > 1) tw /= 2;
         if(th > 1) th /= 2;
-        if(!buf) buf = new uchar[tw*th*bpp];
-        scaletexture(src, srcw, srch, bpp, pitch, buf, tw, th);
+        if(src)
+        {
+            if(!buf) buf = new uchar[tw*th*bpp];
+            scaletexture(src, srcw, srch, bpp, pitch, buf, tw, th);
+        }
     }
     if(buf) delete[] buf;
 }
@@ -734,6 +740,8 @@ static GLenum textype(GLenum &component, GLenum &format)
             if(!format) format = GL_RG;
             break;
 
+        case GL_R3_G3_B2:
+        case GL_RGB4:
         case GL_RGB5:
         case GL_RGB8:
         case GL_RGB16:
@@ -743,6 +751,9 @@ static GLenum textype(GLenum &component, GLenum &format)
             if(!format) format = GL_RGB;
             break;
 
+        case GL_RGBA2:
+        case GL_RGBA4:
+        case GL_RGB5_A1:
         case GL_RGBA8:
         case GL_RGBA16:
         case GL_RGB10_A2:
@@ -771,6 +782,42 @@ static GLenum textype(GLenum &component, GLenum &format)
         case GL_COMPRESSED_ALPHA:
             if(!format) format = GL_ALPHA;
             break;
+
+        case GL_RGB8UI:
+        case GL_RGB16UI:
+        case GL_RGB32UI:
+        case GL_RGB8I:
+        case GL_RGB16I:
+        case GL_RGB32I:
+            if(!format) format = GL_RGB_INTEGER;
+            break;
+
+        case GL_RGBA8UI:
+        case GL_RGBA16UI:
+        case GL_RGBA32UI:
+        case GL_RGBA8I:
+        case GL_RGBA16I:
+        case GL_RGBA32I:
+            if(!format) format = GL_RGBA_INTEGER;
+            break;
+
+        case GL_R8UI:
+        case GL_R16UI:
+        case GL_R32UI:
+        case GL_R8I:
+        case GL_R16I:
+        case GL_R32I:
+            if(!format) format = GL_RED_INTEGER;
+            break;
+
+        case GL_RG8UI:
+        case GL_RG16UI:
+        case GL_RG32UI:
+        case GL_RG8I:
+        case GL_RG16I:
+        case GL_RG32I:
+            if(!format) format = GL_RG_INTEGER;
+            break;
     }
     if(!format) format = component;
     return type;
@@ -783,7 +830,7 @@ void createtexture(int tnum, int w, int h, const void *pixels, int clamp, int fi
     if(!pw) pw = w;
     if(!ph) ph = h;
     int tw = w, th = h;
-    bool mipmap = filter > 1 && pixels;
+    bool mipmap = filter > 1;
     if(resize && pixels)
     {
         resizetexture(w, h, mipmap, false, target, 0, tw, th);
@@ -901,6 +948,7 @@ static Texture *newtexture(Texture *t, const char *rname, ImageData &s, int clam
     t->h = t->ys = s.h;
 
     int filter = !canreduce || reducefilter ? (mipit ? 2 : 1) : 0;
+    bool swizzle = !(clamp&0x10000);
     glGenTextures(1, &t->id);
     if(s.compressed)
     {
@@ -921,13 +969,13 @@ static Texture *newtexture(Texture *t, const char *rname, ImageData &s, int clam
             if(t->w > 1) t->w /= 2;
             if(t->h > 1) t->h /= 2;
         }
-        createcompressedtexture(t->id, t->w, t->h, data, s.align, s.bpp, levels, clamp, filter, s.compressed, GL_TEXTURE_2D, true);
+        createcompressedtexture(t->id, t->w, t->h, data, s.align, s.bpp, levels, clamp, filter, s.compressed, GL_TEXTURE_2D, swizzle);
     }
     else
     {
         resizetexture(t->w, t->h, mipit, canreduce, GL_TEXTURE_2D, compress, t->w, t->h);
         GLenum component = compressedformat(format, t->w, t->h, compress);
-        createtexture(t->id, t->w, t->h, s.data, clamp, filter, component, GL_TEXTURE_2D, t->xs, t->ys, s.pitch, false, format, true);
+        createtexture(t->id, t->w, t->h, s.data, clamp, filter, component, GL_TEXTURE_2D, t->xs, t->ys, s.pitch, false, format, swizzle);
     }
     return t;
 }
@@ -1043,13 +1091,13 @@ void texnormal(ImageData &s, int emphasis)
 template<int n, int bpp, bool normals>
 static void blurtexture(int w, int h, uchar *dst, const uchar *src, int margin)
 {
-    static const int matrix3x3[9] =
+    static const int weights3x3[9] =
     {
         0x10, 0x20, 0x10,
         0x20, 0x40, 0x20,
         0x10, 0x20, 0x10
     };
-    static const int matrix5x5[25] =
+    static const int weights5x5[25] =
     {
         0x05, 0x05, 0x09, 0x05, 0x05,
         0x05, 0x0A, 0x14, 0x0A, 0x05,
@@ -1057,7 +1105,7 @@ static void blurtexture(int w, int h, uchar *dst, const uchar *src, int margin)
         0x05, 0x0A, 0x14, 0x0A, 0x05,
         0x05, 0x05, 0x09, 0x05, 0x05
     };
-    const int *mat = n > 1 ? matrix5x5 : matrix3x3;
+    const int *mat = n > 1 ? weights5x5 : weights3x3;
     int mstride = 2*n + 1,
         mstartoffset = n*(mstride + 1),
         stride = bpp*w,
@@ -1365,6 +1413,10 @@ static bool texturedata(ImageData &d, const char *tname, Slot::Tex *tex = NULL, 
         else if(!strncmp(cmd, "mirror", len))
         {
             if(wrap) *wrap |= 0x300;
+        }
+        else if(!strncmp(cmd, "noswizzle", len))
+        {
+            if(wrap) *wrap |= 0x10000;
         }
         else if(!strncmp(cmd, "thumbnail", len))
         {
@@ -2222,7 +2274,7 @@ Texture *loadthumbnail(Slot &slot)
         {
             if(vslot.colorscale != vec(1, 1, 1)) texmad(s, vslot.colorscale, vec(0, 0, 0));
             int xs = s.w, ys = s.h;
-            if(s.w > 64 || s.h > 64) scaleimage(s, min(s.w, 64), min(s.h, 64));
+            if(s.w > 128 || s.h > 128) scaleimage(s, min(s.w, 128), min(s.h, 128));
             if(g.data)
             {
                 if(g.w != s.w || g.h != s.h) scaleimage(g, s.w, s.h);
@@ -2391,43 +2443,60 @@ Texture *cubemapload(const char *name, bool mipit, bool msg, bool transient)
 }
 
 VARR(envmapradius, 0, 128, 10000);
+VARP(aaenvmap, 0, 1, 1);
 
 struct envmap
 {
     int radius, size, blur;
     vec o;
     GLuint tex;
+
+    envmap() : radius(-1), size(0), blur(0), o(0, 0, 0), tex(0) {}
+
+    void clear()
+    {
+        if(tex) { glDeleteTextures(1, &tex); tex = 0; }
+    }
 };
 
 static vector<envmap> envmaps;
-static Texture *skyenvmap = NULL;
 
 void clearenvmaps()
 {
-    if(skyenvmap)
-    {
-        if(skyenvmap->type&Texture::TRANSIENT) cleanuptexture(skyenvmap);
-        skyenvmap = NULL;
-    }
-    loopv(envmaps) glDeleteTextures(1, &envmaps[i].tex);
+    loopv(envmaps) envmaps[i].clear();
     envmaps.shrink(0);
 }
 
-VAR(aaenvmap, 0, 2, 4);
+static GLuint emfbo[3] = { 0, 0, 0 }, emtex[2] = { 0, 0 };
+static int emtexsize = -1;
 
-GLuint genenvmap(const vec &o, int envmapsize, int blur)
+GLuint genenvmap(const vec &o, int envmapsize, int blur, bool onlysky)
 {
     int rendersize = 1<<(envmapsize+aaenvmap), sizelimit = min(hwcubetexsize, min(gw, gh));
     if(maxtexsize) sizelimit = min(sizelimit, maxtexsize);
     while(rendersize > sizelimit) rendersize /= 2;
     int texsize = min(rendersize, 1<<envmapsize);
     if(!aaenvmap) rendersize = texsize;
-    GLuint tex;
+    if(!emtex[0]) glGenTextures(2, emtex);
+    if(!emfbo[0]) glGenFramebuffers_(3, emfbo);
+    if(emtexsize != texsize)
+    {
+        emtexsize = texsize;
+        loopi(2)
+        {
+            createtexture(emtex[i], emtexsize, emtexsize, NULL, 3, 1, GL_RGB, GL_TEXTURE_RECTANGLE);
+            glBindFramebuffer_(GL_FRAMEBUFFER, emfbo[i]);
+            glFramebufferTexture2D_(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, emtex[i], 0);
+            if(glCheckFramebufferStatus_(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+                fatal("failed allocating envmap buffer!");
+        }
+    }
+    GLuint tex = 0;
     glGenTextures(1, &tex);
-    glViewport(0, 0, rendersize, rendersize);
+    // workaround for Catalyst bug:
+    // all texture levels must be specified before glCopyTexSubImage2D is called, otherwise it crashes
+    loopi(6) createtexture(!i ? tex : 0, texsize, texsize, NULL, 3, 2, GL_RGB5, cubemapsides[i].target);
     float yaw = 0, pitch = 0;
-    uchar *pixels = new uchar[3*rendersize*rendersize*2];
-    glPixelStorei(GL_PACK_ALIGNMENT, texalign(pixels, rendersize, 3));
     loopi(6)
     {
         const cubemapside &side = cubemapsides[i];
@@ -2446,25 +2515,61 @@ GLuint genenvmap(const vec &o, int envmapsize, int blur)
             case GL_TEXTURE_CUBE_MAP_POSITIVE_Z: // up
                 yaw = 270; pitch = 90; break;
         }
-        drawcubemap(rendersize, o, yaw, pitch, side);
-        uchar *src = pixels, *dst = &pixels[3*rendersize*rendersize];
-        readhdr(rendersize, rendersize, GL_RGB, GL_UNSIGNED_BYTE, src);
-        if(rendersize > texsize)
-        {
-            scaletexture(src, rendersize, rendersize, 3, 3*rendersize, dst, texsize, texsize);
-            swap(src, dst);
-        }
-        reorienttexture(src, texsize, texsize, 3, 3*texsize, dst, side.flipx, !side.flipy, side.swapxy);
+        drawcubemap(rendersize, o, yaw, pitch, side, onlysky);
+        copyhdr(rendersize, rendersize, emfbo[0], texsize, texsize, side.flipx, !side.flipy, side.swapxy);
         if(blur > 0)
         {
-            swap(src, dst);
-            blurtexture(blur, 3, texsize, texsize, src, dst);
+            float blurweights[MAXBLURRADIUS+1], bluroffsets[MAXBLURRADIUS+1];
+            setupblurkernel(blur, blurweights, bluroffsets);
+            loopj(2)
+            {
+                glBindFramebuffer_(GL_FRAMEBUFFER, emfbo[1]);
+                glViewport(0, 0, texsize, texsize);
+                setblurshader(j, 1, blur, blurweights, bluroffsets, GL_TEXTURE_RECTANGLE);
+                glBindTexture(GL_TEXTURE_RECTANGLE, emtex[0]);
+                screenquad(texsize, texsize);
+                swap(emfbo[0], emfbo[1]);
+                swap(emtex[0], emtex[1]);
+            }
         }
-        createtexture(tex, texsize, texsize, dst, 3, 2, GL_RGB5, side.target);
+        for(int level = 0, lsize = texsize;; level++)
+        {
+            if(hasFBB)
+            {
+                glBindFramebuffer_(GL_READ_FRAMEBUFFER, emfbo[0]);
+                glBindFramebuffer_(GL_DRAW_FRAMEBUFFER, emfbo[2]);
+                glFramebufferTexture2D_(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, side.target, tex, level);
+                glBlitFramebuffer_(0, 0, lsize, lsize, 0, 0, lsize, lsize, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+            }
+            else
+            {
+                glBindFramebuffer_(GL_FRAMEBUFFER, emfbo[0]);
+                glBindTexture(GL_TEXTURE_CUBE_MAP, tex);
+                glCopyTexSubImage2D(side.target, level, 0, 0, 0, 0, lsize, lsize);
+            }
+            if(lsize <= 1) break;
+            int dsize = lsize/2;
+            if(hasFBB)
+            {
+                glBindFramebuffer_(GL_READ_FRAMEBUFFER, emfbo[0]);
+                glBindFramebuffer_(GL_DRAW_FRAMEBUFFER, emfbo[1]);
+                glBlitFramebuffer_(0, 0, lsize, lsize, 0, 0, dsize, dsize, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+            }
+            else
+            {
+                glBindFramebuffer_(GL_FRAMEBUFFER, emfbo[1]);
+                glBindTexture(GL_TEXTURE_RECTANGLE, emtex[0]);
+                glViewport(0, 0, dsize, dsize);
+                SETSHADER(scalelinear);
+                screenquad(lsize, lsize);
+            }
+            lsize = dsize;
+            swap(emfbo[0], emfbo[1]);
+            swap(emtex[0], emtex[1]);
+        }
     }
     glBindFramebuffer_(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, hudw, hudh);
-    delete[] pixels;
     clientkeepalive();
     return tex;
 }
@@ -2472,8 +2577,7 @@ GLuint genenvmap(const vec &o, int envmapsize, int blur)
 void initenvmaps()
 {
     clearenvmaps();
-    extern char *skybox;
-    skyenvmap = skybox[0] ? cubemapload(skybox, true, false, true) : NULL;
+    envmaps.add().size = hasskybox() ? 0 : 1;
     const vector<extentity *> &ents = entities::getents();
     loopv(ents)
     {
@@ -2484,7 +2588,6 @@ void initenvmaps()
         em.size = ent.attr[1] ? clamp(int(ent.attr[1]), 4, 9) : 0;
         em.blur = ent.attr[2] ? clamp(int(ent.attr[2]), 1, 2) : 0;
         em.o = ent.o;
-        em.tex = 0;
     }
 }
 
@@ -2497,7 +2600,7 @@ void genenvmaps()
     loopv(envmaps)
     {
         envmap &em = envmaps[i];
-        em.tex = genenvmap(em.o, em.size ? min(em.size, envmapsize) : envmapsize, em.blur);
+        em.tex = genenvmap(em.o, em.size ? min(em.size, envmapsize) : envmapsize, em.blur, em.radius < 0);
         if(renderedframe) continue;
         int millis = SDL_GetTicks();
         if(millis - lastprogress >= 250)
@@ -2506,6 +2609,9 @@ void genenvmaps()
             lastprogress = millis;
         }
     }
+    if(emfbo[0]) { glDeleteFramebuffers_(3, emfbo); memset(emfbo, 0, sizeof(emfbo)); }
+    if(emtex[0]) { glDeleteTextures(2, emtex); memset(emtex, 0, sizeof(emtex)); }
+    emtexsize = -1;
 }
 
 ushort closestenvmap(const vec &o)
@@ -2535,18 +2641,23 @@ ushort closestenvmap(int orient, const ivec &co, int size)
     return closestenvmap(loc);
 }
 
+static inline GLuint lookupskyenvmap()
+{
+    return envmaps.length() && envmaps[0].radius < 0 ? envmaps[0].tex : 0;
+}
+
 GLuint lookupenvmap(Slot &slot)
 {
     loopv(slot.sts) if(slot.sts[i].type==TEX_ENVMAP && slot.sts[i].t) return slot.sts[i].t->id;
-    return skyenvmap ? skyenvmap->id : 0;
+    return lookupskyenvmap();
 }
 
 GLuint lookupenvmap(ushort emid)
 {
-    if(emid==EMID_SKY || emid==EMID_CUSTOM || drawtex) return skyenvmap ? skyenvmap->id : 0;
+    if(emid==EMID_SKY || emid==EMID_CUSTOM || drawtex) return lookupskyenvmap();
     if(emid==EMID_NONE || !envmaps.inrange(emid-EMID_RESERVED)) return 0;
     GLuint tex = envmaps[emid-EMID_RESERVED].tex;
-    return tex ? tex : (skyenvmap ? skyenvmap->id : 0);
+    return tex ? tex : lookupskyenvmap();
 }
 
 void cleanuptexture(Texture *t)

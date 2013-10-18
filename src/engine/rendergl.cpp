@@ -2,8 +2,8 @@
 
 #include "engine.h"
 
-bool hasVAO = false, hasTR = false, hasTSW = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasS3TC = false, hasFXT1 = false, hasLATC = false, hasRGTC = false, hasAF = false, hasFBB = false, hasFBMS = false, hasTMS = false, hasMSS = false, hasFBMSBS = false, hasNVFBMSC = false, hasNVTMS = false, hasUBO = false, hasMBR = false, hasDB2 = false, hasDBB = false, hasTG = false, hasT4 = false, hasTQ = false, hasPF = false, hasTRG = false, hasDBT = false, hasDC = false, hasDBGO = false, hasEGPU4 = false, hasGPU4 = false, hasGPU5 = false, hasEAL = false, hasCR = false, hasOQ2 = false;
-bool mesa = false, intel = false, ati = false, nvidia = false;
+bool hasVAO = false, hasTR = false, hasTSW = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasS3TC = false, hasFXT1 = false, hasLATC = false, hasRGTC = false, hasAF = false, hasFBB = false, hasFBMS = false, hasTMS = false, hasMSS = false, hasFBMSBS = false, hasNVFBMSC = false, hasNVTMS = false, hasUBO = false, hasMBR = false, hasDB2 = false, hasDBB = false, hasTG = false, hasT4 = false, hasTQ = false, hasPF = false, hasTRG = false, hasTI = false, hasHFV = false, hasHFP = false, hasDBT = false, hasDC = false, hasDBGO = false, hasEGPU4 = false, hasGPU4 = false, hasGPU5 = false, hasEAL = false, hasCR = false, hasOQ2 = false;
+bool mesa = false, intel = false, amd = false, nvidia = false;
 
 int hasstencil = 0;
 
@@ -188,6 +188,18 @@ PFNGLDRAWBUFFERSPROC glDrawBuffers_ = NULL;
 // OpenGL 3.0
 PFNGLGETSTRINGIPROC           glGetStringi_           = NULL;
 PFNGLBINDFRAGDATALOCATIONPROC glBindFragDataLocation_ = NULL;
+PFNGLUNIFORM1UIPROC           glUniform1ui_           = NULL;
+PFNGLUNIFORM2UIPROC           glUniform2ui_           = NULL;
+PFNGLUNIFORM3UIPROC           glUniform3ui_           = NULL;
+PFNGLUNIFORM4UIPROC           glUniform4ui_           = NULL;
+PFNGLUNIFORM1UIVPROC          glUniform1uiv_          = NULL;
+PFNGLUNIFORM2UIVPROC          glUniform2uiv_          = NULL;
+PFNGLUNIFORM3UIVPROC          glUniform3uiv_          = NULL;
+PFNGLUNIFORM4UIVPROC          glUniform4uiv_          = NULL;
+PFNGLCLEARBUFFERIVPROC        glClearBufferiv_        = NULL;
+PFNGLCLEARBUFFERUIVPROC       glClearBufferuiv_       = NULL;
+PFNGLCLEARBUFFERFVPROC        glClearBufferfv_        = NULL;
+PFNGLCLEARBUFFERFIPROC        glClearBufferfi_        = NULL;
 
 // GL_EXT_draw_buffers2
 PFNGLCOLORMASKIPROC glColorMaski_ = NULL;
@@ -197,6 +209,14 @@ PFNGLDISABLEIPROC   glDisablei_   = NULL;
 // GL_NV_conditional_render
 PFNGLBEGINCONDITIONALRENDERPROC glBeginConditionalRender_ = NULL;
 PFNGLENDCONDITIONALRENDERPROC   glEndConditionalRender_   = NULL;
+
+// GL_EXT_texture_integer
+PFNGLTEXPARAMETERIIVPROC     glTexParameterIiv_     = NULL;
+PFNGLTEXPARAMETERIUIVPROC    glTexParameterIuiv_    = NULL;
+PFNGLGETTEXPARAMETERIIVPROC  glGetTexParameterIiv_  = NULL;
+PFNGLGETTEXPARAMETERIUIVPROC glGetTexParameterIuiv_ = NULL;
+PFNGLCLEARCOLORIIEXTPROC     glClearColorIi_        = NULL;
+PFNGLCLEARCOLORIUIEXTPROC    glClearColorIui_       = NULL;
 
 // GL_ARB_uniform_buffer_object
 PFNGLGETUNIFORMINDICESPROC       glGetUniformIndices_       = NULL;
@@ -252,7 +272,7 @@ void glerror(const char *file, int line, GLenum error)
     printf("GL error: %s:%d: %s (%x)\n", file, line, desc, error);
 }
 
-VAR(ati_pf_bug, 0, 0, 1);
+VAR(amd_pf_bug, 0, 0, 1);
 VAR(useubo, 1, 0, 0);
 VAR(usetexgather, 1, 0, 0);
 VAR(usetexcompress, 1, 0, 0);
@@ -324,7 +344,7 @@ void gl_checkextensions()
     else if(strstr(vendor, "NVIDIA"))
         nvidia = true;
     else if(strstr(vendor, "ATI") || strstr(vendor, "Advanced Micro Devices"))
-        ati = true;
+        amd = true;
     else if(strstr(vendor, "Intel"))
         intel = true;
 
@@ -504,7 +524,7 @@ void gl_checkextensions()
         glGenVertexArrays_ =    (PFNGLGENVERTEXARRAYSPROC)   getprocaddress("glGenVertexArrays");
         glIsVertexArray_ =      (PFNGLISVERTEXARRAYPROC)     getprocaddress("glIsVertexArray");
         hasVAO = true;
-        if(glversion < 300 || dbgexts) conoutf(CON_INIT, "Using GL_ARB_vertex_array_object extension.");
+        if(glversion < 300 && dbgexts) conoutf(CON_INIT, "Using GL_ARB_vertex_array_object extension.");
     }
     else if(hasext("GL_APPLE_vertex_array_object"))
     {
@@ -518,9 +538,21 @@ void gl_checkextensions()
 
     if(glversion >= 300)
     {
-        hasTF = hasTRG = hasRGTC = hasPF = true;
+        hasTF = hasTRG = hasRGTC = hasPF = hasHFV = hasHFP = true;
 
-        glBindFragDataLocation_ =  (PFNGLBINDFRAGDATALOCATIONPROC)getprocaddress("glBindFragDataLocation");
+        glBindFragDataLocation_ = (PFNGLBINDFRAGDATALOCATIONPROC)getprocaddress("glBindFragDataLocation");
+        glUniform1ui_ =           (PFNGLUNIFORM1UIPROC)          getprocaddress("glUniform1ui");
+        glUniform2ui_ =           (PFNGLUNIFORM2UIPROC)          getprocaddress("glUniform2ui");
+        glUniform3ui_ =           (PFNGLUNIFORM3UIPROC)          getprocaddress("glUniform3ui");
+        glUniform4ui_ =           (PFNGLUNIFORM4UIPROC)          getprocaddress("glUniform4ui");
+        glUniform1uiv_ =          (PFNGLUNIFORM1UIVPROC)         getprocaddress("glUniform1uiv");
+        glUniform2uiv_ =          (PFNGLUNIFORM2UIVPROC)         getprocaddress("glUniform2uiv");
+        glUniform3uiv_ =          (PFNGLUNIFORM3UIVPROC)         getprocaddress("glUniform3uiv");
+        glUniform4uiv_ =          (PFNGLUNIFORM4UIVPROC)         getprocaddress("glUniform4uiv");
+        glClearBufferiv_ =        (PFNGLCLEARBUFFERIVPROC)       getprocaddress("glClearBufferiv");
+        glClearBufferuiv_ =       (PFNGLCLEARBUFFERUIVPROC)      getprocaddress("glClearBufferuiv");
+        glClearBufferfv_ =        (PFNGLCLEARBUFFERFVPROC)       getprocaddress("glClearBufferfv");
+        glClearBufferfi_ =        (PFNGLCLEARBUFFERFIPROC)       getprocaddress("glClearBufferfi");
         hasGPU4 = true;
 
         if(hasext("GL_EXT_gpu_shader4"))
@@ -540,6 +572,12 @@ void gl_checkextensions()
         glBeginConditionalRender_ = (PFNGLBEGINCONDITIONALRENDERPROC)getprocaddress("glBeginConditionalRender");
         glEndConditionalRender_ =   (PFNGLENDCONDITIONALRENDERPROC)  getprocaddress("glEndConditionalRender");
         hasCR = true;
+
+        glTexParameterIiv_ =     (PFNGLTEXPARAMETERIIVPROC)    getprocaddress("glTexParameterIiv");
+        glTexParameterIuiv_ =    (PFNGLTEXPARAMETERIUIVPROC)   getprocaddress("glTexParameterIuiv");
+        glGetTexParameterIiv_ =  (PFNGLGETTEXPARAMETERIIVPROC) getprocaddress("glGetTexParameterIiv");
+        glGetTexParameterIuiv_ = (PFNGLGETTEXPARAMETERIUIVPROC)getprocaddress("glGetTexParameterIuiv");
+        hasTI = true;
     }
     else
     {
@@ -566,6 +604,14 @@ void gl_checkextensions()
         if(hasext("GL_EXT_gpu_shader4"))
         {
             glBindFragDataLocation_ = (PFNGLBINDFRAGDATALOCATIONPROC)getprocaddress("glBindFragDataLocationEXT");
+            glUniform1ui_ =           (PFNGLUNIFORM1UIPROC)          getprocaddress("glUniform1uiEXT");
+            glUniform2ui_ =           (PFNGLUNIFORM2UIPROC)          getprocaddress("glUniform2uiEXT");
+            glUniform3ui_ =           (PFNGLUNIFORM3UIPROC)          getprocaddress("glUniform3uiEXT");
+            glUniform4ui_ =           (PFNGLUNIFORM4UIPROC)          getprocaddress("glUniform4uiEXT");
+            glUniform1uiv_ =          (PFNGLUNIFORM1UIVPROC)         getprocaddress("glUniform1uivEXT");
+            glUniform2uiv_ =          (PFNGLUNIFORM2UIVPROC)         getprocaddress("glUniform2uivEXT");
+            glUniform3uiv_ =          (PFNGLUNIFORM3UIVPROC)         getprocaddress("glUniform3uivEXT");
+            glUniform4uiv_ =          (PFNGLUNIFORM4UIVPROC)         getprocaddress("glUniform4uivEXT");
             hasEGPU4 = hasGPU4 = true;
             if(dbgexts) conoutf(CON_INIT, "Using GL_EXT_gpu_shader4 extension.");
         }
@@ -590,7 +636,38 @@ void gl_checkextensions()
             hasCR = true;
             if(dbgexts) conoutf(CON_INIT, "Using GL_NV_conditional_render extension.");
         }
+        if(hasext("GL_EXT_texture_integer"))
+        {
+            glTexParameterIiv_ =     (PFNGLTEXPARAMETERIIVPROC)    getprocaddress("glTexParameterIivEXT");
+            glTexParameterIuiv_ =    (PFNGLTEXPARAMETERIUIVPROC)   getprocaddress("glTexParameterIuivEXT");
+            glGetTexParameterIiv_ =  (PFNGLGETTEXPARAMETERIIVPROC) getprocaddress("glGetTexParameterIivEXT");
+            glGetTexParameterIuiv_ = (PFNGLGETTEXPARAMETERIUIVPROC)getprocaddress("glGetTexParameterIuivEXT");
+            glClearColorIi_ =        (PFNGLCLEARCOLORIIEXTPROC)    getprocaddress("glClearColorIiEXT");
+            glClearColorIui_ =       (PFNGLCLEARCOLORIUIEXTPROC)   getprocaddress("glClearColorIuiEXT");
+            hasTI = true;
+            if(dbgexts) conoutf(CON_INIT, "Using GL_EXT_texture_integer extension.");
+        }
+        if(hasext("GL_NV_half_float"))
+        {
+            hasHFV = hasHFP = true;
+            if(dbgexts) conoutf(CON_INIT, "Using GL_NV_half_float");
+        }
+        else
+        {
+            if(hasext("GL_ARB_half_float_vertex"))
+            {
+                hasHFV = true;
+                if(dbgexts) conoutf(CON_INIT, "Using GL_ARB_half_float_vertex extension.");
+            }
+            if(hasext("GL_ARB_half_float_pixel"))
+            {
+                hasHFP = true;
+                if(dbgexts) conoutf(CON_INIT, "Using GL_ARB_half_float_pixel extension.");
+            }
+        }
     }
+
+    if(!hasHFV) fatal("Half-precision floating-point support is required!");
 
     if(glversion >= 300 || hasext("GL_ARB_framebuffer_object"))
     {
@@ -865,12 +942,12 @@ void gl_checkextensions()
         if(dbgexts) conoutf(CON_INIT, "Using GL_ARB_debug_output extension.");
     }
 
-    extern int msaadepthstencil, gdepthstencil, glineardepth, msaalineardepth, lighttilebatch, batchsunlight, smgather;
-    if(ati)
+    extern int msaadepthstencil, gdepthstencil, glineardepth, msaalineardepth, batchsunlight, smgather;
+    if(amd)
     {
         msaalineardepth = glineardepth = 1; // reading back from depth-stencil still buggy on newer cards, and requires stencil for MSAA
-        msaadepthstencil = gdepthstencil = 1; // some older ATI GPUs do not support reading from depth-stencil textures, so only use depth-stencil renderbuffer for now
-        if(checkseries(renderer, "Radeon HD", 4000, 5199)) ati_pf_bug = 1;
+        msaadepthstencil = gdepthstencil = 1; // some older AMD GPUs do not support reading from depth-stencil textures, so only use depth-stencil renderbuffer for now
+        if(checkseries(renderer, "Radeon HD", 4000, 5199)) amd_pf_bug = 1;
     }
     else if(nvidia)
     {
@@ -878,7 +955,6 @@ void gl_checkextensions()
     else if(intel)
     {
         glineardepth = 1; // causes massive slowdown in windows driver (and sometimes in linux driver) if not using linear depth
-        lighttilebatch = 4;
         if(mesa) batchsunlight = 0; // causes massive slowdown in linux driver
         smgather = 1; // native shadow filter is slow
     }
@@ -1115,7 +1191,7 @@ void setcamprojmatrix(bool init = true, bool flush = false)
     if(flush && Shader::lastshader) Shader::lastshader->flushparams();
 }
 
-glmatrix hudmatrix, hudmatrixstack[64];
+matrix4 hudmatrix, hudmatrixstack[64];
 int hudmatrixpos = 0;
 
 void resethudmatrix()
@@ -1290,11 +1366,11 @@ void recomputecamera()
             camera1->move = -1;
             camera1->eyeheight = camera1->aboveeye = camera1->radius = camera1->xradius = camera1->yradius = 2;
 
-            matrix3x3 orient;
+            matrix3 orient;
             orient.identity();
-            orient.rotate_around_y(ovr::modifyroll(camera1->roll)*RAD);
-            orient.rotate_around_x(camera1->pitch*-RAD);
             orient.rotate_around_z(camera1->yaw*-RAD);
+            orient.rotate_around_x(camera1->pitch*-RAD);
+            orient.rotate_around_y(ovr::modifyroll(camera1->roll)*RAD);
             vec dir = vec(orient.b).neg(), side = vec(orient.a).neg(), up = orient.c;
 
             if(game::collidecamera())
@@ -1352,9 +1428,9 @@ float calcfrustumboundsphere(float nearplane, float farplane,  const vec &pos, c
     }
 }
 
-extern const glmatrix viewmatrix(vec(-1, 0, 0), vec(0, 0, 1), vec(0, -1, 0));
-extern const glmatrix invviewmatrix(vec(-1, 0, 0), vec(0, 0, -1), vec(0, 1, 0));
-glmatrix cammatrix, projmatrix, camprojmatrix, invcammatrix, invcamprojmatrix, invprojmatrix;
+extern const matrix4 viewmatrix(vec(-1, 0, 0), vec(0, 0, 1), vec(0, -1, 0));
+extern const matrix4 invviewmatrix(vec(-1, 0, 0), vec(0, 0, -1), vec(0, 1, 0));
+matrix4 cammatrix, projmatrix, camprojmatrix, invcammatrix, invcamprojmatrix, invprojmatrix;
 
 FVAR(nearplane, 0.01f, 0.54f, 2.0f);
 
@@ -1378,7 +1454,7 @@ void renderavatar()
 {
     if(!isthirdperson())
     {
-        glmatrix oldprojmatrix = projmatrix;
+        matrix4 oldprojmatrix = projmatrix;
         float avatarfovy = curavatarfov;
         if(ovr::enabled && ovr::fov) avatarfovy *= ovr::fov/fov;
         projmatrix.perspective(avatarfovy, aspect, nearplane, farplane);
@@ -1394,7 +1470,7 @@ FVAR(polygonoffsetfactor, -1e4f, -3.0f, 1e4f);
 FVAR(polygonoffsetunits, -1e4f, -3.0f, 1e4f);
 FVAR(depthoffset, -1e4f, 0.01f, 1e4f);
 
-glmatrix nooffsetmatrix;
+matrix4 nooffsetmatrix;
 
 void enablepolygonoffset(GLenum type)
 {
@@ -1545,9 +1621,8 @@ bool calcbbscissor(const ivec &bbmin, const ivec &bbmax, float &sx1, float &sy1,
 
 bool calcspotscissor(const vec &origin, float radius, const vec &dir, int spot, const vec &spotx, const vec &spoty, float &sx1, float &sy1, float &sx2, float &sy2, float &sz1, float &sz2)
 {
-    const vec2 &sc = sincos360[spot];
-    float spotscale = radius*sc.y/sc.x;
-    vec up = vec(spotx).rescale(spotscale), right = vec(spoty).rescale(spotscale), center = vec(dir).mul(radius).add(origin);
+    float spotscale = radius * tan360(spot);
+    vec up = vec(spotx).mul(spotscale), right = vec(spoty).mul(spotscale), center = vec(dir).mul(radius).add(origin);
 #define ADDXYZSCISSOR(p) do { \
         if(p.z >= -p.w) \
         { \
@@ -1644,6 +1719,33 @@ void screenquad(float sw, float sh)
 void screenquadflipped(float sw, float sh)
 {
     SCREENQUAD1(-1, -1, 1, 1, 0, sh, sw, 0);
+    gle::disable();
+}
+
+void screenquadreorient(float sw, float sh, bool flipx, bool flipy, bool swapxy)
+{
+    float sx1 = 0, sy1 = 0, sx2 = sw, sy2 = sh;
+    if(swapxy) swap(sx2, sy2);
+    if(flipx) swap(sx1, sx2);
+    if(flipy) swap(sy1, sy2);
+    gle::defvertex(2);
+    gle::deftexcoord0();
+    gle::begin(GL_TRIANGLE_STRIP);
+    if(swapxy)
+    {
+        gle::attribf( 1, -1); gle::attribf(sy1, sx2);
+        gle::attribf(-1, -1); gle::attribf(sy1, sx1);
+        gle::attribf( 1,  1); gle::attribf(sy2, sx2);
+        gle::attribf(-1,  1); gle::attribf(sy2, sx1);
+    }
+    else
+    {
+        gle::attribf( 1, -1); gle::attribf(sx2, sy1);
+        gle::attribf(-1, -1); gle::attribf(sx1, sy1);
+        gle::attribf( 1,  1); gle::attribf(sx2, sy2);
+        gle::attribf(-1,  1); gle::attribf(sx1, sy2);
+    }
+    gle::end();
     gle::disable();
 }
 
@@ -1767,6 +1869,20 @@ void resetfogcolor()
     setfogcolor(curfogcolor);
 }
 
+FVAR(fogintensity, 0, 0.15f, 1);
+
+float calcfogdensity(float dist)
+{
+    return log(fogintensity)/(M_LN2*dist);
+}
+
+FVAR(fogcullintensity, 0, 1e-3f, 1);
+
+float calcfogcull()
+{
+    return log(fogcullintensity) / (M_LN2*calcfogdensity(fog - (fog+64)/8));
+}
+
 static void setfog(int fogmat, float below = 0, float blend = 1, int abovemat = MAT_AIR)
 {
     float start = 0, end = 0;
@@ -1778,7 +1894,9 @@ static void setfog(int fogmat, float below = 0, float blend = 1, int abovemat = 
     curfogcolor.mul(ldrscale);
 
     GLOBALPARAM(fogcolor, curfogcolor);
-    GLOBALPARAMF(fogparams, start, end, 1/(end - start));
+
+    float fogdensity = calcfogdensity(end-start);
+    GLOBALPARAMF(fogdensity, fogdensity, 1/exp(M_LN2*start*fogdensity));
 }
 
 static void blendfogoverlay(int fogmat, float below, float blend, vec &overlay)
@@ -1936,9 +2054,6 @@ void drawminimap()
 
     ldrscale = 1;
     ldrscaleb = ldrscale/255;
-    GLOBALPARAMF(ldrscale, ldrscale);
-    GLOBALPARAM(camera, camera1->o);
-    GLOBALPARAMF(millis, lastmillis/1000.0f);
 
     visiblecubes(false);
     collectlights();
@@ -1970,19 +2085,25 @@ void drawminimap()
     camera1 = oldcamera;
     drawtex = 0;
 
-    readhdr(size, size, GL_RGB5, GL_UNSIGNED_BYTE, NULL, GL_TEXTURE_2D, minimaptex);
-    setuptexparameters(minimaptex, NULL, 3, 1, GL_RGB5, GL_TEXTURE_2D);
+    createtexture(minimaptex, size, size, NULL, 3, 1, GL_RGB5, GL_TEXTURE_2D);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
     GLfloat border[4] = { minimapcolor.x/255.0f, minimapcolor.y/255.0f, minimapcolor.z/255.0f, 1.0f };
     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, border);
     glBindTexture(GL_TEXTURE_2D, 0);
 
+    GLuint fbo = 0;
+    glGenFramebuffers_(1, &fbo);
+    glBindFramebuffer_(GL_FRAMEBUFFER, fbo);
+    glFramebufferTexture2D_(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, minimaptex, 0);
+    copyhdr(size, size, fbo);
     glBindFramebuffer_(GL_FRAMEBUFFER, 0);
+    glDeleteFramebuffers_(1, &fbo);
+
     glViewport(0, 0, hudw, hudh);
 }
 
-void drawcubemap(int size, const vec &o, float yaw, float pitch, const cubemapside &side)
+void drawcubemap(int size, const vec &o, float yaw, float pitch, const cubemapside &side, bool onlysky)
 {
     drawtex = DRAWTEX_ENVMAP;
 
@@ -2032,33 +2153,40 @@ void drawcubemap(int size, const vec &o, float yaw, float pitch, const cubemapsi
 
     ldrscale = 1;
     ldrscaleb = ldrscale/255;
-    GLOBALPARAMF(ldrscale, ldrscale);
-    GLOBALPARAM(camera, camera1->o);
-    GLOBALPARAMF(millis, lastmillis/1000.0f);
 
-    visiblecubes();
-    GLERROR;
+    visiblecubes(onlysky);
 
-    rendergbuffer();
-    GLERROR;
-
-    rendershadowatlas();
-    GLERROR;
-
-    shadegbuffer();
-    GLERROR;
-
-    if(fogmat)
+    if(onlysky)
     {
-        setfog(fogmat, fogbelow, 1, abovemat);
+        preparegbuffer();
+        GLERROR;
 
-        renderwaterfog(fogmat, fogbelow);
-
-        setfog(fogmat, fogbelow, clamp(fogbelow, 0.0f, 1.0f), abovemat);
+        shadesky();
+        GLERROR;
     }
+    else
+    {
+        rendergbuffer();
+        GLERROR;
 
-    rendertransparent();
-    GLERROR;
+        rendershadowatlas();
+        GLERROR;
+
+        shadegbuffer();
+        GLERROR;
+
+        if(fogmat)
+        {
+            setfog(fogmat, fogbelow, 1, abovemat);
+
+            renderwaterfog(fogmat, fogbelow);
+
+            setfog(fogmat, fogbelow, clamp(fogbelow, 0.0f, 1.0f), abovemat);
+        }
+
+        rendertransparent();
+        GLERROR;
+    }
 
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
@@ -2130,10 +2258,6 @@ namespace modelpreview
         ldrscale = 1;
         ldrscaleb = ldrscale/255;
 
-        GLOBALPARAMF(ldrscale, ldrscale);
-        GLOBALPARAM(camera, camera1->o);
-        GLOBALPARAMF(millis, lastmillis/1000.0f);
-
         projmatrix.perspective(fovy, aspect, nearplane, farplane);
         setcamprojmatrix();
 
@@ -2201,11 +2325,8 @@ void gl_drawview()
     glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
 
-    ldrscale = hdr ? 0.5f : 1;
+    ldrscale = 0.5f;
     ldrscaleb = ldrscale/255;
-    GLOBALPARAMF(ldrscale, ldrscale);
-    GLOBALPARAM(camera, camera1->o);
-    GLOBALPARAMF(millis, lastmillis/1000.0f);
 
     visiblecubes();
 
@@ -2223,6 +2344,8 @@ void gl_drawview()
     generategrass();
     rendergrass();
     GLERROR;
+
+    glFlush();
 
     renderradiancehints();
     GLERROR;
@@ -2344,7 +2467,7 @@ void drawdamagecompass(int w, int h)
         float logscale = 32,
               scale = log(1 + (logscale - 1)*damagedirs[i]) / log(logscale),
               offset = -size/2.0f-min(h, w)/4.0f;
-        matrix3x4 m;
+        matrix4x3 m;
         m.identity();
         m.settranslation(w/2, h/2, 0);
         m.rotate_around_z(i*45*RAD);

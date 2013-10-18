@@ -648,6 +648,7 @@ struct BlendTexture
     {
         if(!tex) glGenTextures(1, &tex);
         sz = min(sz, maxtexsize ? min(maxtexsize, hwtexsize) : hwtexsize);
+        while(sz&(sz-1)) sz &= sz-1;
         if(sz == size) return false;
         size = sz;
         if(data) delete[] data;

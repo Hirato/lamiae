@@ -13,7 +13,7 @@ void loadcaustics(bool force)
     if(caustictex[0]) return;
     loopi(NUMCAUSTICS)
     {
-        defformatstring(name, "<grey>media/textures/caustics/caust%.2d.png", i);
+        defformatstring(name, "<grey><noswizzle>media/textures/caustics/caust%.2d.png", i);
         caustictex[i] = textureload(name);
     }
 }
@@ -46,7 +46,10 @@ void setupcaustics(int tmu, float surface = -1e16f)
     if(surface > -1e15f)
     {
         float bz = surface + camera1->o.z + (vertwater ? WATER_AMPLITUDE : 0);
-        glmatrix m(vec4(s, 0), vec4(t, 0), vec4(0, 0, -1, bz));
+        matrix4 m(vec4(s.x, t.x,  0, 0),
+                  vec4(s.y, t.y,  0, 0),
+                  vec4(s.z, t.z, -1, 0),
+                  vec4(  0,   0, bz, 1));
         m.mul(worldmatrix);
         GLOBALPARAM(causticsmatrix, m);
         blendscale *= 0.5f;
@@ -103,22 +106,24 @@ void renderwaterfog(int mat, float surface)
         const bvec &deepfadecolor = getwaterdeepfadecolor(mat);
         int deep = getwaterdeep(mat);
         GLOBALPARAMF(waterdeepcolor, deepcolor.x*ldrscaleb, deepcolor.y*ldrscaleb, deepcolor.z*ldrscaleb);
-        ivec deepfade = ivec(deepfadecolor.x, deepfadecolor.y, deepfadecolor.z).mul(deep);
-        GLOBALPARAMF(waterdeepfade, deepfade.x ? 255.0f/deepfade.x : 1e4f, deepfade.y ? 255.0f/deepfade.y : 1e4f, deepfade.z ? 255.0f/deepfade.z : 1e4f, deep ? 1.0f/deep : 1e4f);
+        vec deepfade = deepfadecolor.tocolor().mul(deep);
+        GLOBALPARAMF(waterdeepfade,
+            deepfade.x ? calcfogdensity(deepfade.x) : -1e4f,
+            deepfade.y ? calcfogdensity(deepfade.y) : -1e4f,
+            deepfade.z ? calcfogdensity(deepfade.z) : -1e4f,
+            deep ? calcfogdensity(deep) : -1e4f);
 
         rendercaustics(surface, syl, syr);
     }
     else
     {
         GLOBALPARAMF(waterdeepcolor, 0, 0, 0);
-        GLOBALPARAMF(waterdeepfade, 0, 0, 0);
+        GLOBALPARAMF(waterdeepfade, -1e4f, -1e4f, -1e4f, -1e4f);
     }
 
+    GLOBALPARAMF(waterheight, bz);
+
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    vec4 d = cammatrix.getrow(2);
-    glmatrix m(d, vec4(0, 1, 0, 0), vec4(0, 0, -1, bz));
-    m.mul(worldmatrix);
-    GLOBALPARAM(waterfogmatrix, m);
 
     SETSHADER(waterfog);
     gle::defvertex(2);
@@ -176,35 +181,35 @@ static float whscale, whoffset;
         body; \
     })
 
+static float wxscale = 1.0f, wyscale = 1.0f, wscroll = 0.0f;
+
 VERTW(vertwt, {
     gle::deftexcoord0();
 }, {
-    gle::attribf(v1/8.0f, v2/8.0f);
+    gle::attribf(wxscale*v1, wyscale*v2);
 })
 VERTWN(vertwtn, {
     gle::deftexcoord0();
 }, {
-    gle::attribf(v1/8.0f, v2/8.0f);
+    gle::attribf(wxscale*v1, wyscale*v2);
 })
-
-static float lavaxk = 1.0f, lavayk = 1.0f, lavascroll = 0.0f;
 
 VERTW(vertl, {
     gle::deftexcoord0();
 }, {
-    gle::attribf(lavaxk*(v1+lavascroll), lavayk*(v2+lavascroll));
+    gle::attribf(wxscale*(v1+wscroll), wyscale*(v2+wscroll));
 })
 VERTWN(vertln, {
     gle::deftexcoord0();
 }, {
-    gle::attribf(lavaxk*(v1+lavascroll), lavayk*(v2+lavascroll));
+    gle::attribf(wxscale*(v1+wscroll), wyscale*(v2+wscroll));
 })
 
 #define renderwaterstrips(vertw, z) { \
     def##vertw(); \
+    gle::begin(GL_TRIANGLE_STRIP, 2*(wy2-wy1 + 1)*(wx2-wx1)/subdiv); \
     for(int x = wx1; x<wx2; x += subdiv) \
     { \
-        gle::begin(GL_TRIANGLE_STRIP); \
         vertw(x,        wy1, z); \
         vertw(x+subdiv, wy1, z); \
         for(int y = wy1; y<wy2; y += subdiv) \
@@ -212,8 +217,9 @@ VERTWN(vertln, {
             vertw(x,        y+subdiv, z); \
             vertw(x+subdiv, y+subdiv, z); \
         } \
-        xtraverts += gle::end(); \
+        gle::multidraw(); \
     } \
+    xtraverts += gle::end(); \
 }
 
 void rendervertwater(uint subdiv, int xo, int yo, int z, uint size, int mat)
@@ -307,7 +313,7 @@ uint renderwaterlod(int x, int y, int z, uint size, int mat)
 
 #define renderwaterquad(vertwn, z) \
     { \
-        if(gle::data.empty()) { def##vertwn(); gle::begin(GL_QUADS); } \
+        if(gle::attribbuf.empty()) { def##vertwn(); gle::begin(GL_QUADS); } \
         vertwn(x, y, z); \
         vertwn(x+rsize, y, z); \
         vertwn(x+rsize, y+csize, z); \
@@ -338,35 +344,27 @@ static inline void renderwater(const materialsurface &m, int mat = MAT_WATER)
         rendervertwater(m.csize, m.o.x, m.o.y, m.o.z, m.csize, mat);
 }
 
-void renderlava(const materialsurface &m, Texture *tex, float scale)
-{
-    lavaxk = 8.0f/(tex->xs*scale);
-    lavayk = 8.0f/(tex->ys*scale);
-    lavascroll = lastmillis/1000.0f;
-    renderwater(m, MAT_LAVA);
-}
-
 #define WATERVARS(name) \
     bvec name##color(0x01, 0x21, 0x2C), name##deepcolor(0x01, 0x0A, 0x10), name##deepfadecolor(0x60, 0xBF, 0xFF), name##refractcolor(0xFF, 0xFF, 0xFF), name##fallcolor(0, 0, 0), name##fallrefractcolor(0xFF, 0xFF, 0xFF); \
     HVARFR(name##colour, 0, 0x01212C, 0xFFFFFF, \
     { \
         if(!name##colour) name##colour = 0x01212C; \
-        name##color = bvec((name##colour>>16)&0xFF, (name##colour>>8)&0xFF, name##colour&0xFF); \
+        name##color = bvec::hexcolor(name##colour); \
     }); \
     HVARFR(name##deepcolour, 0, 0x010A10, 0xFFFFFF, \
     { \
         if(!name##deepcolour) name##deepcolour = 0x010A10; \
-        name##deepcolor = bvec((name##deepcolour>>16)&0xFF, (name##deepcolour>>8)&0xFF, name##deepcolour&0xFF); \
+        name##deepcolor = bvec::hexcolor(name##deepcolour); \
     }); \
     HVARFR(name##deepfade, 0, 0x60BFFF, 0xFFFFFF, \
     { \
         if(!name##deepfade) name##deepfade = 0x60BFFF; \
-        name##deepfadecolor = bvec((name##deepfade>>16)&0xFF, (name##deepfade>>8)&0xFF, name##deepfade&0xFF); \
+        name##deepfadecolor = bvec::hexcolor(name##deepfade); \
     }); \
     HVARFR(name##refractcolour, 0, 0xFFFFFF, 0xFFFFFF, \
     { \
         if(!name##refractcolour) name##refractcolour = 0xFFFFFF; \
-        name##refractcolor = bvec((name##refractcolour>>16)&0xFF, (name##refractcolour>>8)&0xFF, name##refractcolour&0xFF); \
+        name##refractcolor = bvec::hexcolor(name##refractcolour); \
     }); \
     VARR(name##fog, 0, 30, 10000); \
     VARR(name##deep, 0, 50, 10000); \
@@ -374,11 +372,11 @@ void renderlava(const materialsurface &m, Texture *tex, float scale)
     FVARR(name##refract, 0, 0.1f, 1e3f); \
     HVARFR(name##fallcolour, 0, 0, 0xFFFFFF, \
     { \
-        name##fallcolor = bvec((name##fallcolour>>16)&0xFF, (name##fallcolour>>8)&0xFF, name##fallcolour&0xFF); \
+        name##fallcolor = bvec::hexcolor(name##fallcolour); \
     }); \
     HVARFR(name##fallrefractcolour, 0, 0, 0xFFFFFF, \
     { \
-        name##fallrefractcolor = bvec((name##fallrefractcolour>>16)&0xFF, (name##fallrefractcolour>>8)&0xFF, name##fallrefractcolour&0xFF); \
+        name##fallrefractcolor = bvec::hexcolor(name##fallrefractcolour); \
     }); \
     VARR(name##fallspec, 0, 150, 200); \
     FVARR(name##fallrefract, 0, 0.1f, 1e3f);
@@ -412,7 +410,7 @@ GETMATIDXVAR(water, fallrefract, float)
     HVARFR(name##colour, 0, 0xFF4000, 0xFFFFFF, \
     { \
         if(!name##colour) name##colour = 0xFF4000; \
-        name##color = bvec((name##colour>>16)&0xFF, (name##colour>>8)&0xFF, name##colour&0xFF); \
+        name##color = bvec::hexcolor(name##colour); \
     }); \
     VARR(name##fog, 0, 50, 10000); \
     FVARR(name##glowmin, 0, 0.25f, 2); \
@@ -465,11 +463,11 @@ void preloadwatershaders(bool force)
     useshaderbyname("waterminimap");
 }
 
-static float wfwave, wfscroll, wfxscale, wfyscale;
+static float wfwave = 0.0f, wfscroll = 0.0f, wfxscale = 1.0f, wfyscale = 1.0f;
 
 static void renderwaterfall(const materialsurface &m, float offset, const vec *normal = NULL)
 {
-    if(gle::data.empty())
+    if(gle::attribbuf.empty())
     {
         gle::defvertex();
         if(normal) gle::defnormal();
@@ -536,13 +534,19 @@ void renderlava()
         if(lavasurfs[k].length())
         {
             Texture *tex = lslot.sts.inrange(0) ? lslot.sts[0].t: notexture;
+            wxscale = TEX_SCALE/(tex->xs*lslot.scale);
+            wyscale = TEX_SCALE/(tex->ys*lslot.scale);
+            wscroll = lastmillis/1000.0f;
+
             glBindTexture(GL_TEXTURE_2D, tex->id);
             glActiveTexture_(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, lslot.sts.inrange(1) ? lslot.sts[1].t->id : notexture->id);
             glActiveTexture_(GL_TEXTURE0);
 
+            gle::normal(vec(0, 0, 1));
+
             vector<materialsurface> &surfs = lavasurfs[k];
-            loopv(surfs) renderlava(surfs[i], tex, lslot.scale);
+            loopv(surfs) renderwater(surfs[i], MAT_LAVA);
             xtraverts += gle::end();
         }
 
@@ -632,7 +636,12 @@ void renderwater()
 
         MSlot &wslot = lookupmaterialslot(MAT_WATER+k);
 
-        glBindTexture(GL_TEXTURE_2D, wslot.sts.inrange(0) ? wslot.sts[0].t->id : notexture->id);
+        Texture *tex = wslot.sts.inrange(0) ? wslot.sts[0].t: notexture;
+        wxscale = TEX_SCALE/(tex->xs*wslot.scale);
+        wyscale = TEX_SCALE/(tex->ys*wslot.scale);
+        wscroll = 0.0f;
+
+        glBindTexture(GL_TEXTURE_2D, tex->id);
         glActiveTexture_(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, wslot.sts.inrange(1) ? wslot.sts[1].t->id : notexture->id);
         if(caustics && causticscale && causticmillis) setupcaustics(2);
@@ -652,9 +661,14 @@ void renderwater()
         float refract = getwaterrefract(k);
         GLOBALPARAMF(watercolor, color.x*colorscale, color.y*colorscale, color.z*colorscale);
         GLOBALPARAMF(waterdeepcolor, deepcolor.x*colorscale, deepcolor.y*colorscale, deepcolor.z*colorscale);
-        GLOBALPARAMF(waterfog, fog ? 1.0f/fog : 1e4f);
-        ivec deepfade = ivec(deepfadecolor.x, deepfadecolor.y, deepfadecolor.z).mul(deep);
-        GLOBALPARAMF(waterdeepfade, deepfade.x ? 255.0f/deepfade.x : 1e4f, deepfade.y ? 255.0f/deepfade.y : 1e4f, deepfade.z ? 255.0f/deepfade.z : 1e4f, deep ? 1.0f/deep : 1e4f);
+        float fogdensity = fog ? calcfogdensity(fog) : -1e4f;
+        GLOBALPARAMF(waterfog, fogdensity);
+        vec deepfade = deepfadecolor.tocolor().mul(deep);
+        GLOBALPARAMF(waterdeepfade,
+            deepfade.x ? calcfogdensity(deepfade.x) : -1e4f,
+            deepfade.y ? calcfogdensity(deepfade.y) : -1e4f,
+            deepfade.z ? calcfogdensity(deepfade.z) : -1e4f,
+            deep ? calcfogdensity(deep) : -1e4f);
         GLOBALPARAMF(waterspec, 0.5f*spec/100.0f);
         GLOBALPARAMF(waterreflect, reflectscale, reflectscale, reflectscale, waterreflectstep);
         GLOBALPARAMF(waterrefract, refractcolor.x*refractscale, refractcolor.y*refractscale, refractcolor.z*refractscale, refract*viewh);

@@ -236,12 +236,12 @@ BIH::BIH(vector<mesh> &buildmeshes)
     loopi(nummeshes)
     {
         mesh &m = meshes[i];
-        m.scale = m.xform.a.magnitude3();
+        m.scale = m.xform.a.magnitude();
         m.invscale = 1/m.scale;
-        m.xformnorm = matrix3x3(m.xform);
+        m.xformnorm = matrix3(m.xform);
         m.xformnorm.normalize();
         m.invxform.invert(m.xform);
-        m.invxformnorm = matrix3x3(m.invxform);
+        m.invxformnorm = matrix3(m.invxform);
         m.invxformnorm.normalize();
         m.tribbs = dsttri;
         const tri *srctri = m.tris;
@@ -475,7 +475,7 @@ static inline bool triboxoverlap(const vec &radius, const vec &a, const vec &b, 
 }
 
 template<>
-inline void BIH::tricollide<COLLIDE_ELLIPSE>(const mesh &m, int tidx, physent *d, const vec &dir, float cutoff, const vec &center, const vec &radius, const matrix3x4 &orient, float &dist, const ivec &bo, const ivec &br)
+inline void BIH::tricollide<COLLIDE_ELLIPSE>(const mesh &m, int tidx, physent *d, const vec &dir, float cutoff, const vec &center, const vec &radius, const matrix4x3 &orient, float &dist, const ivec &bo, const ivec &br)
 {
     const tribb &bb = m.tribbs[tidx];
     if(abs(bo.x - bb.center.x) > br.x + bb.radius.x ||
@@ -485,7 +485,7 @@ inline void BIH::tricollide<COLLIDE_ELLIPSE>(const mesh &m, int tidx, physent *d
 
     const tri &t = m.tris[tidx];
     vec a = m.getpos(t.vert[0]), b = m.getpos(t.vert[1]), c = m.getpos(t.vert[2]),
-        zdir = vec(orient.c).mul(m.invscale*m.invscale*(radius.z - radius.x));
+        zdir = vec(orient.rowz()).mul(m.invscale*m.invscale*(radius.z - radius.x));
     if(trisegmentdistance(a, b, c, vec(center).sub(zdir), vec(center).add(zdir)) > m.invscale*m.invscale*radius.x*radius.x) return;
 
     vec n;
@@ -512,7 +512,7 @@ inline void BIH::tricollide<COLLIDE_ELLIPSE>(const mesh &m, int tidx, physent *d
 }
 
 template<>
-inline void BIH::tricollide<COLLIDE_OBB>(const mesh &m, int tidx, physent *d, const vec &dir, float cutoff, const vec &center, const vec &radius, const matrix3x4 &orient, float &dist, const ivec &bo, const ivec &br)
+inline void BIH::tricollide<COLLIDE_OBB>(const mesh &m, int tidx, physent *d, const vec &dir, float cutoff, const vec &center, const vec &radius, const matrix4x3 &orient, float &dist, const ivec &bo, const ivec &br)
 {
     const tribb &bb = m.tribbs[tidx];
     if(abs(bo.x - bb.center.x) > br.x + bb.radius.x ||
@@ -549,7 +549,7 @@ inline void BIH::tricollide<COLLIDE_OBB>(const mesh &m, int tidx, physent *d, co
 }
 
 template<int C>
-inline void BIH::collide(const mesh &m, physent *d, const vec &dir, float cutoff, const vec &center, const vec &radius, const matrix3x4 &orient, float &dist, node *curnode, const ivec &bo, const ivec &br)
+inline void BIH::collide(const mesh &m, physent *d, const vec &dir, float cutoff, const vec &center, const vec &radius, const matrix4x3 &orient, float &dist, node *curnode, const ivec &bo, const ivec &br)
 {
     node *stack[128];
     int stacksize = 0;
@@ -623,7 +623,7 @@ bool BIH::ellipsecollide(physent *d, const vec &dir, float cutoff, const vec &o,
     center.sub(o);
     if(scale != 1) { scale = 1/scale; center.mul(scale); radius.mul(scale); }
 
-    matrix3x3 orient;
+    matrix3 orient;
     orient.identity();
     if(yaw) orient.rotate_around_z(sincosmod360(yaw));
     if(pitch) orient.rotate_around_x(sincosmod360(pitch));
@@ -643,7 +643,7 @@ bool BIH::ellipsecollide(physent *d, const vec &dir, float cutoff, const vec &o,
     {
         mesh &m = meshes[i];
         if(!(m.flags&MESH_COLLIDE) || m.flags&MESH_NOCLIP) continue;
-        matrix3x4 morient;
+        matrix4x3 morient;
         morient.mul(orient, m.xform);
         collide<COLLIDE_ELLIPSE>(m, d, dir, cutoff, m.invxform.transform(bo), radius, morient, dist, m.nodes, icenter, iradius);
     }
@@ -659,7 +659,7 @@ bool BIH::boxcollide(physent *d, const vec &dir, float cutoff, const vec &o, int
     center.sub(o);
     if(scale != 1) { scale = 1/scale; center.mul(scale); radius.mul(scale); }
 
-    matrix3x3 orient;
+    matrix3 orient;
     orient.identity();
     if(yaw) orient.rotate_around_z(sincosmod360(yaw));
     if(pitch) orient.rotate_around_x(sincosmod360(pitch));
@@ -674,20 +674,18 @@ bool BIH::boxcollide(physent *d, const vec &dir, float cutoff, const vec &o, int
          icenter = ivec(imin).add(imax).div(2),
          iradius = ivec(imax).sub(imin).add(1).div(2);
 
-    matrix3x3 drot;
+    matrix3 drot, dorient;
     drot.setyaw(d->yaw*RAD);
-    vec ddir = drot.transform(dir);
-
-    matrix3x4 dorient;
-    dorient.mul(drot, drot.transform(center).neg(), orient);
+    vec ddir = drot.transform(dir), dcenter = drot.transform(center).neg();
+    dorient.mul(drot, orient);
 
     float dist = -1e10f;
     loopi(nummeshes)
     {
         mesh &m = meshes[i];
         if(!(m.flags&MESH_COLLIDE) || m.flags&MESH_NOCLIP) continue;
-        matrix3x4 morient;
-        morient.mul(dorient, m.xform);
+        matrix4x3 morient;
+        morient.mul(dorient, dcenter, m.xform);
         collide<COLLIDE_OBB>(m, d, ddir, cutoff, center, radius, morient, dist, m.nodes, icenter, iradius);
     }
     if(dist > -1e9f)

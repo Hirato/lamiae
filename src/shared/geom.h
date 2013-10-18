@@ -29,8 +29,10 @@ struct vec2
 
     vec2 &mul(float f)       { x *= f; y *= f; return *this; }
     vec2 &mul(const vec2 &o) { x *= o.x; y *= o.y; return *this; }
+    vec2 &square()           { mul(*this); return *this; }
     vec2 &div(float f)       { x /= f; y /= f; return *this; }
     vec2 &div(const vec2 &o) { x /= o.x; y /= o.y; return *this; }
+    vec2 &recip()            { x = 1/x; y = 1/y; return *this; }
     vec2 &add(float f)       { x += f; y += f; return *this; }
     vec2 &add(const vec2 &o) { x += o.x; y += o.y; return *this; }
     vec2 &sub(float f)       { x -= f; y -= f; return *this; }
@@ -42,10 +44,12 @@ struct vec2
     vec2 &max(float f)       { x = ::max(x, f); y = ::max(y, f); return *this; }
     vec2 &abs() { x = fabs(x); y = fabs(y); return *this; }
     vec2 &clamp(float l, float h) { x = ::clamp(x, l, h); y = ::clamp(y, l, h); return *this; }
-
+    vec2 &reflect(const vec2 &n) { float k = 2*dot(n); x -= k*n.x; y -= k*n.y; return *this; }
     vec2 &lerp(const vec2 &b, float t) { x += (b.x-x)*t; y += (b.y-y)*t; return *this; }
     vec2 &lerp(const vec2 &a, const vec2 &b, float t) { x = a.x + (b.x-a.x)*t; y = a.y + (b.y-a.y)*t; return *this; }
     vec2 &avg(const vec2 &b) { add(b); mul(0.5f); return *this; }
+    template<class B> vec2 &madd(const vec2 &a, const B &b) { return add(vec2(a).mul(b)); }
+    template<class B> vec2 &msub(const vec2 &a, const B &b) { return sub(vec2(a).mul(b)); }
 
     vec2 &rotate_around_z(float c, float s) { float rx = x, ry = y; x = c*rx-s*ry; y = c*ry+s*rx; return *this; }
     vec2 &rotate_around_z(float angle) { return rotate_around_z(cosf(angle), sinf(angle)); }
@@ -110,8 +114,10 @@ struct vec
     float zdot(const vec &o) const { return z*o.z; }
     vec &mul(const vec &o)   { x *= o.x; y *= o.y; z *= o.z; return *this; }
     vec &mul(float f)        { x *= f; y *= f; z *= f; return *this; }
+    vec &square()            { mul(*this); return *this; }
     vec &div(const vec &o)   { x /= o.x; y /= o.y; z /= o.z; return *this; }
     vec &div(float f)        { x /= f; y /= f; z /= f; return *this; }
+    vec &recip()             { x = 1/x; y = 1/y; z = 1/z; return *this; }
     vec &add(const vec &o)   { x += o.x; y += o.y; z += o.z; return *this; }
     vec &add(float f)        { x += f; y += f; z += f; return *this; }
     vec &addz(float f)       { z += f; return *this; }
@@ -162,6 +168,8 @@ struct vec
     vec &lerp(const vec &b, float t) { x += (b.x-x)*t; y += (b.y-y)*t; z += (b.z-z)*t; return *this; }
     vec &lerp(const vec &a, const vec &b, float t) { x = a.x + (b.x-a.x)*t; y = a.y + (b.y-a.y)*t; z = a.z + (b.z-a.z)*t; return *this; }
     vec &avg(const vec &b) { add(b); mul(0.5f); return *this; }
+    template<class B> vec &madd(const vec &a, const B &b) { return add(vec(a).mul(b)); }
+    template<class B> vec &msub(const vec &a, const B &b) { return sub(vec(a).mul(b)); }
 
     vec &rescale(float k)
     {
@@ -189,7 +197,6 @@ struct vec
                     x*(d.x*d.z*(1-c)-d.y*s) + y*(d.y*d.z*(1-c)+d.x*s) + z*(d.z*d.z*(1-c)+c));
         return *this;
     }
-
     vec &rotate(float angle, const vec &d) { return rotate(cosf(angle), sinf(angle), d); }
     vec &rotate(const vec2 &sc, const vec &d) { return rotate(sc.x, sc.y, d); }
 
@@ -245,7 +252,7 @@ struct vec
         return vec(((color>>16)&0xFF)*(1.0f/255.0f), ((color>>8)&0xFF)*(1.0f/255.0f), (color&0xFF)*(1.0f/255.0f));
     }
 
-    int tohexcolor() { return (int(::clamp(r, 0.0f, 1.0f)*255)<<16)|(int(::clamp(g, 0.0f, 1.0f)*255)<<8)|int(::clamp(b, 0.0f, 1.0f)*255); }
+    int tohexcolor() const { return (int(::clamp(r, 0.0f, 1.0f)*255)<<16)|(int(::clamp(g, 0.0f, 1.0f)*255)<<8)|int(::clamp(b, 0.0f, 1.0f)*255); }
 };
 
 inline vec2::vec2(const vec &v) : x(v.x), y(v.y) {}
@@ -305,15 +312,19 @@ struct vec4
         return *this;
     }
     vec4 &avg(const vec4 &b) { add(b); mul(0.5f); return *this; }
+    template<class B> vec4 &madd(const vec4 &a, const B &b) { return add(vec4(a).mul(b)); }
+    template<class B> vec4 &msub(const vec4 &a, const B &b) { return sub(vec4(a).mul(b)); }
 
     vec4 &mul3(float f)      { x *= f; y *= f; z *= f; return *this; }
     vec4 &mul(float f)       { mul3(f); w *= f; return *this; }
     vec4 &mul(const vec4 &o) { x *= o.x; y *= o.y; z *= o.z; w *= o.w; return *this; }
     vec4 &mul(const vec &o)  { x *= o.x; y *= o.y; z *= o.z; return *this; }
+    vec4 &square()           { mul(*this); return *this; }
     vec4 &div3(float f)      { x /= f; y /= f; z /= f; return *this; }
     vec4 &div(float f)       { div3(f); w /= f; return *this; }
     vec4 &div(const vec4 &o) { x /= o.x; y /= o.y; z /= o.z; w /= o.w; return *this; }
     vec4 &div(const vec &o)  { x /= o.x; y /= o.y; z /= o.z; return *this; }
+    vec4 &recip()            { x = 1/x; y = 1/y; z = 1/z; w = 1/w; return *this; }
     vec4 &add(const vec4 &o) { x += o.x; y += o.y; z += o.z; w += o.w; return *this; }
     vec4 &add(const vec &o)  { x += o.x; y += o.y; z += o.z; return *this; }
     vec4 &add3(float f)      { x += f; y += f; z += f; return *this; }
@@ -327,6 +338,10 @@ struct vec4
     vec4 &neg3()             { x = -x; y = -y; z = -z; return *this; }
     vec4 &neg()              { neg3(); w = -w; return *this; }
     vec4 &clamp(float l, float h) { x = ::clamp(x, l, h); y = ::clamp(y, l, h); z = ::clamp(z, l, h); w = ::clamp(w, l, h); return *this; }
+
+    template<class A, class B>
+    vec4 &cross(const A &a, const B &b) { x = a.y*b.z-a.z*b.y; y = a.z*b.x-a.x*b.z; z = a.x*b.y-a.y*b.x; return *this; }
+    vec4 &cross(const vec &o, const vec &a, const vec &b) { return cross(vec(a).sub(o), vec(b).sub(o)); }
 
     void setxyz(const vec &v) { x = v.x; y = v.y; z = v.z; }
 
@@ -346,8 +361,9 @@ struct vec4
 inline vec2::vec2(const vec4 &v) : x(v.x), y(v.y) {}
 inline vec::vec(const vec4 &v) : x(v.x), y(v.y), z(v.z) {}
 
-struct matrix3x3;
-struct matrix3x4;
+struct matrix3;
+struct matrix4x3;
+struct matrix4;
 
 struct quat : vec4
 {
@@ -361,6 +377,12 @@ struct quat : vec4
         y = s*axis.y;
         z = s*axis.z;
     }
+    quat(const vec &u, const vec &v)
+    {
+        w = sqrtf(u.squaredlen() * v.squaredlen()) + u.dot(v);
+        cross(u, v);
+        normalize();
+    }
     explicit quat(const vec &v)
     {
         x = v.x;
@@ -368,14 +390,17 @@ struct quat : vec4
         z = v.z;
         restorew();
     }
-    explicit quat(const matrix3x3 &m) { convertmatrix(m); }
-    explicit quat(const matrix3x4 &m) { convertmatrix(m); }
+    explicit quat(const matrix3 &m) { convertmatrix(m); }
+    explicit quat(const matrix4x3 &m) { convertmatrix(m); }
+    explicit quat(const matrix4 &m) { convertmatrix(m); }
 
     void restorew() { w = 1.0f-x*x-y*y-z*z; w = w<0 ? 0 : -sqrtf(w); }
 
     quat &add(const vec4 &o) { vec4::add(o); return *this; }
     quat &sub(const vec4 &o) { vec4::sub(o); return *this; }
     quat &mul(float k) { vec4::mul(k); return *this; }
+    template<class B> quat &madd(const vec4 &a, const B &b) { return add(vec4(a).mul(b)); }
+    template<class B> quat &msub(const vec4 &a, const B &b) { return sub(vec4(a).mul(b)); }
 
     quat &mul(const quat &p, const quat &o)
     {
@@ -388,6 +413,8 @@ struct quat : vec4
     quat &mul(const quat &o) { return mul(quat(*this), o); }
 
     quat &invert() { neg3(); return *this; }
+
+    quat &normalize() { vec4::normalize(); return *this; }
 
     void calcangleaxis(float &angle, vec &axis)
     {
@@ -402,12 +429,12 @@ struct quat : vec4
 
     vec rotate(const vec &v) const
     {
-        return vec().cross(*this, vec().cross(*this, v).add(vec(v).mul(w))).mul(2).add(v);
+        return vec().cross(*this, vec().cross(*this, v).madd(v, w)).mul(2).add(v);
     }
 
     vec invertedrotate(const vec &v) const
     {
-        return vec().cross(*this, vec().cross(*this, v).sub(vec(v).mul(w))).mul(2).add(v);
+        return vec().cross(*this, vec().cross(*this, v).msub(v, w)).mul(2).add(v);
     }
 
     template<class M>
@@ -418,33 +445,33 @@ struct quat : vec4
         {
             float r = sqrtf(1 + trace), inv = 0.5f/r;
             w = 0.5f*r;
-            x = (m.c.y - m.b.z)*inv;
-            y = (m.a.z - m.c.x)*inv;
-            z = (m.b.x - m.a.y)*inv;
+            x = (m.b.z - m.c.y)*inv;
+            y = (m.c.x - m.a.z)*inv;
+            z = (m.a.y - m.b.x)*inv;
         }
         else if(m.a.x > m.b.y && m.a.x > m.c.z)
         {
             float r = sqrtf(1 + m.a.x - m.b.y - m.c.z), inv = 0.5f/r;
             x = 0.5f*r;
-            y = (m.b.x + m.a.y)*inv;
-            z = (m.a.z + m.c.x)*inv;
-            w = (m.c.y - m.b.z)*inv;
+            y = (m.a.y + m.b.x)*inv;
+            z = (m.c.x + m.a.z)*inv;
+            w = (m.b.z - m.c.y)*inv;
         }
         else if(m.b.y > m.c.z)
         {
             float r = sqrtf(1 + m.b.y - m.a.x - m.c.z), inv = 0.5f/r;
-            x = (m.b.x + m.a.y)*inv;
+            x = (m.a.y + m.b.x)*inv;
             y = 0.5f*r;
-            z = (m.c.y + m.b.z)*inv;
-            w = (m.a.z - m.c.x)*inv;
+            z = (m.b.z + m.c.y)*inv;
+            w = (m.c.x - m.a.z)*inv;
         }
         else
         {
             float r = sqrtf(1 + m.c.z - m.a.x - m.b.y), inv = 0.5f/r;
-            x = (m.a.z + m.c.x)*inv;
-            y = (m.c.y + m.b.z)*inv;
+            x = (m.c.x + m.a.z)*inv;
+            y = (m.b.z + m.c.y)*inv;
             z = 0.5f*r;
-            w = (m.b.x - m.a.y)*inv;
+            w = (m.a.y - m.b.x)*inv;
         }
     }
 };
@@ -463,7 +490,7 @@ struct dualquat
     {
     }
     explicit dualquat(const quat &q) : real(q), dual(0, 0, 0, 0) {}
-    explicit dualquat(const matrix3x4 &m);
+    explicit dualquat(const matrix4x3 &m);
 
     dualquat &mul(float k) { real.mul(k); dual.mul(k); return *this; }
     dualquat &add(const dualquat &d) { real.add(d.real); dual.add(d.dual); return *this; }
@@ -471,15 +498,15 @@ struct dualquat
     dualquat &lerp(const dualquat &to, float t)
     {
         float k = real.dot(to.real) < 0 ? -t : t;
-        real.mul(1-t).add(vec4(to.real).mul(k));
-        dual.mul(1-t).add(vec4(to.dual).mul(k));
+        real.mul(1-t).madd(to.real, k);
+        dual.mul(1-t).madd(to.dual, k);
         return *this;
     }
     dualquat &lerp(const dualquat &from, const dualquat &to, float t)
     {
         float k = from.real.dot(to.real) < 0 ? -t : t;
-        (real = from.real).mul(1-t).add(vec4(to.real).mul(k));
-        (dual = from.dual).mul(1-t).add(vec4(to.dual).mul(k));
+        (real = from.real).mul(1-t).madd(to.real, k);
+        (dual = from.dual).mul(1-t).madd(to.dual, k);
         return *this;
     }
 
@@ -487,7 +514,7 @@ struct dualquat
     {
         real.invert();
         dual.invert();
-        dual.sub(quat(real).mul(2*real.dot(dual)));
+        dual.msub(real, 2*real.dot(dual));
         return *this;
     }
 
@@ -508,10 +535,10 @@ struct dualquat
     {
         quat trans;
         trans.mul(base.dual, quat(base.real).invert());
-        dual.mul(quat(q).invert(), quat(real).mul(trans).add(dual));
+        dual.mul(quat(q).invert(), quat().mul(real, trans).add(dual));
 
         real.mul(q, quat(real));
-        dual.add(quat().mul(real, trans.invert())).sub(quat(real).mul(2*base.real.dot(base.dual)));
+        dual.add(quat().mul(real, trans.invert())).msub(real, 2*base.real.dot(base.dual));
     }
 
     void normalize()
@@ -546,13 +573,18 @@ struct dualquat
     void accumulate(const dualquat &d, float k)
     {
         if(real.dot(d.real) < 0) k = -k;
-        real.add(vec4(d.real).mul(k));
-        dual.add(vec4(d.dual).mul(k));
+        real.madd(d.real, k);
+        dual.madd(d.dual, k);
     }
 
     vec transform(const vec &v) const
     {
-        return vec().cross(real, vec().cross(real, v).add(vec(v).mul(real.w)).add(vec(dual))).add(vec(dual).mul(real.w)).sub(vec(real).mul(dual.w)).mul(2).add(v);
+        return vec().cross(real, vec().cross(real, v).madd(v, real.w).add(vec(dual))).madd(vec(dual), real.w).msub(vec(real), dual.w).mul(2).add(v);
+    }
+
+    quat transform(const quat &q) const
+    {
+        return quat().mul(real, q);
     }
 
     vec transposedtransform(const vec &v) const
@@ -572,61 +604,54 @@ struct dualquat
 
     vec gettranslation() const
     {
-        return vec().cross(real, dual).add(vec(dual).mul(real.w)).sub(vec(real).mul(dual.w)).mul(2);
+        return vec().cross(real, dual).madd(vec(dual), real.w).msub(vec(real), dual.w).mul(2);
     }
 };
 
-struct glmatrix;
-
-struct matrix3x3
+struct matrix3
 {
     vec a, b, c;
 
-    matrix3x3() {}
-    matrix3x3(const vec &a, const vec &b, const vec &c) : a(a), b(b), c(c) {}
-    explicit matrix3x3(float angle, const vec &axis) { rotate(angle, axis); }
-    explicit matrix3x3(const quat &q)
+    matrix3() {}
+    matrix3(const vec &a, const vec &b, const vec &c) : a(a), b(b), c(c) {}
+    explicit matrix3(float angle, const vec &axis) { rotate(angle, axis); }
+    explicit matrix3(const quat &q)
     {
         float x = q.x, y = q.y, z = q.z, w = q.w,
               tx = 2*x, ty = 2*y, tz = 2*z,
               txx = tx*x, tyy = ty*y, tzz = tz*z,
               txy = tx*y, txz = tx*z, tyz = ty*z,
               twx = w*tx, twy = w*ty, twz = w*tz;
-        a = vec(1 - (tyy + tzz), txy - twz, txz + twy);
-        b = vec(txy + twz, 1 - (txx + tzz), tyz - twx);
-        c = vec(txz - twy, tyz + twx, 1 - (txx + tyy));
+        a = vec(1 - (tyy + tzz), txy + twz, txz - twy);
+        b = vec(txy - twz, 1 - (txx + tzz), tyz + twx);
+        c = vec(txz + twy, tyz - twx, 1 - (txx + tyy));
     }
-    explicit matrix3x3(const matrix3x4 &m);
-    explicit matrix3x3(const glmatrix &m);
+    explicit matrix3(const matrix4x3 &m);
+    explicit matrix3(const matrix4 &m);
 
-    void mul(const matrix3x3 &m, const matrix3x3 &n)
+    void mul(const matrix3 &m, const matrix3 &n)
     {
-        a = vec(n.a).mul(m.a.x).add(vec(n.b).mul(m.a.y)).add(vec(n.c).mul(m.a.z));
-        b = vec(n.a).mul(m.b.x).add(vec(n.b).mul(m.b.y)).add(vec(n.c).mul(m.b.z));
-        c = vec(n.a).mul(m.c.x).add(vec(n.b).mul(m.c.y)).add(vec(n.c).mul(m.c.z));
+        a = vec(m.a).mul(n.a.x).madd(m.b, n.a.y).madd(m.c, n.a.z);
+        b = vec(m.a).mul(n.b.x).madd(m.b, n.b.y).madd(m.c, n.b.z);
+        c = vec(m.a).mul(n.c.x).madd(m.b, n.c.y).madd(m.c, n.c.z);
     }
-    void mul(const matrix3x3 &n) { mul(*this, n); }
+    void mul(const matrix3 &n) { mul(matrix3(*this), n); }
 
-    void multranspose(const matrix3x3 &m, const matrix3x3 &n)
+    void multranspose(const matrix3 &m, const matrix3 &n)
     {
-        a = vec(m.a.dot(n.a), m.a.dot(n.b), m.a.dot(n.c));
-        b = vec(m.b.dot(n.a), m.b.dot(n.b), m.b.dot(n.c));
-        c = vec(m.c.dot(n.a), m.c.dot(n.b), m.c.dot(n.c));
+        a = vec(m.a).mul(n.a.x).madd(m.b, n.b.x).madd(m.c, n.c.x);
+        b = vec(m.a).mul(n.a.y).madd(m.b, m.b.y).madd(m.c, n.c.y);
+        c = vec(m.a).mul(n.a.z).madd(m.b, n.b.z).madd(m.c, n.c.z);
     }
+    void multranspose(const matrix3 &n) { multranspose(matrix3(*this), n); }
 
-    void transposemul(const matrix3x3 &m, const matrix3x3 &n)
+    void transposemul(const matrix3 &m, const matrix3 &n)
     {
-        a = vec(n.a).mul(m.a.x).add(vec(n.b).mul(m.b.x)).add(vec(n.c).mul(m.c.x));
-        b = vec(n.a).mul(m.a.y).add(vec(n.b).mul(m.b.y)).add(vec(n.c).mul(m.c.y));
-        c = vec(n.a).mul(m.a.z).add(vec(n.b).mul(m.b.z)).add(vec(n.c).mul(m.c.z));
+        a = vec(m.a.dot(n.a), m.b.dot(n.a), m.c.dot(n.a));
+        b = vec(m.a.dot(n.b), m.b.dot(n.b), m.c.dot(n.b));
+        c = vec(m.a.dot(n.c), m.b.dot(n.c), m.c.dot(n.c));
     }
-
-    void transpose(float *dst) const
-    {
-        dst[0] = a.x; dst[1] = b.x; dst[2] = c.x;
-        dst[3] = a.y; dst[4] = b.y; dst[5] = c.y;
-        dst[6] = a.z; dst[7] = b.z; dst[8] = c.z;
-    }
+    void transposemul(const matrix3 &n) { transposemul(matrix3(*this), n); }
 
     void transpose()
     {
@@ -634,27 +659,29 @@ struct matrix3x3
         swap(b.z, c.y);
     }
 
-    void transpose(const matrix3x3 &m)
+    template<class M>
+    void transpose(const M &m)
     {
         a = vec(m.a.x, m.b.x, m.c.x);
         b = vec(m.a.y, m.b.y, m.c.y);
         c = vec(m.a.z, m.b.z, m.c.z);
     }
 
-    void invert(const matrix3x3 &o)
+    void invert(const matrix3 &o)
     {
+        vec unscale(1/o.a.squaredlen(), 1/o.b.squaredlen(), 1/o.c.squaredlen());
         transpose(o);
-        a.mul(1/a.squaredlen());
-        b.mul(1/b.squaredlen());
-        c.mul(1/c.squaredlen());
+        a.mul(unscale);
+        b.mul(unscale);
+        c.mul(unscale);
     }
-    void invert() { invert(matrix3x3(*this)); }
+    void invert() { invert(matrix3(*this)); }
 
     void normalize()
     {
-        a.mul(1/a.magnitude());
-        b.mul(1/b.magnitude());
-        c.mul(1/c.magnitude());
+        a.normalize();
+        b.normalize();
+        c.normalize();
     }
 
     void scale(float k)
@@ -671,15 +698,15 @@ struct matrix3x3
 
     void rotate(float ck, float sk, const vec &axis)
     {
-        a = vec(axis.x*axis.x*(1-ck)+ck, axis.x*axis.y*(1-ck)-axis.z*sk, axis.x*axis.z*(1-ck)+axis.y*sk);
-        b = vec(axis.y*axis.x*(1-ck)+axis.z*sk, axis.y*axis.y*(1-ck)+ck, axis.y*axis.z*(1-ck)-axis.x*sk);
-        c = vec(axis.x*axis.z*(1-ck)-axis.y*sk, axis.y*axis.z*(1-ck)+axis.x*sk, axis.z*axis.z*(1-ck)+ck);
+        a = vec(axis.x*axis.x*(1-ck)+ck, axis.x*axis.y*(1-ck)+axis.z*sk, axis.x*axis.z*(1-ck)-axis.y*sk);
+        b = vec(axis.x*axis.y*(1-ck)-axis.z*sk, axis.y*axis.y*(1-ck)+ck, axis.y*axis.z*(1-ck)+axis.x*sk);
+        c = vec(axis.x*axis.z*(1-ck)+axis.y*sk, axis.y*axis.z*(1-ck)-axis.x*sk, axis.z*axis.z*(1-ck)+ck);
     }
 
     void setyaw(float ck, float sk)
     {
-        a = vec(ck, -sk, 0);
-        b = vec(sk, ck, 0);
+        a = vec(ck, sk, 0);
+        b = vec(-sk, ck, 0);
         c = vec(0, 0, 1);
     }
 
@@ -695,7 +722,7 @@ struct matrix3x3
         if(angle <= 0) axis = vec(0, 0, 1);
         else if(angle < M_PI)
         {
-            axis = vec(c.y - b.z, a.z - c.x, b.x - a.y);
+            axis = vec(b.z - c.y, c.x - a.z, a.y - b.x);
             float r = axis.magnitude();
             if(r <= threshold) return false;
             axis.mul(1/r);
@@ -705,40 +732,40 @@ struct matrix3x3
             float r = sqrtf(max(1 + a.x - b.y - c.z, 0.0f));
             if(r <= threshold) return false;
             axis.x = 0.5f*r;
-            axis.y = a.y/r;
-            axis.z = a.z/r;
+            axis.y = b.x/r;
+            axis.z = c.x/r;
         }
         else if(b.y >= c.z)
         {
             float r = sqrtf(max(1 + b.y - a.x - c.z, 0.0f));
             if(r <= threshold) return false;
             axis.y = 0.5f*r;
-            axis.x = a.y/r;
-            axis.z = b.z/r;
+            axis.x = b.x/r;
+            axis.z = c.y/r;
         }
         else
         {
             float r = sqrtf(max(1 + b.y - a.x - c.z, 0.0f));
             if(r <= threshold) return false;
             axis.z = 0.5f*r;
-            axis.x = a.z/r;
-            axis.y = b.z/r;
+            axis.x = c.x/r;
+            axis.y = c.y/r;
         }
         return true;
     }
 
-    vec transform(const vec &o) const { return vec(a.dot(o), b.dot(o), c.dot(o)); }
-    vec transposedtransform(const vec &o) const
+    vec transform(const vec &o) const
     {
-        return vec(a).mul(o.x).add(vec(b).mul(o.y)).add(vec(c).mul(o.z));
+        return vec(a).mul(o.x).madd(b, o.y).madd(c, o.z);
     }
+    vec transposedtransform(const vec &o) const { return vec(a.dot(o), b.dot(o), c.dot(o)); }
     vec abstransform(const vec &o) const
     {
-        return vec(a.absdot(o), b.absdot(o), c.absdot(o));
+        return vec(a).mul(o.x).abs().add(vec(b).mul(o.y).abs()).add(vec(c).mul(o.z).abs());
     }
     vec abstransposedtransform(const vec &o) const
     {
-        return vec(a).mul(o.x).abs().add(vec(b).mul(o.y).abs()).add(vec(c).mul(o.z).abs());
+        return vec(a.absdot(o), b.absdot(o), c.absdot(o));
     }
 
     void identity()
@@ -750,277 +777,254 @@ struct matrix3x3
 
     void rotate_around_x(float ck, float sk)
     {
-        sk = -sk;
-        a.rotate_around_x(ck, sk);
-        b.rotate_around_x(ck, sk);
-        c.rotate_around_x(ck, sk);
+        vec rb = vec(b).mul(ck).madd(c, sk),
+            rc = vec(c).mul(ck).msub(b, sk);
+        b = rb;
+        c = rc;
     }
     void rotate_around_x(float angle) { rotate_around_x(cosf(angle), sinf(angle)); }
     void rotate_around_x(const vec2 &sc) { rotate_around_x(sc.x, sc.y); }
 
     void rotate_around_y(float ck, float sk)
     {
-        sk = -sk;
-        a.rotate_around_y(ck, sk);
-        b.rotate_around_y(ck, sk);
-        c.rotate_around_y(ck, sk);
+        vec rc = vec(c).mul(ck).madd(a, sk),
+            ra = vec(a).mul(ck).msub(c, sk);
+        c = rc;
+        a = ra;
     }
     void rotate_around_y(float angle) { rotate_around_y(cosf(angle), sinf(angle)); }
     void rotate_around_y(const vec2 &sc) { rotate_around_y(sc.x, sc.y); }
 
     void rotate_around_z(float ck, float sk)
     {
-        sk = -sk;
-        a.rotate_around_z(ck, sk);
-        b.rotate_around_z(ck, sk);
-        c.rotate_around_z(ck, sk);
+        vec ra = vec(a).mul(ck).madd(b, sk),
+            rb = vec(b).mul(ck).msub(a, sk);
+        a = ra;
+        b = rb;
     }
     void rotate_around_z(float angle) { rotate_around_z(cosf(angle), sinf(angle)); }
     void rotate_around_z(const vec2 &sc) { rotate_around_z(sc.x, sc.y); }
 
-    vec transform(const vec2 &o) const { return vec(a.dot2(o), b.dot2(o), c.dot2(o)); }
-    vec transposedtransform(const vec2 &o) { return vec(a).mul(o.x).add(vec(b).mul(o.y)); }
+    vec transform(const vec2 &o) { return vec(a).mul(o.x).madd(b, o.y); }
+    vec transposedtransform(const vec2 &o) const { return vec(a.dot2(o), b.dot2(o), c.dot2(o)); }
+
+    vec rowx() const { return vec(a.x, b.x, c.x); }
+    vec rowy() const { return vec(a.y, b.y, c.y); }
+    vec rowz() const { return vec(a.z, b.z, c.z); }
 };
 
-struct matrix3x4
+struct matrix4x3
 {
-    vec4 a, b, c;
+    vec a, b, c, d;
 
-    matrix3x4() {}
-    matrix3x4(const vec4 &x, const vec4 &y, const vec4 &z) : a(x), b(y), c(z) {}
-    matrix3x4(const matrix3x3 &rot, const vec &trans)
-     : a(rot.a, trans.x), b(rot.b, trans.y), c(rot.c, trans.z)
-    {}
-    matrix3x4(const dualquat &d)
+    matrix4x3() {}
+    matrix4x3(const vec &a, const vec &b, const vec &c, const vec &d) : a(a), b(b), c(c), d(d) {}
+    matrix4x3(const matrix3 &rot, const vec &trans) : a(rot.a), b(rot.b), c(rot.c), d(trans) {}
+    matrix4x3(const dualquat &dq)
     {
-        vec4 r = vec4(d.real).mul(1/d.real.squaredlen()), rr = vec4(r).mul(d.real);
+        vec4 r = vec4(dq.real).mul(1/dq.real.squaredlen()), rr = vec4(r).mul(dq.real);
         r.mul(2);
-        float xy = r.x*d.real.y, xz = r.x*d.real.z, yz = r.y*d.real.z,
-              wx = r.w*d.real.x, wy = r.w*d.real.y, wz = r.w*d.real.z;
-        a = vec4(rr.w + rr.x - rr.y - rr.z, xy - wz, xz + wy,
-            -(d.dual.w*r.x - d.dual.x*r.w + d.dual.y*r.z - d.dual.z*r.y));
-        b = vec4(xy + wz, rr.w + rr.y - rr.x - rr.z, yz - wx,
-            -(d.dual.w*r.y - d.dual.x*r.z - d.dual.y*r.w + d.dual.z*r.x));
-        c = vec4(xz - wy, yz + wx, rr.w + rr.z - rr.x - rr.y,
-            -(d.dual.w*r.z + d.dual.x*r.y - d.dual.y*r.x - d.dual.z*r.w));
+        float xy = r.x*dq.real.y, xz = r.x*dq.real.z, yz = r.y*dq.real.z,
+              wx = r.w*dq.real.x, wy = r.w*dq.real.y, wz = r.w*dq.real.z;
+        a = vec(rr.w + rr.x - rr.y - rr.z, xy + wz, xz - wy);
+        b = vec(xy - wz, rr.w + rr.y - rr.x - rr.z, yz + wx);
+        c = vec(xz + wy, yz - wx, rr.w + rr.z - rr.x - rr.y);
+        d = vec(-(dq.dual.w*r.x - dq.dual.x*r.w + dq.dual.y*r.z - dq.dual.z*r.y),
+                -(dq.dual.w*r.y - dq.dual.x*r.z - dq.dual.y*r.w + dq.dual.z*r.x),
+                -(dq.dual.w*r.z + dq.dual.x*r.y - dq.dual.y*r.x - dq.dual.z*r.w));
+
     }
-    explicit matrix3x4(const glmatrix &m);
+    explicit matrix4x3(const matrix4 &m);
 
     void mul(float k)
     {
         a.mul(k);
         b.mul(k);
         c.mul(k);
+        d.mul(k);
     }
 
     void scale(float k)
     {
-        a.mul3(k);
-        b.mul3(k);
-        c.mul3(k);
+        a.mul(k);
+        b.mul(k);
+        c.mul(k);
     }
 
-    void settranslation(float x, float y, float z) { a.w = x; b.w = y; c.w = z; }
-    void settranslation(const vec &p) { settranslation(p.x, p.y, p.z); }
+    void settranslation(const vec &p) { d = p; }
+    void settranslation(float x, float y, float z) { d = vec(x, y, z); }
 
-    void translate(const vec &p, float scale = 1)
-    {
-        a.w += a.dot3(p)*scale;
-        b.w += b.dot3(p)*scale;
-        c.w += c.dot3(p)*scale;
-    }
+    void translate(const vec &p) { d.madd(a, p.x).madd(b, p.y).madd(c, p.z); }
+    void translate(float x, float y, float z) { translate(vec(x, y, z)); }
+    void translate(const vec &p, float scale) { translate(vec(p).mul(scale)); }
 
-    void translate(float x, float y, float z, float scale = 1)
+    void accumulate(const matrix4x3 &m, float k)
     {
-        translate(vec(x, y, z), scale);
-    }
-
-    void accumulate(const matrix3x4 &m, float k)
-    {
-        a.add(vec4(m.a).mul(k));
-        b.add(vec4(m.b).mul(k));
-        c.add(vec4(m.c).mul(k));
+        a.madd(m.a, k);
+        b.madd(m.b, k);
+        c.madd(m.c, k);
+        d.madd(m.d, k);
     }
 
     void normalize()
     {
-        a.mul3(1/a.magnitude3());
-        b.mul3(1/b.magnitude3());
-        c.mul3(1/c.magnitude3());
+        a.normalize();
+        b.normalize();
+        c.normalize();
     }
 
-    void lerp(const matrix3x4 &to, float t)
+    void lerp(const matrix4x3 &to, float t)
     {
         a.lerp(to.a, t);
         b.lerp(to.b, t);
         c.lerp(to.c, t);
+        d.lerp(to.d, t);
     }
-    void lerp(const matrix3x4 &from, const matrix3x4 &to, float t)
+    void lerp(const matrix4x3 &from, const matrix4x3 &to, float t)
     {
         a.lerp(from.a, to.a, t);
         b.lerp(from.b, to.b, t);
         c.lerp(from.c, to.c, t);
+        d.lerp(from.d, to.d, t);
     }
 
     void identity()
     {
-        a = vec4(1, 0, 0, 0);
-        b = vec4(0, 1, 0, 0);
-        c = vec4(0, 0, 1, 0);
+        a = vec(1, 0, 0);
+        b = vec(0, 1, 0);
+        c = vec(0, 0, 1);
+        d = vec(0, 0, 0);
     }
 
-    template<class M>
-    void mul(const matrix3x4 &m, const M &n)
+    void mul(const matrix4x3 &m, const matrix4x3 &n)
     {
-        a = vec4(n.a).mul(m.a.x).add(vec4(n.b).mul(m.a.y)).add(vec4(n.c).mul(m.a.z)).addw(m.a.w);
-        b = vec4(n.a).mul(m.b.x).add(vec4(n.b).mul(m.b.y)).add(vec4(n.c).mul(m.b.z)).addw(m.b.w);
-        c = vec4(n.a).mul(m.c.x).add(vec4(n.b).mul(m.c.y)).add(vec4(n.c).mul(m.c.z)).addw(m.c.w);
+        a = vec(m.a).mul(n.a.x).madd(m.b, n.a.y).madd(m.c, n.a.z);
+        b = vec(m.a).mul(n.b.x).madd(m.b, n.b.y).madd(m.c, n.b.z);
+        c = vec(m.a).mul(n.c.x).madd(m.b, n.c.y).madd(m.c, n.c.z);
+        d = vec(m.d).madd(m.a, n.d.x).madd(m.b, n.d.y).madd(m.c, n.d.z);
     }
-    template<class M>
-    void mul(const M &n) { mul(*this, n); }
+    void mul(const matrix4x3 &n) { mul(matrix4x3(*this), n); }
 
-    template<class M>
-    void mul(const matrix3x3 &m, const M &n)
+    void mul(const matrix3 &m, const matrix4x3 &n)
     {
-        a = vec4(n.a).mul(m.a.x).add(vec4(n.b).mul(m.a.y)).add(vec4(n.c).mul(m.a.z));
-        b = vec4(n.a).mul(m.b.x).add(vec4(n.b).mul(m.b.y)).add(vec4(n.c).mul(m.b.z));
-        c = vec4(n.a).mul(m.c.x).add(vec4(n.b).mul(m.c.y)).add(vec4(n.c).mul(m.c.z));
-    }
-
-    template<class M>
-    void mul(const matrix3x3 &rot, const vec &trans, const M &o)
-    {
-        mul(rot, o);
-        a.addw(trans.x);
-        b.addw(trans.y);
-        c.addw(trans.z);
+        a = vec(m.a).mul(n.a.x).madd(m.b, n.a.y).madd(m.c, n.a.z);
+        b = vec(m.a).mul(n.b.x).madd(m.b, n.b.y).madd(m.c, n.b.z);
+        c = vec(m.a).mul(n.c.x).madd(m.b, n.c.y).madd(m.c, n.c.z);
+        d = vec(m.a).mul(n.d.x).madd(m.b, n.d.y).madd(m.c, n.d.z);
     }
 
-    void mulorient(const matrix3x3 &m)
+    void mul(const matrix3 &rot, const vec &trans, const matrix4x3 &n)
     {
-        vec ra = vec(a).mul(m.a.x).add(vec(b).mul(m.a.y)).add(vec(c).mul(m.a.z)),
-            rb = vec(a).mul(m.b.x).add(vec(b).mul(m.b.y)).add(vec(c).mul(m.b.z)),
-            rc = vec(a).mul(m.c.x).add(vec(b).mul(m.c.y)).add(vec(c).mul(m.c.z));
-        a.setxyz(ra);
-        b.setxyz(rb);
-        c.setxyz(rc);
+        mul(rot, n);
+        d.add(trans);
     }
 
-    void mulorient(const matrix3x3 &m, const dualquat &base)
+    void transpose()
     {
-        vec trans = transformnormal(base.gettranslation());
-        translate(trans.sub(m.transform(trans)));
-        mulorient(m);
+        d = vec(a.dot(d), b.dot(d), c.dot(d)).neg();
+        swap(a.y, b.x); swap(a.z, c.x);
+        swap(b.z, c.y);
     }
 
-    void transpose(const matrix3x4 &o)
+    void transpose(const matrix4x3 &o)
     {
-        a = vec4(o.a.x, o.b.x, o.c.x, -(o.a.x*o.a.w + o.b.x*o.b.w + o.c.x*o.c.w));
-        b = vec4(o.a.y, o.b.y, o.c.y, -(o.a.y*o.a.w + o.b.y*o.b.w + o.c.y*o.c.w));
-        c = vec4(o.a.z, o.b.z, o.c.z, -(o.a.z*o.a.w + o.b.z*o.b.w + o.c.z*o.c.w));
+        a = vec(o.a.x, o.b.x, o.c.x);
+        b = vec(o.a.y, o.b.y, o.c.y);
+        c = vec(o.a.z, o.b.z, o.c.z);
+        d = vec(o.a.dot(o.d), o.b.dot(o.d), o.c.dot(o.d)).neg();
     }
 
-    void transposemul(const matrix3x3 &rot, const vec &trans, const matrix3x4 &o)
+    void transposemul(const matrix4x3 &m, const matrix4x3 &n)
     {
-        a = vec4(o.a).mul(rot.a.x).add(vec4(o.b).mul(rot.b.x)).add(vec4(o.c).mul(rot.c.x)).addw(trans.x);
-        b = vec4(o.a).mul(rot.a.y).add(vec4(o.b).mul(rot.b.y)).add(vec4(o.c).mul(rot.c.y)).addw(trans.y);
-        c = vec4(o.a).mul(rot.a.z).add(vec4(o.b).mul(rot.b.z)).add(vec4(o.c).mul(rot.c.z)).addw(trans.z);
+        vec t(m.a.dot(m.d), m.b.dot(m.d), m.c.dot(m.d));
+        a = vec(m.a.dot(n.a), m.b.dot(n.a), m.c.dot(n.a));
+        b = vec(m.a.dot(n.b), m.b.dot(n.b), m.c.dot(n.b));
+        c = vec(m.a.dot(n.c), m.b.dot(n.c), m.c.dot(n.c));
+        d = vec(m.a.dot(n.d), m.b.dot(n.d), m.c.dot(n.d)).sub(t);
     }
 
-    void transposemul(const matrix3x4 &m, const matrix3x4 &n)
+    void multranspose(const matrix4x3 &m, const matrix4x3 &n)
     {
-        float tx = m.a.x*m.a.w + m.b.x*m.b.w + m.c.x*m.c.w,
-              ty = m.a.y*m.a.w + m.b.y*m.b.w + m.c.y*m.c.w,
-              tz = m.a.z*m.a.w + m.b.z*m.b.w + m.c.z*m.c.w;
-        a = vec4(n.a).mul(m.a.x).add(vec4(n.b).mul(m.b.x)).add(vec4(n.c).mul(m.c.x)).subw(tx);
-        b = vec4(n.a).mul(m.a.y).add(vec4(n.b).mul(m.b.y)).add(vec4(n.c).mul(m.c.y)).subw(ty);
-        c = vec4(n.a).mul(m.a.z).add(vec4(n.b).mul(m.b.z)).add(vec4(n.c).mul(m.c.z)).subw(tz);
+        vec t(n.a.dot(n.d), n.b.dot(n.d), n.c.dot(n.d));
+        a = vec(m.a).mul(n.a.x).madd(m.b, n.b.x).madd(m.c, n.c.x);
+        b = vec(m.a).mul(n.a.y).madd(m.b, m.b.y).madd(m.c, n.c.y);
+        c = vec(m.a).mul(n.a.z).madd(m.b, n.b.z).madd(m.c, n.c.z);
+        d = vec(m.d).msub(m.a, t.x).msub(m.b, t.y).msub(m.c, t.z);
     }
 
-    void invert(const matrix3x4 &o)
+    void invert(const matrix4x3 &o)
     {
+        vec unscale(1/o.a.squaredlen(), 1/o.b.squaredlen(), 1/o.c.squaredlen());
         transpose(o);
-        a.mul(1/a.dot3(a));
-        b.mul(1/b.dot3(b));
-        c.mul(1/c.dot3(c));
+        a.mul(unscale);
+        b.mul(unscale);
+        c.mul(unscale);
+        d.mul(unscale);
     }
-    void invert() { invert(matrix3x4(*this)); }
+    void invert() { invert(matrix4x3(*this)); }
 
     void rotate(float angle, const vec &d)
     {
         rotate(cosf(angle), sinf(angle), d);
     }
 
-    void rotate(float ck, float sk, const vec &d)
+    void rotate(float ck, float sk, const vec &axis)
     {
-        a = vec4(d.x*d.x*(1-ck)+ck, d.x*d.y*(1-ck)-d.z*sk, d.x*d.z*(1-ck)+d.y*sk, 0);
-        b = vec4(d.y*d.x*(1-ck)+d.z*sk, d.y*d.y*(1-ck)+ck, d.y*d.z*(1-ck)-d.x*sk, 0);
-        c = vec4(d.x*d.z*(1-ck)-d.y*sk, d.y*d.z*(1-ck)+d.x*sk, d.z*d.z*(1-ck)+ck, 0);
+        matrix3 m;
+        m.rotate(ck, sk, axis);
+        *this = matrix4x3(m, vec(0, 0, 0));
     }
 
     void rotate_around_x(float ck, float sk)
     {
-        sk = -sk;
-        a.rotate_around_x(ck, sk);
-        b.rotate_around_x(ck, sk);
-        c.rotate_around_x(ck, sk);
+        vec rb = vec(b).mul(ck).madd(c, sk),
+            rc = vec(c).mul(ck).msub(b, sk);
+        b = rb;
+        c = rc;
     }
     void rotate_around_x(float angle) { rotate_around_x(cosf(angle), sinf(angle)); }
     void rotate_around_x(const vec2 &sc) { rotate_around_x(sc.x, sc.y); }
 
     void rotate_around_y(float ck, float sk)
     {
-        sk = -sk;
-        a.rotate_around_y(ck, sk);
-        b.rotate_around_y(ck, sk);
-        c.rotate_around_y(ck, sk);
+        vec rc = vec(c).mul(ck).madd(a, sk),
+            ra = vec(a).mul(ck).msub(c, sk);
+        c = rc;
+        a = ra;
     }
     void rotate_around_y(float angle) { rotate_around_y(cosf(angle), sinf(angle)); }
     void rotate_around_y(const vec2 &sc) { rotate_around_y(sc.x, sc.y); }
 
     void rotate_around_z(float ck, float sk)
     {
-        sk = -sk;
-        a.rotate_around_z(ck, sk);
-        b.rotate_around_z(ck, sk);
-        c.rotate_around_z(ck, sk);
+        vec ra = vec(a).mul(ck).madd(b, sk),
+            rb = vec(b).mul(ck).msub(a, sk);
+        a = ra;
+        b = rb;
     }
     void rotate_around_z(float angle) { rotate_around_z(cosf(angle), sinf(angle)); }
     void rotate_around_z(const vec2 &sc) { rotate_around_z(sc.x, sc.y); }
 
-    vec transform(const vec &o) const { return vec(a.dot(o), b.dot(o), c.dot(o)); }
-    vec transposedtransform(const vec &o) const
-    {
-        vec p = o;
-        p.x -= a.w;
-        p.y -= b.w;
-        p.z -= c.w;
-        return vec(a.x*p.x + b.x*p.y + c.x*p.z,
-                   a.y*p.x + b.y*p.y + c.y*p.z,
-                   a.z*p.x + b.z*p.y + c.z*p.z);
-    }
-    vec transformnormal(const vec &o) const { return vec(a.dot3(o), b.dot3(o), c.dot3(o)); }
-    vec transposedtransformnormal(const vec &o) const
-    {
-        return vec(a.x*o.x + b.x*o.y + c.x*o.z,
-                   a.y*o.x + b.y*o.y + c.y*o.z,
-                   a.z*o.x + b.z*o.y + c.z*o.z);
-    }
-    vec transform(const vec2 &o) const { return vec(a.x*o.x + a.y*o.y + a.w, b.x*o.x + b.y*o.y + b.w, c.x*o.x + c.y*o.y + c.w); }
+    vec transform(const vec &o) const { return vec(d).madd(a, o.x).madd(b, o.y).madd(c, o.z); }
+    vec transposedtransform(const vec &o) const { vec p = vec(o).sub(d); return vec(a.dot(p), b.dot(p), c.dot(p)); }
+    vec transformnormal(const vec &o) const { return vec(a).mul(o.x).madd(b, o.y).madd(c, o.z); }
+    vec transposedtransformnormal(const vec &o) const { return vec(a.dot(o), b.dot(o), c.dot(o)); }
+    vec transform(const vec2 &o) const { return vec(d).madd(a, o.x).madd(b, o.y); }
 
-    float getscale() const { return a.magnitude3(); }
-    vec gettranslation() const { return vec(a.w, b.w, c.w); }
+    vec4 rowx() const { return vec4(a.x, b.x, c.x, d.x); }
+    vec4 rowy() const { return vec4(a.y, b.y, c.y, d.y); }
+    vec4 rowz() const { return vec4(a.z, b.z, c.z, d.z); }
 };
 
-inline dualquat::dualquat(const matrix3x4 &m) : real(m)
+inline dualquat::dualquat(const matrix4x3 &m) : real(m)
 {
-    dual.x =  0.5f*( m.a.w*real.w + m.b.w*real.z - m.c.w*real.y);
-    dual.y =  0.5f*(-m.a.w*real.z + m.b.w*real.w + m.c.w*real.x);
-    dual.z =  0.5f*( m.a.w*real.y - m.b.w*real.x + m.c.w*real.w);
-    dual.w = -0.5f*( m.a.w*real.x + m.b.w*real.y + m.c.w*real.z);
+    dual.x =  0.5f*( m.d.x*real.w + m.d.y*real.z - m.d.z*real.y);
+    dual.y =  0.5f*(-m.d.x*real.z + m.d.y*real.w + m.d.z*real.x);
+    dual.z =  0.5f*( m.d.x*real.y - m.d.y*real.x + m.d.z*real.w);
+    dual.w = -0.5f*( m.d.x*real.x + m.d.y*real.y + m.d.z*real.z);
 }
 
-inline matrix3x3::matrix3x3(const matrix3x4 &m) : a(m.a), b(m.b), c(m.c) {}
+inline matrix3::matrix3(const matrix4x3 &m) : a(m.a), b(m.b), c(m.c) {}
 
 struct plane : vec
 {
@@ -1340,6 +1344,12 @@ struct bvec
 
     static bvec fromcolor(const vec &v) { return bvec(uchar(v.x*255.0f), uchar(v.y*255.0f), uchar(v.z*255.0f)); }
     vec tocolor() const { return vec(x*(1.0f/255.0f), y*(1.0f/255.0f), z*(1.0f/255.0f)); }
+
+    static bvec hexcolor(int color)
+    {
+        return bvec((color>>16)&0xFF, (color>>8)&0xFF, color&0xFF);
+    }
+    int tohexcolor() const { return (int(r)<<16)|(int(g)<<8)|int(b); }
 };
 
 struct usvec
@@ -1376,21 +1386,39 @@ struct svec
 inline vec::vec(const svec &v) : x(v.x), y(v.y), z(v.z) {}
 inline ivec::ivec(const svec &v) : x(v.x), y(v.y), z(v.z) {}
 
-struct glmatrix
+struct matrix4
 {
     vec4 a, b, c, d;
 
-    glmatrix() {}
-    glmatrix(const float *m) : a(m), b(m+4), c(m+8), d(m+12) {}
-    glmatrix(const vec &a, const vec &b, const vec &c = vec(0, 0, 1))
+    matrix4() {}
+    matrix4(const float *m) : a(m), b(m+4), c(m+8), d(m+12) {}
+    matrix4(const vec &a, const vec &b, const vec &c = vec(0, 0, 1))
         : a(a.x, b.x, c.x, 0), b(a.y, b.y, c.y, 0), c(a.z, b.z, c.z, 0), d(0, 0, 0, 1)
     {}
-    glmatrix(const vec4 &a, const vec4 &b, const vec4 &c, const vec4 &d = vec4(0, 0, 0, 1))
-        : a(a.x, b.x, c.x, d.x), b(a.y, b.y, c.y, d.y), c(a.z, b.z, c.z, d.z), d(a.w, b.w, c.w, d.w)
+    matrix4(const vec4 &a, const vec4 &b, const vec4 &c, const vec4 &d = vec4(0, 0, 0, 1))
+        : a(a), b(b), c(c), d(d)
     {}
-    glmatrix(const matrix3x4 &m)
-        : a(m.a.x, m.b.x, m.c.x, 0), b(m.a.y, m.b.y, m.c.y, 0), c(m.a.z, m.b.z, m.c.z, 0), d(m.a.w, m.b.w, m.c.w, 1)
+    matrix4(const matrix4x3 &m)
+        : a(m.a, 0), b(m.b, 0), c(m.c, 0), d(m.d, 1)
     {}
+
+    void mul(const matrix4 &x, const matrix3 &y)
+    {
+        a = vec4(x.a).mul(y.a.x).madd(x.b, y.a.y).madd(x.c, y.a.z);
+        b = vec4(x.a).mul(y.b.x).madd(x.b, y.b.y).madd(x.c, y.b.z);
+        c = vec4(x.a).mul(y.c.x).madd(x.b, y.c.y).madd(x.c, y.c.z);
+        d = x.d;
+    }
+    void mul(const matrix3 &y) { mul(matrix4(*this), y); }
+
+    void mul(const matrix4 &x, const matrix4 &y)
+    {
+        a = vec4(x.a).mul(y.a.x).madd(x.b, y.a.y).madd(x.c, y.a.z).madd(x.d, y.a.w);
+        b = vec4(x.a).mul(y.b.x).madd(x.b, y.b.y).madd(x.c, y.b.z).madd(x.d, y.b.w);
+        c = vec4(x.a).mul(y.c.x).madd(x.b, y.c.y).madd(x.c, y.c.z).madd(x.d, y.c.w);
+        d = vec4(x.a).mul(y.d.x).madd(x.b, y.d.y).madd(x.c, y.d.z).madd(x.d, y.d.w);
+    }
+    void mul(const matrix4 &y) { mul(matrix4(*this), y); }
 
     void rotate_around_x(float ck, float sk)
     {
@@ -1422,30 +1450,14 @@ struct glmatrix
     void rotate_around_z(float angle) { rotate_around_z(cosf(angle), sinf(angle)); }
     void rotate_around_z(const vec2 &sc) { rotate_around_z(sc.x, sc.y); }
 
-    void rotate(float ck, float sk, const vec &dir)
+    void rotate(float ck, float sk, const vec &axis)
     {
-        vec c1(dir.x*dir.x*(1-ck)+ck, dir.y*dir.x*(1-ck)+dir.z*sk, dir.x*dir.z*(1-ck)-dir.y*sk),
-            c2(dir.x*dir.y*(1-ck)-dir.z*sk, dir.y*dir.y*(1-ck)+ck, dir.y*dir.z*(1-ck)+dir.x*sk),
-            c3(dir.x*dir.z*(1-ck)+dir.y*sk, dir.y*dir.z*(1-ck)-dir.x*sk, dir.z*dir.z*(1-ck)+ck);
-        vec4 ra = vec4(a).mul(c1.x).add(vec4(b).mul(c1.y)).add(vec4(c).mul(c1.z)),
-             rb = vec4(a).mul(c2.x).add(vec4(b).mul(c2.y)).add(vec4(c).mul(c2.z)),
-             rc = vec4(a).mul(c3.x).add(vec4(b).mul(c3.y)).add(vec4(c).mul(c3.z));
-        a = ra;
-        b = rb;
-        c = rc;
+        matrix3 m;
+        m.rotate(ck, sk, axis);
+        mul(m);
     }
-
     void rotate(float angle, const vec &dir) { rotate(cosf(angle), sinf(angle), dir); }
     void rotate(const vec2 &sc, const vec &dir) { rotate(sc.x, sc.y, dir); }
-
-    void mul(const glmatrix &x, const glmatrix &y)
-    {
-        a = vec4(x.a).mul(y.a.x).add(vec4(x.b).mul(y.a.y)).add(vec4(x.c).mul(y.a.z)).add(vec4(x.d).mul(y.a.w));
-        b = vec4(x.a).mul(y.b.x).add(vec4(x.b).mul(y.b.y)).add(vec4(x.c).mul(y.b.z)).add(vec4(x.d).mul(y.b.w));
-        c = vec4(x.a).mul(y.c.x).add(vec4(x.b).mul(y.c.y)).add(vec4(x.c).mul(y.c.z)).add(vec4(x.d).mul(y.c.w));
-        d = vec4(x.a).mul(y.d.x).add(vec4(x.b).mul(y.d.y)).add(vec4(x.c).mul(y.d.z)).add(vec4(x.d).mul(y.d.w));
-    }
-    void mul(const glmatrix &y) { mul(glmatrix(*this), y); }
 
     void identity()
     {
@@ -1458,14 +1470,9 @@ struct glmatrix
     void settranslation(const vec &v) { d.setxyz(v); }
     void settranslation(float x, float y, float z) { d.x = x; d.y = y; d.z = z; }
 
-    void translate(float x, float y, float z, float scale = 1)
-    {
-        d.add(vec4(a).mul(x).add(vec4(b).mul(y)).add(vec4(c).mul(z)).mul3(scale));
-    }
-    void translate(const vec &p, float scale = 1)
-    {
-        translate(p.x, p.y, p.z, scale);
-    }
+    void translate(const vec &p) { d.madd(a, p.x).madd(b, p.y).madd(c, p.z); }
+    void translate(float x, float y, float z) { translate(vec(x, y, z)); }
+    void translate(const vec &p, float scale) { translate(vec(p).mul(scale)); }
 
     void setscale(float x, float y, float z) { a.x = x; b.y = y; c.z = z; }
     void setscale(const vec &v) { setscale(v.x, v.y, v.z); }
@@ -1521,7 +1528,7 @@ struct glmatrix
         swap(c.w, d.z);
     }
 
-    void transpose(const glmatrix &m)
+    void transpose(const matrix4 &m)
     {
         a = vec4(m.a.x, m.b.x, m.c.x, m.d.x);
         b = vec4(m.a.y, m.b.y, m.c.y, m.d.y);
@@ -1553,7 +1560,7 @@ struct glmatrix
         d = vec4(-(right+left)/width, -(top+bottom)/height, (zfar+znear)/zrange, 1);
     }
 
-    void clip(const plane &p, const glmatrix &m)
+    void clip(const plane &p, const matrix4 &m)
     {
         float x = ((p.x<0 ? -1 : (p.x>0 ? 1 : 0)) + m.c.x) / m.a.x,
               y = ((p.y<0 ? -1 : (p.y>0 ? 1 : 0)) + m.c.y) / m.b.y,
@@ -1649,9 +1656,12 @@ struct glmatrix
         return vec(d);
     }
 
-    vec4 getrow(int i) const { return vec4(a.v[i], b.v[i], c.v[i], d.v[i]); }
+    vec4 rowx() const { return vec4(a.x, b.x, c.x, d.x); }
+    vec4 rowy() const { return vec4(a.y, b.y, c.y, d.y); }
+    vec4 rowz() const { return vec4(a.z, b.z, c.z, d.z); }
+    vec4 roww() const { return vec4(a.w, b.w, c.w, d.w); }
 
-    bool invert(const glmatrix &m, double mindet = 1.0e-10);
+    bool invert(const matrix4 &m, double mindet = 1.0e-10);
 
     vec2 lineardepthscale() const
     {
@@ -1659,33 +1669,111 @@ struct glmatrix
     }
 };
 
-inline matrix3x3::matrix3x3(const glmatrix &m)
-    : a(m.a.x, m.b.x, m.c.x), b(m.a.y, m.b.y, m.c.y), c(m.a.z, m.b.z, m.c.z)
+inline matrix3::matrix3(const matrix4 &m)
+    : a(m.a), b(m.b), c(m.c)
 {}
 
-inline matrix3x4::matrix3x4(const glmatrix &m)
-    : a(m.a.x, m.b.x, m.c.x, m.d.x), b(m.a.y, m.b.y, m.c.y, m.d.y), c(m.a.z, m.b.z, m.c.z, m.d.z)
+inline matrix4x3::matrix4x3(const matrix4 &m)
+    : a(m.a), b(m.b), c(m.c), d(m.d)
 {}
 
-struct glmatrix3x3
-{
-    vec a, b, c;
-
-    glmatrix3x3() {}
-    glmatrix3x3(const vec &a, const vec &b, const vec &c) : a(a), b(b), c(c) {}
-    explicit glmatrix3x3(const glmatrix &m) : a(m.a), b(m.b), c(m.c) {}
-    explicit glmatrix3x3(const matrix3x3 &m) : a(m.a.x, m.b.x, m.c.x), b(m.a.y, m.b.y, m.c.y), c(m.a.z, m.b.z, m.c.z) {}
-    explicit glmatrix3x3(const matrix3x4 &m) : a(m.a.x, m.b.x, m.c.x), b(m.a.y, m.b.y, m.c.y), c(m.a.z, m.b.z, m.c.z) {}
-};
-
-struct glmatrix2x2
+struct matrix2
 {
     vec2 a, b;
 
-    glmatrix2x2() {}
-    glmatrix2x2(const vec2 &a, const vec2 &b) : a(a), b(b) {}
-    explicit glmatrix2x2(const glmatrix &m) : a(m.a), b(m.b) {}
-    explicit glmatrix2x2(const glmatrix3x3 &m) : a(m.a), b(m.b) {}
+    matrix2() {}
+    matrix2(const vec2 &a, const vec2 &b) : a(a), b(b) {}
+    explicit matrix2(const matrix4 &m) : a(m.a), b(m.b) {}
+    explicit matrix2(const matrix3 &m) : a(m.a), b(m.b) {}
+};
+
+struct half
+{
+    ushort val;
+
+    half() {}
+    half(float f)
+    {
+        union { int i; float f; } conv;
+        conv.f = f;
+        ushort signbit = (conv.i>>(31-15)) & (1<<15), mantissa = (conv.i>>(23-10)) & 0x3FF;
+        int exponent = ((conv.i>>23)&0xFF) - 127 + 15;
+        if(exponent <= 0)
+        {
+            mantissa |= 0x400;
+            mantissa >>= min(1-exponent, 10+1);
+            exponent = 0;
+        }
+        else if(exponent >= 0x1F)
+        {
+            mantissa = 0;
+            exponent = 0x1F;
+        }
+        val = signbit | (ushort(exponent)<<10) | mantissa;
+    }
+
+    bool operator==(const half &h) const { return val == h.val; }
+    bool operator!=(const half &h) const { return val != h.val; }
+};
+
+struct hvec2
+{
+    half x, y;
+
+    hvec2() {}
+    template<class T> hvec2(T x, T y) : x(x), y(y) {}
+    hvec2(const vec2 &v) : x(v.x), y(v.y) {}
+
+    bool operator==(const hvec2 &h) const { return x == h.x && y == h.y; }
+    bool operator!=(const hvec2 &h) const { return x != h.x || y != h.y; }
+};
+
+struct hvec
+{
+    half x, y, z;
+
+    hvec() {}
+    template<class T> hvec(T x, T y, T z) : x(x), y(y), z(z) {}
+    hvec(const vec &v) : x(v.x), y(v.y), z(v.z) {}
+
+    bool operator==(const hvec &h) const { return x == h.x && y == h.y && z == h.z; }
+    bool operator!=(const hvec &h) const { return x != h.x || y != h.y || z != h.z; }
+};
+
+struct hvec4
+{
+    half x, y, z, w;
+
+    hvec4() {}
+    template<class T> hvec4(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {}
+    template<class T> hvec4(const vec &v, T w = 0) : x(v.x), y(v.y), z(v.z), w(w) {}
+    hvec4(const vec4 &v) : x(v.x), y(v.y), z(v.z), w(v.w) {}
+
+    bool operator==(const hvec4 &h) const { return x == h.x && y == h.y && z == h.z && w == h.w; }
+    bool operator!=(const hvec4 &h) const { return x != h.x || y != h.y || z != h.z || w != h.w; }
+};
+
+struct squat
+{
+    short x, y, z, w;
+
+    squat() {}
+    squat(const vec4 &q) { convert(q); }
+
+    void convert(const vec4 &q)
+    {
+        x = short(q.x*32767.5f-0.5f);
+        y = short(q.y*32767.5f-0.5f);
+        z = short(q.z*32767.5f-0.5f);
+        w = short(q.w*32767.5f-0.5f);
+    }
+
+    void lerp(const vec4 &a, const vec4 &b, float t)
+    {
+        vec4 q;
+        q.lerp(a, b, t);
+        convert(q);
+    }
 };
 
 extern bool raysphereintersect(const vec &center, float radius, const vec &o, const vec &ray, float &dist);
@@ -1693,13 +1781,15 @@ extern bool rayboxintersect(const vec &b, const vec &s, const vec &o, const vec 
 extern bool linecylinderintersect(const vec &from, const vec &to, const vec &start, const vec &end, float radius, float &dist);
 
 extern const vec2 sincos360[];
-
 static inline int mod360(int angle)
 {
     if(angle < 0) angle = 360 + (angle <= -360 ? angle%360 : angle);
     else if(angle >= 360) angle %= 360;
     return angle;
 }
-
 static inline const vec2 &sincosmod360(int angle) { return sincos360[mod360(angle)]; }
+static inline float cos360(int angle) { return sincos360[angle].x; }
+static inline float sin360(int angle) { return sincos360[angle].y; }
+static inline float tan360(int angle) { const vec2 &sc = sincos360[angle]; return sc.y/sc.x; }
+static inline float cotan360(int angle) { const vec2 &sc = sincos360[angle]; return sc.x/sc.y; }
 

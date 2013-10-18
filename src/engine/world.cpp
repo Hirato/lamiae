@@ -6,6 +6,7 @@ VARR(mapversion, 1, OCTAVERSION, 0);
 VARNR(mapscale, worldscale, 1, 0, 0);
 VARNR(mapsize, worldsize, 1, 0, 0);
 SVARR(maptitle, "Untitled Map by Unknown");
+VARNR(emptymap, _emptymap, 1, 0, 0);
 
 VAR(octaentsize, 0, 64, 1024);
 VAR(entselradius, 0, 2, 10);
@@ -1311,6 +1312,7 @@ bool emptymap(int scale, bool force, const char *mname, bool usecfg)    // main 
 
     setvar("mapscale", scale<10 ? 10 : (scale>16 ? 16 : scale), true, false);
     setvar("mapsize", 1<<worldscale, true, false);
+    setvar("emptymap", 1, true, false);
 
     texmru.shrink(0);
     freeocta(worldroot);
@@ -1329,7 +1331,7 @@ bool emptymap(int scale, bool force, const char *mname, bool usecfg)    // main 
     }
 
     initlights();
-    allchanged(true);
+    allchanged(usecfg);
 
     startmap(mname);
     return true;

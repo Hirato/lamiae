@@ -520,8 +520,8 @@ ICOMMAND(servinfodesc, "i", (int *i),
         const char *status = si.status();
         result(status ? status : si.desc);
     }));
-ICOMMAND(servinfoname, "i", (int *i), GETSERVERINFO(*i, si, result(si.name)));
-ICOMMAND(servinfoport, "i", (int *i), GETSERVERINFO(*i, si, intret(si.address.port)));
+ICOMMAND(servinfoname, "i", (int *i), GETSERVERINFO_(*i, si, result(si.name)));
+ICOMMAND(servinfoport, "i", (int *i), GETSERVERINFO_(*i, si, intret(si.address.port)));
 ICOMMAND(servinfomap, "i", (int *i), GETSERVERINFO(*i, si, result(si.map)));
 ICOMMAND(servinfoping, "i", (int *i), GETSERVERINFO(*i, si, intret(si.ping)));
 ICOMMAND(servinfonumplayers, "i", (int *i), GETSERVERINFO(*i, si, intret(si.numplayers)));
