@@ -355,7 +355,7 @@ extern void adddecal(int type, const vec &center, const vec &surface, float radi
 
 // worldio
 extern string mpath, mname;
-extern void backup(char *name, char *backupname);
+extern void backup(const char *name, const char *backupname);
 extern bool load_world(const char *mname, const char *cname = NULL);
 extern bool save_world(const char *mname, bool nolms = false, bool octa = false);
 extern void setmapdir(const char *pth = NULL);

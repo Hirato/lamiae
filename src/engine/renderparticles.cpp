@@ -117,7 +117,7 @@ enum
     PT_NOTEX     = 1<<19,
     PT_SHADER    = 1<<20,
     PT_SWIZZLE   = 1<<21,
-    PT_LAYER     = 1<<22,
+    PT_NOLAYER   = 1<<22,
     PT_FLIP      = PT_HFLIP | PT_VFLIP | PT_ROT
 };
 

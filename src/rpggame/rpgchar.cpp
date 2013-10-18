@@ -550,7 +550,7 @@ VAR(animoverride, -1, 0, NUMANIMS-1);
 VAR(testanims, 0, 0, 1);
 VAR(testpitch, -90, 0, 90);
 
-void renderclient(dynent *d, const char *mdlname, modelattach *attachments, int hold, int attack, int attackdelay, int lastaction, int lastpain, float scale, bool ragdoll, float trans)
+void renderclient(dynent *d, const char *mdlname, modelattach *attachments, int hold, int attack, int attackdelay, int lastaction, int lastpain, float scale, bool ragdoll, vec4 &color)
 {
 	int anim = hold ? hold : ANIM_IDLE|ANIM_LOOP;
 	float yaw = testanims ? 0 : d->yaw,
@@ -610,8 +610,8 @@ void renderclient(dynent *d, const char *mdlname, modelattach *attachments, int 
     if(d!=game::player1) flags |= MDL_CULL_VFC | MDL_CULL_OCCLUDED | MDL_CULL_QUERY;
     if(d->type==ENT_PLAYER) flags |= MDL_FULLBRIGHT;
     else flags |= MDL_CULL_DIST;
-	if(d->state == CS_LAGGED) trans = min(trans, 0.3f);
-	rendermodel(mdlname, anim, o, yaw, pitch, roll, flags, d, attachments, basetime, 0, scale, trans);
+	if(d->state == CS_LAGGED) color.a = min(color.a, 0.3f);
+	rendermodel(mdlname, anim, o, yaw, pitch, roll, flags, d, attachments, basetime, 0, scale, color);
 }
 
 void rpgchar::render()
@@ -652,7 +652,7 @@ void rpgchar::render()
 
 	if(aiflags & AI_ANIM) hold = (forceanim & ANIM_INDEX) | ANIM_LOOP;
 
-	renderclient(this, temp.mdl ? temp.mdl : mdl, attachments.buf, hold, action, delay, lastaction, state == CS_ALIVE ? lastpain : 0, 1, true, temp.alpha);
+	renderclient(this, temp.mdl ? temp.mdl : mdl, attachments.buf, hold, action, delay, lastaction, state == CS_ALIVE ? lastpain : 0, 1, true, temp.color);
 
 	emitter = emitters;
 	loopv(equipped)

@@ -60,7 +60,7 @@ namespace game
 					fabs(camera::camera.o.y - curmap->objs[i]->o.y) > curmap->objs[i]->radius
 				) : (curmap->objs[i] != player1 || isthirdperson()))
 				{
-					curmap->objs[i]->temp.alpha = clamp(curmap->objs[i]->temp.alpha, 0, 1);
+					curmap->objs[i]->temp.color.clamp(0, 1);
 					curmap->objs[i]->render();
 
 					if(DEBUG_ENT)

@@ -658,18 +658,21 @@ int playsoundname(const char *s, const vec *loc, int vol, int flags, int loops, 
 ICOMMAND(playsound, "i", (int *n), playsound(*n));
 
 ICOMMAND(entsoundname, "i", (int *id),
-    if(mapsounds.inrange(*id))
-    {defformatstring(s, "%s", mapslots[mapsounds[*id].slots].sample->name); result(s);}
+    if(mapsounds.configs.inrange(*id))
+    {
+        defformatstring(s, "%s", mapsounds.slots[mapsounds.configs[*id].slots].sample->name);
+        result(s);
+    }
 );
 
 void writemapsounds(stream *f)
 {
-    loopv(mapsounds)
+    loopv(mapsounds.configs)
     {
-        soundconfig &c = mapsounds[i];
+        soundconfig &c = mapsounds.configs[i];
         loopj(c.numslots)
         {
-            soundslot &s = mapslots[c.slots + j];
+            soundslot &s = mapsounds.slots[c.slots + j];
             if(!j) f->printf("mapsound %s %d %d // %d\n", escapestring(s.sample->name), s.volume, c.maxuses, i);
             else f->printf("altmapsound %s %d\n", escapestring(s.sample->name), s.volume);
         }

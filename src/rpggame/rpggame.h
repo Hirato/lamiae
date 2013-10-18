@@ -839,7 +839,7 @@ struct rpgent : dynent
 	struct
 	{
 		vec4 light; //w == radius x y z == R G B
-		float alpha;
+		vec4 color;
 		const char *mdl;
 	} temp;
 
@@ -881,7 +881,7 @@ struct rpgent : dynent
 	{
 		temp.mdl = NULL;
 		temp.light = vec4(0, 0, 0, 0);
-		temp.alpha = 1;
+		temp.color = vec4(1, 1, 1, 1);
 	}
 	virtual ~rpgent()
 	{
