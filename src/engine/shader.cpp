@@ -216,12 +216,19 @@ static void compileglslshader(Shader &s, GLenum type, GLuint &obj, const char *d
             "#define shadow2DOffset(sampler, coords, offset) textureOffset(sampler, coords, offset)\n"
             "#define texture3D(sampler, coords) texture(sampler, coords)\n"
             "#define textureCube(sampler, coords) texture(sampler, coords)\n";
-        if(glslversion >= 140) parts[numparts++] =
-            "#define texture2DRect(sampler, coords) texture(sampler, coords)\n"
-            "#define texture2DRectOffset(sampler, coords, offset) textureOffset(sampler, coords, offset)\n"
-            "#define texture2DRectProj(sampler, coords) textureProj(sampler, coords)\n"
-            "#define shadow2DRect(sampler, coords) texture(sampler, coords)\n"
-            "#define shadow2DRectOffset(sampler, coords, offset) textureOffset(sampler, coords, offset)\n";
+        if(glslversion >= 140)
+        {
+            parts[numparts++] =
+                "#define texture2DRect(sampler, coords) texture(sampler, coords)\n"
+                "#define texture2DRectProj(sampler, coords) textureProj(sampler, coords)\n"
+                "#define shadow2DRect(sampler, coords) texture(sampler, coords)\n";
+            extern int mesa_texrectoffset_bug;
+            parts[numparts++] = mesa_texrectoffset_bug ?
+                "#define texture2DRectOffset(sampler, coords, offset) texture(sampler, coords + vec2(offset))\n"
+                "#define shadow2DRectOffset(sampler, coords, offset) texture(sampler, coords + vec2(offset))\n" :
+                "#define texture2DRectOffset(sampler, coords, offset) textureOffset(sampler, coords, offset)\n"
+                "#define shadow2DRectOffset(sampler, coords, offset) textureOffset(sampler, coords, offset)\n";
+        }
     }
     if(glslversion < 130 && hasEGPU4) parts[numparts++] = "#define uint unsigned int\n";
     else if(glslversion < 140 && !hasEGPU4)

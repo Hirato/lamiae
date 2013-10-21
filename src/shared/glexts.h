@@ -794,3 +794,10 @@ extern PFNGLBLENDEQUATIONIPROC glBlendEquationi_;
 extern PFNGLBLENDEQUATIONSEPARATEIPROC glBlendEquationSeparatei_;
 extern PFNGLBLENDFUNCIPROC glBlendFunci_;
 extern PFNGLBLENDFUNCSEPARATEIPROC glBlendFuncSeparatei_;
+
+// GL_ARB_copy_image
+#ifndef GL_ARB_copy_image
+#define GL_ARB_copy_image 1
+typedef void (APIENTRYP PFNGLCOPYIMAGESUBDATAPROC) (GLuint srcName, GLenum srcTarget, GLint srcLevel, GLint srcX, GLint srcY, GLint srcZ, GLuint dstName, GLenum dstTarget, GLint dstLevel, GLint dstX, GLint dstY, GLint dstZ, GLsizei srcWidth, GLsizei srcHeight, GLsizei srcDepth);
+#endif
+extern PFNGLCOPYIMAGESUBDATAPROC glCopyImageSubData_;

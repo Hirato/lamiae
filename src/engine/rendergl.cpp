@@ -2,7 +2,7 @@
 
 #include "engine.h"
 
-bool hasVAO = false, hasTR = false, hasTSW = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasS3TC = false, hasFXT1 = false, hasLATC = false, hasRGTC = false, hasAF = false, hasFBB = false, hasFBMS = false, hasTMS = false, hasMSS = false, hasFBMSBS = false, hasNVFBMSC = false, hasNVTMS = false, hasUBO = false, hasMBR = false, hasDB2 = false, hasDBB = false, hasTG = false, hasT4 = false, hasTQ = false, hasPF = false, hasTRG = false, hasTI = false, hasHFV = false, hasHFP = false, hasDBT = false, hasDC = false, hasDBGO = false, hasEGPU4 = false, hasGPU4 = false, hasGPU5 = false, hasEAL = false, hasCR = false, hasOQ2 = false;
+bool hasVAO = false, hasTR = false, hasTSW = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasS3TC = false, hasFXT1 = false, hasLATC = false, hasRGTC = false, hasAF = false, hasFBB = false, hasFBMS = false, hasTMS = false, hasMSS = false, hasFBMSBS = false, hasNVFBMSC = false, hasNVTMS = false, hasUBO = false, hasMBR = false, hasDB2 = false, hasDBB = false, hasTG = false, hasT4 = false, hasTQ = false, hasPF = false, hasTRG = false, hasTI = false, hasHFV = false, hasHFP = false, hasDBT = false, hasDC = false, hasDBGO = false, hasEGPU4 = false, hasGPU4 = false, hasGPU5 = false, hasEAL = false, hasCR = false, hasOQ2 = false, hasCI = false;
 bool mesa = false, intel = false, amd = false, nvidia = false;
 
 int hasstencil = 0;
@@ -249,6 +249,9 @@ PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays_ = NULL;
 PFNGLGENVERTEXARRAYSPROC    glGenVertexArrays_    = NULL;
 PFNGLISVERTEXARRAYPROC      glIsVertexArray_      = NULL;
 
+// GL_ARB_copy_image
+PFNGLCOPYIMAGESUBDATAPROC glCopyImageSubData_ = NULL;
+
 void *getprocaddress(const char *name)
 {
     return SDL_GL_GetProcAddress(name);
@@ -273,6 +276,7 @@ void glerror(const char *file, int line, GLenum error)
 }
 
 VAR(amd_pf_bug, 0, 0, 1);
+VAR(mesa_texrectoffset_bug, 0, 0, 1);
 VAR(useubo, 1, 0, 0);
 VAR(usetexgather, 1, 0, 0);
 VAR(usetexcompress, 1, 0, 0);
@@ -942,12 +946,28 @@ void gl_checkextensions()
         if(dbgexts) conoutf(CON_INIT, "Using GL_ARB_debug_output extension.");
     }
 
-    extern int msaadepthstencil, gdepthstencil, glineardepth, msaalineardepth, batchsunlight, smgather;
+    if(hasext("GL_ARB_copy_image"))
+    {
+        glCopyImageSubData_ = (PFNGLCOPYIMAGESUBDATAPROC)getprocaddress("glCopyImageSubData");
+
+        hasCI = true;
+        if(dbgexts) conoutf(CON_INIT, "Using GL_ARB_copy_image extension.");
+    }
+    else if(hasext("GL_NV_copy_image"))
+    {
+        glCopyImageSubData_ = (PFNGLCOPYIMAGESUBDATAPROC)getprocaddress("glCopyImageSubDataNV");
+
+        hasCI = true;
+        if(dbgexts) conoutf(CON_INIT, "Using GL_NV_copy_image extension.");
+    }
+
+    extern int msaadepthstencil, gdepthstencil, glineardepth, msaalineardepth, batchsunlight, smgather, rhrect;
     if(amd)
     {
         msaalineardepth = glineardepth = 1; // reading back from depth-stencil still buggy on newer cards, and requires stencil for MSAA
         msaadepthstencil = gdepthstencil = 1; // some older AMD GPUs do not support reading from depth-stencil textures, so only use depth-stencil renderbuffer for now
         if(checkseries(renderer, "Radeon HD", 4000, 5199)) amd_pf_bug = 1;
+        rhrect = 1; // bad cpu stalls on Catalyst 13.x when trying to use 3D textures previously bound to FBOs
     }
     else if(nvidia)
     {
@@ -957,6 +977,7 @@ void gl_checkextensions()
         glineardepth = 1; // causes massive slowdown in windows driver (and sometimes in linux driver) if not using linear depth
         if(mesa) batchsunlight = 0; // causes massive slowdown in linux driver
         smgather = 1; // native shadow filter is slow
+        if(mesa) mesa_texrectoffset_bug = 1; // mesa (< 10.0) i965 driver has buggy textureOffset with texture rectangles
     }
 }
 

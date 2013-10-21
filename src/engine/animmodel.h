@@ -934,7 +934,7 @@ struct animmodel : model
             if(!(anim&ANIM_NORENDER))
             {
                 matrix4 modelmatrix;
-                modelmatrix.mul(shadowmapping ? shadowmatrix : aamaskmatrix, matrixstack[matrixpos]);
+                modelmatrix.mul(shadowmapping ? shadowmatrix : camprojmatrix, matrixstack[matrixpos]);
                 if(resize!=1) modelmatrix.scale(resize);
                 GLOBALPARAM(modelmatrix, modelmatrix);
 

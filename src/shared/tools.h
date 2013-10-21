@@ -26,21 +26,6 @@ typedef unsigned long long int ullong;
 #define RESTRICT
 #endif
 
-inline void *operator new(size_t size)
-{
-    void *p = malloc(size);
-    if(!p) abort();
-    return p;
-}
-inline void *operator new[](size_t size)
-{
-    void *p = malloc(size);
-    if(!p) abort();
-    return p;
-}
-inline void operator delete(void *p) { if(p) free(p); }
-inline void operator delete[](void *p) { if(p) free(p); }
-
 inline void *operator new(size_t, void *p) { return p; }
 inline void *operator new[](size_t, void *p) { return p; }
 inline void operator delete(void *, void *) {}
