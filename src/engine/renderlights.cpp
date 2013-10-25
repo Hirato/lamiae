@@ -1411,8 +1411,7 @@ struct lightinfo
     {
         dir = spotdir;
         spot = spotangle;
-        quat orient(dir.y, -dir.x, 0, 1 + dir.z);
-        orient.normalize();
+        quat orient(dir, vec(0, 0, dir.z < 0 ? -1 : 1));
         spotx = orient.invertedrotate(vec(1, 0, 0));
         spoty = orient.invertedrotate(vec(0, 1, 0));
     }
@@ -2519,7 +2518,7 @@ void renderlights(float bsx1 = -1, float bsy1 = -1, float bsx2 = 1, float bsy2 =
                     shadowparamsv[0] = vec4(
                         0.5f * sm.size * cotan360(l.spot),
                         (-smnearclip * smfarclip / (smfarclip - smnearclip) - 0.5f*bias),
-                        1 / (1 + l.dir.z),
+                        1 / (1 + fabs(l.dir.z)),
                         0.5f + 0.5f * (smfarclip + smnearclip) / (smfarclip - smnearclip));
                 }
                 else
@@ -2620,7 +2619,7 @@ void renderlights(float bsx1 = -1, float bsy1 = -1, float bsx2 = 1, float bsy2 =
                     shadowparamsv[j] = vec4(
                         0.5f * sm.size * cotan360(l.spot),
                         (-smnearclip * smfarclip / (smfarclip - smnearclip) - 0.5f*bias),
-                        1 / (1 + l.dir.z),
+                        1 / (1 + fabs(l.dir.z)),
                         0.5f + 0.5f * (smfarclip + smnearclip) / (smfarclip - smnearclip));
                 }
                 else
@@ -2905,6 +2904,8 @@ void collectlights()
         gle::disable();
         glFlush();
     }
+
+    if(rhinoq && oqfrags && !drawtex) renderradiancehints();
 }
 
 static inline void addlighttiles(const lightinfo &l, int idx)
@@ -3431,6 +3432,8 @@ void radiancehints::renderslices()
     if(rhrect) glDisable(GL_SCISSOR_TEST);
 }
 
+VAR(rhinoq, 0, 1, 1);
+
 void renderradiancehints()
 {
     if(!sunlight || !csmshadowmap || !gi || !giscale || !gidist) return;
@@ -3463,6 +3466,12 @@ void renderradiancehints()
 
     if(rhforce || rh.prevdynmin.z < rh.prevdynmax.z || rh.dynmin.z < rh.dynmax.z || !rh.allcached())
     {
+        if(rhinoq && oqfrags && !drawtex)
+        {
+            glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+            glDepthMask(GL_TRUE);
+        }
+
         glBindFramebuffer_(GL_FRAMEBUFFER, rsmfbo);
 
         shadowmatrix.mul(rsm.proj, rsm.model);
@@ -3477,6 +3486,14 @@ void renderradiancehints()
         rendershadowmodelbatches(rhdynmm!=0);
 
         rh.renderslices();
+
+        if(rhinoq && oqfrags && !drawtex)
+        {
+            glBindFramebuffer_(GL_FRAMEBUFFER, msaasamples ? msfbo : gfbo);
+            glViewport(0, 0, vieww, viewh);
+
+            glFlush();
+        }
     }
 
     clearbatchedmapmodels();
@@ -3656,7 +3673,7 @@ void rendershadowmaps()
             shadowmatrix.mul(smprojmatrix, spotmatrix);
             GLOBALPARAM(shadowmatrix, shadowmatrix);
 
-            glCullFace((l.dir.scalartriple(l.spoty, l.spotx) < 0) == (smcullside != 0) ? GL_BACK : GL_FRONT);
+            glCullFace((l.dir.z >= 0) == (smcullside != 0) ? GL_BACK : GL_FRONT);
 
             shadowside = 0;
 

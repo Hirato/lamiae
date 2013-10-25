@@ -490,12 +490,15 @@ inline const char *stringptr(const stringslice &s) { return s.str; }
 inline int stringlen(const char *s) { return int(strlen(s)); }
 inline int stringlen(const stringslice &s) { return s.len; }
 
-static inline uint hthash(const stringslice &s)
+static inline uint memhash(const void *ptr, int len)
 {
+    const uchar *data = (const uchar *)ptr;
     uint h = 5381;
-    loopi(s.len) h = ((h<<5)+h)^s.str[i];
+    loopi(len) h = ((h<<5)+h)^data[i];
     return h;
 }
+
+static inline uint hthash(const stringslice &s) { return memhash(s.str, s.len); }
 
 static inline bool htcmp(const stringslice &x, const char *y)
 {

@@ -201,7 +201,7 @@ struct obj : vertmodel, vertloader<obj>
             if(!loaddefaultparts()) return false;
         }
         translate.y = -translate.y;
-        loopv(parts) parts[i]->meshes->shared++;
+        loaded();
         return true;
     }
 };

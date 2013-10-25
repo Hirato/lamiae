@@ -744,6 +744,16 @@ extern PFNGLUNIFORMBLOCKBINDINGPROC     glUniformBlockBinding_;
 extern PFNGLBINDBUFFERBASEPROC          glBindBufferBase_;
 extern PFNGLBINDBUFFERRANGEPROC         glBindBufferRange_;
 
+// GL_ARB_copy_buffer
+#ifndef GL_ARB_copy_buffer
+#define GL_COPY_READ_BUFFER_BINDING       0x8F36
+#define GL_COPY_READ_BUFFER               GL_COPY_READ_BUFFER_BINDING
+#define GL_COPY_WRITE_BUFFER_BINDING      0x8F37
+#define GL_COPY_WRITE_BUFFER              GL_COPY_WRITE_BUFFER_BINDING
+typedef void (APIENTRYP PFNGLCOPYBUFFERSUBDATAPROC) (GLenum readTarget, GLenum writeTarget, GLintptr readOffset, GLintptr writeOffset, GLsizeiptr size);
+#endif
+extern PFNGLCOPYBUFFERSUBDATAPROC glCopyBufferSubData_;
+
 // GL_ARB_vertex_array_objext
 #ifndef GL_ARB_vertex_array_object
 #define GL_ARB_vertex_array_object 1

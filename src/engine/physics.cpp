@@ -1706,7 +1706,7 @@ void vectoyawpitch(const vec &v, float &yaw, float &pitch)
     pitch = asin(v.z/v.magnitude())/RAD;
 }
 
-#define PHYSFRAMETIME 5
+#define PHYSFRAMETIME 8
 
 VARP(maxroll, 0, 0, 20);
 FVAR(straferoll, 0, 0.033f, 90);

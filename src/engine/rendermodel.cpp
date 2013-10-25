@@ -1,7 +1,7 @@
 #include "engine.h"
 
 VARP(oqdynent, 0, 1, 1);
-VARP(animationinterpolationtime, 0, 150, 1000);
+VARP(animationinterpolationtime, 0, 200, 1000);
 
 model *loadingmodel = NULL;
 
@@ -86,14 +86,6 @@ void mdlspec(float *percent)
     loadingmodel->setspec(spec);
 }
 COMMAND(mdlspec, "f");
-
-void mdlambient(float *percent)
-{
-    checkmdl;
-    float ambient = *percent > 0 ? *percent/100.0f : 0.0f;
-    loadingmodel->setambient(ambient);
-}
-COMMAND(mdlambient, "f");
 
 void mdlalphatest(float *cutoff)
 {
@@ -290,6 +282,7 @@ void rdlimitrot(int *t1, int *t2, float *maxangle, float *qx, float *qy, float *
     r.tri[0] = *t1;
     r.tri[1] = *t2;
     r.maxangle = *maxangle * RAD;
+    r.maxtrace = 1 + 2*cos(r.maxangle);
     r.middle = matrix3(quat(*qx, *qy, *qz, *qw));
 }
 COMMAND(rdlimitrot, "iifffff");

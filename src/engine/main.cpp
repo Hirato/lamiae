@@ -749,7 +749,7 @@ void swapbuffers(bool overlay)
 }
 
 VAR(menufps, 0, 60, 1000);
-VARP(maxfps, 0, 200, 1000);
+VARP(maxfps, 0, 125, 1000);
 
 void limitfps(int &millis, int curmillis)
 {

@@ -71,16 +71,52 @@ struct animmodel : model
     struct linkedpart;
     struct mesh;
 
-    struct skin
+    struct shaderparams
+    {
+        float spec, glow, glowdelta, glowpulse, fullbright, envmapmin, envmapmax, scrollu, scrollv, alphatest;
+        vec color;
+
+        shaderparams() : spec(1.0f), glow(3.0f), glowdelta(0), glowpulse(0), fullbright(0), envmapmin(0), envmapmax(0), scrollu(0), scrollv(0), alphatest(0.9f), color(1, 1, 1) {}
+    };
+
+    struct shaderparamskey
+    {
+        static hashtable<shaderparams, shaderparamskey> keys;
+        static int firstversion, lastversion;
+
+        int version;
+
+        shaderparamskey() : version(-1) {}
+
+        bool checkversion()
+        {
+            if(version >= firstversion) return true;
+            version = lastversion;
+            if(++lastversion <= 0)
+            {
+                enumerate(keys, shaderparamskey, key, key.version = -1);
+                firstversion = 0;
+                lastversion = 1;
+                version = 0;
+            }
+            return false; 
+        }
+
+        static inline void invalidate()
+        {
+            firstversion = lastversion;
+        }
+    };
+
+    struct skin : shaderparams
     {
         part *owner;
         Texture *tex, *decal, *masks, *envmap, *normalmap;
         Shader *shader;
-        float spec, ambient, glow, glowdelta, glowpulse, fullbright, envmapmin, envmapmax, scrollu, scrollv, alphatest;
         bool cullface;
-        vec color;
+        shaderparamskey *key;
 
-        skin() : owner(0), tex(notexture), decal(NULL), masks(notexture), envmap(NULL), normalmap(NULL), shader(NULL), spec(1.0f), ambient(0.3f), glow(3.0f), glowdelta(0), glowpulse(0), fullbright(0), envmapmin(0), envmapmax(0), scrollu(0), scrollv(0), alphatest(0.9f), cullface(true), color(1, 1, 1) {}
+        skin() : owner(0), tex(notexture), decal(NULL), masks(notexture), envmap(NULL), normalmap(NULL), shader(NULL), cullface(true), key(NULL) {}
 
         bool masked() const { return masks != notexture; }
         bool envmapped() const { return envmapmax>0; }
@@ -88,8 +124,16 @@ struct animmodel : model
         bool alphatested() const { return alphatest > 0 && tex->type&Texture::ALPHA; }
         bool decaled() const { return decal != NULL; }
 
+        void setkey()
+        {
+            key = &shaderparamskey::keys[*this];
+        }
+
         void setshaderparams(mesh &m, const animstate *as, bool skinned = true)
         {
+            if(key->checkversion() && Shader::lastshader->owner == key) return;
+            Shader::lastshader->owner = key;
+
             LOCALPARAMF(texscroll, scrollu*lastmillis/1000.0f, scrollv*lastmillis/1000.0f);
             if(alphatested()) LOCALPARAMF(alphatest, alphatest);
 
@@ -194,34 +238,34 @@ struct animmodel : model
                 glBindTexture(GL_TEXTURE_2D, tex->id);
                 lasttex = tex;
             }
-            if(normalmap && normalmap!=lastnormalmap)
+            if(bumpmapped() && normalmap!=lastnormalmap)
             {
                 glActiveTexture_(GL_TEXTURE3);
                 activetmu = 3;
                 glBindTexture(GL_TEXTURE_2D, normalmap->id);
                 lastnormalmap = normalmap;
             }
-            if(decal && decal!=lastdecal)
+            if(decaled() && decal!=lastdecal)
             {
                 glActiveTexture_(GL_TEXTURE4);
                 activetmu = 4;
                 glBindTexture(GL_TEXTURE_2D, decal->id);
                 lastdecal = decal;
             }
-            if(masks!=lastmasks && masks!=notexture)
+            if(masked() && masks!=lastmasks)
             {
                 glActiveTexture_(GL_TEXTURE1);
                 activetmu = 1;
                 glBindTexture(GL_TEXTURE_2D, masks->id);
                 lastmasks = masks;
             }
-            if(envmaptmu>=0 && envmapmax>0)
+            if(envmapped())
             {
                 GLuint emtex = envmap ? envmap->id : closestenvmaptex;
                 if(lastenvmaptex!=emtex)
                 {
-                    glActiveTexture_(GL_TEXTURE0+envmaptmu);
-                    activetmu = envmaptmu;
+                    glActiveTexture_(GL_TEXTURE2);
+                    activetmu = 2;
                     glBindTexture(GL_TEXTURE_CUBE_MAP, emtex);
                     lastenvmaptex = emtex;
                 }
@@ -1006,6 +1050,12 @@ struct animmodel : model
             loopi(MAXANIMPARTS) if(anims[i]) return true;
             return false;
         }
+
+        virtual void loaded()
+        {
+            meshes->shared++;
+            loopv(skins) skins[i].setkey();
+        }
     };
 
     enum
@@ -1254,15 +1304,18 @@ struct animmodel : model
 
         if(!(anim&ANIM_NOSKIN))
         {
-            colorscale = color;
+            if(colorscale != color)
+            {
+                colorscale = color;
+                shaderparamskey::invalidate();
+            }
 
-            if(envmapped()) envmaptmu = 2;
+            if(envmapped()) closestenvmaptex = lookupenvmap(closestenvmap(o));
             else if(a) for(int i = 0; a[i].tag; i++) if(a[i].m && a[i].m->envmapped())
             {
-                envmaptmu = 2;
+                closestenvmaptex = lookupenvmap(closestenvmap(o));
                 break;
             }
-            if(envmaptmu>=0) closestenvmaptex = lookupenvmap(closestenvmap(o));
         }
 
         if(depthoffset && !enabledepthoffset)
@@ -1440,12 +1493,6 @@ struct animmodel : model
         loopv(parts) loopvj(parts[i]->skins) parts[i]->skins[j].spec = spec;
     }
 
-    void setambient(float ambient)
-    {
-        if(parts.empty()) loaddefaultparts();
-        loopv(parts) loopvj(parts[i]->skins) parts[i]->skins[j].ambient = ambient;
-    }
-
     void setglow(float glow, float delta, float pulse)
     {
         if(parts.empty()) loaddefaultparts();
@@ -1513,12 +1560,17 @@ struct animmodel : model
         m.scale(scale);
     }
 
+    virtual void loaded()
+    {
+        loopv(parts) parts[i]->loaded();
+    }
+
     static bool enabletc, enablecullface, enabletangents, enablebones, enabledepthoffset;
     static float sizescale;
     static vec4 colorscale;
     static GLuint lastvbuf, lasttcbuf, lastxbuf, lastbbuf, lastebuf, lastenvmaptex, closestenvmaptex;
     static Texture *lasttex, *lastdecal, *lastmasks, *lastnormalmap;
-    static int envmaptmu, matrixpos;
+    static int matrixpos;
     static matrix4 matrixstack[64];
 
     void startrender()
@@ -1527,7 +1579,7 @@ struct animmodel : model
         enablecullface = true;
         lastvbuf = lasttcbuf = lastxbuf = lastbbuf = lastebuf = lastenvmaptex = closestenvmaptex = 0;
         lasttex = lastdecal = lastmasks = lastnormalmap = NULL;
-        envmaptmu = -1;
+        shaderparamskey::invalidate();
     }
 
     static void disablebones()
@@ -1578,8 +1630,21 @@ vec4 animmodel::colorscale(1, 1, 1, 1);
 GLuint animmodel::lastvbuf = 0, animmodel::lasttcbuf = 0, animmodel::lastxbuf = 0, animmodel::lastbbuf = 0, animmodel::lastebuf = 0,
        animmodel::lastenvmaptex = 0, animmodel::closestenvmaptex = 0;
 Texture *animmodel::lasttex = NULL, *animmodel::lastdecal = NULL, *animmodel::lastmasks = NULL, *animmodel::lastnormalmap = NULL;
-int animmodel::envmaptmu = -1, animmodel::matrixpos = 0;
+int animmodel::matrixpos = 0;
 matrix4 animmodel::matrixstack[64];
+
+static inline uint hthash(const animmodel::shaderparams &k)
+{
+    return memhash(&k, sizeof(k));
+}
+
+static inline bool htcmp(const animmodel::shaderparams &x, const animmodel::shaderparams &y)
+{
+    return !memcmp(&x, &y, sizeof(animmodel::shaderparams));
+}
+
+hashtable<animmodel::shaderparams, animmodel::shaderparamskey> animmodel::shaderparamskey::keys;
+int animmodel::shaderparamskey::firstversion = 0, animmodel::shaderparamskey::lastversion = 1;
 
 template<class MDL> struct modelloader
 {
@@ -1638,12 +1703,6 @@ template<class MDL, class MESH> struct modelcommands
     {
         float spec = *percent > 0 ? *percent/100.0f : 0.0f;
         loopskins(meshname, s, s.spec = spec);
-    }
-
-    static void setambient(char *meshname, float *percent)
-    {
-        float ambient = *percent > 0 ? *percent/100.0f : 0.0f;
-        loopskins(meshname, s, s.ambient = ambient);
     }
 
     static void setglow(char *meshname, float *percent, float *delta, float *pulse)
@@ -1736,7 +1795,6 @@ template<class MDL, class MESH> struct modelcommands
         {
             modelcommand(setskin, "skin", "sssff");
             modelcommand(setspec, "spec", "sf");
-            modelcommand(setambient, "ambient", "sf");
             modelcommand(setglow, "glow", "sfff");
             modelcommand(setalphatest, "alphatest", "sf");
             modelcommand(setcullface, "cullface", "si");

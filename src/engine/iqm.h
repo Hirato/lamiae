@@ -305,12 +305,14 @@ struct iqm : skelmodel, skelloader<iqm>
                             if(p.mask&0x100) animdata++;
                             if(p.mask&0x200) animdata++;
                         }
-                        frame[k] = dualquat(orient, pos);
-                        if(adjustments.inrange(k)) adjustments[k].adjust(frame[k]);
+                        dualquat dq(orient, pos);
+                        if(adjustments.inrange(k)) adjustments[k].adjust(dq);
                         boneinfo &b = skel->bones[k];
-                        frame[k].mul(b.invbase);
-                        if(b.parent >= 0) frame[k].mul(skel->bones[b.parent].base, dualquat(frame[k]));
-                        frame[k].fixantipodal(skel->framebones[k]);
+                        dq.mul(b.invbase);
+                        dualquat &dst = frame[k];
+                        if(p.parent < 0) dst = dq;
+                        else dst.mul(skel->bones[p.parent].base, dq);
+                        dst.fixantipodal(skel->framebones[k]);
                     }
                 }
             }
@@ -408,12 +410,7 @@ struct iqm : skelmodel, skelloader<iqm>
             }
             loading = NULL;
         }
-        loopv(parts)
-        {
-            skelpart *p = (skelpart *)parts[i];
-            p->endanimparts();
-            p->meshes->shared++;
-        }
+        loaded();
         return true;
     }
 };

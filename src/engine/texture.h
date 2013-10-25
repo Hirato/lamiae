@@ -158,8 +158,9 @@ struct Shader
     vector<UniformLoc> uniformlocs;
     vector<AttribLoc> attriblocs;
     vector<FragDataLoc> fragdatalocs;
+    const void *owner;
 
-    Shader() : name(NULL), vsstr(NULL), psstr(NULL), defer(NULL), type(SHADER_DEFAULT), program(0), vsobj(0), psobj(0), detailshader(NULL), variantshader(NULL), altshader(NULL), standard(false), forced(false), used(false), native(true), reusevs(NULL), reuseps(NULL)
+    Shader() : name(NULL), vsstr(NULL), psstr(NULL), defer(NULL), type(SHADER_DEFAULT), program(0), vsobj(0), psobj(0), detailshader(NULL), variantshader(NULL), altshader(NULL), standard(false), forced(false), used(false), native(true), reusevs(NULL), reuseps(NULL), owner(NULL)
     {
         loopi(MAXSHADERDETAIL) fastshader[i] = this;
     }
@@ -335,7 +336,8 @@ struct LocalShaderParam
             if(loc == -1) loc = getlocalparam(name);
             if(!s->localparamremap.inrange(loc)) return NULL;
         }
-        return &s->localparams[s->localparamremap[loc]];
+        uchar remap = s->localparamremap[loc];
+        return s->localparams.inrange(remap) ? &s->localparams[remap] : NULL;
     }
 
     void setf(float x = 0, float y = 0, float z = 0, float w = 0)
