@@ -269,7 +269,7 @@ bool soundsample::load(const char *dir, bool msg)
     string filename;
     loopi(sizeof(exts)/sizeof(exts[0]))
     {
-        formatstring(filename, "media/sound/%s%s%s", dir, name, exts[i]);
+        formatstring(filename, "media/sounds/%s%s%s", dir, name, exts[i]);
         if(msg && !i) renderprogress(0, filename);
         path(filename);
         chunk = loadwav(filename);

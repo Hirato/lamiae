@@ -9,10 +9,13 @@
 *.bak
 *~
 
+# and temporaries
+*.kate-swp
+
 # and generated files
 src/windows/lamiae.depend
 
-# some misc text formats
+# and some misc text formats
 *.diff
 *.patch
 
