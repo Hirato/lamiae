@@ -466,7 +466,7 @@ void writemapcfg()
     extern vector<int> smoothgroups;
     loopv(smoothgroups)
     {
-        if(smoothgroups[i] <= 0) continue;
+        if(smoothgroups[i] < 0) continue;
         f->printf("smoothangle %i %i\n", i, smoothgroups[i]);
     }
 
