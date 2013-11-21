@@ -1378,9 +1378,9 @@ void recomputecamera()
 
             matrix3 orient;
             orient.identity();
-            orient.rotate_around_z(camera1->yaw*-RAD);
-            orient.rotate_around_x(camera1->pitch*-RAD);
-            orient.rotate_around_y(ovr::modifyroll(camera1->roll)*RAD);
+            orient.rotate_around_z(camera1->yaw*RAD);
+            orient.rotate_around_x(camera1->pitch*RAD);
+            orient.rotate_around_y(ovr::modifyroll(camera1->roll)*-RAD);
             vec dir = vec(orient.b).neg(), side = vec(orient.a).neg(), up = orient.c;
 
             if(game::collidecamera())
