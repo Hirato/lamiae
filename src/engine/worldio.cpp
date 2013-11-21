@@ -402,8 +402,7 @@ void saveslotconfig(stream *h, Slot &s, int index)
     if(index >= 0)
     {
         if(s.grass) h->printf("texgrass \"%s\"\n", s.grass);
-        //if(s.smooth >= 0)
-
+        if(s.smooth >= 0) h->printf("texsmooth %i -1\n", s.smooth);
 
         if(vs.scroll.x != 0.f || vs.scroll.y != 0.f)
             h->printf("texscroll %g %g\n", vs.scroll.x * 1000.0f, vs.scroll.y * 1000.0f);
@@ -462,6 +461,14 @@ void writemapcfg()
 
     loopv(mapmodels)
         f->printf("mmodel %s // %d\n", escapestring(mapmodels[i].name), i);
+
+    f->printf("\n\n//texture smoothgroups\n");
+    extern vector<int> smoothgroups;
+    loopv(smoothgroups)
+    {
+        if(smoothgroups[i] <= 0) continue;
+        f->printf("smoothangle %i %i\n", i, smoothgroups[i]);
+    }
 
     f->printf("\n//Textures\n\ntexturereset\n\n");
 
