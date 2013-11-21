@@ -2989,13 +2989,13 @@ namespace UI
         return false;
     }
 
-    bool hascursor()
+    bool hascursor(bool target)
     {
         if(mainmenu) return true;
 
         if(world->takesinput() && cursormode() >= 1)
         {
-            if(world->target(cursorx*world->w, cursory*world->h))
+            if(!target || world->target(cursorx*world->w, cursory*world->h))
                 return true;
         }
         return false;
