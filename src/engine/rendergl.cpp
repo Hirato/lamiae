@@ -2,7 +2,7 @@
 
 #include "engine.h"
 
-bool hasVAO = false, hasTR = false, hasTSW = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasS3TC = false, hasFXT1 = false, hasLATC = false, hasRGTC = false, hasAF = false, hasFBB = false, hasFBMS = false, hasTMS = false, hasMSS = false, hasFBMSBS = false, hasNVFBMSC = false, hasNVTMS = false, hasUBO = false, hasMBR = false, hasDB2 = false, hasDBB = false, hasTG = false, hasT4 = false, hasTQ = false, hasPF = false, hasTRG = false, hasTI = false, hasHFV = false, hasHFP = false, hasDBT = false, hasDC = false, hasDBGO = false, hasEGPU4 = false, hasGPU4 = false, hasGPU5 = false, hasEAL = false, hasCR = false, hasOQ2 = false, hasCB = false, hasCI = false;
+bool hasVAO = false, hasTR = false, hasTSW = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasS3TC = false, hasFXT1 = false, hasLATC = false, hasRGTC = false, hasAF = false, hasFBB = false, hasFBMS = false, hasTMS = false, hasMSS = false, hasFBMSBS = false, hasNVFBMSC = false, hasNVTMS = false, hasUBO = false, hasMBR = false, hasDB2 = false, hasDBB = false, hasTG = false, hasTQ = false, hasPF = false, hasTRG = false, hasTI = false, hasHFV = false, hasHFP = false, hasDBT = false, hasDC = false, hasDBGO = false, hasEGPU4 = false, hasGPU4 = false, hasGPU5 = false, hasEAL = false, hasCR = false, hasOQ2 = false, hasCB = false, hasCI = false;
 bool mesa = false, intel = false, amd = false, nvidia = false;
 
 int hasstencil = 0;
@@ -916,11 +916,6 @@ void gl_checkextensions()
             hasTG = true;
             if(dbgexts) conoutf(CON_INIT, "Using GL_ARB_texture_gather extension.");
         }
-        else if(hasext("GL_AMD_texture_texture4"))
-        {
-            hasT4 = true;
-            if(dbgexts) conoutf(CON_INIT, "Using GL_AMD_texture_texture4 extension.");
-        }
         if(hasext("GL_ARB_gpu_shader5"))
         {
             hasGPU5 = true;
@@ -942,8 +937,7 @@ void gl_checkextensions()
             if(dbgexts) conoutf(CON_INIT, "Using GL_ARB_draw_buffers_blend extension.");
         }
     }
-    if(hasTG || hasT4) usetexgather = 1;
-    if(hasTG && hasGPU5 && !intel) usetexgather = 2;
+    if(hasTG) usetexgather = hasGPU5 && !intel && !nvidia ? 2 : 1;
 
     if(hasext("GL_ARB_debug_output"))
     {
@@ -1262,45 +1256,30 @@ VARP(zoomoutvel, 0, 100, 5000);
 VARP(zoomfov, 10, 35, 60);
 VARP(fov, 10, 100, 150);
 VAR(avatarzoomfov, 10, 25, 60);
-VAR(avatarfov, 10, 65, 150);
-FVAR(avatardepth, 0, 0.5f, 1);
+VAR(avatarfov, 10, 40, 100);
+FVAR(avatardepth, 0, 0.8f, 1);
 FVARNP(aspect, forceaspect, 0, 0, 1e3f);
 
-static int zoommillis = 0;
-VARF(zoom, -1, 0, 1,
-    if(zoom) zoommillis = totalmillis;
-);
+static float zoomprogress = 0;
+VAR(zoom, -1, 0, 1);
 
 void disablezoom()
 {
     zoom = 0;
-    zoommillis = totalmillis;
+    zoomprogress = 0;
 }
 
 void computezoom()
 {
-    if(!zoom) { curfov = fov; curavatarfov = avatarfov; return; }
-    if(zoom < 0 && curfov >= fov) { zoom = 0; curfov = fov; curavatarfov = avatarfov; return; } // don't zoom-out if not zoomed-in
-    int zoomvel = zoom > 0 ? zoominvel : zoomoutvel,
-        oldfov = zoom > 0 ? fov : zoomfov,
-        newfov = zoom > 0 ? zoomfov : fov,
-        oldavatarfov = zoom > 0 ? avatarfov : avatarzoomfov,
-        newavatarfov = zoom > 0 ? avatarzoomfov : avatarfov;
-    float t = zoomvel ? float(zoomvel - (totalmillis - zoommillis)) / zoomvel : 0;
-    if(t <= 0)
-    {
-        if(!zoomvel && fabs(newfov - curfov) >= 1)
-        {
-            curfov = newfov;
-            curavatarfov = newavatarfov;
-        }
-        zoom = max(zoom, 0);
-    }
+    if(!zoom) { zoomprogress = 0; curfov = fov; curavatarfov = avatarfov; return; }
+    if(zoom > 0) zoomprogress = zoominvel ? min(zoomprogress + float(elapsedtime) / zoominvel, 1.0f) : 1;
     else
     {
-        curfov = oldfov*t + newfov*(1 - t);
-        curavatarfov = oldavatarfov*t + newavatarfov*(1 - t);
+        zoomprogress = zoomoutvel ? max(zoomprogress - float(elapsedtime) / zoomoutvel, 0.0f) : 0;
+        if(zoomprogress <= 0) zoom = 0;
     }
+    curfov = zoomfov*zoomprogress + fov*(1 - zoomprogress);
+    curavatarfov = avatarzoomfov*zoomprogress + avatarfov*(1 - zoomprogress);
 }
 
 FVARP(zoomsens, 1e-4f, 3, 1e4f);

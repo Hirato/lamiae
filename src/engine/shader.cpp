@@ -176,8 +176,11 @@ static void compileglslshader(Shader &s, GLenum type, GLuint &obj, const char *d
         parts[numparts++] = "#extension GL_ARB_texture_multisample : enable\n";
     if(glslversion >= 150 && glslversion < 330 && hasEAL)
         parts[numparts++] = "#extension GL_ARB_explicit_attrib_location : enable\n";
-    if(glslversion < 400 && hasGPU5)
-        parts[numparts++] = "#extension GL_ARB_gpu_shader5 : enable\n";
+    if(glslversion < 400)
+    {
+        if(hasTG) parts[numparts++] = "#extension GL_ARB_texture_gather : enable\n";
+        if(hasGPU5) parts[numparts++] = "#extension GL_ARB_gpu_shader5 : enable\n";
+    }
     if(glslversion >= 130)
     {
         if(type == GL_VERTEX_SHADER) parts[numparts++] =

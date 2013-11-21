@@ -57,7 +57,7 @@ void setupbloom(int w, int h)
 
     static uchar gray[3] = { 32, 32, 32 };
     static float grayf[3] = { 0.125f, 0.125f, 0.125f };
-    createtexture(bloomtex[4], 1, 1, hasTF ? (void *)grayf : (void *)gray, 3, 1, hasTF ? GL_RGB16F : GL_RGB16);
+    createtexture(bloomtex[4], 1, 1, hasTF ? (void *)grayf : (void *)gray, 3, 1, hasTF ? (hasTRG ? GL_R16F : GL_RGB16F) : (hasTRG ? GL_R16 : GL_RGB16));
 
     loopi(5 + (bloomformat != GL_RGB ? 1 : 0))
     {
@@ -1492,7 +1492,7 @@ static inline void setsmcomparemode() // use embedded shadow cmp
 }
 
 extern int usetexgather;
-static inline bool usegatherforsm() { return smfilter > 1 && smgather && (hasTG || hasT4) && usetexgather; }
+static inline bool usegatherforsm() { return smfilter > 1 && smgather && hasTG && usetexgather; }
 static inline bool usesmcomparemode() { return !usegatherforsm() || (hasTG && hasGPU5 && usetexgather > 1); }
 
 void viewshadowatlas()

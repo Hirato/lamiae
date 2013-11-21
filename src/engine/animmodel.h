@@ -99,7 +99,7 @@ struct animmodel : model
                 lastversion = 1;
                 version = 0;
             }
-            return false; 
+            return false;
         }
 
         static inline void invalidate()

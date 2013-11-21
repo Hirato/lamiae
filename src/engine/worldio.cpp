@@ -401,7 +401,7 @@ void saveslotconfig(stream *h, Slot &s, int index)
     }
     if(index >= 0)
     {
-        if(s.autograss) h->printf("autograss \"%s\"\n", s.autograss);
+        if(s.grass) h->printf("texgrass \"%s\"\n", s.grass);
         //if(s.smooth >= 0)
 
 

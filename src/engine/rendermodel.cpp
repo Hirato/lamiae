@@ -732,7 +732,7 @@ void rendermodelbatches()
             batchedmodel &bm = batchedmodels[j];
             j = bm.next;
             bm.culled = cullmodel(b.m, bm.center, bm.radius, bm.flags, bm.d);
-            if(bm.culled) continue;
+            if(bm.culled || bm.flags&MDL_ONLYSHADOW) continue;
             if(bm.colorscale.a < 1)
             {
                 float sx1, sy1, sx2, sy2;

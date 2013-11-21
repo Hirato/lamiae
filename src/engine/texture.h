@@ -659,10 +659,10 @@ struct Slot
     VSlot *variants;
     bool loaded;
     uint texmask;
-    char *autograss;
+    char *grass;
     Texture *grasstex, *thumbnail;
 
-    Slot(int index = -1) : index(index), variants(NULL), autograss(NULL) { reset(); }
+    Slot(int index = -1) : index(index), variants(NULL), grass(NULL) { reset(); }
 
     void reset()
     {
@@ -672,7 +672,7 @@ struct Slot
         params.shrink(0);
         loaded = false;
         texmask = 0;
-        DELETEA(autograss);
+        DELETEA(grass);
         grasstex = NULL;
         thumbnail = NULL;
     }

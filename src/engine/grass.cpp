@@ -207,8 +207,8 @@ static void gengrassquads(vtxarray *va)
         Slot &s = *lookupvslot(g.texture, false).slot;
         if(!s.grasstex)
         {
-            if(!s.autograss) continue;
-            s.grasstex = textureload(s.autograss, 2);
+            if(!s.grass) continue;
+            s.grasstex = textureload(s.grass, 2);
         }
 
         grassgroup *group = NULL;

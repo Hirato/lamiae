@@ -72,6 +72,7 @@ SDL_GLContext glcontext = NULL;
 
 VAR(curtime, 1, 0, 0);
 VAR(totalmillis, 1, 1, 0);
+VAR(elapsedtime, 1, 0, 0);
 VAR(lastmillis, 1, 1, 0);
 
 dynent *player = NULL;
@@ -1096,9 +1097,9 @@ int main(int argc, char **argv)
         static int frames = 0;
         int millis = getclockmillis();
         limitfps(millis, totalmillis);
-        int elapsed = millis-totalmillis;
+        elapsedtime = millis - totalmillis;
         static int timeerr = 0;
-        int scaledtime = game::scaletime(elapsed) + timeerr;
+        int scaledtime = game::scaletime(elapsedtime) + timeerr;
         curtime = scaledtime/100;
         timeerr = scaledtime%100;
         if(!multiplayer(false) && curtime>200) curtime = 200;
@@ -1121,7 +1122,7 @@ int main(int argc, char **argv)
 
         serverslice(false, 0);
 
-        if(frames) updatefpshistory(elapsed);
+        if(frames) updatefpshistory(elapsedtime);
         frames++;
 
         // miscellaneous general game effects

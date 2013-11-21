@@ -599,7 +599,7 @@ SVAR(serverip, "");
 VARF(serverport, 0, server::serverport(), 0xFFFF, { if(!serverport) serverport = server::serverport(); });
 
 #ifdef STANDALONE
-int curtime = 0, lastmillis = 0, totalmillis = 0;
+int curtime = 0, lastmillis = 0, elapsedtime = 0, totalmillis = 0;
 #endif
 
 void updatemasterserver()
@@ -635,9 +635,10 @@ void serverslice(bool dedicated, uint timeout)   // main server update, called f
 
     if(dedicated)
     {
-        int millis = (int)enet_time_get(), elapsed = millis - totalmillis;
+        int millis = (int)enet_time_get();
+        elapsedtime = millis - totalmillis;
         static int timeerr = 0;
-        int scaledtime = server::scaletime(elapsed) + timeerr;
+        int scaledtime = server::scaletime(elapsedtime) + timeerr;
         curtime = scaledtime/100;
         timeerr = scaledtime%100;
         if(server::ispaused()) curtime = 0;
