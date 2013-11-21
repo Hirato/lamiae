@@ -1,6 +1,6 @@
 ENET_CFLAGS= -m32
 CXXFLAGS?= -O3
-override CXXFLAGS+= -m32
+override CXXFLAGS+= -m32 -msse2 -mfpmath=sse
 
 MACHINE=32
 
