@@ -100,7 +100,7 @@ extern void compacteditvslots();
 extern void compactmruvslots();
 extern void compactvslots(cube *c, int n = 8);
 extern void compactvslot(int &index);
-extern int compactvslots();
+extern int compactvslots(bool cull = false);
 extern void reloadtextures();
 extern void cleanuptextures();
 extern const char *textypename(int i);
@@ -121,7 +121,7 @@ static inline bool pvsoccluded(const ivec &bborigin, int size)
 }
 
 // rendergl
-extern bool hasVAO, hasTR, hasTSW, hasFBO, hasAFBO, hasDS, hasTF, hasCBF, hasS3TC, hasFXT1, hasLATC, hasRGTC, hasAF, hasFBB, hasFBMS, hasTMS, hasMSS, hasFBMSBS, hasNVFBMSC, hasNVTMS, hasUBO, hasMBR, hasDB2, hasDBB, hasTG, hasT4, hasTQ, hasPF, hasTRG, hasTI, hasHFV, hasHFP, hasDBT, hasDC, hasDBGO, hasEGPU4, hasGPU4, hasGPU5, hasEAL, hasCR, hasOQ2;
+extern bool hasVAO, hasTR, hasTSW, hasFBO, hasAFBO, hasDS, hasTF, hasCBF, hasS3TC, hasFXT1, hasLATC, hasRGTC, hasAF, hasFBB, hasFBMS, hasTMS, hasMSS, hasFBMSBS, hasNVFBMSC, hasNVTMS, hasUBO, hasMBR, hasDB2, hasDBB, hasTG, hasTQ, hasPF, hasTRG, hasTI, hasHFV, hasHFP, hasDBT, hasDC, hasDBGO, hasEGPU4, hasGPU4, hasGPU5, hasEAL, hasCR, hasOQ2, hasCB, hasCI;
 extern int glversion, glslversion;
 
 enum { DRAWTEX_NONE = 0, DRAWTEX_ENVMAP, DRAWTEX_MINIMAP, DRAWTEX_MODELPREVIEW };
@@ -304,6 +304,8 @@ extern float shadowradius, shadowbias;
 extern int shadowside, shadowspot;
 extern matrix4 shadowmatrix;
 
+extern int rhinoq;
+
 extern void resetlights();
 extern void collectlights();
 extern void loaddeferredlightshaders();
@@ -352,7 +354,7 @@ extern GLuint gdepthtex, gcolortex, gnormaltex, gglowtex, gdepthrb, gstencilrb;
 extern int msaasamples;
 extern GLuint msdepthtex, mscolortex, msnormaltex, msglowtex, msdepthrb, msstencilrb;
 extern vec2 msaapositions[16];
-enum { AA_UNUSED = 0, AA_RESERVED, AA_LUMA, AA_VELOCITY, AA_SPLIT, AA_SPLIT_LUMA, AA_SPLIT_VELOCITY };
+enum { AA_UNUSED = 0, AA_RESERVED, AA_LUMA, AA_VELOCITY, AA_VELOCITY_MASKED, AA_SPLIT, AA_SPLIT_LUMA, AA_SPLIT_VELOCITY, AA_SPLIT_VELOCITY_MASKED };
 
 extern void cleanupgbuffer();
 extern void initgbuffer();
@@ -377,7 +379,7 @@ extern bool debuglights();
 extern void cleanuplights();
 
 // aa
-extern matrix4 nojittermatrix, aamaskmatrix;
+extern matrix4 nojittermatrix;
 
 extern void setupaa(int w, int h);
 extern void jitteraa(bool init = true);

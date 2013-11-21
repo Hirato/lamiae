@@ -2,7 +2,8 @@
 enum                            // hardcoded texture numbers
 {
     DEFAULT_SKY = 0,
-    DEFAULT_GEOM
+    DEFAULT_GEOM,
+    NUMDEFAULTSLOTS
 };
 
 #define OCTAVERSION 33           // bump if map format changes, see worldio.cpp

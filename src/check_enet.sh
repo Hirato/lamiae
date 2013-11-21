@@ -2,9 +2,7 @@
 # ENet cflags detection for unix by Daniel 'q66' Kolesa <quaker66@gmail.com>
 # I hereby put this file into public domain, use as you wish
 
-CC=$1
-CFLAGS=$2
-while [ "$3" != "" ]; do CFLAGS=$CFLAGS$3; shift; done
+CC=$*
 
 cat << EOF > check_func.c
 void TEST_FUN();
@@ -21,7 +19,7 @@ int main() { TEST_TYPE test; return 0; }
 EOF
 
 CHECK_FUNC() {
-    $CC $CFLAGS check_func.c -DTEST_FUN=$1 -o check_func 2>/dev/null
+    $CC check_func.c -DTEST_FUN=$1 -o check_func 2>/dev/null
     if [ $? -eq 0 ]; then printf " $2"; rm check_func; fi
 }
 
@@ -33,14 +31,14 @@ CHECK_FUNC inet_pton -DHAS_INET_PTON
 CHECK_FUNC inet_ntop -DHAS_INET_NTOP
 
 echo "#include <sys/socket.h>" > check_member.h
-$CC $CFLAGS check_member.c -DTEST_STRUCT=msghdr -DTEST_FIELD=msg_flags \
+$CC check_member.c -DTEST_STRUCT=msghdr -DTEST_FIELD=msg_flags \
     -o check_member 2>/dev/null
 if [ $? -eq 0 ]; then printf " -DHAS_MSGHDR_FLAGS"; rm check_member; fi
 rm check_member.h
 
 echo "#include <sys/types.h>" > check_type.h
 echo "#include <sys/socket.h>" >> check_type.h
-$CC $CFLAGS check_type.c -DTEST_TYPE=socklen_t -o check_type 2>/dev/null
+$CC check_type.c -DTEST_TYPE=socklen_t -o check_type 2>/dev/null
 if [ $? -eq 0 ]; then printf " -DHAS_SOCKLEN_T"; rm check_type; fi
 rm check_type.h
 

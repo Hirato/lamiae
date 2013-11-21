@@ -2,7 +2,7 @@
 
 #include "engine.h"
 
-bool hasVAO = false, hasTR = false, hasTSW = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasS3TC = false, hasFXT1 = false, hasLATC = false, hasRGTC = false, hasAF = false, hasFBB = false, hasFBMS = false, hasTMS = false, hasMSS = false, hasFBMSBS = false, hasNVFBMSC = false, hasNVTMS = false, hasUBO = false, hasMBR = false, hasDB2 = false, hasDBB = false, hasTG = false, hasT4 = false, hasTQ = false, hasPF = false, hasTRG = false, hasTI = false, hasHFV = false, hasHFP = false, hasDBT = false, hasDC = false, hasDBGO = false, hasEGPU4 = false, hasGPU4 = false, hasGPU5 = false, hasEAL = false, hasCR = false, hasOQ2 = false;
+bool hasVAO = false, hasTR = false, hasTSW = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasS3TC = false, hasFXT1 = false, hasLATC = false, hasRGTC = false, hasAF = false, hasFBB = false, hasFBMS = false, hasTMS = false, hasMSS = false, hasFBMSBS = false, hasNVFBMSC = false, hasNVTMS = false, hasUBO = false, hasMBR = false, hasDB2 = false, hasDBB = false, hasTG = false, hasTQ = false, hasPF = false, hasTRG = false, hasTI = false, hasHFV = false, hasHFP = false, hasDBT = false, hasDC = false, hasDBGO = false, hasEGPU4 = false, hasGPU4 = false, hasGPU5 = false, hasEAL = false, hasCR = false, hasOQ2 = false, hasCB = false, hasCI = false;
 bool mesa = false, intel = false, amd = false, nvidia = false;
 
 int hasstencil = 0;
@@ -227,6 +227,9 @@ PFNGLUNIFORMBLOCKBINDINGPROC     glUniformBlockBinding_     = NULL;
 PFNGLBINDBUFFERBASEPROC          glBindBufferBase_          = NULL;
 PFNGLBINDBUFFERRANGEPROC         glBindBufferRange_         = NULL;
 
+// GL_ARB_copy_buffer
+PFNGLCOPYBUFFERSUBDATAPROC glCopyBufferSubData_ = NULL;
+
 // GL_EXT_depth_bounds_test
 PFNGLDEPTHBOUNDSEXTPROC glDepthBounds_ = NULL;
 
@@ -248,6 +251,9 @@ PFNGLBINDVERTEXARRAYPROC    glBindVertexArray_    = NULL;
 PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays_ = NULL;
 PFNGLGENVERTEXARRAYSPROC    glGenVertexArrays_    = NULL;
 PFNGLISVERTEXARRAYPROC      glIsVertexArray_      = NULL;
+
+// GL_ARB_copy_image
+PFNGLCOPYIMAGESUBDATAPROC glCopyImageSubData_ = NULL;
 
 void *getprocaddress(const char *name)
 {
@@ -273,6 +279,7 @@ void glerror(const char *file, int line, GLenum error)
 }
 
 VAR(amd_pf_bug, 0, 0, 1);
+VAR(mesa_texrectoffset_bug, 0, 0, 1);
 VAR(useubo, 1, 0, 0);
 VAR(usetexgather, 1, 0, 0);
 VAR(usetexcompress, 1, 0, 0);
@@ -758,6 +765,13 @@ void gl_checkextensions()
     }
     else fatal("Texture rectangle support is required!");
 
+    if(glversion >= 310 || hasext("GL_ARB_copy_buffer"))
+    {
+        glCopyBufferSubData_ = (PFNGLCOPYBUFFERSUBDATAPROC)getprocaddress("glCopyBufferSubData");
+        hasCB = true;
+        if(glversion < 310 && dbgexts) conoutf(CON_INIT, "Using GL_ARB_copy_buffer extension.");
+    }
+
     if(glversion >= 320 || hasext("GL_ARB_texture_multisample"))
     {
         glTexImage2DMultisample_ = (PFNGLTEXIMAGE2DMULTISAMPLEPROC)getprocaddress("glTexImage2DMultisample");
@@ -902,11 +916,6 @@ void gl_checkextensions()
             hasTG = true;
             if(dbgexts) conoutf(CON_INIT, "Using GL_ARB_texture_gather extension.");
         }
-        else if(hasext("GL_AMD_texture_texture4"))
-        {
-            hasT4 = true;
-            if(dbgexts) conoutf(CON_INIT, "Using GL_AMD_texture_texture4 extension.");
-        }
         if(hasext("GL_ARB_gpu_shader5"))
         {
             hasGPU5 = true;
@@ -928,8 +937,7 @@ void gl_checkextensions()
             if(dbgexts) conoutf(CON_INIT, "Using GL_ARB_draw_buffers_blend extension.");
         }
     }
-    if(hasTG || hasT4) usetexgather = 1;
-    if(hasTG && hasGPU5 && !intel) usetexgather = 2;
+    if(hasTG) usetexgather = hasGPU5 && !intel && !nvidia ? 2 : 1;
 
     if(hasext("GL_ARB_debug_output"))
     {
@@ -942,12 +950,28 @@ void gl_checkextensions()
         if(dbgexts) conoutf(CON_INIT, "Using GL_ARB_debug_output extension.");
     }
 
-    extern int msaadepthstencil, gdepthstencil, glineardepth, msaalineardepth, batchsunlight, smgather;
+    if(hasext("GL_ARB_copy_image"))
+    {
+        glCopyImageSubData_ = (PFNGLCOPYIMAGESUBDATAPROC)getprocaddress("glCopyImageSubData");
+
+        hasCI = true;
+        if(dbgexts) conoutf(CON_INIT, "Using GL_ARB_copy_image extension.");
+    }
+    else if(hasext("GL_NV_copy_image"))
+    {
+        glCopyImageSubData_ = (PFNGLCOPYIMAGESUBDATAPROC)getprocaddress("glCopyImageSubDataNV");
+
+        hasCI = true;
+        if(dbgexts) conoutf(CON_INIT, "Using GL_NV_copy_image extension.");
+    }
+
+    extern int msaadepthstencil, gdepthstencil, glineardepth, msaalineardepth, batchsunlight, smgather, rhrect;
     if(amd)
     {
         msaalineardepth = glineardepth = 1; // reading back from depth-stencil still buggy on newer cards, and requires stencil for MSAA
         msaadepthstencil = gdepthstencil = 1; // some older AMD GPUs do not support reading from depth-stencil textures, so only use depth-stencil renderbuffer for now
         if(checkseries(renderer, "Radeon HD", 4000, 5199)) amd_pf_bug = 1;
+        rhrect = 1; // bad cpu stalls on Catalyst 13.x when trying to use 3D textures previously bound to FBOs
     }
     else if(nvidia)
     {
@@ -957,6 +981,7 @@ void gl_checkextensions()
         glineardepth = 1; // causes massive slowdown in windows driver (and sometimes in linux driver) if not using linear depth
         if(mesa) batchsunlight = 0; // causes massive slowdown in linux driver
         smgather = 1; // native shadow filter is slow
+        if(mesa && glversion < 320) mesa_texrectoffset_bug = 1; // mesa (< 10.0) i965 driver has buggy textureOffset with texture rectangles
     }
 }
 
@@ -1002,7 +1027,7 @@ timer *findtimer(const char *name, bool gpu)
 
 timer *begintimer(const char *name, bool gpu)
 {
-    if(!usetimers || viewidx || inbetweenframes || (gpu && !hasTQ)) return NULL;
+    if(!usetimers || viewidx || inbetweenframes || (gpu && (!hasTQ || deferquery))) return NULL;
     timer *t = findtimer(name, gpu);
     if(t->gpu)
     {
@@ -1231,45 +1256,30 @@ VARP(zoomoutvel, 0, 100, 5000);
 VARP(zoomfov, 10, 35, 60);
 VARP(fov, 10, 100, 150);
 VAR(avatarzoomfov, 10, 25, 60);
-VAR(avatarfov, 10, 65, 150);
-FVAR(avatardepth, 0, 0.5f, 1);
+VAR(avatarfov, 10, 40, 100);
+FVAR(avatardepth, 0, 0.8f, 1);
 FVARNP(aspect, forceaspect, 0, 0, 1e3f);
 
-static int zoommillis = 0;
-VARF(zoom, -1, 0, 1,
-    if(zoom) zoommillis = totalmillis;
-);
+static float zoomprogress = 0;
+VAR(zoom, -1, 0, 1);
 
 void disablezoom()
 {
     zoom = 0;
-    zoommillis = totalmillis;
+    zoomprogress = 0;
 }
 
 void computezoom()
 {
-    if(!zoom) { curfov = fov; curavatarfov = avatarfov; return; }
-    if(zoom < 0 && curfov >= fov) { zoom = 0; curfov = fov; curavatarfov = avatarfov; return; } // don't zoom-out if not zoomed-in
-    int zoomvel = zoom > 0 ? zoominvel : zoomoutvel,
-        oldfov = zoom > 0 ? fov : zoomfov,
-        newfov = zoom > 0 ? zoomfov : fov,
-        oldavatarfov = zoom > 0 ? avatarfov : avatarzoomfov,
-        newavatarfov = zoom > 0 ? avatarzoomfov : avatarfov;
-    float t = zoomvel ? float(zoomvel - (totalmillis - zoommillis)) / zoomvel : 0;
-    if(t <= 0)
-    {
-        if(!zoomvel && fabs(newfov - curfov) >= 1)
-        {
-            curfov = newfov;
-            curavatarfov = newavatarfov;
-        }
-        zoom = max(zoom, 0);
-    }
+    if(!zoom) { zoomprogress = 0; curfov = fov; curavatarfov = avatarfov; return; }
+    if(zoom > 0) zoomprogress = zoominvel ? min(zoomprogress + float(elapsedtime) / zoominvel, 1.0f) : 1;
     else
     {
-        curfov = oldfov*t + newfov*(1 - t);
-        curavatarfov = oldavatarfov*t + newavatarfov*(1 - t);
+        zoomprogress = zoomoutvel ? max(zoomprogress - float(elapsedtime) / zoomoutvel, 0.0f) : 0;
+        if(zoomprogress <= 0) zoom = 0;
     }
+    curfov = zoomfov*zoomprogress + fov*(1 - zoomprogress);
+    curavatarfov = avatarzoomfov*zoomprogress + avatarfov*(1 - zoomprogress);
 }
 
 FVARP(zoomsens, 1e-4f, 3, 1e4f);
@@ -2169,6 +2179,9 @@ void drawcubemap(int size, const vec &o, float yaw, float pitch, const cubemapsi
         rendergbuffer();
         GLERROR;
 
+        renderradiancehints();
+        GLERROR;
+
         rendershadowatlas();
         GLERROR;
 
@@ -2347,8 +2360,11 @@ void gl_drawview()
 
     glFlush();
 
-    renderradiancehints();
-    GLERROR;
+    if(!rhinoq || !oqfrags)
+    {
+        renderradiancehints();
+        GLERROR;
+    }
 
     rendershadowatlas();
     GLERROR;

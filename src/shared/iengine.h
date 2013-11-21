@@ -2,6 +2,7 @@
 
 extern int curtime;                     // current frame time
 extern int lastmillis;                  // last time
+extern int elapsedtime;                 // elapsed frame time
 extern int totalmillis;                 // total elapsed time
 extern uint totalsecs;
 extern bvec watercolor;
@@ -353,6 +354,11 @@ enum
 
 extern void adddecal(int type, const vec &center, const vec &surface, float radius, const bvec &color = bvec(0xFF, 0xFF, 0xFF), int info = 0);
 
+static inline void adddecal(int type, const vec &center, const vec &surface, float radius, int color, int info = 0)
+{
+    adddecal(type, center, surface, radius, bvec::hexcolor(color), info);
+}
+
 // worldio
 extern string mpath, mname;
 extern void backup(const char *name, const char *backupname);
@@ -404,7 +410,7 @@ extern void stopsounds();
 extern void initsound();
 
 // rendermodel
-enum { MDL_CULL_VFC = 1<<0, MDL_CULL_DIST = 1<<1, MDL_CULL_OCCLUDED = 1<<2, MDL_CULL_QUERY = 1<<3, MDL_FULLBRIGHT = 1<<4, MDL_NORENDER = 1<<5, MDL_MAPMODEL = 1<<6, MDL_NOBATCH = 1<<7 };
+enum { MDL_CULL_VFC = 1<<0, MDL_CULL_DIST = 1<<1, MDL_CULL_OCCLUDED = 1<<2, MDL_CULL_QUERY = 1<<3, MDL_FULLBRIGHT = 1<<4, MDL_NORENDER = 1<<5, MDL_MAPMODEL = 1<<6, MDL_NOBATCH = 1<<7, MDL_ONLYSHADOW = 1<<8 };
 
 struct model;
 struct modelattach

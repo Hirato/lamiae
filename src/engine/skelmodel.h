@@ -289,7 +289,7 @@ struct skelmodel : animmodel
                     loopk(htlen)
                     {
                         int &vidx = htdata[(htidx+k)&(htlen-1)];
-                        if(vidx < 0) { vidx = idxs.add(ushort(vverts.length())); vverts.add(vv); }
+                        if(vidx < 0) { vidx = idxs.add(ushort(vverts.length())); vverts.add(vv); break; }
                         else if(!memcmp(&vverts[vidx], &vv, sizeof(vv))) { minvert = min(minvert, idxs.add(ushort(vidx))); break; }
                     }
                 }
@@ -862,6 +862,7 @@ struct skelmodel : animmodel
             loopi(numbones) if(bones[i].interpindex>=0)
             {
                 INTERPBONE(i);
+                d.normalize();
                 const boneinfo &b = bones[i];
                 if(b.interpparent<0) sc.bdata[b.interpindex] = d;
                 else sc.bdata[b.interpindex].mul(sc.bdata[b.interpparent], d);
@@ -1476,7 +1477,7 @@ struct skelmodel : animmodel
     };
 
     virtual skelmeshgroup *newmeshes() = 0;
- 
+
     meshgroup *loadmeshes(const char *name, const char *skelname = NULL, float smooth = 2)
     {
         skelmeshgroup *group = newmeshes();
@@ -1565,6 +1566,12 @@ struct skelmodel : animmodel
             }
 
             ((skelmeshgroup *)meshes)->skel->optimize();
+        }
+
+        void loaded()
+        {
+            endanimparts();
+            part::loaded();
         }
     };
 

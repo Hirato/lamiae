@@ -364,11 +364,14 @@ struct md5 : skelmodel, skelloader<md5>
                             if(h.flags&32) j.orient.z = -*jdata++;
                             j.orient.restorew();
                         }
-                        frame[i] = dualquat(j.orient, j.pos);
-                        if(adjustments.inrange(i)) adjustments[i].adjust(frame[i]);
-                        frame[i].mul(skel->bones[i].invbase);
-                        if(h.parent >= 0) frame[i].mul(skel->bones[h.parent].base, dualquat(frame[i]));
-                        frame[i].fixantipodal(skel->framebones[i]);
+                        dualquat dq(j.orient, j.pos);
+                        if(adjustments.inrange(i)) adjustments[i].adjust(dq);
+                        boneinfo &b = skel->bones[i];
+                        dq.mul(b.invbase);
+                        dualquat &dst = frame[i];
+                        if(h.parent < 0) dst = dq;
+                        else dst.mul(skel->bones[h.parent].base, dq);
+                        dst.fixantipodal(skel->framebones[i]);
                     }
                 }
             }
@@ -431,12 +434,7 @@ struct md5 : skelmodel, skelloader<md5>
             }
             loading = NULL;
         }
-        loopv(parts)
-        {
-            skelpart *p = (skelpart *)parts[i];
-            p->endanimparts();
-            p->meshes->shared++;
-        }
+        loaded();
         return true;
     }
 };

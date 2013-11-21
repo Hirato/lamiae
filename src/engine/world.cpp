@@ -1004,17 +1004,18 @@ ICOMMAND(getattrnum, "s", (char *s),
     intret(getattrnum(type));
 )
 
-void newentity(int type, int *attrs)
+extentity *newentity(int type, int *attrs)
 {
     int idx;
     extentity *t = newentity(true, player->o, type, attrs, idx);
-    if(!t) return;
+    if(!t) return NULL;
 
     dropentity(*t);
     t->type = ET_EMPTY;
     enttoggle(idx);
     makeundoent();
     entedit(idx, e.type = type);
+    return t;
 }
 
 void newent(tagval *args, int num)
@@ -1049,22 +1050,24 @@ void entcopy()
     if(noentedit()) return;
     entcopygrid = sel.grid;
     entcopybuf.shrink(0);
-    loopv(entgroup)
-        entfocus(entgroup[i],
-            entitycopy &ec = entcopybuf.add(entitycopy(e));
-            ec.e.o.sub(vec(sel.o));
-            int sz = entities::extraentinfosize();
-            if(sz)
-            {
-                ec.extra.reserve(sz);
-                entities::saveextrainfo(e, ec.extra.getbuf());
-            }
-        );
+    addimplicit({
+        loopv(entgroup)
+            entfocus(entgroup[i],
+                entitycopy &ec = entcopybuf.add(entitycopy(e));
+                ec.e.o.sub(vec(sel.o));
+                int sz = entities::extraentinfosize();
+                if(sz)
+                {
+                    ec.extra.reserve(sz);
+                    entities::saveextrainfo(e, ec.extra.getbuf());
+                }
+            );
+    });
 }
 
 void entpaste()
 {
-    if(noentedit() || !entcopybuf.length()) return;
+    if(noentedit() || entcopybuf.empty()) return;
 
     entcancel();
     float m = float(sel.grid)/float(entcopygrid);
@@ -1086,11 +1089,34 @@ void entpaste()
     groupeditundo(e.attr = entcopybuf[j].e.attr; e.type = entcopybuf[j++].e.type;);
 }
 
+void entreplace()
+{
+    if(noentedit() || entcopybuf.empty()) return;
+    entitycopy &c = entcopybuf[0];
+
+    if(entgroup.length() || enthover >= 0)
+    {
+        groupedit({
+            e.type = c.e.type;
+            e.attr.setsize(0);
+            loopvj(c.e.attr) e.attr.add(c.e.attr[j]);
+            if(c.extra.capacity())
+                entities::loadextrainfo(e, c.extra.getbuf());
+        });
+    }
+    else
+    {
+        entity *e = newentity (c.e.type, c.e.attr.getbuf());
+        entities::loadextrainfo(*e, c.extra.getbuf());
+    }
+}
+
 COMMAND(newent, "V");
 COMMAND(delent, "");
 COMMAND(dropent, "");
 COMMAND(entcopy, "");
 COMMAND(entpaste, "");
+COMMAND(entreplace, "");
 
 void entset(tagval *args, int num)
 {

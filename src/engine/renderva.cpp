@@ -1619,13 +1619,12 @@ void rendergeom()
 {
     bool doOQ = oqfrags && oqgeom && !drawtex, multipassing = false;
     renderstate cur;
-    setupgeom(cur);
-
-    resetbatches();
 
     int blends = 0;
     if(viewidx)
     {
+        setupgeom(cur);
+        resetbatches();
         for(vtxarray *va = visibleva; va; va = va->next) if(va->texs && va->occluded < OCCLUDE_GEOM)
         {
             if(pvsoccluded(va->geommin, va->geommax))
@@ -1688,6 +1687,8 @@ void rendergeom()
 
         if(!multipassing) { multipassing = true; glDepthFunc(GL_LEQUAL); }
         cur.texgenorient = -1;
+        setupgeom(cur);
+        resetbatches();
 
         for(vtxarray *va = visibleva; va; va = va->next) if(va->texs && va->occluded < OCCLUDE_GEOM)
         {
@@ -1715,6 +1716,8 @@ void rendergeom()
     }
     else
     {
+        setupgeom(cur);
+        resetbatches();
         for(vtxarray *va = visibleva; va; va = va->next) if(va->texs)
         {
             va->query = NULL;

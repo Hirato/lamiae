@@ -118,6 +118,7 @@ enum
     PT_SHADER    = 1<<20,
     PT_SWIZZLE   = 1<<21,
     PT_NOLAYER   = 1<<22,
+    PT_COLLIDE   = 1<<24,
     PT_FLIP      = PT_HFLIP | PT_VFLIP | PT_ROT
 };
 
@@ -160,15 +161,15 @@ struct partrenderer
     const char *texname;
     int texclamp;
     uint type;
-    int collide;
+    int decal;
     string info;
 
-    partrenderer(const char *texname, int texclamp, int type, int collide = 0)
-        : tex(NULL), texname(texname), texclamp(texclamp), type(type), collide(collide)
+    partrenderer(const char *texname, int texclamp, int type, int decal = -1)
+        : tex(NULL), texname(texname), texclamp(texclamp), type(type), decal(decal)
     {
     }
-    partrenderer(int type, int collide = 0)
-        : tex(NULL), texname(NULL), texclamp(0), type(type), collide(collide)
+    partrenderer(int type, int decal = -1)
+        : tex(NULL), texname(NULL), texclamp(0), type(type), decal(decal)
     {
     }
     virtual ~partrenderer()
@@ -216,9 +217,9 @@ struct partrenderer
                 o.add(vec(d).mul(t/5000.0f));
                 o.z -= t*t/(2.0f * 5000.0f * p->gravity);
             }
-            if(collide && o.z < p->val && canstep)
+            if(type&PT_COLLIDE && o.z < p->val && canstep)
             {
-                if(collide >= 0)
+                if(decal >= 0)
                 {
                     vec surface;
                     float floorz = rayfloor(vec(o.x, o.y, p->val), surface, RAY_CLIPMAT, COLLIDERADIUS);
@@ -227,7 +228,7 @@ struct partrenderer
                         p->val = collidez+COLLIDEERROR;
                     else
                     {
-                        adddecal(collide, vec(o.x, o.y, collidez), vec(p->o).sub(o).normalize(), 2*p->size, p->color, type&PT_RND4 ? (p->flags>>5)&3 : 0);
+                        adddecal(decal, vec(o.x, o.y, collidez), vec(p->o).sub(o).normalize(), 2*p->size, p->color, type&PT_RND4 ? (p->flags>>5)&3 : 0);
                         blend = 0;
                     }
                 }
@@ -244,7 +245,7 @@ struct partrenderer
         if(type&PT_RND4) concatstring(info, "r,");
         if(type&PT_TRACK) concatstring(info, "t,");
         if(type&PT_FLIP) concatstring(info, "f,");
-        if(collide) concatstring(info, "c,");
+        if(type&PT_COLLIDE) concatstring(info, "c,");
         int len = strlen(info);
         info[len-1] = info[len-1] == ',' ? ')' : '\0';
         if(texname)
@@ -267,12 +268,12 @@ struct listrenderer : partrenderer
     static listparticle *parempty;
     listparticle *list;
 
-    listrenderer(const char *texname, int texclamp, int type, int collide = 0)
-        : partrenderer(texname, texclamp, type, collide), list(NULL)
+    listrenderer(const char *texname, int texclamp, int type, int decal = -1)
+        : partrenderer(texname, texclamp, type, decal), list(NULL)
     {
     }
-    listrenderer(int type, int collide = 0)
-        : partrenderer(type, collide), list(NULL)
+    listrenderer(int type, int decal = -1)
+        : partrenderer(type, decal), list(NULL)
     {
     }
 
@@ -332,7 +333,7 @@ struct listrenderer : partrenderer
         p->gravity = gravity;
         p->fade = fade;
         p->millis = lastmillis + emitoffset;
-        p->color = bvec(color>>16, (color>>8)&0xFF, color&0xFF);
+        p->color = bvec::hexcolor(color);
         p->size = size;
         p->owner = NULL;
         p->flags = 0;
@@ -615,8 +616,8 @@ struct varenderer : partrenderer
     int maxparts, numparts, lastupdate, rndmask;
     GLuint vbo;
 
-    varenderer(const char *texname, int type, int collide = 0)
-        : partrenderer(texname, 3, type, collide),
+    varenderer(const char *texname, int type, int decal = -1)
+        : partrenderer(texname, 3, type, decal),
           verts(NULL), parts(NULL), maxparts(0), numparts(0), lastupdate(-1), rndmask(0), vbo(0)
     {
         if(type & PT_HFLIP) rndmask |= 0x01;
@@ -676,7 +677,7 @@ struct varenderer : partrenderer
         p->gravity = gravity;
         p->fade = fade;
         p->millis = lastmillis + emitoffset;
-        p->color = bvec(color>>16, (color>>8)&0xFF, color&0xFF);
+        p->color = bvec::hexcolor(color);
         p->size = size;
         p->owner = NULL;
         p->flags = 0x80 | (rndmask ? rnd(0x80) & rndmask : 0);
@@ -832,16 +833,16 @@ typedef varenderer<PT_TRAIL> trailrenderer;
 
 struct softquadrenderer : quadrenderer
 {
-    softquadrenderer(const char *texname, int type, int collide = 0)
-        : quadrenderer(texname, type|PT_SOFT, collide)
+    softquadrenderer(const char *texname, int type, int decal = -1)
+        : quadrenderer(texname, type|PT_SOFT, decal)
     {
     }
 };
 
 static partrenderer *parts[] =
 {
-    new quadrenderer("<grey>media/particles/blood", PT_PART|PT_FLIP|PT_MOD|PT_RND4, DECAL_BLOOD),    // blood spats (note: rgb is inverted)
-    new trailrenderer("<grey>media/particles/base", PT_TRAIL|PT_LERP, DECAL_RIPPLE),                 // water, entity
+    new quadrenderer("<grey>media/particles/blood", PT_PART|PT_FLIP|PT_MOD|PT_RND4|PT_COLLIDE, DECAL_BLOOD),    // blood spats (note: rgb is inverted)
+    new trailrenderer("<grey>media/particles/base", PT_TRAIL|PT_LERP|PT_COLLIDE, DECAL_RIPPLE),                 // water, entity
     new quadrenderer("<grey>media/particles/smoke", PT_PART|PT_FLIP|PT_LERP),                        // smoke
     new quadrenderer("<grey>media/particles/steam", PT_PART|PT_FLIP),                                // steam
     new quadrenderer("<grey>media/particles/flames", PT_PART|PT_HFLIP|PT_RND4|PT_BRIGHT),            // flames
@@ -862,8 +863,8 @@ static partrenderer *parts[] =
     &texts,                                                                                          // text
     &meters,                                                                                         // meter
     &metervs,                                                                                        // meter vs
-    new quadrenderer("media/particles/snow", PT_PART|PT_BRIGHT|PT_RND4|PT_FLIP, DECAL_STAIN),        // snow
-    new quadrenderer("<grey>media/particles/leaves", PT_PART|PT_RND4|PT_FLIP|PT_LERP, DECAL_LEAVES), //leaves
+    new quadrenderer("media/particles/snow", PT_PART|PT_BRIGHT|PT_RND4|PT_FLIP|PT_COLLIDE, DECAL_STAIN),        // snow
+    new quadrenderer("<grey>media/particles/leaves", PT_PART|PT_RND4|PT_FLIP|PT_LERP|PT_COLLIDE, DECAL_LEAVES), //leaves
     &flares // must be done last
 };
 
@@ -969,9 +970,9 @@ void renderparticles(int layer)
                     else if(flags&PT_NOTEX) particlenotextureshader->set();
                     else particleshader->setvariant(swizzle, 0);
                 }
-                if(changedbits&(PT_BRIGHT|PT_SOFT|PT_NOTEX|PT_SHADER|PT_SWIZZLE))
+                if(changedbits&(PT_MOD|PT_BRIGHT|PT_SOFT|PT_NOTEX|PT_SHADER|PT_SWIZZLE))
                 {
-                    float colorscale = ldrscale;
+                    float colorscale = flags&PT_MOD ? 1 : ldrscale;
                     if(flags&PT_BRIGHT) colorscale *= particlebright;
                     LOCALPARAMF(colorscale, colorscale, colorscale, colorscale, 1);
                 }
@@ -1011,7 +1012,7 @@ VARP(maxparticledistance, 256, 1024, 4096);
 static void splash(int type, int color, int radius, int num, int fade, const vec &p, float size, int gravity)
 {
     if(camera1->o.dist(p) > maxparticledistance && !seedemitter) return;
-    float collidez = parts[type]->collide ? p.z - raycube(p, vec(0, 0, -1), COLLIDERADIUS, RAY_CLIPMAT) + (parts[type]->collide >= 0 ? COLLIDEERROR : 0) : -1;
+    float collidez = parts[type]->type&PT_COLLIDE ? p.z - raycube(p, vec(0, 0, -1), COLLIDERADIUS, RAY_CLIPMAT) + (parts[type]->decal >= 0 ? COLLIDEERROR : 0) : -1;
     int fmin = 1;
     int fmax = fade*3;
     loopi(num)
@@ -1233,8 +1234,8 @@ void regularshape(int type, int radius, int color, int dir, int num, int fade, c
         {
             vec d = vec(to).sub(from).rescale(vel); //velocity
             particle *n = newparticle(from, d, rnd(fade*3)+1, type, color, size, gravity);
-            if(fade < 0 && parts[type]->collide)
-                n->val = from.z - raycube(from, vec(0, 0, -1), parts[type]->collide >= 0 ? COLLIDERADIUS : max(from.z, 0.0f), RAY_CLIPMAT) + (parts[type]->collide >= 0 ? COLLIDEERROR : 0);
+            if(fade < 0 && parts[type]->type & PT_COLLIDE)
+                n->val = from.z - raycube(from, vec(0, 0, -1), COLLIDERADIUS, RAY_CLIPMAT) + COLLIDEERROR;
         }
     }
 }
@@ -1369,13 +1370,8 @@ static void makeparticles(entity &e)
             else
             {
                 int mat = MAT_WATER + clamp(-attr7, 0, 3);
-                const bvec &wfcol = getwaterfallcolor(mat);
-                color = (int(wfcol[0])<<16) | (int(wfcol[1])<<8) | int(wfcol[2]);
-                if(!color)
-                {
-                    const bvec &wcol = getwatercolor(mat);
-                    color = (int(wcol[0])<<16) | (int(wcol[1])<<8) | int(wcol[2]);
-                }
+                color = getwaterfallcolor(mat).tohexcolor();
+                if(!color) color = getwatercolor(mat).tohexcolor();
             }
 
             regularsplash(PART_WATER, color, attr3 ? abs(attr3) : 150, 4, attr4 ? abs(attr4) : 200, offsetvec(e.o, attr2, rnd(10)), attr5 ? abs(attr5) *.01f : 0.6f, attr6 ? attr6 : 2);

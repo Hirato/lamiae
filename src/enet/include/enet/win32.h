@@ -11,6 +11,7 @@
 #pragma warning (disable: 4267) // size_t to int conversion
 #pragma warning (disable: 4244) // 64bit to 32bit int
 #pragma warning (disable: 4018) // signed/unsigned mismatch
+#pragma warning (disable: 4146) // unary minus operator applied to unsigned type
 #endif
 #endif
 
@@ -49,7 +50,7 @@ typedef fd_set ENetSocketSet;
 
 #define ENET_SOCKETSET_EMPTY(sockset)          FD_ZERO (& (sockset))
 #define ENET_SOCKETSET_ADD(sockset, socket)    FD_SET (socket, & (sockset))
-#define ENET_SOCKETSET_REMOVE(sockset, socket) FD_CLEAR (socket, & (sockset))
+#define ENET_SOCKETSET_REMOVE(sockset, socket) FD_CLR (socket, & (sockset))
 #define ENET_SOCKETSET_CHECK(sockset, socket)  FD_ISSET (socket, & (sockset))
 
 #endif /* __ENET_WIN32_H__ */
