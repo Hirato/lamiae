@@ -1895,6 +1895,113 @@ void vshaderparam(const char *name, float *x, float *y, float *z, float *w)
 }
 COMMAND(vshaderparam, "sfFFf");
 
+ICOMMAND(getvrotate, "i", (int *slot),
+    if(noedit(true) || !vslots.inrange(*slot)) return;
+    intret(vslots[*slot]->rotation);
+)
+
+ICOMMAND(getvoffset, "i", (int *slot),
+    if(noedit(true) || !vslots.inrange(*slot)) return;
+    VSlot &v = *vslots[*slot];
+    defformatstring(str, "%i %i", v.offset.x, v.offset.y);
+    result(str);
+)
+
+ICOMMAND(getvscroll, "i", (int *slot),
+    if(noedit(true) || !vslots.inrange(*slot)) return;
+    VSlot &v = *vslots[*slot];
+    defformatstring(str, "%g %g", v.scroll.x, v.scroll.y);
+    result(str);
+)
+
+ICOMMAND(getvscale, "i", (int *slot),
+    if(noedit(true) || !vslots.inrange(*slot)) return;
+    floatret(vslots[*slot]->scale);
+)
+
+ICOMMAND(getvlayer, "i", (int *slot),
+    if(noedit(true) || !vslots.inrange(*slot)) return;
+    intret(vslots[*slot]->layer);
+)
+
+ICOMMAND(getvdecal, "i", (int *slot),
+    if(noedit(true) || !vslots.inrange(*slot)) return;
+    intret(vslots[*slot]->decal);
+)
+
+ICOMMAND(getvalpha, "i", (int *slot),
+    if(noedit(true) || !vslots.inrange(*slot)) return;
+    VSlot &v = *vslots[*slot];
+    defformatstring(str, "%g %g", v.alphafront, v.alphaback);
+    result(str);
+)
+
+ICOMMAND(getvcolor, "i", (int *slot),
+    if(noedit(true) || !vslots.inrange(*slot)) return;
+    VSlot &v = *vslots[*slot];
+    defformatstring(str, "%g %g %g", v.colorscale.x, v.colorscale.y, v.colorscale.z);
+    result(str);
+)
+
+ICOMMAND(getvrefract, "i", (int *slot),
+    if(noedit(true) || !vslots.inrange(*slot)) return;
+    VSlot &v = *vslots[*slot];
+    defformatstring(str, "%g %g %g %g", v.refractscale, v.refractcolor.x, v.refractcolor.y, v.refractcolor.z);
+    result(str);
+)
+
+ICOMMAND(loopvshaderparams, "irre", (int *slot, ident *param, ident *val, uint *body),
+    if(noedit(true) || !vslots.inrange(*slot)) return;
+
+    VSlot &v = *vslots[*slot];
+    identstack stack; identstack stack2;
+    string vals;
+
+    // we only want modified parameters.
+    loopv(v.params)
+    {
+        formatstring(vals, "%g %g %g %g", v.params[i].val[0], v.params[i].val[1], v.params[i].val[2], v.params[i].val[3]);
+
+        loopiter(param, stack, v.params[i].name);
+        loopiter(val, stack2, vals);
+        execute(body);
+    }
+    if(v.params.length()) { poparg(*param); poparg(*val); }
+)
+
+ICOMMAND(getvshaderparam, "is", (int *slot, const char *param),
+    if(noedit(true) || !vslots.inrange(*slot)) return;
+    float vals[4]; loopi(4) vals[i] = 0;
+    VSlot &v = *vslots[*slot];
+    Slot &s = *v.slot;
+
+    loopv(v.params)
+    {
+        if(!strcmp(v.params[i].name, param))
+        {
+            loopj(4) vals[j] = v.params[i].val[j];
+            goto end;
+        }
+    }
+    // check original params too.
+    loopv(s.params)
+    {
+        if(!strcmp(s.params[i].name, param))
+        {
+            loopj(4) vals[j] = s.params[i].val[j];
+            goto end;
+        }
+    }
+
+end:
+    defformatstring(str, "%g %g %g %g", vals[0], vals[1], vals[2], vals[3]);
+    result(str);
+)
+
+ICOMMAND(getvshaderparam, "is", (int *slot),
+    if(noedit(true) || !vslots.inrange(*slot)) return;
+)
+
 void mpedittex(int tex, int allfaces, selinfo &sel, bool local)
 {
     if(local)
