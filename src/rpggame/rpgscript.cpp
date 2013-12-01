@@ -603,35 +603,58 @@ namespace rpgscript
 		popstack();
 	}
 
-	void parseref(const char *str, int &idx)
+	bool parseref(const char *str, int &idx)
 	{
 		idx = 0;
 		const char *sep = strchr(str, ':');
 		if(sep)
+		{
 			idx = parseint(++sep);
+			return true;
+		}
+		return false;
 	}
 
-	#define getreference(var, name, cond, fail, fun) \
+	#define getbasicreference(fun, var, name, fail) \
 		if(!*var) \
 		{ \
 			ERRORF(#fun "; requires a reference to be specified"); \
 			fail; return; \
 		} \
 		int name ## idx; \
-		parseref(var, name ## idx); \
+		bool has ## name ## idx = parseref(var, name ## idx); \
 		if(DEBUG_VSCRIPT) \
 		{ \
-			const char *sep = strchr(var, ':'); \
-			DEBUGF("searching for reference " #name ", via reference %s%s", var, sep ? "" : ":0"); \
+			if(!has ## name ## idx) DEBUGF("Reference %s specifies no index, non-reflist ops will assume :0", var); \
 		} \
 		reference *name = searchstack(var); \
-		if(!name || !(cond)) \
+		if(name) { if(DEBUG_VSCRIPT) DEBUGF("reference %s found", var); }\
+		else \
 		{ \
-			ERRORF(#fun "; invalid reference \"%s\" or of incompatible type", var); \
-			if(name && debugreference) name->dump(); \
+			ERRORF(#fun "; invalid reference %s", var); \
 			fail; return; \
 		}
 
+	#define getreference(fun, var, name, cond, fail) \
+		getbasicreference(fun, var, name, fail) \
+		if(!(cond)) \
+		{ \
+			ERRORF(#fun "; reference \"%s\" of incompatible type", var); \
+			if(debugreference) name->dump(); \
+			fail; return; \
+		}
+
+	#define domultiref(fun, ref, cond, body) \
+		int ref ## count = has ## ref ## idx ? ref ## idx + 1 : ref->list.length(); \
+		for(; ref ## idx < ref ## count;  ref ## idx++) \
+		{ \
+			if(!(cond)) \
+			{ \
+				ERRORF(#fun "; reference %s:%i is of an incompatible type", ref->name, ref ## idx); \
+				continue; \
+			} \
+			body; \
+		}
 
 	// Utility Functions
 
@@ -646,8 +669,8 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_cansee, "ss", (const char *looker, const char *lookee),
-		getreference(looker, ent, ent->getchar(entidx), intret(0), r_cansee)
-		getreference(lookee, obj, obj->getent(objidx), intret(0), r_cansee)
+		getreference(r_cansee, looker, ent, ent->getchar(entidx), intret(0))
+		getreference(r_cansee, lookee, obj, obj->getent(objidx), intret(0))
 
 		intret(ent->getchar(entidx)->cansee(obj->getent(objidx)));
 	)
@@ -716,12 +739,11 @@ namespace rpgscript
 
 		reference *a = *alias ? searchstack(alias) : NULL;
 
-		const char *refsep = strchr(ref, ':');
-		const char *alsep = strchr(alias, ':');
-		int refidx = refsep ? parseint(++refsep) : 0;
-		int alidx = alsep ? parseint(++alsep) : 0;
+		int refidx; int alidx;
+		bool hasrefidx = parseref(ref, refidx);
+		bool hasalidx = parseref(alias, alidx);
 
-		if(refsep)
+		if(hasrefidx)
 		{
 			if(!a)
 			{
@@ -739,7 +761,7 @@ namespace rpgscript
 				return;
 			}
 
-			if(alsep)
+			if(hasalidx)
 			{
 				if(!a->list.inrange(alidx))
 				{
@@ -767,7 +789,7 @@ namespace rpgscript
 			r->setnull();
 			if(!a) return;
 
-			if(alsep)
+			if(hasalidx)
 			{
 				if(a->list.inrange(alidx))
 					r->list.add(a->list[alidx]);
@@ -784,7 +806,7 @@ namespace rpgscript
 		reference *a = searchstack(f);
 		reference *b = searchstack(s);
 		if(!a || !b) {ERRORF("r_swapref; either %s or %s is an invalid reference", f, s); return;}
-		if(!a->canset() || b->canset()) return;
+		if(!a->canset() || !b->canset()) return;
 		swap(a->list, b->list);
 	)
 
@@ -804,12 +826,12 @@ namespace rpgscript
 		reference *b = searchstack(s);
 		if(!a || !b) {ERRORF("r_matchref; either %s or %s is an invalid reference", f, s); intret(0); return;}
 
-		const char *asep = strchr(f, ':');
-		const char *bsep = strchr(s, ':');
-		int aidx = asep ? parseint(++asep) : 0;
-		int bidx = bsep ? parseint(++bsep) : 0;
 
-		if(asep && bsep)
+		int aidx; int bidx;
+		bool hasaidx = parseref(f, aidx);
+		bool hasbidx = parseref(s, bidx);
+
+		if(hasaidx && hasbidx)
 		{
 			reference::ref *ra = NULL;
 			reference::ref *rb = NULL;
@@ -825,7 +847,7 @@ namespace rpgscript
 			else
 				intret(1);
 		}
-		else if(asep)
+		else if(hasaidx)
 		{
 			if(!a->list.inrange(aidx) && !b->list.length())
 				intret(1);
@@ -834,7 +856,7 @@ namespace rpgscript
 			else
 				intret(0);
 		}
-		else if(bsep)
+		else if(hasbidx)
 		{
 			if(!b->list.inrange(bidx) && !a->list.length())
 				intret(1);
@@ -867,8 +889,6 @@ namespace rpgscript
 		reference *r = searchstack(ref, true);
 		reference *a = searchstack(add, false);
 
-
-
 		if(a && r->canset())
 		{
 			const char *addsep = strchr(add, ':');
@@ -891,16 +911,17 @@ namespace rpgscript
 
 		reference *children = searchstack(c, false);
 		if(!children) return;
-		const char *csep = strchr(c, ':');
-		int cidx = csep ? parseint(++csep) : 0;
+		int cidx;
+		bool hascidx = parseref(c, cidx);
+
 		if(!children->list.inrange(cidx)) return;
 
 		if(ref == children)
 		{
-			if(!csep) ref->list.setsize(0);
+			if(!hascidx) ref->list.setsize(0);
 			else ref->list.remove(cidx);
 		}
-		else if(csep)
+		else if(hascidx)
 		{
 			loopv(ref->list)
 			{
@@ -925,7 +946,7 @@ namespace rpgscript
 		*n = max(1, *n);
 		int in = clamp(0, r->list.length(), *i);
 		int num = max(1, *n + in - r->list.length());
-		if(in != *i || *n != num) WARNINGF("r_ref_remove, arguments clamped fo %s: %i %i --> %i %i", ref, *i, *n, in, num);
+		if(in != *i || *n != num) WARNINGF("r_ref_remove, arguments clamped to %s: %i %i --> %i %i", ref, *i, *n, in, num);
 		r->list.remove(in, num);
 	)
 
@@ -1124,7 +1145,7 @@ namespace rpgscript
 	}
 
 	ICOMMAND(r_local_get, "ss", (const char *ref, const char *name),
-		getreference(ref, gen, gen->getinv(genidx) || gen->getent(genidx) || gen->getmap(genidx), result(""), r_local_get)
+		getreference(r_local_get, ref, gen, gen->getinv(genidx) || gen->getent(genidx) || gen->getmap(genidx), result(""))
 
 		int li = -1;
 		if(gen->getinv(genidx))
@@ -1142,7 +1163,7 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_local_set, "sss", (const char *ref, const char *name, const char *val),
-		getreference(ref, gen, gen->getinv(genidx) || gen->getent(genidx) || gen->getmap(genidx), , r_local_set)
+		getreference(r_local_set, ref, gen, gen->getinv(genidx) || gen->getent(genidx) || gen->getmap(genidx), )
 
 		int *li = NULL;
 
@@ -1189,7 +1210,9 @@ namespace rpgscript
 		reference *sender = NULL, *receiver = NULL;
 		int sendidx, recidx;
 		parseref(send, sendidx);
-		parseref(rec, recidx);
+		const bool hasrecidx = parseref(rec, recidx);
+
+		rpgent *source = sender ? sender->getent(sendidx) : NULL;
 
 		if(*send) sender = searchstack(send);
 		if(*rec) receiver = searchstack(rec);
@@ -1205,29 +1228,35 @@ namespace rpgscript
 		{
 			if(DEBUG_VSCRIPT) DEBUGF("no receiver, sending signal to everything");
 			enumerate(game::mapdata, mapinfo, map,
-				map.getsignal(sig, true, sender ? sender->getent(sendidx) : NULL);
+				map.getsignal(sig, true, source);
 			)
 			camera::getsignal(sig);
 		}
-		else if(receiver->getmap(recidx))
+		else
 		{
-			if(DEBUG_VSCRIPT) DEBUGF("receiver is map, sending signal");
-			receiver->getmap(recidx)->getsignal(sig, prop, sender ? sender->getent(sendidx) : NULL);
-			return;
+			int count = hasrecidx ? recidx + 1 : receiver->list.length();
+			for(; recidx < count; recidx++)
+			{
+				if(receiver->getmap(recidx))
+				{
+					if(DEBUG_VSCRIPT) DEBUGF("receiver:%i is map, sending signal", recidx);
+					receiver->getmap(recidx)->getsignal(sig, prop, source);
+					return;
+				}
+				else if(receiver->getent(recidx))
+				{
+					if(DEBUG_VSCRIPT) DEBUGF("receiver:%i is ent, sending signal", recidx);
+					receiver->getent(recidx)->getsignal(sig, prop, source);
+					return;
+				}
+				else if(receiver->getinv(recidx))
+				{
+					if(DEBUG_VSCRIPT) DEBUGF("receiver:%i is item, sending signal", recidx);
+					receiver->getinv(recidx)->getsignal(sig, prop, source);
+					return;
+				}
+			}
 		}
-		else  if(receiver->getent(recidx))
-		{
-			if(DEBUG_VSCRIPT) DEBUGF("receiver is ent, sending signal");
-			receiver->getent(recidx)->getsignal(sig, prop, sender ? sender->getent(sendidx) : NULL);
-			return;
-		}
-		else if(receiver->getinv(0))
-		{
-			if(DEBUG_VSCRIPT) DEBUGF("receiver is item, sending signal");
-			receiver->getinv(recidx)->getsignal(sig, prop, sender ? sender->getent(sendidx) : NULL);
-			return;
-		}
-
 	}
 	COMMANDN(r_signal, sendsignal, "sssi");
 
@@ -1248,7 +1277,7 @@ namespace rpgscript
 
 	ICOMMAND(r_loop_ents, "sse", (const char *mapref, const char *ref, uint *body),
 		if(!*ref) {ERRORF("r_loop_ents; requires map reference and a reference to alias ents to"); return;}
-		getreference(mapref, map, map->getmap(mapidx), , r_loop_ents)
+		getreference(r_loop_ents, mapref, map, map->getmap(mapidx), )
 
 		pushstack();
 		reference *cur = registertemp(ref, NULL);
@@ -1265,7 +1294,7 @@ namespace rpgscript
 
 	ICOMMAND(r_setref_ents, "ss", (const char *ref, const char *mapref),
 		if(!*ref) return;
-		getreference(mapref, map, map->getmap(mapidx), , r_setref_ents)
+		getreference(r_setref_ents, mapref, map, map->getmap(mapidx), )
 
 		reference *entstack = registerref(ref, NULL);
 		if(!entstack->canset()) return;
@@ -1277,7 +1306,7 @@ namespace rpgscript
 
 	ICOMMAND(r_loop_aeffects, "ssse", (const char *mapref, const char *vic, const char *ref, uint *body),
 		if(!*ref) {ERRORF("r_loop_aeffects; requires map reference and a reference to alias ents to"); return;}
-		getreference(mapref, map, map->getmap(mapidx), , r_loop_aeffects)
+		getreference(r_loop_aeffects, mapref, map, map->getmap(mapidx), )
 
 		rpgent *victim = NULL;
 		if(*vic)
@@ -1307,7 +1336,7 @@ namespace rpgscript
 
 	ICOMMAND(r_loop_inv, "sse", (const char *entref, const char *ref, uint *body),
 		if(!*ref) {ERRORF("r_loop_inv, requires ent reference and reference to alias items to"); return;}
-		getreference(entref, ent, ent->getchar(entidx) || ent->getcontainer(entidx), , r_loop_inv)
+		getreference(r_loop_inv, entref, ent, ent->getchar(entidx) || ent->getcontainer(entidx), )
 
 		pushstack();
 		reference *it = registertemp(ref, NULL);
@@ -1327,7 +1356,7 @@ namespace rpgscript
 
 	ICOMMAND(r_setref_invstack, "sss", (const char *ref, const char *srcref, const char *base),
 		if(!*ref) {ERRORF("r_setref_invstack; requires ent reference and a reference name"); return;}
-		getreference(srcref, src, src->getchar(srcidx) || src->getcontainer(srcidx), , r_setref_invstack)
+		getreference(r_setref_invstack, srcref, src, src->getchar(srcidx) || src->getcontainer(srcidx), )
 
 		reference *invstack = registerref(ref, NULL);
 		if(!invstack->canset()) return;
@@ -1342,7 +1371,7 @@ namespace rpgscript
 
 	ICOMMAND(r_setref_inv, "sss", (const char *ref, const char *srcref, const char *base),
 		if(!*ref) {ERRORF("r_setref_inv; requires ent reference and a reference name"); return;}
-		getreference(srcref, src, src->getchar(srcidx) || src->getcontainer(srcidx), , r_setref_inv)
+		getreference(r_setref_inv, srcref, src, src->getchar(srcidx) || src->getcontainer(srcidx), )
 
 		reference *inv = registerref(ref, NULL);
 		if(!inv->canset()) return;
@@ -1364,7 +1393,7 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_setref_equip, "ssi", (const char *ref, const char *entref, int *filter),
-		getreference(entref, ent, ent->getchar(entidx), , r_setref_equip)
+		getreference(r_setref_equip, entref, ent, ent->getchar(entidx), )
 
 		rpgchar *d = ent->getchar(entidx);
 		reference *equip = searchstack(ref, true);
@@ -1381,7 +1410,7 @@ namespace rpgscript
 
 	ICOMMAND(r_loop_veffects, "sse", (const char *entref, const char *ref, uint *body),
 		if(!*ref) {ERRORF("r_loop_veffects; requires ent reference and a reference name"); return;}
-		getreference(entref, ent, ent->getent(entidx), , r_loop_veffects)
+		getreference(r_loop_veffects, entref, ent, ent->getent(entidx), )
 
 		pushstack();
 		reference *effect = registertemp(ref, NULL);
@@ -1401,7 +1430,7 @@ namespace rpgscript
 
 	ICOMMAND(r_get_attr, "sii", (const char *ref, int *attr, int *u),
 		if(*attr < 0 || *attr >= STAT_MAX) {ERRORF("r_get_attr; attribute %i out of range", *attr); intret(0); return;}
-		getreference(ref, obj, obj->getchar(objidx) || obj->getinv(objidx), intret(0), r_get_attr)
+		getreference(r_get_attr, ref, obj, obj->getchar(objidx) || obj->getinv(objidx), intret(0))
 		if(obj->getchar(objidx))
 			intret(obj->getchar(objidx)->base.getattr(*attr));
 		else
@@ -1422,7 +1451,7 @@ namespace rpgscript
 
 	ICOMMAND(r_get_skill, "sii", (const char *ref, int *skill, int *u),
 		if(*skill < 0 || *skill >= SKILL_MAX) {ERRORF("r_get_skill; skill %i out of range", *skill); intret(0); return;}
-		getreference(ref, obj, obj->getchar(objidx) || obj->getinv(objidx) || obj->getequip(objidx), intret(0), r_get_skill)
+		getreference(r_get_skill, ref, obj, obj->getchar(objidx) || obj->getinv(objidx) || obj->getequip(objidx), intret(0))
 		if(obj->getchar(objidx))
 			intret(obj->getchar(objidx)->base.getskill(*skill));
 		else
@@ -1442,7 +1471,7 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_get_weight, "s", (const char *ref),
-		getreference(ref, ent, ent->getchar(entidx) || ent->getcontainer(entidx) || ent->getinv(entidx) || ent->getequip(entidx), floatret(0), r_get_weight)
+		getreference(r_get_weight, ref, ent, ent->getchar(entidx) || ent->getcontainer(entidx) || ent->getinv(entidx) || ent->getequip(entidx), floatret(0))
 
 		if(ent->getent(entidx))
 			floatret(ent->getent(entidx)->getweight());
@@ -1453,7 +1482,7 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_get_name, "si", (const char *ref, int *u),
-		getreference(ref, obj, obj->getent(objidx) || obj->getinv(objidx) || obj->getequip(objidx), result(""), r_get_name)
+		getreference(r_get_name, ref, obj, obj->getent(objidx) || obj->getinv(objidx) || obj->getequip(objidx), result(""))
 		if(obj->getinv(objidx))
 		{
 			item *it = obj->getinv(objidx);
@@ -1469,85 +1498,95 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_get_type, "s", (const char *ref),
-		getreference(ref, ent, ent->getent(entidx), intret(0), r_get_type)
+		getreference(r_get_type, ref, ent, ent->getent(entidx), intret(0))
 		intret(ent->getent(entidx)->type());
 	)
 
 	// Item Commands
 
 	ICOMMAND(r_get_base, "s", (const char *ref),
-		getreference(ref, item, item->getinv(itemidx), intret(-1), r_get_base)
+		getreference(r_get_base, ref, item, item->getinv(itemidx), intret(-1))
 		result(item->getinv(itemidx)->base);
 	) //TODO save bases for everything and return here.
 
 	ICOMMAND(r_get_use, "s", (const char *ref),
-		getreference(ref, equip, equip->getequip(equipidx), intret(-1), r_get_use)
+		getreference(r_get_use, ref, equip, equip->getequip(equipidx), intret(-1))
 		intret(equip->getequip(equipidx)->use);
 	)
 
 	// Entity Commands
 
 	ICOMMAND(r_get_state, "s", (const char *ref),
-		getreference(ref, ent, ent->getchar(entidx), intret(CS_DEAD), r_get_state)
+		getreference(r_get_state, ref, ent, ent->getchar(entidx), intret(CS_DEAD))
 
 		intret(ent->getent(entidx)->state);
 	)
 
 	ICOMMAND(r_get_pos, "s", (const char *ref),
-		getreference(ref, ent, ent->getent(entidx), result("0 0 0"), r_get_pos)
+		getreference(r_get_pos, ref, ent, ent->getent(entidx), result("0 0 0"))
 		static string s; formatstring(s, "%f %f %f", ent->getent(entidx)->o.x, ent->getent(entidx)->o.y, ent->getent(entidx)->o.z);
 		result(s);
 	)
 
 	ICOMMAND(r_add_status, "ssfi", (const char *ref, const char *st, float *mul, int *flags),
-		if(!statuses.access(st)) return;
-		getreference(ref, victim, victim->getent(victimidx), , r_add_effect)
+		getbasicreference(r_add_status, ref, victim, )
 		statusgroup *sg = statuses.access(st);
-
+		if(!sg) return;
 		inflict inf(sg, ATTACK_NONE, 1); //resistances aren't applied
-		victim->getent(victimidx)->seffects.add(new victimeffect(NULL, &inf, *flags, *mul));
+
+		domultiref(r_add_status, victim, victim->getent(victimidx),
+			victim->getent(victimidx)->seffects.add(new victimeffect(NULL, &inf, *flags, *mul));
+		)
 	)
 
 	ICOMMAND(r_kill, "ss", (const char *ref, const char *killer), //I was framed!
-		getreference(ref, victim, victim->getchar(victimidx), , r_kill)
+		getbasicreference(r_kill, ref, victim, )
 		int nastyidx;
 		parseref(killer, nastyidx);
 		reference *nasty = *killer ? searchstack(killer) : NULL;
 
-		if(DEBUG_SCRIPT) DEBUGF("r_kill; killing \"%s\" with \"%s\" as the killer", ref, killer);
-		victim->getent(victimidx)->die(nasty ? nasty->getent(nastyidx) : NULL);
+		domultiref(r_kill, victim, victim->getchar(victimidx),
+			if(DEBUG_SCRIPT) DEBUGF("r_kill; killing %s:%i and shifting the blame to %s", victim->name, victimidx, killer);
+			victim->getchar(victimidx)->die(nasty ? nasty->getent(nastyidx) : NULL);
+		)
 	)
 
 	ICOMMAND(r_resurrect, "s", (const char *ref),
-		getreference(ref, target, target->getchar(targetidx), , r_resurrect)
+		getbasicreference(r_resurrect, ref, target, )
 
-		if(DEBUG_SCRIPT) DEBUGF("r_resurrect; trying to revive \"%s\"", ref);
-		target->getchar(targetidx)->revive(false);
+		domultiref(r_resurrect, target, target->getchar(targetidx),
+			if(DEBUG_SCRIPT) DEBUGF("r_resurrect; trying to revive %s:%i", target->name, targetidx);
+			target->getchar(targetidx)->revive(false);
+		)
 	)
 
 	ICOMMAND(r_pickup, "ss", (const char *finder, const char *keepsake), //finders keepers :P
-		getreference(finder, actor, actor->getchar(actoridx), , r_pickup)
-		getreference(keepsake, item, item->getitem(itemidx), , r_pickup)
+		getreference(r_pickup, finder, actor, actor->getchar(actoridx), )
+		getbasicreference(r_pickup, keepsake, item, )
 
-		if(DEBUG_SCRIPT) DEBUGF("r_pickup; reference \"%s\" trying to pickup \"%s\"", finder, keepsake);
-		actor->getchar(actoridx)->pickup(item->getitem(itemidx));
-		if(!item->getitem(itemidx)->quantity)
-		{
-			if(DEBUG_SCRIPT) DEBUGF("r_pickup; keepsake has no more items left, queueing for obit");
-			 obits.add(item->getent(itemidx));
-		}
+		domultiref(r_pickup, item, item->getitem(itemidx),
+			if(DEBUG_SCRIPT) DEBUGF("r_pickup; reference \"%s\" trying to pickup \"%s\"", finder, keepsake);
+			actor->getchar(actoridx)->pickup(item->getitem(itemidx));
+			if(!item->getitem(itemidx)->quantity)
+			{
+				if(DEBUG_SCRIPT) DEBUGF("r_pickup; keepsake has no more items left, queueing for obit");
+				obits.add(item->getent(itemidx));
+			}
+		)
 	)
 
 	ICOMMAND(r_additem, "ssie", (const char *ref, const char *base, int *q, uint *body),
-		getreference(ref, ent, ent->getchar(entidx) || ent->getcontainer(entidx), , r_additem)
+		getbasicreference(r_additem, ref, ent, )
 
-		if(DEBUG_SCRIPT) DEBUGF("added %i instances of item \"%s\" to reference \"%s\"", *q, base, ref);
-		item *it = ent->getent(entidx)->additem(base, max(0, *q));
-		doitemscript(it, ent->getchar(entidx), body);
+		domultiref(r_additem, ent, ent->getchar(entidx) || ent->getcontainer(entidx),
+			if(DEBUG_SCRIPT) DEBUGF("added %i instances of item \"%s\" to reference %s:%i", *q, base, ent->name, entidx);
+			item *it = ent->getent(entidx)->additem(base, max(0, *q));
+			doitemscript(it, ent->getchar(entidx), body);
+		)
 	)
 
 	ICOMMAND(r_get_amount, "ss", (const char *ref, const char *base),
-		getreference(ref, ent, ent->getchar(entidx) || ent->getcontainer(entidx) || ent->getinv(entidx), intret(0), r_get_amount)
+		getreference(r_get_amount, ref, ent, ent->getchar(entidx) || ent->getcontainer(entidx) || ent->getinv(entidx), intret(0))
 
 		if(ent->getinv(entidx))
 			intret(ent->getinv(entidx)->quantity);
@@ -1556,26 +1595,32 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_drop, "ssi", (const char *ref, const char *itref, int *q),
-		getreference(ref, ent, ent->getchar(entidx) || ent->getcontainer(entidx), intret(0), r_drop)
-		getreference(itref, it, it->getinv(itidx), intret(0), r_drop)
+		getreference(r_drop, ref, ent, ent->getchar(entidx) || ent->getcontainer(entidx), intret(0))
+		getbasicreference(r_drop, itref, it, intret(0))
 
-		int dropped = ent->getent(entidx)->drop(it->getinv(itidx), max(0, *q), true);
-		if(DEBUG_SCRIPT) DEBUGF("dropping %i of reference \"%s\" from reference \"%s\" - %i dropped", *q, itref, ref, dropped);
+		int dropped = 0;
+		domultiref(r_drop, it, it->getinv(itidx),
+			dropped += ent->getent(entidx)->drop(it->getinv(itidx), max(0, *q), true);
+			if(DEBUG_SCRIPT) DEBUGF("dropping %i of reference %s:%i from reference \"%s\" - total %i dropped", *q, it->name, itidx, ref, dropped);
+		)
 		intret(dropped);
 	)
 
 	ICOMMAND(r_remove, "ssi", (const char *ref, const char *itref, int *q),
-		getreference(ref, ent, ent->getchar(entidx) || ent->getcontainer(entidx), intret(0), r_remove)
-		getreference(itref, it, it->getinv(itidx), intret(0), r_remove)
+		getreference(r_remove, ref, ent, ent->getchar(entidx) || ent->getcontainer(entidx), intret(0))
+		getbasicreference(r_remove, itref, it, intret(0))
 
-		int dropped = ent->getent(entidx)->drop(it->getinv(itidx), max(0, *q), false);
-		if(DEBUG_SCRIPT) DEBUGF("removing %i of reference \"%s\" from reference \"%s\" - %i removing", *q, itref, ref, dropped);
+		int dropped = 0;
+		domultiref(r_drop, it, it->getinv(itidx),
+			dropped += ent->getent(entidx)->drop(it->getinv(itidx), max(0, *q), false);
+			if(DEBUG_SCRIPT) DEBUGF("removing %i of reference %s:%i from reference \"%s\" - total %i removed", *q, it->name, itidx, ref, dropped);
+		)
 		intret(dropped);
 	)
 
 	ICOMMAND(r_canequip, "ssi", (const char *ref, const char *itref, int *u),
-		getreference(ref, ent, ent->getchar(entidx), intret(0), r_canequip)
-		getreference(itref, it, it->getinv(itidx), intret(0), r_canequip)
+		getreference(r_canequip, ref, ent, ent->getchar(entidx), intret(0))
+		getreference(r_canequip, itref, it, it->getinv(itidx), intret(0))
 
 		if(it->getequip(itidx)) *u = it->getequip(itidx)->use;
 
@@ -1588,14 +1633,16 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_equip, "ssi", (const char *ref, const char *itref, int *u),
-		getreference(ref, ent, ent->getchar(entidx), , r_equip)
-		getreference(itref, it, it->getinv(itidx), , r_equip)
+		getreference(r_equip, ref, ent, ent->getchar(entidx), )
+		getbasicreference(r_equip, itref, it, )
 
-		ent->getent(entidx)->equip(it->getinv(itidx), *u);
+		domultiref(r_equip, it, it->getinv(itidx),
+			ent->getent(entidx)->equip(it->getinv(itidx), *u);
+		)
 	)
 
 	ICOMMAND(r_dequip, "stiN", (const char *ref, tagval *which, int *slot, int *numargs),
-		getreference(ref, ent, ent->getchar(entidx), intret(0), r_dequip)
+		getreference(r_dequip, ref, ent, ent->getchar(entidx), intret(0))
 		if(*numargs > 2)
 		{
 			const char *base = which->getstr();
@@ -1605,15 +1652,15 @@ namespace rpgscript
 		else //2 arg version
 		{
 			if(DEBUG_SCRIPT) DEBUGF("attempting 2-arg dequip on reference %s for (equip?) reference %s", ref, which->getstr());
-			getreference(which->getstr(), eq, eq->getequip(eqidx), intret(0), r_dequip)
+			getreference(r_dequip, which->getstr(), eq, eq->getequip(eqidx), intret(0))
 
 			intret(ent->getchar(entidx)->dequip(eq->getequip(eqidx)->it->base, eq->getequip(eqidx)->use));
 		}
 	)
 
 	ICOMMAND(r_use, "ssiN", (const char *ref, const char *itref, int *use, int *numargs),
-		getreference(ref, ent, ent->getchar(entidx), , r_use)
-		getreference(itref, it, it->getinv(itidx) || it->getequip(itidx), , r_use);
+		getreference(r_use, ref, ent, ent->getchar(entidx), )
+		getreference(r_use, itref, it, it->getinv(itidx) || it->getequip(itidx), );
 
 		item *item = NULL;
 		int u = -1;
@@ -1633,36 +1680,22 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_transfer, "sssi", (const char *fromref, const char *toref, const char *itref, int *q),
-		getreference(fromref, from, from->getchar(fromidx) || from->getcontainer(fromidx), , r_transfer)
-		getreference(toref, to, to->getchar(toidx) || to->getcontainer(toidx), , r_transfer)
+		getreference(r_transfer, fromref, from, from->getchar(fromidx) || from->getcontainer(fromidx), )
+		getreference(r_transfer, toref, to, to->getchar(toidx) || to->getcontainer(toidx), )
+		getbasicreference(r_transfer, itref, it, );
+
 		*q = max(1, *q);
 
 		//Just save us the effort and further complications.
 		if(from == to)
 		{
-			WARNINGF("from and to reference is identical");
+			WARNINGF("from and to reference targets are identical, ignoring r_transfer request");
 			return;
 		}
 
-		const char *itsep = strchr(itref, ':');
-		int itidx = itsep ? parseint(++itsep) : 0;
-		reference *it = searchstack(itref, false);
-		if(!it)
-		{
-			ERRORF("r_transfer: reference %s does not exist", itref);
-			return;
-		}
-
-		for(; itidx < it->list.length(); itidx++)
-		{
-			if(!it->getinv(itidx))
-			{
-				WARNINGF("%s at index %i is not an item!", itref, itidx);
-				if(itsep) break;
-				continue;
-			}
+		domultiref(r_transfer, it, it->getinv(itidx),
 			if(DEBUG_SCRIPT)
-				 DEBUGF("attempting to move %i units of item %s (index %i) (%p) to entity %s (%p) from %s (%p)", *q, itref, itidx, it->getinv(itidx), toref, to->getent(toidx), fromref, from->getent(fromidx));
+				 DEBUGF("attempting to move %i units of item %s:%i (%p) to entity %s (%p) from %s (%p)", *q, it->name, itidx, it->getinv(itidx), toref, to->getent(toidx), fromref, from->getent(fromidx));
 
 			vector<item *> *stack = NULL;
 			if(from->getchar(fromidx)) stack = from->getchar(fromidx)->inventory.access(it->getinv(itidx)->base);
@@ -1671,7 +1704,6 @@ namespace rpgscript
 			if(stack->find(it->getinv(itidx)) == -1)
 			{
 				WARNINGF("item %p does not exist in the inventory of %p", it->getinv(itidx), from->getent(toidx));
-				if(itsep) break;
 				continue;
 			}
 
@@ -1682,110 +1714,111 @@ namespace rpgscript
 
 			if(DEBUG_SCRIPT)
 				 DEBUGF("transferred up to %i instances of %i from item %p to %p", *q, orig, it->getinv(itidx), to->getent(toidx));
-
-			if(itsep) break;
-		}
+		)
 	)
 
 	ICOMMAND(r_trigger, "s", (const char *ref),
-		getreference(ref, obj, obj->gettrigger(objidx), , r_trigger)
+		getbasicreference(r_trigger, ref, obj, )
 
-		obj->gettrigger(objidx)->lasttrigger = lastmillis;
-		obj->gettrigger(objidx)->flags ^= rpgtrigger::F_TRIGGERED;
-
-		if(DEBUG_SCRIPT) DEBUGF("triggered reference \"%s\", triggered flag is now %i", ref, obj->gettrigger(0)->flags & rpgtrigger::F_TRIGGERED);
+		domultiref(r_trigger, obj, obj->gettrigger(objidx),
+			obj->gettrigger(objidx)->lasttrigger = lastmillis;
+			obj->gettrigger(objidx)->flags ^= rpgtrigger::F_TRIGGERED;
+			if(DEBUG_SCRIPT) DEBUGF("triggered reference \"%s\", triggered flag is now %i", ref, obj->gettrigger(0)->flags & rpgtrigger::F_TRIGGERED);
+		)
 	)
 
 	ICOMMAND(r_destroy, "s", (const char *victim),
-		getreference(victim, obit, obit->getent(obitidx), , r_destroy)
-		if(obit->getent(obitidx) == trader->getent(0)) return;
+		getbasicreference(r_destroy, victim, obit, )
 
-		if(DEBUG_SCRIPT) DEBUGF("queueing reference %s for destruction", victim);
-		obits.add(obit->getent(obitidx));
+		domultiref(r_destroy, obit, obit->getent(obitidx) && obit->getent(obitidx) != trader->getent(0),
+			if(DEBUG_SCRIPT) DEBUGF("queueing reference %s:%i (%p) for destruction", obit->name, obitidx, obit->getent(obitidx));
+
+			obits.add(obit->getent(obitidx));
+		)
 	)
 
 	// Entity - stats
 
 	ICOMMAND(r_get_mana, "s", (const char *ref),
-		getreference(ref, ent, ent->getchar(entidx), intret(0), r_get_mana)
+		getreference(r_get_mana, ref, ent, ent->getchar(entidx), intret(0))
 		intret(ent->getchar(entidx)->mana);
 	)
 
 	ICOMMAND(r_get_maxmana, "s", (const char *ref),
-		getreference(ref, ent, ent->getchar(entidx), intret(0), r_get_maxmana)
+		getreference(r_get_maxmana, ref, ent, ent->getchar(entidx), intret(0))
 		intret(ent->getchar(entidx)->base.getmaxmp());
 	)
 
 	ICOMMAND(r_get_manaregen, "s", (const char *ref),
-		getreference(ref, ent, ent->getchar(entidx), intret(0), r_get_manaregen)
+		getreference(r_get_manaregen, ref, ent, ent->getchar(entidx), intret(0))
 		floatret(ent->getchar(entidx)->base.getmpregen())
 	)
 
 	ICOMMAND(r_get_health, "s", (const char *ref),
-		getreference(ref, ent, ent->getchar(entidx), intret(0), r_get_health)
+		getreference(r_get_health, ref, ent, ent->getchar(entidx), intret(0))
 		intret(ent->getchar(entidx)->health);
 	)
 
 	ICOMMAND(r_get_maxhealth, "s", (const char *ref),
-		getreference(ref, ent, ent->getchar(entidx), intret(0), r_get_maxhealth)
+		getreference(r_get_maxhealth, ref, ent, ent->getchar(entidx), intret(0))
 		intret(ent->getchar(entidx)->base.getmaxhp());
 	)
 
 	ICOMMAND(r_get_healthregen, "s", (const char *ref),
-		getreference(ref, ent, ent->getchar(entidx), intret(0), r_get_healthregen)
+		getreference(r_get_healthregen, ref, ent, ent->getchar(entidx), intret(0))
 		floatret(ent->getchar(entidx)->base.gethpregen())
 	)
 
 	ICOMMAND(r_get_resist, "si", (const char *ref, int *elem),
 		if(*elem < 0 || *elem >= ATTACK_MAX) {ERRORF("r_get_resist; element %i out of range", *elem); intret(0); return;}
-		getreference(ref, ent, ent->getchar(entidx), intret(0), r_get_resist)
+		getreference(r_get_resist, ref, ent, ent->getchar(entidx), intret(0))
 		intret(ent->getchar(entidx)->base.getresistance(*elem));
 	)
 
 	ICOMMAND(r_get_thresh, "si", (const char *ref, int *elem),
 		if(*elem < 0 || *elem >= ATTACK_MAX) {ERRORF("r_get_thres; element %i out of range", *elem); intret(0); return;}
-		getreference(ref, ent, ent->getchar(entidx), intret(0), r_get_thresh)
+		getreference(r_get_thresh, ref, ent, ent->getchar(entidx), intret(0))
 		intret(ent->getchar(entidx)->base.getthreshold(*elem));
 	)
 
 	ICOMMAND(r_get_maxweight, "s", (const char *ref),
-		getreference(ref, ent, ent->getchar(entidx), intret(0), r_get_maxweight)
+		getreference(r_get_maxweight, ref, ent, ent->getchar(entidx), intret(0))
 		intret(ent->getchar(entidx)->base.getmaxcarry());
 	)
 
 	ICOMMAND(r_get_maxspeed, "s", (const char *ref),
-		getreference(ref, ent, ent->getchar(entidx), intret(0), r_get_maxspeed)
+		getreference(r_get_maxspeed, ref, ent, ent->getchar(entidx), intret(0))
 		float spd; float jmp;
 		ent->getchar(entidx)->base.setspeeds(spd, jmp);
 		floatret(spd);
 	)
 
 	ICOMMAND(r_get_jumpvel, "s", (const char *ref),
-		getreference(ref, ent, ent->getchar(entidx), intret(0), r_get_jumpvel)
+		getreference(r_get_jumpvel, ref, ent, ent->getchar(entidx), intret(0))
 		float spd; float jmp;
 		ent->getchar(entidx)->base.setspeeds(spd, jmp);
 		floatret(jmp);
 	)
 
 	ICOMMAND(r_get_lastaction, "s", (const char *ref),
-		getreference(ref, ent, ent->getchar(entidx) || ent->gettrigger(entidx), intret(lastmillis), r_get_lastaction)
+		getreference(r_get_lastaction, ref, ent, ent->getchar(entidx) || ent->gettrigger(entidx), intret(lastmillis))
 
 		if(ent->getchar(entidx)) intret(ent->getchar(entidx)->lastaction);
 		else if(ent->gettrigger(entidx)) intret(ent->gettrigger(entidx)->lasttrigger);
 	)
 
 	ICOMMAND(r_get_charge, "s", (const char *ref),
-		getreference(ref, ent, ent->getchar(entidx), intret(0), r_get_charge)
+		getreference(r_get_charge, ref, ent, ent->getchar(entidx), intret(0))
 		intret(ent->getchar(entidx)->charge);
 	)
 
 	ICOMMAND(r_get_primary, "s", (const char *ref),
-		getreference(ref, ent, ent->getchar(entidx), intret(0), r_get_primary)
+		getreference(r_get_primary, ref, ent, ent->getchar(entidx), intret(0))
 		intret(ent->getchar(entidx)->primary);
 	)
 
 	ICOMMAND(r_get_secondary, "s", (const char *ref),
-		getreference(ref, ent, ent->getchar(entidx), intret(0), r_get_secondary)
+		getreference(r_get_secondary, ref, ent, ent->getchar(entidx), intret(0))
 		intret(ent->getchar(entidx)->secondary);
 	)
 
@@ -1822,7 +1855,7 @@ namespace rpgscript
 	//dialogue
 	//see also r_script_say in rpgconfig.cpp
 	ICOMMAND(r_chat, "ss", (const char *s, const char *node),
-		getreference(s, speaker, speaker->getent(speakeridx), , r_chat)
+		getreference(r_chat, s, speaker, speaker->getent(speakeridx), )
 		if(speaker != talker && talker->list.length()) talker->setnull(true);
 
 		script *scr = speaker->getent(speakeridx)->getscript();
@@ -1870,14 +1903,14 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_trade, "s", (const char *str),
-		getreference(str, cont, cont->getchar(contidx) || cont->getcontainer(contidx), , r_trade)
+		getreference(r_trade, str, cont, cont->getchar(contidx) || cont->getcontainer(contidx), )
 		if(cont->getchar(contidx) && !cont->getchar(contidx)->merchant) return;
 		if(cont->getcontainer(contidx) && !cont->getcontainer(contidx)->merchant) return;
 		trader->setref(cont->getent(contidx), true);
 	)
 
 	ICOMMAND(r_loot, "s", (const char *str),
-		getreference(str, cont, cont->getchar(contidx) || cont->getcontainer(contidx), , r_loot)
+		getreference(r_loot, str, cont, cont->getchar(contidx) || cont->getcontainer(contidx), )
 		looter->setref(cont->getent(contidx), true);
 		rpgexecute("showloot");
 	)
@@ -1887,28 +1920,33 @@ namespace rpgscript
 	//ICOMMAND(r_resetmap, "s", (const char *ref), - resets contents status
 
 	ICOMMAND(r_on_map, "ss", (const char *mapref, const char *entref),
-		getreference(mapref, map, map->getmap(mapidx), intret(0), r_on_map)
-		getreference(entref, ent, ent->getent(entidx), intret(0), r_on_map)
+		getreference(r_on_map, mapref, map, map->getmap(mapidx), intret(0))
+		getbasicreference(r_on_map, entref, ent, intret(1))
 
-		intret(map->getmap(mapidx)->objs.find(ent->getent(entidx)) >= 0);
+		int present = 1;
+		domultiref(r_on_map, ent, ent->getent(entidx),
+			present &= map->getmap(mapidx)->objs.find(ent->getent(entidx)) >= 0;
+		)
+		intret(present);
 	)
 
 	#define SPAWNCOMMAND(type, con) \
 		ICOMMAND(r_spawn_ ## type, "sisii", (const char *ref, int *attra, const char *attrb, int *attrc, int *attrd), \
-			getreference(ref, map, map->getmap(mapidx), , r_spawn_ ## type); \
-			 \
-			action_spawn *spawn = new action_spawn con; \
-			if(map->getmap(mapidx) == curmap) \
-			{ \
-				if(DEBUG_SCRIPT) DEBUGF("conditions met, spawning (" #type ") %i %s %i %i", *attra, attrb, *attrc, *attrd); \
-				spawn->exec(); \
-				delete spawn; \
-			} \
-			else \
-			{ \
-				if(DEBUG_SCRIPT) DEBUGF("conditions met but on another map queueing (" #type ") %i %s %i %i", *attra, attrb, *attrc, *attrd); \
-				map->getmap(mapidx)->loadactions.add(spawn); \
-			} \
+			getbasicreference(r_spawn_ ## type, ref, map, ); \
+			domultiref(r_spawn_ ## type, map, map->getmap(mapidx), \
+				action_spawn *spawn = new action_spawn con; \
+				if(map->getmap(mapidx) == curmap) \
+				{ \
+					if(DEBUG_SCRIPT) DEBUGF("conditions met, spawning (" #type ") %i %s %i %i", *attra, attrb, *attrc, *attrd); \
+					spawn->exec(); \
+					delete spawn; \
+				} \
+				else \
+				{ \
+					if(DEBUG_SCRIPT) DEBUGF("conditions met but on another map queueing (" #type ") %i %s %i %i", *attra, attrb, *attrc, *attrd); \
+					map->getmap(mapidx)->loadactions.add(spawn); \
+				} \
+			) \
 		)
 	//tag, index, number, quantity
 	SPAWNCOMMAND(item, (*attra, ENT_ITEM, attrb, *attrc, max(1, *attrd)))
@@ -1926,7 +1964,7 @@ namespace rpgscript
 	#undef SPAWNCOMMAND
 
 	ICOMMAND(r_teleport, "sis", (const char *ref, int *d, const char *m),
-		getreference(ref, ent, ent->getent(entidx), , r_teleport)
+		getreference(r_teleport, ref, ent, ent->getent(entidx), )
 
 		mapinfo *destmap = *m ? accessmap(m) : curmap;
 
@@ -1959,20 +1997,20 @@ namespace rpgscript
 
 	ICOMMAND(r_get_status_owner, "ss", (const char *ref, const char *set),
 		if(!*set) return;
-		getreference(ref, eff, eff->getveffect(effidx) || eff->getaeffect(effidx), , r_get_status_owner)
+		getreference(r_get_status_owner, ref, eff, eff->getveffect(effidx) || eff->getaeffect(effidx), )
 		reference *owner = searchstack(set, true);
 		if(eff->getveffect(effidx)) owner->setref(eff->getveffect(effidx)->owner);
 		else owner->setref(eff->getaeffect(effidx)->owner);
 	)
 
 	ICOMMAND(r_get_status_num, "s", (const char *ref),
-		getreference(ref, eff, eff->getveffect(effidx) || eff->getaeffect(effidx), intret(0), r_get_status_num)
+		getreference(r_get_status_num, ref, eff, eff->getveffect(effidx) || eff->getaeffect(effidx), intret(0))
 		if(eff->getveffect(effidx)) intret(eff->getveffect(effidx)->effects.length());
 		else intret(eff->getaeffect(effidx)->effects.length());
 	)
 
 	ICOMMAND(r_get_status, "si", (const char *ref, int *idx),
-		getreference(ref, eff, eff->getveffect(effidx) || eff->getaeffect(effidx), result("-1 0 0 0 0"), r_get_status_num)
+		getreference(r_get_status, ref, eff, eff->getveffect(effidx) || eff->getaeffect(effidx), result("-1 0 0 0 0"))
 
 		vector<status *> *seffects;
 		if(eff->getveffect(effidx)) seffects = &eff->getveffect(effidx)->effects;
@@ -1988,7 +2026,7 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_get_status_duration, "si", (const char *ref, int *idx),
-		getreference(ref, eff, eff->getveffect(effidx) || eff->getaeffect(effidx), intret(0), r_get_status_duration)
+		getreference(r_get_status_duration, ref, eff, eff->getveffect(effidx) || eff->getaeffect(effidx), intret(0))
 		vector<status *> &effects = eff->getveffect(effidx) ? eff->getveffect(effidx)->effects : eff->getaeffect(effidx)->effects;
 		int val = 0;
 
@@ -2012,7 +2050,7 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_get_status_remain, "si", (const char *ref, int *idx),
-		getreference(ref, eff, eff->getveffect(effidx) || eff->getaeffect(effidx), intret(0), r_get_status_remain)
+		getreference(r_get_status_remain, ref, eff, eff->getveffect(effidx) || eff->getaeffect(effidx), intret(0))
 		vector<status *> &effects = eff->getveffect(effidx) ? eff->getveffect(effidx)->effects : eff->getaeffect(effidx)->effects;
 		int val = 0;
 
@@ -2038,7 +2076,7 @@ namespace rpgscript
 	ICOMMAND(r_sound, "ss", (const char *p, const char *r),
 		if(*r)
 		{
-			getreference(r, ent, ent->getent(entidx), , r_sound)
+			getreference(r_sound, r, ent, ent->getent(entidx), )
 			playsoundname(p, &ent->getent(entidx)->o);
 		}
 		else

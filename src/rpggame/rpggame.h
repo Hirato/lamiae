@@ -1,4 +1,4 @@
-#ifndef __RPGGAME__
+﻿#ifndef __RPGGAME__
 #define __RPGGAME__
 
 #include "cube.h"
@@ -277,7 +277,7 @@ namespace rpgscript
 
 	extern reference *hover, *talker, *looter, *trader, *config;
 	extern vector<rpgent *> obits;
-	extern void parseref(const char *name, int &idx);
+	extern bool parseref(const char *name, int &idx);
 	extern reference *searchstack(const char *name, bool create = false);
 
 	extern void update();
