@@ -448,8 +448,8 @@ struct journal
 	journal() : name(NULL), status(JRN_RUMOUR) {}
 	~journal() { entries.deletearrays(); }
 };
-
-static inline bool htcmp(const char *key, const journal &ref) { return !strcmp(key, ref.name); }
+template<typename T>
+static inline bool htcmp(T *key, const journal &ref) { return htcmp(key, ref.name); }
 
 struct rpgvar
 {
@@ -513,7 +513,9 @@ struct dialogue
 		choices.deletecontents();
 	}
 };
-static inline bool htcmp(const char *key, const dialogue &ref) { return !strcmp(key, ref.node); }
+
+template<typename T>
+static inline bool htcmp(T *key, const dialogue &ref) { return htcmp(key, ref.node); }
 
 struct signal
 {
@@ -548,7 +550,8 @@ struct script
 	script() : key(NULL), listeners(64), chat(64), curnode(NULL) {}
 	~script() {}
 };
-static inline bool htcmp(const char *key, const script &ref) { return !strcmp(key, ref.key); }
+template<typename T>
+static inline bool htcmp(T *key, const script &ref) { return htcmp(key, ref.key); }
 
 struct mapscript
 {
@@ -558,7 +561,8 @@ struct mapscript
 	mapscript() : key(NULL), listeners(64) {}
 	~mapscript() {}
 };
-static inline bool htcmp(const char *key, const mapscript &ref) { return !strcmp(key, ref.key); }
+template<typename T>
+static inline bool htcmp(T *key, const mapscript &ref) { return htcmp(key, ref.key); }
 
 enum
 {
@@ -604,7 +608,8 @@ struct effect
 	void drawcone(const vec &o, vec dir, const vec &axis, int angle, float radius, float size, int type = PROJ, int elapse = 17);
 	void drawcone(physent *d, use_weapon *wep, float size, int type = PROJ, int elapse = 17);
 };
-static inline bool htcmp(const char *key, const effect &ref) { return !strcmp(key, ref.key); }
+template<typename T>
+static inline bool htcmp(T *key, const effect &ref) { return htcmp(key, ref.key); }
 
 enum
 {
@@ -788,7 +793,8 @@ struct statusgroup
 		return res;
 	}
 };
-static inline bool htcmp(const char *key, const statusgroup &ref) { return !strcmp(key, ref.key); }
+template<typename T>
+static inline bool htcmp(T *key, const statusgroup &ref) { return htcmp(key, ref.key); }
 
 struct areaeffect
 {
@@ -1470,7 +1476,8 @@ struct ammotype
 	ammotype() : key(NULL), name(NULL), reserved(false) {}
 	~ammotype() { delete[] name; }
 };
-static inline bool htcmp(const char *key, const ammotype &ref) { return !strcmp(key, ref.key); }
+template<typename T>
+static inline bool htcmp(T *key, const ammotype &ref) { return htcmp(key, ref.key); }
 
 struct faction
 {
@@ -1496,7 +1503,8 @@ struct faction
 		delete[] logo;
 	}
 };
-static inline bool htcmp(const char *key, const faction &ref) { return !strcmp(key, ref.key); }
+template<typename T>
+static inline bool htcmp(T *key, const faction &ref) { return htcmp(key, ref.key); }
 
 struct merchant
 {
@@ -1515,7 +1523,8 @@ struct merchant
 
 	merchant() : key(NULL), currency(NULL), credit(0) {}
 };
-static inline bool htcmp(const char *key, const merchant &ref) { return !strcmp(key, ref.key); }
+template<typename T>
+static inline bool htcmp(T *key, const merchant &ref) { return htcmp(key, ref.key); }
 
 //directives are sorted by priority, the most important ones are done first.
 //for example, self defense is high priority while fleeing is an even higher priority,
@@ -1733,7 +1742,8 @@ struct recipe
 			d->additem(products[i].base, products[i].quantity * mul);
 	}
 };
-static inline bool htcmp(const char *key, const recipe &ref) { return !strcmp(key, ref.key); }
+template<typename T>
+static inline bool htcmp(T *key, const recipe &ref) { return htcmp(key, ref.key); }
 
 enum
 {
