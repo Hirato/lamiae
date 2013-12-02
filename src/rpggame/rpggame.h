@@ -152,6 +152,7 @@ namespace game
 	extern const char *datapath(const char *subdir = "");
 	//NOTE: queryhashpool will register the string
 	extern const char *queryhashpool(const char *str);
+	extern const char *queryhashpool(const stringslice &str);
 
 	extern hashset<const char *> hashpool;
 

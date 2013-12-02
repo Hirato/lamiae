@@ -336,10 +336,9 @@ namespace rpgscript
 			return NULL;
 		}
 
-		const char *sep = strchr(name, ':');
-		static string lookup;
-		copystring(lookup, name);
-		if(sep) lookup[sep - name] = '\0';
+		stringslice lookup(name, 0);
+		while(lookup.str[lookup.len] != '\0' && lookup.str[lookup.len] != ':')
+			lookup.len++;
 
 		loopvrev(stack)
 		{
@@ -353,14 +352,14 @@ namespace rpgscript
 		}
 		if(create)
 		{
-			if(DEBUG_VSCRIPT) DEBUGF("reference \"%s\" not found, creating", lookup);
+			if(DEBUG_VSCRIPT) DEBUGF("reference \"%.*s\" not found, creating", lookup.len, lookup.str);
 			const char *refname = queryhashpool(lookup);
 			reference *ref = &(*stack[0])[refname];
 			ref->name = refname;
 			return ref;
 
 		}
-		if(DEBUG_VSCRIPT) DEBUGF("reference \"%s\" not found", lookup);
+		if(DEBUG_VSCRIPT) DEBUGF("reference \"%.*s\" not found", lookup.len, lookup.str);
 		return NULL;
 	}
 

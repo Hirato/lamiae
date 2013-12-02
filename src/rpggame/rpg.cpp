@@ -55,6 +55,16 @@ namespace game
 		return hashpool.access(str, str);
 	}
 
+	const char *queryhashpool(const stringslice &str)
+	{
+		const char **ret = hashpool.access(str);
+		if(ret) return *ret;
+		const char *newstr = newstring(str);
+		if(DEBUG_WORLD)
+			DEBUGF("Registered [ %s ] in hashpool; %i entries", newstr, hashpool.length() + 1);
+		return hashpool.access(newstr, newstr);
+	}
+
 	//important variables/configuration
 	SVAR(firstmap, "");
 	VAR(gameversion, 0, 0, 0x7FFFFFFF);
