@@ -3075,7 +3075,6 @@ void writecfg(const char *name)
         if(id.type==ID_ALIAS && id.flags&IDF_PERSIST && !(id.flags&IDF_OVERRIDDEN)) switch(id.valtype)
         {
         case VAL_STR:
-            if(!id.val.s[0]) break;
             if(!validateblock(id.val.s)) { f->printf("%s = %s\n", escapeid(id), escapestring(id.val.s)); break; }
         case VAL_FLOAT:
         case VAL_INT:
