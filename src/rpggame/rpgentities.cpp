@@ -202,18 +202,19 @@ namespace entities
 		{
 			rpgentity &e = *((rpgentity *) ents[i]);
 			const char *mdl = entmodel(e);
+			if(!mdl || !entpreviewalpha) return;
+
 			int anim = e.type == CRITTER ? int(ANIM_IDLE) : int(ANIM_MAPMODEL),
 				yaw = e.attr[0];
 
-			if(mdl && entpreviewalpha)
-				rendermodel(
-					mdl,
-					anim|ANIM_LOOP,
-					e.o,
-					yaw, 0, 0,
-					MDL_CULL_VFC | MDL_CULL_DIST | MDL_CULL_OCCLUDED,
-					NULL, NULL, 0, 0, 1
-				);
+			rendermodel(
+				mdl,
+				anim|ANIM_LOOP,
+				e.o,
+				yaw, 0, 0,
+				MDL_CULL_VFC | MDL_CULL_DIST | MDL_CULL_OCCLUDED,
+				NULL, NULL, 0, 0, 1
+			);
 		}
 	}
 
