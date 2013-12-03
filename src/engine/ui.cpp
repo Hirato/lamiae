@@ -1,4 +1,4 @@
-#include "engine.h"
+﻿#include "engine.h"
 #include "textedit.h"
 
 namespace UI
@@ -3194,6 +3194,7 @@ namespace UI
             tooltip->draw(x, y);
         }
 
+        glDisable(GL_BLEND);
         gle::disable();
     }
 }
