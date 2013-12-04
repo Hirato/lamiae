@@ -1589,6 +1589,8 @@ VARFP(smfilter, 0, 2, 3, { cleardeferredlightshaders(); cleanupshadowatlas(); })
 VARFP(smgather, 0, 0, 1, { cleardeferredlightshaders(); cleanupshadowatlas(); });
 VAR(smnoshadow, 0, 0, 1);
 VAR(smdynshadow, 0, 1, 1);
+FVAR(avatarshadowdist, 0, 8, 100);
+FVAR(avatarshadowbias, 0, 8, 100);
 VAR(lighttilesused, 1, 0, 0);
 VAR(lightpassesused, 1, 0, 0);
 
@@ -4008,7 +4010,12 @@ void preparegbuffer(bool depthclear)
     if(drawtex == DRAWTEX_MINIMAP)
     {
         linearworldmatrix.mul(invcamprojmatrix, invscreenmatrix);
-        worldmatrix = linearworldmatrix;
+        if(!gdepthformat) worldmatrix = linearworldmatrix;
+        linearworldmatrix.a.z = invcammatrix.a.z;
+        linearworldmatrix.b.z = invcammatrix.b.z;
+        linearworldmatrix.c.z = invcammatrix.c.z;
+        linearworldmatrix.d.z = invcammatrix.d.z;
+        if(gdepthformat) worldmatrix = linearworldmatrix;
 
         GLOBALPARAMF(radialfogscale, 0, 0, 0, 0);
     }

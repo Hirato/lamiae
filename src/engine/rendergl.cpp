@@ -1251,11 +1251,11 @@ void pophudmatrix(bool flush, bool flushparams)
 int vieww = -1, viewh = -1, viewidx = 0;
 float curfov = 100, curavatarfov = 65, fovy, aspect;
 int farplane;
-VARP(zoominvel, 0, 250, 5000);
-VARP(zoomoutvel, 0, 100, 5000);
-VARP(zoomfov, 10, 35, 60);
+VARP(zoominvel, 0, 40, 500);
+VARP(zoomoutvel, 0, 50, 500);
+VARP(zoomfov, 10, 42, 60);
 VARP(fov, 10, 100, 150);
-VAR(avatarzoomfov, 10, 25, 60);
+VAR(avatarzoomfov, 1, 1, 1);
 VAR(avatarfov, 10, 40, 100);
 FVAR(avatardepth, 0, 0.8f, 1);
 FVARNP(aspect, forceaspect, 0, 0, 1e3f);
@@ -1282,7 +1282,7 @@ void computezoom()
     curavatarfov = avatarzoomfov*zoomprogress + avatarfov*(1 - zoomprogress);
 }
 
-FVARP(zoomsens, 1e-4f, 3, 1e4f);
+FVARP(zoomsens, 1e-4f, 4.5f, 1e4f);
 FVARP(zoomaccel, 0, 0, 1000);
 VARP(zoomautosens, 0, 1, 1);
 FVARP(sensitivity, 1e-4f, 10, 1e4f);

@@ -514,13 +514,16 @@ void addbatchedmodel(model *m, batchedmodel &bm, int idx)
     b->batched = idx;
 }
 
-static inline void renderbatchedmodel(model *m, batchedmodel &b)
+static inline void renderbatchedmodel(model *m, const batchedmodel &b)
 {
     modelattach *a = NULL;
     if(b.attached>=0) a = &modelattached[b.attached];
 
     int anim = b.anim;
-    if(shadowmapping > SM_REFLECT) anim |= ANIM_NOSKIN;
+    if(shadowmapping > SM_REFLECT)
+    {
+        anim |= ANIM_NOSKIN;
+    }
     else
     {
         if(b.flags&MDL_FULLBRIGHT) anim |= ANIM_FULLBRIGHT;
@@ -796,7 +799,7 @@ void rendertransparentmodelbatches()
             batchedmodel &bm = batchedmodels[j];
             j = bm.next;
             bm.culled = cullmodel(b.m, bm.center, bm.radius, bm.flags, bm.d);
-            if(bm.culled || bm.colorscale.a >= 1) continue;
+            if(bm.culled || bm.colorscale.a >= 1 || bm.flags&MDL_ONLYSHADOW) continue;
             if(!rendered)
             {
                 b.m->startrender();
@@ -997,7 +1000,7 @@ hasboundbox:
         m->startrender();
         setaamask(true);
         if(flags&MDL_FULLBRIGHT) anim |= ANIM_FULLBRIGHT;
-        m->render(anim, basetime, basetime2, o, yaw, pitch, roll, d, a, size);
+        m->render(anim, basetime, basetime2, o, yaw, pitch, roll, d, a, size, color);
         m->endrender();
         if(flags&MDL_CULL_QUERY && !viewidx && d->query) endquery(d->query);
         return;

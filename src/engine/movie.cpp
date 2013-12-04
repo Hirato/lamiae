@@ -31,6 +31,8 @@ struct avisegmentinfo
     avisegmentinfo(stream::offset offset, int firstindex) : offset(offset), videoindexoffset(0), soundindexoffset(0), firstindex(firstindex), videoindexsize(0), soundindexsize(0), indexframes(0), videoframes(0), soundframes(0) {}
 };
 
+SVARP(moviedir, "movie");
+
 struct aviwriter
 {
     stream *f;
@@ -174,7 +176,16 @@ struct aviwriter
 
     aviwriter(const char *name, uint w, uint h, uint fps, bool sound) : f(NULL), yuv(NULL), videoframes(0), totalsize(0), videow(w&~1), videoh(h&~1), videofps(fps), soundfrequency(0),soundchannels(0),soundformat(0)
     {
-        copystring(filename, name);
+        copystring(filename, moviedir);
+        if(moviedir[0])
+        {
+            int dirlen = strlen(filename);
+            if(filename[dirlen] != '/' && filename[dirlen] != '\\' && dirlen+1 < (int)sizeof(filename)) { filename[dirlen++] = '/'; filename[dirlen] = '\0'; }
+            const char *dir = findfile(filename, "w");
+            if(!fileexists(dir, "w")) createdir(dir);
+        }
+
+        concatstring(filename, name);
         path(filename);
         if(!strrchr(filename, '.')) concatstring(filename, ".avi");
 
@@ -916,7 +927,7 @@ namespace recorder
         file = new aviwriter(filename, videow, videoh, videofps, sound);
         if(!file->open())
         {
-            conoutf(CON_ERROR, "unable to create file %s", filename);
+            conoutf(CON_ERROR, "unable to create file %s", file->filename);
             DELETEP(file);
             return;
         }

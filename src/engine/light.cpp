@@ -694,7 +694,7 @@ void calclight()
 COMMAND(calclight, "");
 
 VARF(fullbright, 0, 0, 1, initlights());
-VARF(fullbrightlevel, 0, 128, 255, initlights());
+VARF(fullbrightlevel, 0, 160, 255, initlights());
 
 void clearlights()
 {
