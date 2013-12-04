@@ -1161,6 +1161,25 @@ namespace rpgscript
 		}
 	)
 
+	ICOMMAND(r_local_exists, "ss", (const char *ref, const char *name),
+		getreference(r_local_exists, ref, gen, gen->getinv(genidx) || gen->getent(genidx) || gen->getmap(genidx), intret(0))
+
+		int li = -1;
+		if(gen->getinv(genidx))
+			li = gen->getinv(genidx)->locals;
+		else if(gen->getent(genidx))
+			li = gen->getent(genidx)->locals;
+		else if(gen->getmap(genidx))
+			li = gen->getmap(genidx)->locals;
+
+		if(li >= 0)
+		{
+			rpgvar *var = locals[li]->variables.access(name);
+			intret(var != NULL);
+		}
+		intret(0);
+	)
+
 	ICOMMAND(r_local_set, "sss", (const char *ref, const char *name, const char *val),
 		getreference(r_local_set, ref, gen, gen->getinv(genidx) || gen->getent(genidx) || gen->getmap(genidx), )
 
