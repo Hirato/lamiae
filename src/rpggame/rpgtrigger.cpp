@@ -12,8 +12,9 @@ void rpgtrigger::update()
 void rpgtrigger::render()
 {
 	if(flags & F_INVIS) return;
+	vec4 col(colour, temp.alpha);
 
-	rendermodel(temp.mdl, (flags & F_TRIGGERED) ? ANIM_TRIGGER : (lasttrigger - lastmillis > 1500 ? ANIM_MAPMODEL|ANIM_LOOP : ANIM_TRIGGER|ANIM_REVERSE), vec(o).sub(vec(0, 0, eyeheight)), yaw, pitch, roll, MDL_CULL_DIST|MDL_CULL_OCCLUDED, NULL, NULL, lasttrigger, 1500, 1, temp.color);
+	rendermodel(temp.mdl, (flags & F_TRIGGERED) ? ANIM_TRIGGER : (lasttrigger - lastmillis > 1500 ? ANIM_MAPMODEL|ANIM_LOOP : ANIM_TRIGGER|ANIM_REVERSE), vec(o).sub(vec(0, 0, eyeheight)), yaw, pitch, roll, MDL_CULL_DIST|MDL_CULL_OCCLUDED, NULL, NULL, lasttrigger, 1500, 1, col);
 }
 
 void rpgtrigger::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir)

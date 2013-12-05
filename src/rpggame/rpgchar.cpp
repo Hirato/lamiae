@@ -624,6 +624,7 @@ void rpgchar::render()
 
 	vector<modelattach> attachments;
 	vec *emitter = emitters;
+	vec4 col(colour, temp.alpha);
 
 	loopv(equipped)
 	{
@@ -652,7 +653,7 @@ void rpgchar::render()
 
 	if(aiflags & AI_ANIM) hold = (forceanim & ANIM_INDEX) | ANIM_LOOP;
 
-	renderclient(this, temp.mdl ? temp.mdl : mdl, attachments.buf, hold, action, delay, lastaction, state == CS_ALIVE ? lastpain : 0, 1, true, temp.color);
+	renderclient(this, temp.mdl ? temp.mdl : mdl, attachments.buf, hold, action, delay, lastaction, state == CS_ALIVE ? lastpain : 0, 1, true, col);
 
 	emitter = emitters;
 	loopv(equipped)

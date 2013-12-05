@@ -846,7 +846,7 @@ struct rpgent : dynent
 	struct
 	{
 		vec4 light; //w == radius x y z == R G B
-		vec4 color;
+		float alpha;
 		const char *mdl;
 	} temp;
 
@@ -888,7 +888,7 @@ struct rpgent : dynent
 	{
 		temp.mdl = NULL;
 		temp.light = vec4(0, 0, 0, 0);
-		temp.color = vec4(1, 1, 1, 1);
+		temp.alpha = 1;
 	}
 	virtual ~rpgent()
 	{
@@ -1219,6 +1219,7 @@ struct item
 	::script *script;
 	const char *base;
 
+	vec colour;
 	int quantity;
 
 	int category;
@@ -1266,7 +1267,7 @@ struct item
 
 	bool compare(item *o)
 	{
-		if(base != o->base || script != o->script || durability != o->durability || recovery != o->recovery || category != o->category ||
+		if(base != o->base || colour != o->colour || script != o->script || durability != o->durability || recovery != o->recovery || category != o->category ||
 			flags != o->flags || value != o->value || maxdurability != o->maxdurability || charges != o->charges || weight != o->weight || uses.length() != o->uses.length())
 			return false;
 
@@ -1283,7 +1284,7 @@ struct item
 		return true;
 	}
 
-	item() : name(NULL), icon(NULL), description(NULL), mdl(newstring(DEFAULTMODEL)), script(DEFAULTITEMSCR), base(NULL), quantity(1), category(0), flags(0), value(0), maxdurability(0), charges(-2), weight(0), durability(0), recovery(1), locals(-1) {}
+	item() : name(NULL), icon(NULL), description(NULL), mdl(newstring(DEFAULTMODEL)), script(DEFAULTITEMSCR), base(NULL), colour(vec(1, 1, 1)), quantity(1), category(0), flags(0), value(0), maxdurability(0), charges(-2), weight(0), durability(0), recovery(1), locals(-1) {}
 	~item()
 	{
 		delete[] name;
@@ -1329,6 +1330,7 @@ struct rpgobstacle : rpgent
 
 	const char *mdl;
 	::script *script;
+	vec colour;
 	int weight;
 	int flags;
 	int lastupdate;
@@ -1348,7 +1350,7 @@ struct rpgobstacle : rpgent
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
 
 
-	rpgobstacle() : mdl(newstring(DEFAULTMODEL)), script(DEFAULTOBSTSCR), weight(100), flags(0), lastupdate(0) { physent::type = ENT_INANIMATE;}
+	rpgobstacle() : mdl(newstring(DEFAULTMODEL)), script(DEFAULTOBSTSCR), colour(vec(1, 1, 1)), weight(100), flags(0), lastupdate(0) { physent::type = ENT_INANIMATE;}
 	~rpgobstacle() { delete[] mdl; }
 };
 
@@ -1356,6 +1358,7 @@ struct rpgcontainer : rpgent
 {
 	const char *mdl, *name;
 	hashtable<const char *, vector<item *> > inventory;
+	vec colour;
 	int capacity;
 	::faction *faction;
 	::merchant *merchant;
@@ -1386,7 +1389,7 @@ struct rpgcontainer : rpgent
 	int getcount(item *it);
 	float getweight();
 
-	rpgcontainer() : mdl(newstring(DEFAULTMODEL)), name(NULL), capacity(200), faction(NULL), merchant(NULL), script(DEFAULTCONTSCR), lock(0), magelock(0) {physent::type = ENT_INANIMATE;}
+	rpgcontainer() : mdl(newstring(DEFAULTMODEL)), name(NULL), colour(vec(1, 1, 1)), capacity(200), faction(NULL), merchant(NULL), script(DEFAULTCONTSCR), lock(0), magelock(0) {physent::type = ENT_INANIMATE;}
 	~rpgcontainer()
 	{
 		delete[] name;
@@ -1405,6 +1408,7 @@ struct rpgplatform : rpgent
 
 	const char *mdl;
 	::script *script;
+	vec colour;
 	int speed;
 	int flags;
 
@@ -1427,7 +1431,7 @@ struct rpgplatform : rpgent
 	void die(rpgent *killer = NULL) {}
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
 
-	rpgplatform() : mdl(newstring(DEFAULTMODEL)), script(DEFAULTPLATSCR), speed(100), flags(0), routes(hashtable<int, vector<int> >(16)), target(-1) {physent::type = ENT_INANIMATE;}
+	rpgplatform() : mdl(newstring(DEFAULTMODEL)), script(DEFAULTPLATSCR), colour(vec(1, 1, 1)), speed(100), flags(0), routes(hashtable<int, vector<int> >(16)), target(-1) {physent::type = ENT_INANIMATE;}
 	~rpgplatform() { delete[] mdl; }
 };
 
@@ -1442,6 +1446,7 @@ struct rpgtrigger : rpgent
 
 	const char *mdl, *name;
 	::script *script; //id
+	vec colour;
 	int flags;
 	int lasttrigger;
 
@@ -1459,7 +1464,7 @@ struct rpgtrigger : rpgent
 	void die(rpgent *killer = NULL) {}
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
 
-	rpgtrigger() : mdl(newstring(DEFAULTMODEL)), name(NULL), script(DEFAULTTRIGSCR), flags(0), lasttrigger(lastmillis) {physent::type = ENT_INANIMATE;}
+	rpgtrigger() : mdl(newstring(DEFAULTMODEL)), name(NULL), script(DEFAULTTRIGSCR), colour(vec(1, 1, 1)), flags(0), lasttrigger(lastmillis) {physent::type = ENT_INANIMATE;}
 	~rpgtrigger()
 	{
 		delete[] mdl;
@@ -1561,6 +1566,7 @@ struct rpgchar : rpgent
 	vec emitters[SLOT_NUM * 2]; //two emitters a slot; start and end
 
 	const char *name, *mdl, *portrait;
+	vec colour;
 	::script *script;
 	::faction *faction;
 	::merchant *merchant;
@@ -1628,7 +1634,7 @@ struct rpgchar : rpgent
 
 	void cleanup();
 
-	rpgchar() : name(NULL), mdl(newstring(DEFAULTMODEL)), portrait(NULL), script(DEFAULTCHARSCR), faction(DEFAULTFACTION), merchant(NULL), base(stats(this)), lastaction(0), lastai(0), lastpain(0), charge(0), primary(false), secondary(false), lastprimary(false), lastsecondary(false), attack(NULL), aiflags(0), target(NULL), forceanim(0)
+	rpgchar() : name(NULL), mdl(newstring(DEFAULTMODEL)), portrait(NULL), colour(vec(1, 1, 1)), script(DEFAULTCHARSCR), faction(DEFAULTFACTION), merchant(NULL), base(stats(this)), lastaction(0), lastai(0), lastpain(0), charge(0), primary(false), secondary(false), lastprimary(false), lastsecondary(false), attack(NULL), aiflags(0), target(NULL), forceanim(0)
 	{
 		health = base.getmaxhp();
 		mana = base.getmaxmp();

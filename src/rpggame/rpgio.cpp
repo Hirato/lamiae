@@ -249,6 +249,7 @@ namespace rpgio
 		NOTNULL(it->script, it)
 		NOTNULL(it->base, it);
 
+		readvec(it->colour)
 		it->quantity = f->getlil<int>();
 		it->category = f->getlil<int>();
 		it->flags = f->getlil<int>();
@@ -370,6 +371,7 @@ namespace rpgio
 		writestring(f, it->script->key);
 		writestring(f, it->base);
 
+		writevec(it->colour)
 		f->putlil(it->quantity);
 		f->putlil(it->category);
 		f->putlil(it->flags);
@@ -478,6 +480,7 @@ namespace rpgio
 				loading->name = readstring(f);
 				loading->mdl = readstring(f);
 				loading->portrait = readstring(f);
+				readvec(loading->colour);
 
 				NOTNULL(loading->mdl, ent);
 				preloadmodel(loading->mdl);
@@ -572,6 +575,7 @@ namespace rpgio
 				READHASHEXTENDED(loading->script, game::scripts);
 				NOTNULL(loading->script, ent);
 
+				readvec(loading->colour);
 				loading->weight = f->getlil<int>();
 				loading->flags = f->getlil<int>();
 
@@ -598,6 +602,7 @@ namespace rpgio
 				if(loading->merchant) NOTNULL(loading->merchant, ent);
 				NOTNULL(loading->script, ent)
 
+				readvec(loading->colour);
 				loading->capacity = f->getlil<int>();
 				loading->lock = f->getlil<int>();
 				loading->magelock = f->getlil<int>();
@@ -626,6 +631,7 @@ namespace rpgio
 				READHASHEXTENDED(loading->script, game::scripts)
 				NOTNULL(loading->script, ent)
 
+				readvec(loading->colour);
 				loading->speed = f->getlil<int>();
 				loading->flags = f->getlil<int>();
 
@@ -658,6 +664,8 @@ namespace rpgio
 				loading->name = readstring(f);
 				READHASHEXTENDED(loading->script, game::scripts)
 				NOTNULL(loading->script, ent)
+
+				readvec(loading->colour);
 				loading->flags = f->getlil<int>();
 				loading->lasttrigger = f->getlil<int>() + lastmillis;
 
@@ -769,6 +777,7 @@ namespace rpgio
 				writestring(f, saving->name);
 				writestring(f, saving->mdl);
 				writestring(f, saving->portrait);
+				writevec(saving->colour)
 
 				#define x(var) f->putlil(saving->base.var);
 
@@ -842,6 +851,7 @@ namespace rpgio
 				writestring(f, saving->mdl);
 				writestring(f, saving->script->key);
 
+				writevec(saving->colour)
 				f->putlil(saving->weight);
 				f->putlil(saving->flags);
 
@@ -857,6 +867,7 @@ namespace rpgio
 				writestring(f, saving->merchant ? saving->merchant->key : NULL);
 				writestring(f, saving->script->key );
 
+				writevec(saving->colour)
 				f->putlil(saving->capacity);
 				f->putlil(saving->lock);
 				f->putlil(saving->magelock);
@@ -878,6 +889,7 @@ namespace rpgio
 				writestring(f, saving->mdl);
 				writestring(f, saving->script->key);
 
+				writevec(saving->colour)
 				f->putlil(saving->speed);
 				f->putlil(saving->flags);
 
@@ -901,6 +913,8 @@ namespace rpgio
 				writestring(f, saving->mdl);
 				writestring(f, saving->name);
 				writestring(f, saving->script->key);
+
+				writevec(saving->colour)
 				f->putlil(saving->flags);
 				f->putlil(saving->lasttrigger - lastmillis);
 

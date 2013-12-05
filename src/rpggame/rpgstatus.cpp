@@ -298,7 +298,7 @@ void status_generic::update(rpgent *victim, rpgent *owner, int resist, int thres
 		case STATUS_INVIS:
 			if(DEBUG_STATUS)
 				DEBUGF("Applying invisibility effect to %p; %i %i; mult %f", victim, strength, duration, mult);
-			victim->temp.color.a -= strength * mult / 100.f;
+			victim->temp.alpha -= strength * mult / 100.f;
 			break;
 	}
 }

@@ -734,7 +734,7 @@ namespace game
 			float eye = d->maxheight;
 
 			d->resetmdl();
-			d->temp.color = vec4(1, 1, 1, 1);
+			d->temp.alpha = 1;
 			d->temp.light = vec4(0, 0, 0, 0);
 			d->update();
 			loopvj(d->seffects)

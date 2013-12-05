@@ -822,6 +822,7 @@ namespace game
 	MODEL(mdl)
 	SHASH(script, scripts, 1)
 
+	VEC(colour, 0, 0, 0, 1, 1, 1)
 	INT(quantity, 0, 0xFFFFFF)
 	INT(category, 0, categories.length() - 1)
 	INT(flags, 0, item::F_MAX)
@@ -1063,6 +1064,7 @@ namespace game
 	SHASH(faction, factions, 1)
 	SHASH(merchant, merchants, 0)
 
+	VEC(colour, 0, 0, 0, 1, 1, 1)
 	STATS(base)
 	FLOAT(health, 0, e->base.getmaxhp())
 	FLOAT(mana, 0, e->base.getmaxmp())
@@ -1115,6 +1117,7 @@ namespace game
 
 	MODEL(mdl)
 	SHASH(script, scripts, 1)
+	VEC(colour, 0, 0, 0, 1, 1, 1)
 	INT(weight, 0, 0xFFFF)
 	INT(flags, 0, rpgobstacle::F_MAX)
 
@@ -1134,6 +1137,7 @@ namespace game
 	SHASH(script, scripts, 1)
 	SHASH(faction, factions, 0)
 	SHASH(merchant, merchants, 0)
+	VEC(colour, 0, 0, 0, 1, 1, 1)
 	INT(capacity, 0, 0xFFFF)
 	INT(lock, 0, 100)
 	INT(magelock, 0, 100)
@@ -1151,6 +1155,7 @@ namespace game
 
 	MODEL(mdl)
 	SHASH(script, scripts, 1)
+	VEC(colour, 0, 0, 0, 1, 1, 1)
 	INT(speed, 1, 1000)
 	INT(flags, 0, rpgplatform::F_MAX)
 
@@ -1201,6 +1206,7 @@ namespace game
 	MODEL(mdl)
 	STRING(name)
 	SHASH(script, scripts, 1)
+	VEC(colour, 0, 0, 0, 1, 1, 1)
 	INT(flags, 0, rpgtrigger::F_MAX)
 
 	#undef START
