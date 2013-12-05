@@ -273,6 +273,26 @@ bool delayscript::update()
 	return false;
 }
 
+bool timer::update()
+{
+	remaining -= curtime;
+	if(remaining > 0 || camera::cutscene) return true;
+
+	uint *cond = compilecode(this->cond);
+	uint *script = compilecode(this->script);
+	while(remaining <= 0)
+	{
+		remaining += delay;
+		if(!executebool(cond)) { freecode(cond); freecode(script); return false; }
+
+		rpgexecute(script);
+	}
+
+	freecode(cond);
+	freecode(script);
+	return true;
+}
+
 /*
 	start the actual script stuff!
 */
@@ -291,6 +311,7 @@ namespace rpgscript
 	vector<hashnameset<reference> *> stack;
 	vector<localinst *> locals;
 	vector<delayscript *> delaystack;
+	hashnameset<timer> timers;
 	reference *player = NULL;
 	reference *hover = NULL;
 	reference *map = NULL;
@@ -419,8 +440,25 @@ namespace rpgscript
 		copystack(ds->refs);
 	)
 
+	ICOMMAND(r_timer, "siss", (const char *name, int *interval, const char *cond, const char *scr),
+		if(!stack.length()) return;
+
+		*interval = max(50, *interval);
+
+		if(DEBUG_SCRIPT) DEBUGF("Registering timer[%s] with interval %i", name, *interval);
+		name = game::queryhashpool(name);
+		timer *t = &timers[name];
+
+		t->name = name;
+		t->delay = t->remaining = *interval;
+		delete[] t->cond; t->cond = newstring(cond);
+		delete[] t->script; t->script = newstring(scr);
+	)
+
 	void clean()
 	{
+		delaystack.deletecontents();
+		timers.clear();
 		stack.deletecontents();
 
 		while(locals.length() && !locals.last()) locals.pop();
@@ -449,28 +487,21 @@ namespace rpgscript
 		player->immutable = hover->immutable = looter->immutable = trader->immutable = talker-> immutable = map->immutable = config->immutable = true;
 	}
 
+	static inline void replacerefs(hashnameset<reference> &refs, void *orig, void *next)
+	{
+		enumerate(refs, reference, ref,
+			loopvk(ref.list) if(ref.list[k].ptr == orig)
+			{
+				if(next) ref.list[k].ptr = next;
+				else ref.list.remove(k--);
+			}
+		)
+	}
+
 	void replacerefs(void *orig, void *next)
 	{
-		loopvj(stack)
-		{
-			enumerate(*stack[j], reference, ref,
-				loopvk(ref.list) if(ref.list[k].ptr == orig)
-				{
-					if(next) ref.list[k].ptr = next;
-					else ref.list.remove(k--);
-				}
-			)
-		}
-		loopvj(delaystack)
-		{
-			enumerate(delaystack[i]->refs, reference, ref,
-				loopvk(ref.list) if(ref.list[k].ptr == orig)
-				{
-					if(next) ref.list[k].ptr = next;
-					else ref.list.remove(k--);
-				}
-			)
-		}
+		loopv(stack) replacerefs(*stack[i], orig, next);
+		loopv(delaystack) replacerefs(delaystack[i]->refs, orig, next);
 	}
 
 	void removereferences(rpgent *ptr, bool references)
@@ -542,6 +573,12 @@ namespace rpgscript
 			if(!delaystack[i]->update())
 				delete delaystack.remove(i--);
 		}
+
+		vector<timer *> expiredtimers;
+		enumerate(timers, timer, t,
+			if(!t.update()) expiredtimers.add(&t);
+		)
+		loopv(expiredtimers) timers.remove(expiredtimers[i]->name);
 
 		vec dir = vec(worldpos).sub(player1->o);
 		float maxdist = max(player1->eyeheight, player1->radius) * 1.1;

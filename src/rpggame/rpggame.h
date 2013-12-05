@@ -68,6 +68,7 @@
 
 struct ammotype;
 struct delayscript;
+struct timer;
 struct effect;
 struct faction;
 struct item;
@@ -167,7 +168,7 @@ namespace game
 
 	extern vector<const char *> categories, tips;
 	extern hashnameset<rpgvar> variables;
-	extern hashset<journal> journals;
+	extern hashnameset<journal> journals;
 
 // 	extern vector<equipment> hotkeys;
 
@@ -305,6 +306,7 @@ namespace rpgscript
 	extern vector<hashnameset<reference> *> stack;
 	extern vector<localinst *> locals;
 	extern vector<delayscript *> delaystack;
+	extern hashnameset<timer> timers;
 }
 
 namespace entities
@@ -449,8 +451,6 @@ struct journal
 	journal() : name(NULL), status(JRN_RUMOUR) {}
 	~journal() { entries.deletearrays(); }
 };
-template<typename T>
-static inline bool htcmp(T *key, const journal &ref) { return htcmp(key, ref.name); }
 
 struct rpgvar
 {
@@ -1963,6 +1963,19 @@ struct delayscript
 	bool update();
 	delayscript() : refs(128), script(NULL), remaining(0) {}
 	~delayscript() { delete[] script; }
+};
+
+struct timer
+{
+	const char *name;
+	const char *cond;
+	const char *script;
+	int delay;
+	int remaining;
+
+	bool update();
+	timer() : name(NULL), cond(NULL), script(NULL), delay(0), remaining(0) {}
+	~timer() { delete[] cond; }
 };
 
 enum

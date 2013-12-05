@@ -4,8 +4,8 @@ extern bool reloadtexture(const char *name); //texture.cpp
 
 namespace rpgio
 {
-	#define SAVE_VERSION 44 + 1
-	#define COMPAT_VERSION 44 + 1
+	#define SAVE_VERSION 46
+	#define COMPAT_VERSION 46
 	#define SAVE_MAGIC "RPGS"
 
 	/**
@@ -1572,6 +1572,13 @@ namespace rpgio
 		}
 	}
 
+	void writedelayscript(stream *f, const vector<mapinfo *> &maps, delayscript *saving)
+	{
+		writereferences(f, maps, saving->refs);
+		writestring(f, saving->script);
+		f->putlil(saving->remaining);
+	}
+
 	void readdelayscript(stream *f, const vector<mapinfo *> &maps, delayscript *loading)
 	{
 		readreferences(f, maps, loading->refs);
@@ -1579,11 +1586,13 @@ namespace rpgio
 		loading->remaining = f->getlil<int>();
 	}
 
-	void writedelayscript(stream *f, const vector<mapinfo *> &maps, delayscript *saving)
+	void writejournal(stream *f, journal *saving)
 	{
-		writereferences(f, maps, saving->refs);
-		writestring(f, saving->script);
-		f->putlil(saving->remaining);
+		writestring(f, saving->name);
+		f->putlil(saving->status);
+		f->putlil(saving->entries.length());
+		loopv(saving->entries)
+			writestring(f, saving->entries[i]);
 	}
 
 	void readjournal(stream *f)
@@ -1602,13 +1611,16 @@ namespace rpgio
 			journ->entries.add(readstring(f));
 	}
 
-	void writejournal(stream *f, journal *saving)
+	void writelocal(stream *f, localinst *saving)
 	{
-		writestring(f, saving->name);
-		f->putlil(saving->status);
-		f->putlil(saving->entries.length());
-		loopv(saving->entries)
-			writestring(f, saving->entries[i]);
+		int n = 0;
+		if(saving) n = saving->variables.length();
+		f->putlil(n);
+
+		if(saving) enumerate(saving->variables, rpgvar, var,
+			writestring(f, var.name);
+			writestring(f, var.value);
+		)
 	}
 
 	void readlocal(stream *f, int i)
@@ -1635,16 +1647,42 @@ namespace rpgio
 		}
 	}
 
-	void writelocal(stream *f, localinst *saving)
+	void writetimer(stream *f, vector<mapinfo *> &maps, timer *saving)
 	{
-		int n = 0;
-		if(saving) n = saving->variables.length();
-		f->putlil(n);
+		writestring(f, saving->name);
+		writestring(f, saving->cond);
+		writestring(f, saving->script);
 
-		if(saving) enumerate(saving->variables, rpgvar, var,
-			writestring(f, var.name);
-			writestring(f, var.value);
-		)
+		f->putlil(saving->delay);
+		f->putlil(saving->remaining);
+	}
+
+	void readtimer(stream *f, vector<mapinfo *> &maps)
+	{
+		const char *name;
+		READHASH(name);
+		NOTNULL(name, );
+
+		bool del = false;
+		timer *loading;
+
+		if(rpgscript::timers.access(name))
+		{
+			if(DEBUG_IO) DEBUGF("Timer %s already exists, ignoring saved version", name);
+			del = true;
+			loading = new timer();
+		}
+		else loading = &rpgscript::timers[name];
+
+		loading->name = name;
+
+		loading->cond = readstring(f);
+		loading->script = readstring(f);
+
+		loading->delay = f->getlil<int>();
+		loading->remaining = f->getlil<int>();
+
+		if(del) delete loading;
 	}
 
 	void loadgame(const char *name)
@@ -1763,6 +1801,8 @@ namespace rpgio
 			rpgscript::delaystack.add(new delayscript());
 			readdelayscript(f, maps, rpgscript::delaystack[i]);
 		)
+
+		READ(global timers, readtimer(f, maps); )
 
 		READ(journal bucket,
 			readjournal(f);
@@ -1901,6 +1941,13 @@ namespace rpgio
 			writedelayscript(f, maps, rpgscript::delaystack[i]);
 		)
 
+		vector<timer *> timers;
+		enumerate(rpgscript::timers, timer, t, timers.add(&t));
+
+		WRITE(global timer, timers,
+			writetimer(f, maps, timers[i]);
+		)
+
 		vector<journal *> journ;
 		enumerate(game::journals, journal, bucket,
 			journ.add(&bucket);
@@ -1908,6 +1955,7 @@ namespace rpgio
 		WRITE(journal bucket, journ,
 			writejournal(f, journ[i]);
 		)
+
 
 		game::curmap->objs.add(game::player1);
 		DELETEP(f);

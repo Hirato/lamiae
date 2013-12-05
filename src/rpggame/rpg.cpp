@@ -1,4 +1,4 @@
-#include "rpggame.h"
+﻿#include "rpggame.h"
 
 namespace game
 {
@@ -20,7 +20,7 @@ namespace game
 
 	vector<const char *> categories, tips;
 	hashnameset<rpgvar> variables;
-	hashset<journal> journals;
+	hashnameset<journal> journals;
 
 	string data; //data folder
 	hashnameset<mapinfo> mapdata;
