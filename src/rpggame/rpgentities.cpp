@@ -565,7 +565,7 @@ namespace entities
 		return e.id;
 	}
 
-	float getentyaw(const entity &e)
+	int getentyaw(const entity &e)
 	{
 		switch(e.type)
 		{
@@ -583,6 +583,37 @@ namespace entities
 			case CAMERA:
 				return e.attr[1];
 
+			default:
+				return 0;
+		}
+	}
+
+	int getentpitch(const entity &e)
+	{
+		switch(e.type)
+		{
+			case CAMERA:
+				return e.attr[2];
+			default:
+				return 0;
+		}
+	}
+
+	int getentroll(const entity &e)
+	{
+		switch(e.type)
+		{
+			case CAMERA:
+				return e.attr[3];
+			default:
+				return 0;
+		}
+	}
+
+	int getentscale(const entity &e)
+	{
+		switch(e.type)
+		{
 			default:
 				return 0;
 		}

@@ -11,18 +11,58 @@ VARNR(emptymap, _emptymap, 1, 0, 0);
 VAR(octaentsize, 0, 64, 1024);
 VAR(entselradius, 0, 2, 10);
 
-static inline void mmboundbox(const entity &e, model *m, vec &center, vec &radius)
+int getentyaw(const entity &e)
 {
-    m->boundbox(center, radius);
-    if(e.attr[4] > 0) { float scale = e.attr[4]/100.0f; center.mul(scale); radius.mul(scale); }
-    rotatebb(center, radius, e.attr[1], e.attr[2], e.attr[3]);
+    switch(e.type)
+    {
+        case ET_MAPMODEL:
+            return e.attr[1];
+        case ET_PLAYERSTART:
+            return e.attr[0];
+        default:
+            return entities::getentyaw(e);
+    }
+}
+
+int getentpitch(const entity &e)
+{
+    switch(e.type)
+    {
+        case ET_MAPMODEL:
+            return e.attr[2];
+        default:
+            return entities::getentpitch(e);
+    }
+}
+
+int getentroll(const entity &e)
+{
+    switch(e.type)
+    {
+        case ET_MAPMODEL:
+            return e.attr[3];
+        default:
+            return entities::getentpitch(e);
+    }
+}
+
+int getentscale(const entity &e)
+{
+    switch(e.type)
+    {
+        case ET_MAPMODEL:
+            return e.attr[4];
+        default:
+            return entities::getentscale(e);
+    }
 }
 
 static inline void mmcollisionbox(const entity &e, model *m, vec &center, vec &radius)
 {
     m->collisionbox(center, radius);
-    if(e.attr[4] > 0) { float scale = e.attr[4]/100.0f; center.mul(scale); radius.mul(scale); }
-    rotatebb(center, radius, e.attr[1], e.attr[2], e.attr[3]);
+    float scale = getentscale(e)/100.0f;
+    if(scale > 0) { center.mul(scale); radius.mul(scale); }
+    rotatebb(center, radius, getentyaw(e), getentpitch(e), getentroll(e));
 }
 
 bool getentboundingbox(const extentity &e, ivec &o, ivec &r)
@@ -37,7 +77,7 @@ bool getentboundingbox(const extentity &e, ivec &o, ivec &r)
             if(m)
             {
                 vec center, radius;
-                mmboundbox(e, m, center, radius);
+                mmcollisionbox(e, m, center, radius);
                 center.add(e.o);
                 radius.max(entselradius);
                 o = vec(center).sub(radius);
@@ -465,19 +505,6 @@ void entrotate(int *cw)
         swap(e.o[R[d]], e.o[C[d]]);
         e.o.add(s);
     );
-}
-
-float getentyaw(const entity &e)
-{
-    switch(e.type)
-    {
-        case ET_MAPMODEL:
-            return e.attr[1];
-        case ET_PLAYERSTART:
-            return e.attr[0];
-        default:
-            return entities::getentyaw(e);
-    }
 }
 
 void entselectionbox(const entity &e, vec &eo, vec &es)

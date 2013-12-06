@@ -1,4 +1,4 @@
-// the interface the engine uses to run the gameplay module
+﻿// the interface the engine uses to run the gameplay module
 
 namespace entities
 {
@@ -25,7 +25,10 @@ namespace entities
     extern bool radiusent(extentity &e);
     extern void renderhelpertext(extentity &e, vec &pos, char *buf, int len);
     extern const char *entmodel(const entity &e);
-    extern float getentyaw(const entity &e);
+    extern int getentyaw(const entity &e);
+    extern int getentpitch(const entity &e);
+    extern int getentroll(const entity &e);
+    extern int getentscale(const entity &e);
     extern void animatemapmodel(const extentity &e, int &anim, int &basetime);
 }
 
