@@ -57,6 +57,14 @@ int getentscale(const entity &e)
     }
 }
 
+static inline void mmboundbox(const entity &e, model *m, vec &center, vec &radius)
+{
+    m->boundbox(center, radius);
+    float scale = getentscale(e)/100.0f;
+    if(scale > 0) { center.mul(scale); radius.mul(scale); }
+    rotatebb(center, radius, getentyaw(e), getentpitch(e), getentroll(e));
+}
+
 static inline void mmcollisionbox(const entity &e, model *m, vec &center, vec &radius)
 {
     m->collisionbox(center, radius);
@@ -64,6 +72,7 @@ static inline void mmcollisionbox(const entity &e, model *m, vec &center, vec &r
     if(scale > 0) { center.mul(scale); radius.mul(scale); }
     rotatebb(center, radius, getentyaw(e), getentpitch(e), getentroll(e));
 }
+
 
 bool getentboundingbox(const extentity &e, ivec &o, ivec &r)
 {
@@ -77,7 +86,7 @@ bool getentboundingbox(const extentity &e, ivec &o, ivec &r)
             if(m)
             {
                 vec center, radius;
-                mmcollisionbox(e, m, center, radius);
+                mmboundbox(e, m, center, radius);
                 center.add(e.o);
                 radius.max(entselradius);
                 o = vec(center).sub(radius);
