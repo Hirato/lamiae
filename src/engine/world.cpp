@@ -360,7 +360,7 @@ undoblock *newundoent()
     loopv(entgroup)
     {
         e->i = entgroup[i];
-        e->e.attr.disown(); //points to random values; this causes problems
+        new(&e->e.attr) smallvector<int>(); // need to initialise the attrs.
         e->e = *entities::getents()[entgroup[i]];
         e++;
     }
@@ -1342,6 +1342,7 @@ void resetmap()
     cancelsel();
     pruneundos();
     clearmapcrc();
+    enthover = -1;
 
     entities::clearents();
     outsideents.setsize(0);

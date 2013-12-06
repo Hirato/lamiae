@@ -620,6 +620,11 @@ void selgridmap(selinfo &sel, int *g)                           // generates a m
 void freeundo(undoblock *u)
 {
     if(!u->numents) freeblock(u->block(), false);
+    else loopi(u->numents)
+    {
+        undoent *e = (undoent *)(u + 1);
+        e[i].e.attr.~smallvector<int>(); //need to free it properly
+    }
     delete[] (uchar *)u;
 }
 
