@@ -99,7 +99,7 @@ void stats::skillpotency(int n, float &amnt, float &extra)
 
 void stats::setspeeds(float &maxspeed, float &jumpvel) const
 {
-	float mul = clamp(2 - parent->getweight() / getmaxcarry(), 0.01f, 1.f);
+	float mul = clamp(2 - parent->getweight() / getmaxcarry(), 0.01f, 1.f) * (.2f + parent->getscale() * 0.8f);
 	maxspeed = (40 + bonusmovespeed + deltamovespeed + getattr(STAT_AGILITY) / 4.f) * mul;
 	jumpvel = (80 + bonusjumpvel + deltajumpvel + getattr(STAT_AGILITY) / 2.f) * mul;
 }

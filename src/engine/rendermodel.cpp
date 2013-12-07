@@ -1106,12 +1106,14 @@ void loadskin(const char *dir, const char *altdir, Texture *&skin, Texture *&mas
 
 // convenient function that covers the usual anims for players/monsters/npcs
 
-void setbbfrommodel(physent *d, const char *mdl)
+void setbbfrommodel(physent *d, const char *mdl, float size)
 {
     model *m = loadmodel(mdl);
     if(!m) return;
     vec center, radius;
     m->collisionbox(center, radius);
+    if(size != 1) { center.mul(size); radius.mul(size); }
+
     if(m->collide != COLLIDE_ELLIPSE) d->collidetype = COLLIDE_OBB;
     d->xradius   = radius.x + fabs(center.x);
     d->yradius   = radius.y + fabs(center.y);

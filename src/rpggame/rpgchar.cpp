@@ -653,7 +653,7 @@ void rpgchar::render()
 
 	if(aiflags & AI_ANIM) hold = (forceanim & ANIM_INDEX) | ANIM_LOOP;
 
-	renderclient(this, temp.mdl ? temp.mdl : mdl, attachments.buf, hold, action, delay, lastaction, state == CS_ALIVE ? lastpain : 0, 1, true, col);
+	renderclient(this, temp.mdl ? temp.mdl : mdl, attachments.buf, hold, action, delay, lastaction, state == CS_ALIVE ? lastpain : 0, getscale(), true, col);
 
 	emitter = emitters;
 	loopv(equipped)

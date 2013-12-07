@@ -170,6 +170,12 @@ void status_generic::update(rpgent *victim, rpgent *owner, int resist, int thres
 			//the rest
 			switch(type)
 			{
+				case STATUS_SCALE:
+					if(DEBUG_STATUS)
+						DEBUGF("Applying scale modulation effect to %p; %i %i; mult %f", victim, strength, duration, mult);
+					if (strength >= 0) ent->temp.scale *= (100 + strength) / 100.f * mult;
+					else ent->temp.scale /= (100 - strength) / 100.f * mult;
+					return;
 				case STATUS_MOVE:
 					if(DEBUG_STATUS)
 						DEBUGF("Applying movement buff to %p; %i %i; mult %f", victim, strength, duration, mult);

@@ -4,8 +4,8 @@ extern bool reloadtexture(const char *name); //texture.cpp
 
 namespace rpgio
 {
-	#define SAVE_VERSION 46
-	#define COMPAT_VERSION 46
+	#define SAVE_VERSION 47
+	#define COMPAT_VERSION 47
 	#define SAVE_MAGIC "RPGS"
 
 	/**
@@ -256,6 +256,7 @@ namespace rpgio
 		it->value = f->getlil<int>();
 		it->maxdurability = f->getlil<int>();
 		it->charges = f->getlil<int>();
+		it->scale = f->getlil<float>();
 		it->weight = f->getlil<float>();
 		it->durability = f->getlil<float>();
 		it->recovery = f->getlil<float>();
@@ -378,6 +379,7 @@ namespace rpgio
 		f->putlil(it->value);
 		f->putlil(it->maxdurability);
 		f->putlil(it->charges);
+		f->putlil(it->scale);
 		f->putlil(it->weight);
 		f->putlil(it->durability);
 		f->putlil(it->recovery);
@@ -526,6 +528,7 @@ namespace rpgio
 
 				loading->health = f->getlil<float>();
 				loading->mana = f->getlil<float>();
+				loading->scale = f->getlil<float>();
 				loading->lastaction = f->getlil<int>() + lastmillis;
 
 				vector<item *> items;
@@ -578,6 +581,7 @@ namespace rpgio
 				readvec(loading->colour);
 				loading->weight = f->getlil<int>();
 				loading->flags = f->getlil<int>();
+				loading->scale = f->getlil<float>();
 
 				break;
 			}
@@ -606,6 +610,7 @@ namespace rpgio
 				loading->capacity = f->getlil<int>();
 				loading->lock = f->getlil<int>();
 				loading->magelock = f->getlil<int>();
+				loading->scale = f->getlil<float>();
 
 				int items = f->getlil<int>();
 				loopi(items)
@@ -634,6 +639,7 @@ namespace rpgio
 				readvec(loading->colour);
 				loading->speed = f->getlil<int>();
 				loading->flags = f->getlil<int>();
+				loading->scale = f->getlil<float>();
 
 				int steps = f->getlil<int>();
 				loopi(steps)
@@ -668,6 +674,7 @@ namespace rpgio
 				readvec(loading->colour);
 				loading->flags = f->getlil<int>();
 				loading->lasttrigger = f->getlil<int>() + lastmillis;
+				loading->scale = f->getlil<float>();
 
 				break;
 			}
@@ -817,6 +824,7 @@ namespace rpgio
 
 				f->putlil(saving->health);
 				f->putlil(saving->mana);
+				f->putlil(saving->scale);
 				f->putlil(saving->lastaction - lastmillis);
 
 				vector<item *> items;
@@ -854,6 +862,7 @@ namespace rpgio
 				writevec(saving->colour)
 				f->putlil(saving->weight);
 				f->putlil(saving->flags);
+				f->putlil(saving->scale);
 
 				break;
 			}
@@ -871,6 +880,7 @@ namespace rpgio
 				f->putlil(saving->capacity);
 				f->putlil(saving->lock);
 				f->putlil(saving->magelock);
+				f->putlil(saving->scale);
 
 				vector<item *> items;
 				enumerate(saving->inventory, vector<item *>, stack,
@@ -892,6 +902,7 @@ namespace rpgio
 				writevec(saving->colour)
 				f->putlil(saving->speed);
 				f->putlil(saving->flags);
+				f->putlil(saving->scale);
 
 				f->putlil(saving->routes.length());
 
@@ -917,6 +928,7 @@ namespace rpgio
 				writevec(saving->colour)
 				f->putlil(saving->flags);
 				f->putlil(saving->lasttrigger - lastmillis);
+				f->putlil(saving->scale);
 
 				break;
 			}

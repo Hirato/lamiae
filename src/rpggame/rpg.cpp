@@ -734,7 +734,7 @@ namespace game
 			float eye = d->maxheight;
 
 			d->resetmdl();
-			d->temp.alpha = 1;
+			d->temp.alpha = d->temp.scale = 1;
 			d->temp.light = vec4(0, 0, 0, 0);
 			d->update();
 			loopvj(d->seffects)
@@ -746,7 +746,7 @@ namespace game
 					j--;
 				}
 			}
-			setbbfrommodel(d, d->temp.mdl);
+			setbbfrommodel(d, d->temp.mdl, d->getscale());
 
 			eye = d->maxheight - eye;
 			if(eye)

@@ -829,6 +829,7 @@ namespace game
 	INT(value, 0, 0xFFFFFF)
 	INT(maxdurability, 0, 0xFFFFFF)
 	INT(charges, -1, 0xFFFF)
+	FLOAT(scale, 0.2, 5);
 	FLOAT(weight, 0, 0xFFFF)
 	FLOAT(durability, 0, 0xFFFFFF)
 	FLOAT(recovery, 0, 1)
@@ -1068,6 +1069,7 @@ namespace game
 	STATS(base)
 	FLOAT(health, 0, e->base.getmaxhp())
 	FLOAT(mana, 0, e->base.getmaxmp())
+	FLOAT(scale, 0.2, 5);
 
 	#undef START
 	#undef INIT
@@ -1120,6 +1122,7 @@ namespace game
 	VEC(colour, 0, 0, 0, 1, 1, 1)
 	INT(weight, 0, 0xFFFF)
 	INT(flags, 0, rpgobstacle::F_MAX)
+	FLOAT(scale, 0.2, 5);
 
 
 	#undef START
@@ -1141,6 +1144,7 @@ namespace game
 	INT(capacity, 0, 0xFFFF)
 	INT(lock, 0, 100)
 	INT(magelock, 0, 100)
+	FLOAT(scale, 0.2, 5);
 
 
 	#undef START
@@ -1158,6 +1162,7 @@ namespace game
 	VEC(colour, 0, 0, 0, 1, 1, 1)
 	INT(speed, 1, 1000)
 	INT(flags, 0, rpgplatform::F_MAX)
+	FLOAT(scale, 0.2, 5);
 
 	START(addroute, "ii", (int *from, int *to),
 		INIT
@@ -1208,6 +1213,7 @@ namespace game
 	SHASH(script, scripts, 1)
 	VEC(colour, 0, 0, 0, 1, 1, 1)
 	INT(flags, 0, rpgtrigger::F_MAX)
+	FLOAT(scale, 0.2, 5);
 
 	#undef START
 	#undef INIT
