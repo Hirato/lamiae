@@ -491,7 +491,7 @@ void rpgchar::update()
 	if(lastai <= lastmillis)
 	{
 		getsignal("ai update", false, this);
-		lastai = lastmillis + r_aiperiod + rnd(max(1, r_aiperiod / 2));
+		lastai = lastmillis + r_aiperiod + rnd(max(1, r_aiperiod));
 	}
 
 	//handle equipment
