@@ -453,7 +453,7 @@ void rpgchar::doai(equipment *eleft, equipment *eright, equipment *quiver)
 	}
 }
 
-VARP(r_aiperiod, 0, 100, 1000);
+VARP(r_aiperiod, 0, 500, 1000);
 
 void rpgchar::update()
 {
@@ -491,7 +491,7 @@ void rpgchar::update()
 	if(lastai <= lastmillis)
 	{
 		getsignal("ai update", false, this);
-		lastai = lastmillis + r_aiperiod / 2 + rnd(max(1, r_aiperiod));
+		lastai = lastmillis + r_aiperiod + rnd(max(1, r_aiperiod / 2));
 	}
 
 	//handle equipment
