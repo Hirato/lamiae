@@ -704,22 +704,18 @@ namespace entities
 	}
 
 	ICOMMAND(spawnname, "s", (const char *s),
-		if(efocus)
+		if(entgroup.length())
 		{
-			rpgentity *e = (rpgentity *) ents[efocus];
-			copystring(e->id, s, 64);
+			loopv(entgroup)
+			{
+				rpgentity *e = (rpgentity *) ents[entgroup[i]];
+				copystring(e->id, s, 64);
+			}
 			return;
 		}
-
-		if(enthover >= 0)
+		else if(enthover >= 0)
 		{
 			rpgentity *e = (rpgentity *) ents[enthover];
-			copystring(e->id, s, 64);
-		}
-		loopv(entgroup)
-		{
-			if(enthover == entgroup[i]) continue;
-			rpgentity *e = (rpgentity *) ents[entgroup[i]];
 			copystring(e->id, s, 64);
 		}
 	)
