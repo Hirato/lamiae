@@ -1266,11 +1266,11 @@ namespace rpgscript
 		int sendidx, recidx;
 		parseref(send, sendidx);
 		const bool hasrecidx = parseref(rec, recidx);
-
-		rpgent *source = sender ? sender->getent(sendidx) : NULL;
-
 		if(*send) sender = searchstack(send);
 		if(*rec) receiver = searchstack(rec);
+
+
+		rpgent *source = sender ? sender->getent(sendidx) : NULL;
 
 		if(DEBUG_VSCRIPT) DEBUGF("r_signal called with sig: %s - send: %s - rec: %s - prop: %i", sig, send, rec, prop);
 
