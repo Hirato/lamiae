@@ -162,9 +162,13 @@ bool projectile::update()
 					distance *= elasticity;
 					//conoutf("aft: %f %f %f; %f %f %f; %f", dir.x, dir.y, dir.z, normal.x, normal.y, normal.z, dir.dot(normal));
 
-					//in relation to the above, a negative dot product means gravity turned it around; freeze it
-					if(dir.magnitude() > 1e-6f && (dir.magnitude() > 1e-5f && dir.dot(normal) > -.25))
+					// a projectile that meets the following conditions aren't
+					// suitable for freezing to conserve resources.
+					if(collide.squaredist(o) >= 1 || lastcollide < lastmillis - 500 || dir.squaredlen() > 1)
+					{
+						collide = o; lastcollide = lastmillis;
 						continue;
+					}
 				}
 
 				if(DEBUG_PROJ) DEBUGF("freezing projectile %p", this);

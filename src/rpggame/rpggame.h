@@ -588,7 +588,7 @@ struct effect
 	int lightflags, lightfade, lightradius, lightinitradius;
 	vec lightcol, lightinitcol;
 
-	effect() : key(NULL), flags(FX_DYNLIGHT|FX_FIXEDFLARE), decal(DECAL_BURN), mdl(NULL), spin(vec(0, 0, 0)), particle(PART_FIREBALL1), colour(0xFFBF00), fade(500), gravity(50), size(4), lightflags(DL_EXPAND), lightfade(500), lightradius(64), lightinitradius(lightradius), lightcol(vec(1, .9, 0)), lightinitcol(lightcol) {}
+	effect() : key(NULL), flags(FX_DYNLIGHT|FX_FIXEDFLARE), decal(DECAL_BURN), mdl(NULL), spin(0, 0, 0), particle(PART_FIREBALL1), colour(0xFFBF00), fade(500), gravity(50), size(4), lightflags(DL_EXPAND), lightfade(500), lightradius(64), lightinitradius(lightradius), lightcol(1, .9, 0), lightinitcol(lightcol) {}
 	~effect() { delete[] mdl; }
 
 	enum
@@ -655,8 +655,8 @@ struct projectile
 	rpgchar *owner;
 	equipment item, ammo;
 
-	vec o, dir, emitpos;
-	int lastemit, gravity;
+	vec o, dir, emitpos, collide;
+	int lastemit, lastcollide, gravity;
 	bool deleted;
 	vector<rpgent *> hits; //used for P_PERSIST - only hits an ent once
 
@@ -675,7 +675,7 @@ struct projectile
 	void drawdeath();
 	void dynlight();
 
-	projectile() : owner(NULL), item(NULL), ammo(NULL), o(vec(0, 0, 0)), dir(vec(0, 0, 0)), emitpos(vec(0, 0, 0)), lastemit(lastmillis), gravity(0), deleted(false), pflags(0), time(10000), dist(25000), projfx(NULL), trailfx(NULL), deathfx(NULL), radius(32), elasticity(.8), charge (1.0f), chargeflags(0) {}
+	projectile() : owner(NULL), item(NULL), ammo(NULL), o(0, 0, 0), dir(0, 0, 0), emitpos(0, 0, 0), collide(0, 0, 0), lastemit(lastmillis), lastcollide(lastmillis), gravity(0), deleted(false), pflags(0), time(10000), dist(25000), projfx(NULL), trailfx(NULL), deathfx(NULL), radius(32), elasticity(.8), charge (1.0f), chargeflags(0) {}
 	~projectile() { }
 };
 
@@ -729,7 +729,7 @@ struct status_light : status
 	status *dup() { return new status_light(*this); }
 	void update(rpgent *victim, rpgent *owner, int resist, int thresh, float mul, float extra);
 
-	status_light() : colour(vec(0, 0, 0)) {}
+	status_light() : colour(0, 0, 0) {}
 	~status_light() {}
 };
 
@@ -812,7 +812,7 @@ struct areaeffect
 	void render();
 	void dynlight();
 
-	areaeffect() : owner(NULL), o(vec(0, 0, 0)), group(NULL), fx(NULL), lastemit(lastmillis), elem(ATTACK_NONE), radius(0) {}
+	areaeffect() : owner(NULL), o(0, 0, 0), group(NULL), fx(NULL), lastemit(lastmillis), elem(ATTACK_NONE), radius(0) {}
 	~areaeffect() { effects.deletecontents(); }
 };
 
@@ -1289,7 +1289,7 @@ struct item
 		return true;
 	}
 
-	item() : name(NULL), icon(NULL), description(NULL), mdl(newstring(DEFAULTMODEL)), script(DEFAULTITEMSCR), base(NULL), colour(vec(1, 1, 1)), quantity(1), category(0), flags(0), value(0), maxdurability(0), charges(-2), scale(1), weight(0), durability(0), recovery(1), locals(-1) {}
+	item() : name(NULL), icon(NULL), description(NULL), mdl(newstring(DEFAULTMODEL)), script(DEFAULTITEMSCR), base(NULL), colour(1, 1, 1), quantity(1), category(0), flags(0), value(0), maxdurability(0), charges(-2), scale(1), weight(0), durability(0), recovery(1), locals(-1) {}
 	~item()
 	{
 		delete[] name;
@@ -1358,7 +1358,7 @@ struct rpgobstacle : rpgent
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
 
 
-	rpgobstacle() : mdl(newstring(DEFAULTMODEL)), script(DEFAULTOBSTSCR), colour(vec(1, 1, 1)), weight(100), flags(0), lastupdate(0), scale(1) { physent::type = ENT_INANIMATE;}
+	rpgobstacle() : mdl(newstring(DEFAULTMODEL)), script(DEFAULTOBSTSCR), colour(1, 1, 1), weight(100), flags(0), lastupdate(0), scale(1) { physent::type = ENT_INANIMATE;}
 	~rpgobstacle() { delete[] mdl; }
 };
 
@@ -1399,7 +1399,7 @@ struct rpgcontainer : rpgent
 	int getcount(item *it);
 	float getweight();
 
-	rpgcontainer() : mdl(newstring(DEFAULTMODEL)), name(NULL), colour(vec(1, 1, 1)), capacity(200), faction(NULL), merchant(NULL), script(DEFAULTCONTSCR), lock(0), magelock(0), scale(1) {physent::type = ENT_INANIMATE;}
+	rpgcontainer() : mdl(newstring(DEFAULTMODEL)), name(NULL), colour(1, 1, 1), capacity(200), faction(NULL), merchant(NULL), script(DEFAULTCONTSCR), lock(0), magelock(0), scale(1) {physent::type = ENT_INANIMATE;}
 	~rpgcontainer()
 	{
 		delete[] name;
@@ -1443,7 +1443,7 @@ struct rpgplatform : rpgent
 	void die(rpgent *killer = NULL) {}
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
 
-	rpgplatform() : mdl(newstring(DEFAULTMODEL)), script(DEFAULTPLATSCR), colour(vec(1, 1, 1)), speed(100), flags(0), scale(1), routes(hashtable<int, vector<int> >(16)), target(-1) {physent::type = ENT_INANIMATE;}
+	rpgplatform() : mdl(newstring(DEFAULTMODEL)), script(DEFAULTPLATSCR), colour(1, 1, 1), speed(100), flags(0), scale(1), routes(hashtable<int, vector<int> >(16)), target(-1) {physent::type = ENT_INANIMATE;}
 	~rpgplatform() { delete[] mdl; }
 };
 
@@ -1478,7 +1478,7 @@ struct rpgtrigger : rpgent
 	void die(rpgent *killer = NULL) {}
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
 
-	rpgtrigger() : mdl(newstring(DEFAULTMODEL)), name(NULL), script(DEFAULTTRIGSCR), colour(vec(1, 1, 1)), flags(0), lasttrigger(lastmillis), scale(1) {physent::type = ENT_INANIMATE;}
+	rpgtrigger() : mdl(newstring(DEFAULTMODEL)), name(NULL), script(DEFAULTTRIGSCR), colour(1, 1, 1), flags(0), lasttrigger(lastmillis), scale(1) {physent::type = ENT_INANIMATE;}
 	~rpgtrigger()
 	{
 		delete[] mdl;
@@ -1650,7 +1650,7 @@ struct rpgchar : rpgent
 
 	void cleanup();
 
-	rpgchar() : name(NULL), mdl(newstring(DEFAULTMODEL)), portrait(NULL), colour(vec(1, 1, 1)), script(DEFAULTCHARSCR), faction(DEFAULTFACTION), merchant(NULL), base(stats(this)), scale(1), lastaction(0), lastai(0), lastpain(0), charge(0), primary(false), secondary(false), lastprimary(false), lastsecondary(false), attack(NULL), aiflags(0), target(NULL), forceanim(0)
+	rpgchar() : name(NULL), mdl(newstring(DEFAULTMODEL)), portrait(NULL), colour(1, 1, 1), script(DEFAULTCHARSCR), faction(DEFAULTFACTION), merchant(NULL), base(stats(this)), scale(1), lastaction(0), lastai(0), lastpain(0), charge(0), primary(false), secondary(false), lastprimary(false), lastsecondary(false), attack(NULL), aiflags(0), target(NULL), forceanim(0)
 	{
 		health = base.getmaxhp();
 		mana = base.getmaxmp();
