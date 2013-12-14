@@ -349,7 +349,7 @@ namespace rpgscript
 		popstack();
 	)
 
-	reference *searchstack(const char *name, bool create)
+	reference *searchstack(const char *name, int &idx, bool &hasidx, bool create)
 	{
 		if(!stack.length())
 		{
@@ -360,6 +360,16 @@ namespace rpgscript
 		stringslice lookup(name, 0);
 		while(lookup.str[lookup.len] != '\0' && lookup.str[lookup.len] != ':')
 			lookup.len++;
+
+		if(lookup.str[lookup.len] != ':')
+		{
+			idx = 0; hasidx = false;
+		}
+		else
+		{
+			hasidx = true;
+			idx = parseint(lookup.str + lookup.len + 1);
+		}
 
 		loopvrev(stack)
 		{
@@ -637,31 +647,18 @@ namespace rpgscript
 		popstack();
 	}
 
-	bool parseref(const char *str, int &idx)
-	{
-		idx = 0;
-		const char *sep = strchr(str, ':');
-		if(sep)
-		{
-			idx = parseint(++sep);
-			return true;
-		}
-		return false;
-	}
-
 	#define getbasicreference(fun, var, name, fail) \
 		if(!*var) \
 		{ \
 			ERRORF(#fun "; requires a reference to be specified"); \
 			fail; return; \
 		} \
-		int name ## idx; \
-		bool has ## name ## idx = parseref(var, name ## idx); \
+		int name ## idx; bool has ## name ## idx; \
+		reference *name = searchstack(var, name ## idx, has ## name ##idx); \
 		if(DEBUG_VSCRIPT) \
 		{ \
 			if(!has ## name ## idx) DEBUGF("Reference %s specifies no index, non-reflist ops will assume :0", var); \
 		} \
-		reference *name = searchstack(var); \
 		if(name) { if(DEBUG_VSCRIPT) DEBUGF("reference %s found", var); }\
 		else \
 		{ \
@@ -730,12 +727,10 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_reftype, "s", (const char *ref),
-		int idx;
-		parseref(ref, idx);
-		reference *lookup = searchstack(ref);
+		int refidx; bool hasrefidx;
+		reference *lookup = searchstack(ref, refidx, hasrefidx);
 
-		if(lookup && lookup->list.inrange(idx)) intret(lookup->list[idx].type);
-		else intret(reference::T_INVALID);
+		intret((lookup && lookup->list.inrange(refidx)) ? lookup->list[refidx].type : reference::T_INVALID);
 	)
 
 	ICOMMAND(r_clearref, "V", (tagval *v, int n),
@@ -768,14 +763,12 @@ namespace rpgscript
 	ICOMMAND(r_setref, "ss", (const char *ref, const char *alias),
 		if(!*ref) {ERRORF("r_setref; requires reference to be named"); return;}
 
-		reference *r = searchstack(ref, true);
+		int refidx; bool hasrefidx;
+		reference *r = searchstack(ref, refidx, hasrefidx, true);
 		if(!r || !r->canset()) return; //if this fails, then no stack
 
-		reference *a = *alias ? searchstack(alias) : NULL;
-
-		int refidx; int alidx;
-		bool hasrefidx = parseref(ref, refidx);
-		bool hasalidx = parseref(alias, alidx);
+		int alidx; bool hasalidx;
+		reference *a = *alias ? searchstack(alias, alidx, hasalidx) : NULL;
 
 		if(hasrefidx)
 		{
@@ -787,13 +780,8 @@ namespace rpgscript
 					r->list[refidx] = reference::ref();
 				return;
 			}
-			while(r->list.length() < refidx)
+			while(r->list.length() <= refidx)
 				r->list.add(reference::ref());
-			if(!r->list.inrange(refidx))
-			{
-				ERRORF("Invalid reference index %i", refidx);
-				return;
-			}
 
 			if(hasalidx)
 			{
@@ -855,15 +843,8 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_matchref, "ss", (const char *f, const char *s),
-		if(!*f || !*s) {ERRORF("r_matchref; requires two valid references to compare"); intret(0); return;}
-		reference *a = searchstack(f);
-		reference *b = searchstack(s);
-		if(!a || !b) {ERRORF("r_matchref; either %s or %s is an invalid reference", f, s); intret(0); return;}
-
-
-		int aidx; int bidx;
-		bool hasaidx = parseref(f, aidx);
-		bool hasbidx = parseref(s, bidx);
+		getbasicreference(r_matchref, f, a, intret(0));
+		getbasicreference(r_matchref, s, b, intret(0));
 
 		if(hasaidx && hasbidx)
 		{
@@ -943,23 +924,19 @@ namespace rpgscript
 		reference *ref = searchstack(r, false);
 		if(!ref || !ref->canset()) return;
 
-		reference *children = searchstack(c, false);
-		if(!children) return;
-		int cidx;
-		bool hascidx = parseref(c, cidx);
-
-		if(!children->list.inrange(cidx)) return;
+		getbasicreference(r_ref_sub, c, children, );
+		if(!children->list.inrange(childrenidx)) return;
 
 		if(ref == children)
 		{
-			if(!hascidx) ref->list.setsize(0);
-			else ref->list.remove(cidx);
+			if(!haschildrenidx) ref->list.setsize(0);
+			else ref->list.remove(childrenidx);
 		}
-		else if(hascidx)
+		else if(haschildrenidx)
 		{
 			loopv(ref->list)
 			{
-				if(ref->list[i].ptr == children->list[cidx].ptr)
+				if(ref->list[i].ptr == children->list[childrenidx].ptr)
 					ref->list.remove(i--);
 			}
 		}
@@ -1260,13 +1237,10 @@ namespace rpgscript
 	void sendsignal(const char *sig, const char *send, const char *rec, int prop)
 	{
 		if(!sig) return;
-		reference *sender = NULL, *receiver = NULL;
 		int sendidx, recidx;
-		parseref(send, sendidx);
-		const bool hasrecidx = parseref(rec, recidx);
-		if(*send) sender = searchstack(send);
-		if(*rec) receiver = searchstack(rec);
-
+		bool hassendidx, hasrecidx;
+		reference *sender = searchstack(send, sendidx, hassendidx);
+		reference *receiver = searchstack(rec, recidx, hasrecidx);
 
 		rpgent *source = sender ? sender->getent(sendidx) : NULL;
 
@@ -1365,9 +1339,8 @@ namespace rpgscript
 		if(*vic)
 		{
 			if(DEBUG_VSCRIPT) DEBUGF("r_loop_aeffects, entity reference provided, may do bounds checking");
-			int vidx;
-			parseref(vic, vidx);
-			reference *v = searchstack(vic, false);
+			int vidx; bool hasvidx;
+			reference *v = searchstack(vic, vidx, hasvidx, false);
 			if(v) victim = v->getent(vidx);
 		}
 
@@ -1594,9 +1567,8 @@ namespace rpgscript
 
 	ICOMMAND(r_kill, "ss", (const char *ref, const char *killer), //I was framed!
 		getbasicreference(r_kill, ref, victim, )
-		int nastyidx;
-		parseref(killer, nastyidx);
-		reference *nasty = *killer ? searchstack(killer) : NULL;
+		int nastyidx; bool hasnastyidx;
+		reference *nasty = *killer ? searchstack(killer, nastyidx, hasnastyidx) : NULL;
 
 		domultiref(r_kill, victim, victim->getchar(victimidx),
 			if(DEBUG_SCRIPT) DEBUGF("r_kill; killing %s:%i and shifting the blame to %s", victim->name, victimidx, killer);

@@ -3,11 +3,10 @@
 //essentially a collection of functions to greatly simplify the use of assorted effects while making the aesthetics more consistent
 
 #define getreference(var, name) \
-	int name ## idx; \
-	rpgscript::parseref(var, name ## idx); \
+	int name ## idx; bool has ## name ## idx; \
 	rpgent *name = NULL; \
 	do { \
-		reference *__ ## name = rpgscript::searchstack(var); \
+		reference *__ ## name = rpgscript::searchstack(var, name ## idx, has ## name ## idx); \
 		if(__ ## name) name = __ ## name->getent(name ## idx); \
 	} while(0);
 

@@ -40,9 +40,8 @@ namespace game
 			x *old = loading ## x; \
 			loading ## x = NULL; \
 			\
-			int objidx; \
-			rpgscript::parseref(ref, objidx);\
-			reference *obj = rpgscript::searchstack(ref, false); \
+			int objidx; bool hasobjidx; \
+			reference *obj = rpgscript::searchstack(ref, objidx, hasobjidx); \
 			if(obj) \
 			{ \
 				loading ## x = select; \
@@ -107,9 +106,8 @@ namespace game
 		rpgent *old = loadingrpgent;
 		loadingrpgent = NULL;
 
-		int objidx;
-		rpgscript::parseref(ref, objidx);
-		reference *obj = rpgscript::searchstack(ref, false);
+		int objidx; bool hasobjidx;
+		reference *obj = rpgscript::searchstack(ref, objidx, hasobjidx);
 		if(obj)
 		{
 			loadingrpgent = obj->getent(objidx);
@@ -136,9 +134,8 @@ namespace game
 			loading ## x = NULL; \
 			rpgent *oldrpgent = loadingrpgent; \
 			 \
-			int objidx; \
-			rpgscript::parseref(ref, objidx); \
-			reference *obj = rpgscript::searchstack(ref, false); \
+			int objidx; bool hasobjidx; \
+			reference *obj = rpgscript::searchstack(ref, objidx, hasobjidx); \
 			if(obj) \
 			{ \
 				loading ## x = select; \
@@ -182,9 +179,8 @@ namespace game
 	ICOMMAND(r_select_item_use, "se", (const char *ref, uint *contents),
 		use *old = loadinguse;
 		loadinguse = NULL;
-		int objidx;
-		rpgscript::parseref(ref, objidx);
-		reference *obj = rpgscript::searchstack(ref, false);
+		int objidx; bool hasobjidx;
+		reference *obj = rpgscript::searchstack(ref, objidx, hasobjidx);
 
 		if(obj && obj->getequip(objidx))
 		{

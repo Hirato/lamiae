@@ -173,9 +173,8 @@ namespace game
 		pophudmatrix();
 	}
 	ICOMMAND(r_hud_minimap, "sffff", (const char *r, float *x, float *y, float *dx, float *dy),
-		int idx;
-		rpgscript::parseref(r, idx);
-		reference *ent = rpgscript::searchstack(r);
+		int idx; bool hasidx;
+		reference *ent = rpgscript::searchstack(r, idx, hasidx);
 		drawminimap(ent->getent(idx), *x, *y, *dx, *dy);
 	)
 

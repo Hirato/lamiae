@@ -1,4 +1,4 @@
-// generic useful stuff for any C++ program
+﻿// generic useful stuff for any C++ program
 
 #ifndef _TOOLS_H
 #define _TOOLS_H

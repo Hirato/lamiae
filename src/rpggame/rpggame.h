@@ -279,8 +279,13 @@ namespace rpgscript
 
 	extern reference *hover, *talker, *looter, *trader, *config;
 	extern vector<rpgent *> obits;
-	extern bool parseref(const char *name, int &idx);
-	extern reference *searchstack(const char *name, bool create = false);
+	extern reference *searchstack(const char *name, int &idx, bool &hasidx, bool create = false);
+
+	static inline reference *searchstack(const char *name, bool create = false)
+	{
+		int idx; bool hasref;
+		return searchstack(name, idx, hasref, create);
+	}
 
 	extern void update();
 	extern void clean();

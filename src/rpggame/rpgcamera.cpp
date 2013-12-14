@@ -742,9 +742,8 @@ namespace camera
 
 	#define GETREF(var, ref) \
 		reference *var = NULL; \
-		int var ## idx; \
-		rpgscript::parseref(ref, var ## idx); \
-		if(*ref) var = rpgscript::searchstack(ref);
+		int var ## idx; bool has ## var ## idx; \
+		if(*ref) var = rpgscript::searchstack(ref, var ## idx, has ## var ## idx);
 
 	ICOMMAND(cs_start, "s", (const char *s),
 		//reuse camera state

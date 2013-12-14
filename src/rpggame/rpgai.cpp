@@ -329,9 +329,8 @@ namespace ai
 			ERRORF("" #fun "; requires a reference to be specified"); \
 			fail; return; \
 		} \
-		int name ## idx; \
-		rpgscript::parseref(var, name ## idx); \
-		reference *name = rpgscript::searchstack(var); \
+		int name ## idx; bool has ## name ## idx; \
+		reference *name = rpgscript::searchstack(var, name ## idx, has ## name ##idx); \
 		if(!name || !(cond)) \
 		{ \
 			ERRORF("" #fun "; invalid reference \"%s\" or of incompatible type", var); \
