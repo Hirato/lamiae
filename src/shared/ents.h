@@ -101,8 +101,8 @@ struct physent                                  // base entity type, can be affe
         floor = vec(0, 0, 1);
     }
 
-    vec feetpos(float offset = 0) const { return vec(o).add(vec(0, 0, offset - eyeheight)); }
-    vec headpos(float offset = 0) const { return vec(o).add(vec(0, 0, offset)); }
+    vec feetpos(float offset = 0) const { return vec(o).addz(offset - eyeheight); }
+    vec headpos(float offset = 0) const { return vec(o).addz(offset); }
 
     bool maymove() const { return timeinair || physstate < PHYS_FLOOR || vel.squaredlen() > 1e-4f || deltapos.squaredlen() > 1e-4f; }
 };
@@ -201,7 +201,7 @@ struct dynent : physent                         // animated characters, or chara
 //        animation = -1;
     }
 
-    vec abovehead() { return vec(o).add(vec(0, 0, aboveeye+4)); }
+    vec abovehead() { return vec(o).addz(aboveeye+4); }
 };
 
 extern int efocus, enthover, entorient;

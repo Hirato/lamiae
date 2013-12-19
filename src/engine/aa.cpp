@@ -703,7 +703,7 @@ void jitteraa(bool init)
 
 void setaamask(bool on)
 {
-    int val = on && !drawtex && tqaa && tqaamovemask ? 1 : 0;
+    int val = on && !drawtex ? 1 : 0;
     if(aamask == val) return;
 
     aamask = val;

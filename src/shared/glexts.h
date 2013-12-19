@@ -318,8 +318,8 @@ typedef void (APIENTRYP PFNGLUNIFORMMATRIX3X4FVPROC) (GLint location, GLsizei co
 typedef void (APIENTRYP PFNGLUNIFORMMATRIX4X3FVPROC) (GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
 #endif
 
-// OpenGL 2.1
-#ifdef __APPLE__
+// OpenGL 1.3
+#ifndef WIN32
 #define glActiveTexture_ glActiveTexture
 
 #define glBlendEquation_ glBlendEquation
@@ -338,6 +338,29 @@ typedef void (APIENTRYP PFNGLUNIFORMMATRIX4X3FVPROC) (GLint location, GLsizei co
 #define glGetCompressedTexImage_ glGetCompressedTexImage
 
 #define glDrawRangeElements_ glDrawRangeElements
+#else
+extern PFNGLACTIVETEXTUREPROC    glActiveTexture_;
+
+extern PFNGLBLENDEQUATIONPROC glBlendEquation_;
+extern PFNGLBLENDCOLORPROC    glBlendColor_;
+
+extern PFNGLTEXIMAGE3DPROC        glTexImage3D_;
+extern PFNGLTEXSUBIMAGE3DPROC     glTexSubImage3D_;
+extern PFNGLCOPYTEXSUBIMAGE3DPROC glCopyTexSubImage3D_;
+
+extern PFNGLCOMPRESSEDTEXIMAGE3DPROC    glCompressedTexImage3D_;
+extern PFNGLCOMPRESSEDTEXIMAGE2DPROC    glCompressedTexImage2D_;
+extern PFNGLCOMPRESSEDTEXIMAGE1DPROC    glCompressedTexImage1D_;
+extern PFNGLCOMPRESSEDTEXSUBIMAGE3DPROC glCompressedTexSubImage3D_;
+extern PFNGLCOMPRESSEDTEXSUBIMAGE2DPROC glCompressedTexSubImage2D_;
+extern PFNGLCOMPRESSEDTEXSUBIMAGE1DPROC glCompressedTexSubImage1D_;
+extern PFNGLGETCOMPRESSEDTEXIMAGEPROC   glGetCompressedTexImage_;
+
+extern PFNGLDRAWRANGEELEMENTSPROC glDrawRangeElements_;
+#endif
+
+// OpenGL 2.1
+#ifdef __APPLE__
 #define glMultiDrawArrays_ glMultiDrawArrays
 #define glMultiDrawElements_ glMultiDrawElements
 
@@ -440,25 +463,6 @@ typedef void (APIENTRYP PFNGLUNIFORMMATRIX4X3FVPROC) (GLint location, GLsizei co
 
 #define glDrawBuffers_ glDrawBuffers
 #else
-
-extern PFNGLACTIVETEXTUREPROC    glActiveTexture_;
-
-extern PFNGLBLENDEQUATIONPROC glBlendEquation_;
-extern PFNGLBLENDCOLORPROC    glBlendColor_;
-
-extern PFNGLTEXIMAGE3DPROC        glTexImage3D_;
-extern PFNGLTEXSUBIMAGE3DPROC     glTexSubImage3D_;
-extern PFNGLCOPYTEXSUBIMAGE3DPROC glCopyTexSubImage3D_;
-
-extern PFNGLCOMPRESSEDTEXIMAGE3DPROC    glCompressedTexImage3D_;
-extern PFNGLCOMPRESSEDTEXIMAGE2DPROC    glCompressedTexImage2D_;
-extern PFNGLCOMPRESSEDTEXIMAGE1DPROC    glCompressedTexImage1D_;
-extern PFNGLCOMPRESSEDTEXSUBIMAGE3DPROC glCompressedTexSubImage3D_;
-extern PFNGLCOMPRESSEDTEXSUBIMAGE2DPROC glCompressedTexSubImage2D_;
-extern PFNGLCOMPRESSEDTEXSUBIMAGE1DPROC glCompressedTexSubImage1D_;
-extern PFNGLGETCOMPRESSEDTEXIMAGEPROC   glGetCompressedTexImage_;
-
-extern PFNGLDRAWRANGEELEMENTSPROC glDrawRangeElements_;
 extern PFNGLMULTIDRAWARRAYSPROC   glMultiDrawArrays_;
 extern PFNGLMULTIDRAWELEMENTSPROC glMultiDrawElements_;
 

@@ -1066,6 +1066,7 @@ int main(int argc, char **argv)
     initsound();
 
     logoutf("init: shaders");
+    renderbackground("initializing...");
     initgbuffer();
     loadshaders();
     initparticles();
