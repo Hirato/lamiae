@@ -1957,9 +1957,9 @@ ICOMMAND(getvrefract, "i", (int *slot),
 
 ICOMMAND(loopvshaderparams, "irre", (int *slot, ident *param, ident *val, uint *body),
     if(noedit(true) || !vslots.inrange(*slot)) return;
+    loopstart(param, stack); loopstart(val, stack2);
 
     VSlot &v = *vslots[*slot];
-    identstack stack; identstack stack2;
     string vals;
 
     // we only want modified parameters.
@@ -1971,7 +1971,7 @@ ICOMMAND(loopvshaderparams, "irre", (int *slot, ident *param, ident *val, uint *
         loopiter(val, stack2, vals);
         execute(body);
     }
-    if(v.params.length()) { poparg(*param); poparg(*val); }
+    loopend(param, stack); loopend(val, stack2);
 )
 
 ICOMMAND(getvshaderparam, "is", (int *slot, const char *param),

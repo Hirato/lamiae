@@ -291,7 +291,7 @@ void addident(ident *id)
     addident(*id);
 }
 
-void pusharg(ident &id, const tagval &v, identstack &stack)
+static inline void pusharg(ident &id, const tagval &v, identstack &stack)
 {
     stack.val = id.val;
     stack.valtype = id.valtype;
@@ -301,7 +301,7 @@ void pusharg(ident &id, const tagval &v, identstack &stack)
     cleancode(id);
 }
 
-void poparg(ident &id)
+static inline void poparg(ident &id)
 {
     if(!id.stack) return;
     identstack *stack = id.stack;

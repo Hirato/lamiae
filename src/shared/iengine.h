@@ -112,8 +112,6 @@ extern void mpremip(bool local);
 extern int identflags;
 
 extern void cleancode(ident &id);
-extern void pusharg(ident &id, const tagval &v, identstack &stack);
-extern void poparg(ident &id);
 
 extern int variable(const char *name, int min, int cur, int max, int *storage, identfun fun, int flags);
 extern float fvariable(const char *name, float min, float cur, float max, float *storage, identfun fun, int flags);
