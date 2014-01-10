@@ -478,11 +478,16 @@ struct textrenderer : listrenderer
     void startrender()
     {
         textshader = particletextshader;
+
+        pushfont();
+        setfont("default_outline");
     }
 
     void endrender()
     {
         textshader = NULL;
+
+        popfont();
     }
 
     void killpart(listparticle *p)

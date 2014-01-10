@@ -1242,8 +1242,8 @@ static void compilelookup(vector<uint> &code, const char *&p, int ltype, int pre
                     if(prevargs >= MAXRESULTS) code.add(CODE_ENTER);
                     for(const char *fmt = id->args; *fmt; fmt++) switch(*fmt)
                     {
-                        case 'S': compilestr(code, NULL, 0, true); numargs++; break;
-                        case 's': compilestr(code); numargs++; break;
+                        case 'S': compilestr(code); numargs++; break;
+                        case 's': compilestr(code, NULL, 0, true); numargs++; break;
                         case 'i': compileint(code); numargs++; break;
                         case 'b': compileint(code, INT_MIN); numargs++; break;
                         case 'f': compilefloat(code); numargs++; break;
@@ -3355,18 +3355,27 @@ static bool parselist(const char *&s, const char *&start = liststart, const char
     return true;
 }
 
+static inline char *listelem(const char *start = liststart, const char *end = listend, const char *quotestart = listquotestart)
+{
+    size_t len = end-start;
+    char *s = newstring(len);
+    if(*quotestart == '"') unescapestring(s, start, end);
+    else copystring(s, start, len+1);
+    return s;
+}
+ 
 void explodelist(const char *s, vector<char *> &elems, int limit)
 {
-    const char *start, *end;
-    while((limit < 0 || elems.length() < limit) && parselist(s, start, end))
-        elems.add(newstring(start, end-start));
+    const char *start, *end, *qstart;
+    while((limit < 0 || elems.length() < limit) && parselist(s, start, end, qstart))
+        elems.add(listelem(start, end, qstart));
 }
 
 char *indexlist(const char *s, int pos)
 {
     loopi(pos) if(!parselist(s)) return newstring("");
-    const char *start, *end;
-    return parselist(s, start, end) ? newstring(start, end-start) : newstring("");
+    const char *start, *end, *qstart;
+    return parselist(s, start, end, qstart) ? listelem(start, end, qstart) : newstring("");
 }
 
 int listlen(const char *s)
@@ -3380,15 +3389,15 @@ ICOMMAND(listlen, "s", (char *s), intret(listlen(s)));
 void at(tagval *args, int numargs)
 {
     if(!numargs) return;
-    const char *start = args[0].getstr(), *end = start + strlen(start);
+    const char *start = args[0].getstr(), *end = start + strlen(start), *qstart = "";
     for(int i = 1; i < numargs; i++)
     {
         const char *list = start;
         int pos = args[i].getint();
         for(; pos > 0; pos--) if(!parselist(list)) break;
-        if(pos > 0 || !parselist(list, start, end)) start = end = "";
+        if(pos > 0 || !parselist(list, start, end, qstart)) start = end = qstart = "";
     }
-    commandret->setstr(newstring(start, end-start));
+    commandret->setstr(listelem(start, end, qstart));
 }
 COMMAND(at, "si1V");
 
@@ -3458,10 +3467,10 @@ void listassoc(ident *id, const char *list, const uint *body)
     if(id->type!=ID_ALIAS) return;
     identstack stack;
     int n = 0;
-    for(const char *s = list, *start, *end; parselist(s, start, end); n++)
+    for(const char *s = list, *start, *end, *qstart; parselist(s, start, end); n++)
     {
         setiter(*id, newstring(start, end-start), stack);
-        if(executebool(body)) { if(parselist(s, start, end)) stringret(newstring(start, end-start)); break; }
+        if(executebool(body)) { if(parselist(s, start, end, qstart)) stringret(listelem(start, end, qstart)); break; }
         if(!parselist(s)) break;
     }
     if(n) poparg(*id);
@@ -3473,7 +3482,7 @@ COMMAND(listassoc, "rse");
     { \
         int n = 0; \
         init; \
-        for(const char *s = list, *start, *end; parselist(s, start, end); n++) \
+        for(const char *s = list, *start, *end, *qstart; parselist(s, start, end, qstart); n++) \
         { \
             if(cmp) { intret(n); return; } \
             loopi(*skip) { if(!parselist(s)) goto notfound; n++; } \
@@ -3489,9 +3498,9 @@ LISTFIND(listfind=s, "s", char, int len = (int)strlen(val), int(end-start) == le
     ICOMMAND(name, "s" fmt, (char *list, type *val), \
     { \
         init; \
-        for(const char *s = list, *start, *end; parselist(s, start, end);) \
+        for(const char *s = list, *start, *end, *qstart; parselist(s, start, end);) \
         { \
-            if(cmp) { if(parselist(s, start, end)) stringret(newstring(start, end-start)); return; } \
+            if(cmp) { if(parselist(s, start, end, qstart)) stringret(listelem(start, end, qstart)); return; } \
             if(!parselist(s)) break; \
         } \
     });
@@ -3504,9 +3513,9 @@ void looplist(ident *id, const char *list, const uint *body)
     if(id->type!=ID_ALIAS) return;
     identstack stack;
     int n = 0;
-    for(const char *s = list, *start, *end; parselist(s, start, end); n++)
+    for(const char *s = list, *start, *end, *qstart; parselist(s, start, end, qstart); n++)
     {
-        setiter(*id, newstring(start, end-start), stack);
+        setiter(*id, listelem(start, end, qstart), stack);
         execute(body);
     }
     if(n) poparg(*id);
@@ -3519,10 +3528,10 @@ void looplist2(ident *id, ident *id2, const char *list, const uint *body)
     if(id->type!=ID_ALIAS || id2->type!=ID_ALIAS) return;
     identstack stack, stack2;
     int n = 0;
-    for(const char *s = list, *start, *end; parselist(s, start, end); n += 2)
+    for(const char *s = list, *start, *end, *qstart; parselist(s, start, end, qstart); n += 2)
     {
-        setiter(*id, newstring(start, end-start), stack);
-        setiter(*id2, parselist(s, start, end) ? newstring(start, end-start) : newstring(""), stack2);
+        setiter(*id, listelem(start, end, qstart), stack);
+        setiter(*id2, parselist(s, start, end, qstart) ? listelem(start, end, qstart) : newstring(""), stack2);
         execute(body);
     }
     if(n) { poparg(*id); poparg(*id2); }
@@ -3534,11 +3543,11 @@ void looplist3(ident *id, ident *id2, ident *id3, const char *list, const uint *
     if(id->type!=ID_ALIAS || id2->type!=ID_ALIAS || id3->type!=ID_ALIAS) return;
     identstack stack, stack2, stack3;
     int n = 0;
-    for(const char *s = list, *start, *end; parselist(s, start, end); n += 3)
+    for(const char *s = list, *start, *end, *qstart; parselist(s, start, end, qstart); n += 3)
     {
-        setiter(*id, newstring(start, end-start), stack);
-        setiter(*id2, parselist(s, start, end) ? newstring(start, end-start) : newstring(""), stack2);
-        setiter(*id3, parselist(s, start, end) ? newstring(start, end-start) : newstring(""), stack3);
+        setiter(*id, listelem(start, end, qstart), stack);
+        setiter(*id2, parselist(s, start, end, qstart) ? listelem(start, end, qstart) : newstring(""), stack2);
+        setiter(*id3, parselist(s, start, end, qstart) ? listelem(start, end, qstart) : newstring(""), stack3);
         execute(body);
     }
     if(n) { poparg(*id); poparg(*id2); poparg(*id3); }
@@ -3551,9 +3560,9 @@ void looplistconc(ident *id, const char *list, const uint *body, bool space)
     identstack stack;
     vector<char> r;
     int n = 0;
-    for(const char *s = list, *start, *end; parselist(s, start, end); n++)
+    for(const char *s = list, *start, *end, *qstart; parselist(s, start, end, qstart); n++)
     {
-        char *val = newstring(start, end-start);
+        char *val = listelem(start, end, qstart);
         setiter(*id, val, stack);
 
         if(n && space) r.add(' ');
@@ -3578,7 +3587,7 @@ void listfilter(ident *id, const char *list, const uint *body)
     identstack stack;
     vector<char> r;
     int n = 0;
-    for(const char *s = list, *start, *end, *quotestart, *quoteend; parselist(s, start, end, quotestart, quoteend); n++)
+    for(const char *s = list, *start, *end, *qstart, *qend; parselist(s, start, end, qstart, qend); n++)
     {
         char *val = newstring(start, end-start);
         setiter(*id, val, stack);
@@ -3586,7 +3595,7 @@ void listfilter(ident *id, const char *list, const uint *body)
         if(executebool(body))
         {
             if(r.length()) r.add(' ');
-            r.put(quotestart, quoteend-quotestart);
+            r.put(qstart, qend-qstart);
         }
     }
     if(n) poparg(*id);
@@ -3598,10 +3607,11 @@ COMMAND(listfilter, "rse");
 void prettylist(const char *s, const char *conj)
 {
     vector<char> p;
-    const char *start, *end;
-    for(int len = listlen(s), n = 0; parselist(s, start, end); n++)
+    const char *start, *end, *qstart;
+    for(int len = listlen(s), n = 0; parselist(s, start, end, qstart); n++)
     {
-        p.put(start, end - start);
+        if(*qstart == '"') p.advance(unescapestring(p.reserve(end - start).buf, start, end));
+        else p.put(start, end - start);
         if(n+1 < len)
         {
             if(len > 2 || !conj[0]) p.add(',');
@@ -4013,6 +4023,14 @@ CASECOMMAND(cases, "s", const char *, args[0].getstr(), args[i].type == VAL_NULL
 
 ICOMMAND(rnd, "ii", (int *a, int *b), intret(*a - *b > 0 ? rnd(*a - *b) + *b : *b));
 
+ICOMMAND(tohex, "ii", (int *n, int *p),
+{
+    const int len = 20;
+    char *buf = newstring(len);
+    nformatstring(buf, len, "0x%.*X", max(*p, 1), *n);
+    stringret(buf);
+});
+
 #define CMPSCMD(name, op) \
     ICOMMAND(name, "s1V", (tagval *args, int numargs), \
     { \
@@ -4038,7 +4056,24 @@ ICOMMAND(echo, "C", (char *s), conoutf("\f1%s", s));
 ICOMMAND(error, "C", (char *s), conoutf(CON_ERROR, "%s", s));
 ICOMMAND(strstr, "ss", (char *a, char *b), { char *s = strstr(a, b); intret(s ? s-a : -1); });
 ICOMMAND(strlen, "s", (char *s), intret(strlen(s)));
+ICOMMAND(strcode, "si", (char *s, int *i), intret(*i > 0 ? (memchr(s, 0, *i) ? 0 : uchar(s[*i])) : uchar(s[0])));
+ICOMMAND(codestr, "i", (int *i), { char *s = newstring(1); s[0] = char(*i); s[1] = '\0'; stringret(s); });
+ICOMMAND(struni, "si", (char *s, int *i), intret(*i > 0 ? (memchr(s, 0, *i) ? 0 : cube2uni(s[*i])) : cube2uni(s[0])));
+ICOMMAND(unistr, "i", (int *i), { char *s = newstring(1); s[0] = uni2cube(*i); s[1] = '\0'; stringret(s); });
 
+#define STRMAPCOMMAND(name, map) \
+    ICOMMAND(name, "s", (char *s), \
+    { \
+        int len = strlen(s); \
+        char *m = newstring(len); \
+        loopi(len) m[i] = map(s[i]); \
+        m[len] = '\0'; \
+        stringret(m); \
+    })
+
+STRMAPCOMMAND(strlower, cubelower);
+STRMAPCOMMAND(strupper, cubeupper);
+ 
 char *strreplace(const char *s, const char *oldval, const char *newval, const char *newval2)
 {
     vector<char> buf;

@@ -174,12 +174,10 @@ $(ENET_OBJS): CFLAGS += $(ENET_CFLAGS) $(ENET_XCFLAGS) -Ienet/include -Wno-error
 clean:
 	-$(RM) $(CLIENT_PCH) $(CLIENT_OBJS) $(RPGCLIENT_OBJS) $(ENET_OBJS) lamiae*.*
 
-%.h.gch: %.h
-	$(CXX) $(CXXFLAGS) -x c++-header -o $(subst .h.gch,.tmp.h.gch,$@) $(subst .h.gch,.h,$@)
-	$(MV) $(subst .h.gch,.tmp.h.gch,$@) $@
-
-%-standalone.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c -o $@ $(subst -standalone.o,.cpp,$@)
+$(filter-out shared/%,$(CLIENT_PCH)): $(filter shared/%,$(CLIENT_PCH))
+$(CLIENT_PCH): %.h.gch: %.h
+	$(CXX) $(CXXFLAGS) -x c++-header -o $@.tmp $<
+	$(MV) $@.tmp $@
 
 $(CLIENT_OBJS): CXXFLAGS += $(CLIENT_INCLUDES)
 
@@ -215,7 +213,7 @@ depend:
 	makedepend -fincludes.mk -Y -Ienet/include $(subst .o,.c,$(ENET_OBJS))
 	makedepend -fincludes.mk -a -Y -Ishared -Iengine $(subst .o,.cpp,$(CLIENT_OBJS))
 	makedepend -fincludes.mk -a -Y -Ishared -Iengine -Irpggame $(subst .o,.cpp,$(RPGCLIENT_OBJS))
-	makedepend -fincludes.mk -a -o.h.gch -Y -Ishared -Iengine -Irpggame $(subst .h.gch,.h,$(CLIENT_PCH))
+	makedepend -fincludes.mk -a -o.h.gch -Y -Ishared -Iengine -Irpggame $(CLIENT_PCH:.h.gch=.h)
 
 engine/engine.h.gch: shared/cube.h.gch
 rpggame/rpggame.h.gch: shared/cube.h.gch
@@ -422,10 +420,6 @@ engine/texture.o: shared/ents.h shared/command.h shared/glexts.h
 engine/texture.o: shared/glemu.h shared/iengine.h shared/igame.h
 engine/texture.o: engine/world.h engine/octa.h engine/light.h engine/bih.h
 engine/texture.o: engine/texture.h engine/model.h engine/scale.h
-engine/ui.o: engine/engine.h shared/cube.h shared/tools.h shared/geom.h
-engine/ui.o: shared/ents.h shared/command.h shared/glexts.h shared/glemu.h
-engine/ui.o: shared/iengine.h shared/igame.h engine/world.h engine/octa.h
-engine/ui.o: engine/light.h engine/bih.h engine/texture.h engine/model.h
 engine/ui.o: engine/textedit.h
 engine/water.o: engine/engine.h shared/cube.h shared/tools.h shared/geom.h
 engine/water.o: shared/ents.h shared/command.h shared/glexts.h shared/glemu.h
@@ -441,9 +435,6 @@ engine/worldio.o: shared/glemu.h shared/iengine.h shared/igame.h
 engine/worldio.o: engine/world.h engine/octa.h engine/light.h engine/bih.h
 engine/worldio.o: engine/texture.h engine/model.h
 
-rpggame/rpg.o: rpggame/rpggame.h shared/cube.h shared/tools.h shared/geom.h
-rpggame/rpg.o: shared/ents.h shared/command.h shared/glexts.h shared/glemu.h
-rpggame/rpg.o: shared/iengine.h shared/igame.h
 rpggame/rpgaction.o: rpggame/rpggame.h shared/cube.h shared/tools.h
 rpggame/rpgaction.o: shared/geom.h shared/ents.h shared/command.h
 rpggame/rpgaction.o: shared/glexts.h shared/glemu.h shared/iengine.h

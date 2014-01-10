@@ -26,8 +26,8 @@ enum
     DF_SATURATE   = 1<<5
 };
 
-VARFP(maxdecaltris, 1, 1024, 16384, initdecals());
-VARP(decalfade, 1000, 10000, 60000);
+VARFP(maxdecaltris, 1, 2048, 16384, initdecals());
+VARP(decalfade, 1000, 15000, 60000);
 VAR(dbgdec, 0, 0, 1);
 
 struct decalbuffer

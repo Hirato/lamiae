@@ -26,6 +26,8 @@ struct vec2
     float magnitude() const  { return sqrtf(squaredlen()); }
     vec2 &normalize() { mul(1/magnitude()); return *this; }
     float cross(const vec2 &o) const { return x*o.y - y*o.x; }
+    float squaredist(const vec2 &e) const { return vec2(*this).sub(e).squaredlen(); }
+    float dist(const vec2 &e) const { return sqrtf(squaredist(e)); }
 
     vec2 &mul(float f)       { x *= f; y *= f; return *this; }
     vec2 &mul(const vec2 &o) { x *= o.x; y *= o.y; return *this; }
@@ -137,7 +139,7 @@ struct vec
     vec &normalize()         { div(magnitude()); return *this; }
     bool isnormalized() const { float m = squaredlen(); return (m>0.99f && m<1.01f); }
     float squaredist(const vec &e) const { return vec(*this).sub(e).squaredlen(); }
-    float dist(const vec &e) const { vec t; return dist(e, t); }
+    float dist(const vec &e) const { return sqrtf(squaredist(e)); }
     float dist(const vec &e, vec &t) const { t = *this; t.sub(e); return t.magnitude(); }
     float dist2(const vec &o) const { float dx = x-o.x, dy = y-o.y; return sqrtf(dx*dx + dy*dy); }
     template<class T>
@@ -420,7 +422,7 @@ struct quat : vec4
 
     quat &normalize() { vec4::normalize(); return *this; }
 
-    void calcangleaxis(float &angle, vec &axis)
+    void calcangleaxis(float &angle, vec &axis) const
     {
         float rr = dot3(*this);
         if(rr>0)
@@ -429,6 +431,17 @@ struct quat : vec4
             axis = vec(x, y, z).mul(1/rr);
         }
         else { angle = 0; axis = vec(0, 0, 1); }
+    }
+
+    vec calcangles() const
+    {
+        vec4 qq = vec4(*this).square();
+        float rr = qq.x + qq.y + qq.z + qq.w,
+              t = x*y + z*w;
+        if(fabs(t) > 0.49999f*rr) return t < 0 ? vec(-2*atan2f(x, w), -M_PI/2, 0) : vec(2*atan2f(x, w), M_PI/2, 0);
+        return vec(atan2f(2*(y*w - x*z), qq.x - qq.y - qq.z + qq.w),
+                   asinf(2*t/rr),
+                   atan2f(2*(x*w - y*z), -qq.x + qq.y - qq.z + qq.w));       
     }
 
     vec rotate(const vec &v) const

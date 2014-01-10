@@ -1473,6 +1473,16 @@ static inline uchar uni2cube(int c)
     extern const uchar uni2cubechars[];
     return uint(c) <= 0x7FF ? uni2cubechars[uni2cubeoffsets[c>>8] + (c&0xFF)] : 0;
 }
+static inline uchar cubelower(uchar c)
+{
+    extern const uchar cubelowerchars[256];
+    return cubelowerchars[c];
+}
+static inline uchar cubeupper(uchar c)
+{
+    extern const uchar cubeupperchars[256];
+    return cubeupperchars[c];
+}
 extern int decodeutf8(uchar *dst, int dstlen, const uchar *src, int srclen, int *carry = NULL);
 extern int encodeutf8(uchar *dstbuf, int dstlen, const uchar *srcbuf, int srclen, int *carry = NULL);
 

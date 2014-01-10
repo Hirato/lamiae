@@ -296,8 +296,9 @@ enet_protocol_handle_connect (ENetHost * host, ENetProtocolHeader * header, ENet
             if (peer == NULL)
               peer = currentPeer;
         }
-        else
-        if (currentPeer -> address.host == host -> receivedAddress.host)
+        else 
+        if (currentPeer -> state != ENET_PEER_STATE_CONNECTING &&
+            currentPeer -> address.host == host -> receivedAddress.host)
         {
             if (currentPeer -> address.port == host -> receivedAddress.port &&
                 currentPeer -> connectID == command -> connect.connectID)
@@ -376,7 +377,7 @@ enet_protocol_handle_connect (ENetHost * host, ENetProtocolHeader * header, ENet
                                       ENET_PROTOCOL_MINIMUM_WINDOW_SIZE;
     else
       peer -> windowSize = (ENET_MIN (host -> outgoingBandwidth, peer -> incomingBandwidth) /
-                                    ENET_PEER_WINDOW_SIZE_SCALE) *
+                                    ENET_PEER_WINDOW_SIZE_SCALE) * 
                                       ENET_PROTOCOL_MINIMUM_WINDOW_SIZE;
 
     if (peer -> windowSize < ENET_PROTOCOL_MINIMUM_WINDOW_SIZE)
@@ -819,7 +820,7 @@ enet_protocol_handle_disconnect (ENetHost * host, ENetPeer * peer, const ENetPro
 
     enet_peer_reset_queues (peer);
 
-    if (peer -> state == ENET_PEER_STATE_CONNECTION_SUCCEEDED || peer -> state == ENET_PEER_STATE_DISCONNECTING)
+    if (peer -> state == ENET_PEER_STATE_CONNECTION_SUCCEEDED || peer -> state == ENET_PEER_STATE_DISCONNECTING || peer -> state == ENET_PEER_STATE_CONNECTING)
         enet_protocol_dispatch_state (host, peer, ENET_PEER_STATE_ZOMBIE);
     else
     if (peer -> state != ENET_PEER_STATE_CONNECTED && peer -> state != ENET_PEER_STATE_DISCONNECT_LATER)
@@ -1669,7 +1670,7 @@ enet_protocol_send_outgoing_commands (ENetHost * host, ENetEvent * event, int ch
 #ifdef ENET_DEBUG
            printf ("peer %u: %f%%+-%f%% packet loss, %u+-%u ms round trip time, %f%% throttle, %u/%u outgoing, %u/%u incoming\n", currentPeer -> incomingPeerID, currentPeer -> packetLoss / (float) ENET_PEER_PACKET_LOSS_SCALE, currentPeer -> packetLossVariance / (float) ENET_PEER_PACKET_LOSS_SCALE, currentPeer -> roundTripTime, currentPeer -> roundTripTimeVariance, currentPeer -> packetThrottle / (float) ENET_PEER_PACKET_THROTTLE_SCALE, enet_list_size (& currentPeer -> outgoingReliableCommands), enet_list_size (& currentPeer -> outgoingUnreliableCommands), currentPeer -> channels != NULL ? enet_list_size (& currentPeer -> channels -> incomingReliableCommands) : 0, currentPeer -> channels != NULL ? enet_list_size (& currentPeer -> channels -> incomingUnreliableCommands) : 0);
 #endif
-
+          
            currentPeer -> packetLossVariance -= currentPeer -> packetLossVariance / 4;
 
            if (packetLoss >= currentPeer -> packetLoss)

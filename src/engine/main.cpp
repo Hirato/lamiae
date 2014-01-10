@@ -229,12 +229,12 @@ FVAR(loadprogress, 1, 0, -1);
 VAR(loadbg, 1, 0, -1);
 const char *loadtext = NULL;
 ICOMMAND(loadtext, "", (), result(loadtext ? loadtext : ""))
-void renderprogressview(int w, int h, float bar, const char *text, GLuint tex)   // also used during loading
+void renderprogressview(int w, int h, float bar, const char *text)   // also used during loading
 {
     UI::renderprogress();
 }
 
-void renderprogress(float bar, const char *text, GLuint tex, bool background)
+void renderprogress(float bar, const char *text,bool background)
 {
     if(!inbetweenframes || drawtex) return;
 
@@ -266,7 +266,7 @@ void renderprogress(float bar, const char *text, GLuint tex, bool background)
                 glClear(GL_COLOR_BUFFER_BIT);
                 restorebackground(w, h);
             }
-            renderprogressview(w, h, bar, text, tex);
+            renderprogressview(w, h, bar, text);
             ovr::warp();
         }
         viewidx = 0;
@@ -275,7 +275,7 @@ void renderprogress(float bar, const char *text, GLuint tex, bool background)
     else
     {
         if(background) restorebackground(w, h);
-        renderprogressview(w, h, bar, text, tex);
+        renderprogressview(w, h, bar, text);
     }
 
     loadtext = NULL;

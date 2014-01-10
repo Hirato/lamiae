@@ -2,6 +2,7 @@
 
 int gw = -1, gh = -1, bloomw = -1, bloomh = -1, lasthdraccum = 0;
 GLuint gfbo = 0, gdepthtex = 0, gcolortex = 0, gnormaltex = 0, gglowtex = 0, gdepthrb = 0, gstencilrb = 0;
+bool gdepthinit = false;
 int scalew = -1, scaleh = -1;
 GLuint scalefbo[2] = { 0, 0 }, scaletex[2] = { 0, 0 };
 GLuint hdrfbo = 0, hdrtex = 0, bloomfbo[6] = { 0, 0, 0, 0, 0, 0 }, bloomtex[6] = { 0, 0, 0, 0, 0, 0 };
@@ -721,6 +722,7 @@ void setupgbuffer()
 
     hdrfloat = floatformat(hdrformat);
     hdrclear = 3;
+    gdepthinit = false;
 
     if(gdepthformat || msaasamples)
     {
@@ -2907,7 +2909,7 @@ void collectlights()
         glFlush();
     }
 
-    if(rhinoq && oqfrags && !drawtex) renderradiancehints();
+    if(rhinoq && oqfrags && !drawtex && (!wireframe || !editmode)) renderradiancehints();
 }
 
 static inline void addlighttiles(const lightinfo &l, int idx)
@@ -3894,7 +3896,6 @@ void rendertransparent()
         }
         maskgbuffer("cngd"); // workaround for strange Radeon HD 7340 bug, if not here (instead of inside the glClear branch where it should be), stencil doesn't work!
 
-        extern int wireframe;
         if(wireframe && editmode) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
         switch(layer)
@@ -3984,7 +3985,7 @@ void preparegbuffer(bool depthclear)
     glBindFramebuffer_(GL_FRAMEBUFFER, msaasamples ? msfbo : gfbo);
     glViewport(0, 0, vieww, viewh);
 
-    if(drawtex)
+    if(drawtex && gdepthinit)
     {
         glEnable(GL_SCISSOR_TEST);
         glScissor(0, 0, vieww, viewh);
@@ -4000,7 +4001,8 @@ void preparegbuffer(bool depthclear)
     if(gcolorclear) glClearColor(0, 0, 0, 0);
     glClear((depthclear ? GL_DEPTH_BUFFER_BIT : 0)|(gcolorclear ? GL_COLOR_BUFFER_BIT : 0)|(depthclear && ghasstencil ? GL_STENCIL_BUFFER_BIT : 0));
     if(gdepthformat && gdepthclear) maskgbuffer("cngd");
-    if(drawtex) glDisable(GL_SCISSOR_TEST);
+    if(drawtex && gdepthinit) glDisable(GL_SCISSOR_TEST);
+    gdepthinit = true;
 
     matrix4 invscreenmatrix;
     invscreenmatrix.identity();

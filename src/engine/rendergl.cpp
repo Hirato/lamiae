@@ -1256,7 +1256,7 @@ void pophudmatrix(bool flush, bool flushparams)
 }
 
 int vieww = -1, viewh = -1, viewidx = 0;
-float curfov = 100, curavatarfov = 65, fovy, aspect;
+float curfov, curavatarfov, fovy, aspect;
 int farplane;
 VARP(zoominvel, 0, 40, 500);
 VARP(zoomoutvel, 0, 50, 500);
@@ -2004,7 +2004,7 @@ void drawminimap()
     if(!game::needminimap()) { clearminimap(); return; }
 
     GLERROR;
-    renderprogress(0, "generating mini-map...", 0, !renderedframe);
+    renderprogress(0, "generating mini-map...", !renderedframe);
 
     drawtex = DRAWTEX_MINIMAP;
 
@@ -2224,6 +2224,9 @@ void drawcubemap(int size, const vec &o, float yaw, float pitch, const cubemapsi
     drawtex = 0;
 }
 
+VAR(modelpreviewfov, 10, 20, 100);
+VAR(modelpreviewpitch, -90, -15, 90);
+
 namespace modelpreview
 {
     physent *oldcamera;
@@ -2256,7 +2259,7 @@ namespace modelpreview
         camera.type = ENT_CAMERA;
         camera.o = vec(0, 0, 0);
         camera.yaw = 0;
-        camera.pitch = 0;
+        camera.pitch = modelpreviewpitch;
         camera.roll = 0;
         camera1 = &camera;
 
@@ -2270,7 +2273,7 @@ namespace modelpreview
         oldviewh = viewh;
 
         aspect = w/float(h);
-        fovy = 90;
+        fovy = modelpreviewfov;
         curfov = 2*atan2(tan(fovy/2*RAD), 1/aspect)/RAD;
         farplane = 1024;
         vieww = min(gw, w);
@@ -2310,6 +2313,13 @@ namespace modelpreview
         camera1 = oldcamera;
         drawtex = 0;
     }
+}
+
+vec calcmodelpreviewpos(const vec &radius, float &yaw)
+{
+    yaw = fmod(lastmillis/10000.0f*360.0f, 360.0f);
+    float dist = max(radius.magnitude2()/aspect, radius.magnitude())/sinf(fovy/2*RAD);
+    return vec(0, dist, 0).rotate_around_x(camera1->pitch*RAD);
 }
 
 int xtraverts, xtravertsva;
@@ -2367,7 +2377,7 @@ void gl_drawview()
 
     glFlush();
 
-    if(!rhinoq || !oqfrags)
+    if(!rhinoq || !oqfrags || (wireframe && editmode))
     {
         renderradiancehints();
         GLERROR;
@@ -2658,6 +2668,9 @@ void gl_drawhud()
     resethudmatrix();
     hudshader->set();
 
+    pushfont();
+    setfont("default_outline");
+
     gle::colorf(1, 1, 1);
 
     debuglights();
@@ -2745,6 +2758,8 @@ void gl_drawhud()
 
     gle::disable();
     glDisable(GL_BLEND);
+
+    popfont();
 
     if(frametimer)
     {
