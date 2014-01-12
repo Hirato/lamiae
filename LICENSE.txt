@@ -1,6 +1,6 @@
 Lamiae source code, any release.
 
-Copyright (C) 2012-2013 Kevin "Hirato Kirata" Meyer
+Copyright (C) 2012-2014 Kevin "Hirato Kirata" Meyer
 Copyright (C) 2013 Daniel "q66" Kolesa
 
 This software is provided 'as-is', without any express or implied
@@ -46,7 +46,7 @@ freely, subject to the following restrictions:
 
 Sauerbraten game engine source code, any release.
 
-Copyright (C) 2001-2013 Wouter van Oortmerssen, Lee Salzman, Mike Dysart, Robert Pointon, and Quinton Reeves
+Copyright (C) 2001-2014 Wouter van Oortmerssen, Lee Salzman, Mike Dysart, Robert Pointon, and Quinton Reeves
 
 This software is provided 'as-is', without any express or implied
 warranty.  In no event will the authors be held liable for any damages
