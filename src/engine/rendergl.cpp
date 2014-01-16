@@ -664,7 +664,7 @@ void gl_checkextensions()
         if(hasext("GL_NV_half_float"))
         {
             hasHFV = hasHFP = true;
-            if(dbgexts) conoutf(CON_INIT, "Using GL_NV_half_float");
+            if(dbgexts) conoutf(CON_INIT, "Using GL_NV_half_float extension.");
         }
         else
         {
@@ -1809,10 +1809,7 @@ void debugquad(float x, float y, float w, float h, float tx, float ty, float tw,
 
 VARR(fog, 16, 4000, 1000024);
 bvec fogcolor(0x80, 0x99, 0xB3);
-HVARFR(fogcolour, 0, 0x8099B3, 0xFFFFFF,
-{
-    fogcolor = bvec((fogcolour>>16)&0xFF, (fogcolour>>8)&0xFF, fogcolour&0xFF);
-});
+HVARFR(fogcolour, 0, 0x8099B3, 0xFFFFFF, { fogcolor = bvec::hexcolor(fogcolour); });
 VAR(fogoverlay, 0, 1, 1);
 
 static float findsurface(int fogmat, const vec &v, int &abovemat)
@@ -1973,12 +1970,11 @@ void clearminimap()
 
 VARR(minimapheight, 0, 0, 2<<16);
 bvec minimapcolor(0, 0, 0);
-HVARFR(minimapcolour, 0, 0, 0xFFFFFF,
-{
-    minimapcolor = bvec((minimapcolour>>16)&0xFF, (minimapcolour>>8)&0xFF, minimapcolour&0xFF);
-});
+HVARFR(minimapcolour, 0, 0, 0xFFFFFF, { minimapcolor = bvec::hexcolor(minimapcolour); });
 VARR(minimapclip, 0, 0, 1);
 VARFP(minimapsize, 7, 8, 10, { if(minimaptex) drawminimap(); });
+VARFP(showminimap, 0, 1, 1, { if(minimaptex) drawminimap(); });
+HVARFP(nominimapcolour, 0, 0x101010, 0xFFFFFF, { if(minimaptex && !showminimap) drawminimap(); });
 
 void bindminimap()
 {
@@ -2002,6 +1998,14 @@ void clipminimap(ivec &bbmin, ivec &bbmax, cube *c = worldroot, const ivec &co =
 void drawminimap()
 {
     if(!game::needminimap()) { clearminimap(); return; }
+
+    if(!showminimap)
+    {
+        if(!minimaptex) glGenTextures(1, &minimaptex);
+        bvec color = bvec::hexcolor(nominimapcolour);
+        createtexture(minimaptex, 1, 1, color.v, 3, 0, GL_RGB, GL_TEXTURE_2D);
+        return;
+    }
 
     GLERROR;
     renderprogress(0, "generating mini-map...", !renderedframe);
@@ -2053,7 +2057,8 @@ void drawminimap()
     setviewcell(vec(-1, -1, -1));
 
     float oldldrscale = ldrscale, oldldrscaleb = ldrscaleb;
-    int oldvieww = vieww, oldviewh = viewh;
+    int oldfarplane = farplane, oldvieww = vieww, oldviewh = viewh;
+    farplane = worldsize*2;
     vieww = viewh = size;
 
     float zscale = max(float(minimapheight), minimapcenter.z + minimapradius.z + 1) + 1;
@@ -2094,6 +2099,7 @@ void drawminimap()
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
 
+    farplane = oldfarplane;
     vieww = oldvieww;
     viewh = oldviewh;
     ldrscale = oldldrscale;

@@ -1133,13 +1133,8 @@ bool serveroption(char *opt)
 {
     switch(opt[1])
     {
-        case 'u': setvar("serveruprate", atoi(opt+2)); return true;
-        case 'c': setvar("maxclients", atoi(opt+2)); return true;
-        case 'i': setsvar("serverip", opt+2); return true;
-        case 'j': setvar("serverport", atoi(opt+2)); return true;
-        case 'm': setsvar("mastername", opt+2); setvar("updatemaster", mastername[0] ? 1 : 0); return true;
 #ifdef STANDALONE
-        case 'q': logoutf("Using home directory: %s", opt); sethomedir(opt+2); return true;
+        case 'u': logoutf("Using home directory: %s", opt); sethomedir(opt+2); return true;
         case 'k': logoutf("Adding package directory: %s", opt); addpackagedir(opt+2); return true;
         case 'g': logoutf("Setting log file: %s", opt); setlogfile(opt+2); return true;
 #endif

@@ -66,8 +66,10 @@ void fatal(const char *s, ...)    // failure exit
     exit(EXIT_FAILURE);
 }
 
+VAR(desktopw, 1, 0, 0);
+VAR(desktoph, 1, 0, 0);
+int screenw = 0, screenh = 0;
 SDL_Window *screen = NULL;
-int screenw = 0, screenh = 0, desktopw = 0, desktoph = 0;
 SDL_GLContext glcontext = NULL;
 
 VAR(curtime, 1, 0, 0);
@@ -385,18 +387,23 @@ void screenres(int w, int h)
 
 ICOMMAND(screenres, "ii", (int *w, int *h), screenres(*w, *h));
 
+static void setgamma(int val)
+{
+    if(screen && SDL_SetWindowBrightness(screen, val/100.0f) < 0) conoutf(CON_ERROR, "Could not set gamma: %s", SDL_GetError());
+}
+
 static int curgamma = 100;
 VARFP(gamma, 30, 100, 300,
 {
-    if(gamma == curgamma) return;
+    if(initing || gamma == curgamma) return;
     curgamma = gamma;
-    if(SDL_SetWindowBrightness(screen, gamma/100.0f)==-1) conoutf(CON_ERROR, "Could not set gamma: %s", SDL_GetError());
+    setgamma(curgamma);
 });
 
 void restoregamma()
 {
-    if(curgamma == 100) return;
-    SDL_SetWindowBrightness(screen, curgamma/100.0f);
+    if(initing || curgamma == 100) return;
+    setgamma(curgamma);
 }
 
 void cleargamma()
@@ -406,8 +413,9 @@ void cleargamma()
 
 void restorevsync()
 {
+    if(initing || !glcontext) return;
     extern int vsync, vsynctear;
-    if(glcontext) SDL_GL_SetSwapInterval(vsync ? (vsynctear ? -1 : 1) : 0);
+    SDL_GL_SetSwapInterval(vsync ? (vsynctear ? -1 : 1) : 0);
 }
 
 VARFP(vsync, 0, 0, 1, restorevsync());
@@ -480,8 +488,6 @@ void setupscreen()
     renderh = min(scr_h, screenh);
     hudw = screenw;
     hudh = screenh;
-
-    restorevsync();
 }
 
 bool resettextures()
@@ -527,6 +533,7 @@ void resetgl()
     renderbackground("initializing...");
     extern void restoregamma();
     restoregamma();
+    restorevsync();
     initgbuffer();
     reloadshaders();
     reloadtextures();
@@ -927,7 +934,7 @@ int main(int argc, char **argv)
     {
         if(argv[i][0]=='-') switch(argv[i][1])
         {
-            case 'q':
+            case 'u':
             {
                 const char *dir = sethomedir(&argv[i][2]);
                 if(dir) logoutf("Using home directory: %s", dir);
@@ -940,8 +947,7 @@ int main(int argc, char **argv)
     {
         if(argv[i][0]=='-') switch(argv[i][1])
         {
-            case 'q': /* parsed first */ break;
-            case 'r': /* compat, ignore */ break;
+            case 'u': /* parsed first */ break;
             case 'k':
             {
                 const char *dir = addpackagedir(&argv[i][2]);
@@ -952,13 +958,8 @@ int main(int argc, char **argv)
             case 'd': dedicated = atoi(&argv[i][2]); if(dedicated<=0) dedicated = 2; break;
             case 'w': scr_w = clamp(atoi(&argv[i][2]), SCR_MINW, SCR_MAXW); if(!findarg(argc, argv, "-h")) scr_h = -1; break;
             case 'h': scr_h = clamp(atoi(&argv[i][2]), SCR_MINH, SCR_MAXH); if(!findarg(argc, argv, "-w")) scr_w = -1; break;
-            case 'z': /* compat, ignore */ break;
-            case 'b': /* compat, ignore */ break;
-            case 'a': /* compat, ignore */ break;
             case 'v': vsync = atoi(&argv[i][2]); if(vsync < 0) { vsynctear = 1; vsync = 1; } else vsynctear = 0; break;
-            case 't': fullscreen = atoi(&argv[i][2]); break;
-            case 's': /* compat, ignore */ break;
-            case 'f': /* compat, ignore */ break;
+            case 'f': fullscreen = atoi(&argv[i][2]); break;
             case 'l':
             {
                 char pkgdir[] = "media/";
@@ -972,7 +973,6 @@ int main(int argc, char **argv)
         }
         else gameargs.add(argv[i]);
     }
-    initing = NOT_INITING;
 
     numcpus = clamp(SDL_GetCPUCount(), 1, 16);
 
@@ -1019,6 +1019,7 @@ int main(int argc, char **argv)
     if(!setfont("default")) fatal("no default font specified");
 
     logoutf("init: cfg");
+    initing = INIT_LOAD;
     execfile("config/keymap.cfg");
     execfile("config/stdedit.cfg");
     defformatstring(confname, "config/%s/std.cfg", game::gameident());
@@ -1039,7 +1040,6 @@ int main(int argc, char **argv)
 
     identflags |= IDF_PERSIST;
 
-    initing = INIT_LOAD;
     formatstring(confname, "config_%s.cfg", game::gameident());
     if(!execfile(confname, false))
         setdefaults();
@@ -1065,8 +1065,10 @@ int main(int argc, char **argv)
     logoutf("init: sound");
     initsound();
 
-    logoutf("init: shaders");
+    logoutf("init: render");
     renderbackground("initializing...");
+    restoregamma();
+    restorevsync();
     initgbuffer();
     loadshaders();
     initparticles();

@@ -46,6 +46,9 @@
 #ifndef STANDALONE
 #include <SDL.h>
 #include <SDL_opengl.h>
+  #ifdef __APPLE__
+  #define main SDL_main
+  #endif
 #endif
 
 #include <enet/enet.h>

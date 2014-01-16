@@ -104,7 +104,7 @@ struct physent                                  // base entity type, can be affe
     vec feetpos(float offset = 0) const { return vec(o).addz(offset - eyeheight); }
     vec headpos(float offset = 0) const { return vec(o).addz(offset); }
 
-    bool maymove() const { return timeinair || physstate < PHYS_FLOOR || vel.squaredlen() > 1e-4f || deltapos.squaredlen() > 1e-4f; }
+    bool crouched() const { return fabs(eyeheight - maxheight*CROUCHHEIGHT) < 1e-4f; }
 };
 
 enum

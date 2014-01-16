@@ -441,7 +441,7 @@ struct quat : vec4
         if(fabs(t) > 0.49999f*rr) return t < 0 ? vec(-2*atan2f(x, w), -M_PI/2, 0) : vec(2*atan2f(x, w), M_PI/2, 0);
         return vec(atan2f(2*(y*w - x*z), qq.x - qq.y - qq.z + qq.w),
                    asinf(2*t/rr),
-                   atan2f(2*(x*w - y*z), -qq.x + qq.y - qq.z + qq.w));       
+                   atan2f(2*(x*w - y*z), -qq.x + qq.y - qq.z + qq.w));
     }
 
     vec rotate(const vec &v) const

@@ -56,9 +56,9 @@ void setupbloom(int w, int h)
         createtexture(bloomtex[5], bloomw, bloomh, NULL, 3, 1, bloomformat, GL_TEXTURE_RECTANGLE);
     }
 
-    static uchar gray[3] = { 32, 32, 32 };
-    static float grayf[3] = { 0.125f, 0.125f, 0.125f };
-    createtexture(bloomtex[4], 1, 1, hasTF ? (void *)grayf : (void *)gray, 3, 1, hasTF ? (hasTRG ? GL_R16F : GL_RGB16F) : (hasTRG ? GL_R16 : GL_RGB16));
+    static const uchar gray[3] = { 32, 32, 32 };
+    static const float grayf[3] = { 0.125f, 0.125f, 0.125f };
+    createtexture(bloomtex[4], 1, 1, hasTF ? (const void *)grayf : (const void *)gray, 3, 1, hasTF ? (hasTRG ? GL_R16F : GL_RGB16F) : (hasTRG ? GL_R16 : GL_RGB16));
 
     loopi(5 + (bloomformat != GL_RGB ? 1 : 0))
     {
@@ -2828,8 +2828,12 @@ void collectlights()
 
     if(dolightgc) culldynlightprops();
 
-    updatedynlights();
-    int numdynlights = finddynlights();
+    int numdynlights = 0;
+    if(!drawtex)
+    {
+        updatedynlights();
+        numdynlights = finddynlights();
+    }
     loopi(numdynlights)
     {
         vec o, color, dir;
@@ -4193,7 +4197,7 @@ void setuplights()
     if(!shadowatlasfbo) setupshadowatlas();
     if(sunlight && csmshadowmap && gi && giscale && gidist && !rhfbo) setupradiancehints();
     if(!deferredlightshader) loaddeferredlightshaders();
-    if(drawtex == DRAWTEX_MINIMAP && !deferredminimapshader) deferredminimapshader = loaddeferredlightshader(msaasamples ? "Mm" : "m");
+    if(drawtex == DRAWTEX_MINIMAP && !deferredminimapshader) deferredminimapshader = loaddeferredlightshader(msaasamples ? "mM" : "m");
     setupaa(gw, gh);
     GLERROR;
 }

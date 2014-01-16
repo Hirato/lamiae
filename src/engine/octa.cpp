@@ -565,10 +565,8 @@ bool remip(cube &c, const ivec &co, int size)
     return true;
 }
 
-void mpremip(bool local)
+void remip()
 {
-    extern selinfo sel;
-    if(local) game::edittrigger(sel, EDIT_REMIP);
     remipprogress = 1;
     remiptotal = allocnodes;
     loopi(8)
@@ -577,16 +575,17 @@ void mpremip(bool local)
         remip(worldroot[i], o, worldsize>>2);
     }
     calcmerges();
-    if(!local) allchanged();
 }
 
-void remip_()
+void mpremip(bool local)
 {
-    mpremip(true);
+    extern selinfo sel;
+    if(local) game::edittrigger(sel, EDIT_REMIP);
+    remip();
     allchanged();
 }
 
-COMMANDN(remip, remip_, "");
+ICOMMAND(remip, "", (), mpremip(true));
 
 const ivec cubecoords[8] = // verts of bounding cube
 {

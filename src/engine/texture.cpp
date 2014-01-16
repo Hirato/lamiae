@@ -1332,7 +1332,7 @@ static bool texturedata(ImageData &d, const char *tname, Slot::Tex *tex = NULL, 
     {
         cmds = tname;
         file = strrchr(tname, '>');
-        if(!file) { if(msg) conoutf(CON_ERROR, "could not load texture %s", tname); return NULL; }
+        if(!file) { if(msg) conoutf(CON_ERROR, "could not load texture %s", tname); return false; }
         file++;
     }
     bool raw = !usedds || !compress, dds = false;

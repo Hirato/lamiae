@@ -667,7 +667,7 @@ static Uint32 calclighttimer(Uint32 interval, void *param)
 void calclight()
 {
     renderbackground("computing lighting... (esc to abort)");
-    mpremip(true);
+    remip();
     optimizeblendmap();
     clearlightcache();
     clearsurfaces(worldroot);
@@ -691,7 +691,14 @@ void calclight()
             (end - start) / 1000.0f);
 }
 
-COMMAND(calclight, "");
+void mpcalclight(bool local)
+{
+    extern selinfo sel;
+    if(local) game::edittrigger(sel, EDIT_CALCLIGHT);
+    calclight();
+}
+
+ICOMMAND(calclight, "", (), mpcalclight(true));
 
 VARF(fullbright, 0, 0, 1, initlights());
 VARF(fullbrightlevel, 0, 160, 255, initlights());

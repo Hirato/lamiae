@@ -687,7 +687,7 @@ extern const vec matnormals[6] =
     HVARFR(name##colour, 0, 0xB0D8FF, 0xFFFFFF, \
     { \
         if(!name##colour) name##colour = 0xB0D8FF; \
-        name##color = bvec((name##colour>>16)&0xFF, (name##colour>>8)&0xFF, name##colour&0xFF); \
+        name##color = bvec::hexcolor(name##colour); \
     }); \
     FVARR(name##refract, 0, 0.1f, 1e3f); \
     VARR(name##spec, 0, 150, 200);

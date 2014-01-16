@@ -311,6 +311,41 @@ static inline void poparg(ident &id)
     id.stack = stack->next;
 }
 
+static inline void undoarg(ident &id, identstack &stack)
+{
+    identstack *prev = id.stack;
+    stack.val = id.val;
+    stack.valtype = id.valtype;
+    stack.next = prev;
+    id.stack = prev->next;
+    id.setval(*prev);
+    cleancode(id);
+}
+
+#define UNDOARGS \
+    identstack argstack[MAXARGS]; \
+    for(int argmask = aliasstack->usedargs, i = 0; argmask; argmask >>= 1, i++) if(argmask&1) \
+        undoarg(*identmap[i], argstack[i]); \
+    identlink *prevstack = aliasstack->next; \
+    identlink aliaslink = { aliasstack->id, aliasstack, prevstack->usedargs, prevstack->argstack }; \
+    aliasstack = &aliaslink;
+
+static inline void redoarg(ident &id, const identstack &stack)
+{
+    identstack *prev = stack.next;
+    prev->val = id.val;
+    prev->valtype = id.valtype;
+    id.stack = prev;
+    id.setval(stack);
+    cleancode(id);
+}
+
+#define REDOARGS \
+    prevstack->usedargs = aliaslink.usedargs; \
+    aliasstack = aliaslink.next; \
+    for(int argmask = aliasstack->usedargs, i = 0; argmask; argmask >>= 1, i++) if(argmask&1) \
+        redoarg(*identmap[i], argstack[i]);
+
 ICOMMAND(push, "rTe", (ident *id, tagval *v, uint *code),
 {
     if(id->type != ID_ALIAS || id->index < MAXARGS) return;
@@ -1740,6 +1775,10 @@ static void compilestatements(vector<uint> &code, const char *&p, int rettype, i
                     if(more) more = compilearg(code, p, VAL_CODE, prevargs);
                     code.add((more ? CODE_DO : CODE_NULL) | retcodeany(rettype));
                     break;
+                case ID_DOARGS:
+                    if(more) more = compilearg(code, p, VAL_CODE, prevargs);
+                    code.add((more ? CODE_DOARGS : CODE_NULL) | retcodeany(rettype));
+                    break;
                 case ID_IF:
                     if(more) more = compilearg(code, p, VAL_CANY, prevargs);
                     if(!more) code.add(CODE_NULL | retcodeany(rettype));
@@ -2248,6 +2287,19 @@ static const uint *runcode(const uint *code, tagval &result)
                 for(int i = offset; i < numargs; i++) popalias(*args[i].id);
                 goto exit;
             }
+
+            case CODE_DOARGS|RET_NULL: case CODE_DOARGS|RET_STR: case CODE_DOARGS|RET_INT: case CODE_DOARGS|RET_FLOAT:
+                if(aliasstack != &noalias)
+                {
+                    UNDOARGS
+                    freearg(result);
+                    runcode(args[--numargs].code, result);
+                    freearg(args[numargs]);
+                    forcearg(result, op&CODE_RET_MASK);
+                    REDOARGS
+                    continue;
+                }
+                // fall-through
 
             case CODE_DO|RET_NULL: case CODE_DO|RET_STR: case CODE_DO|RET_INT: case CODE_DO|RET_FLOAT:
                 freearg(result);
@@ -3127,6 +3179,19 @@ void floatret(float v)
 #define ICOMMANDSNAME _stdcmd
 
 ICOMMANDK(do, ID_DO, "e", (uint *body), executeret(body, *commandret));
+
+static void doargs(uint *body)
+{
+    if(aliasstack != &noalias)
+    {
+        UNDOARGS
+        executeret(body, *commandret);
+        REDOARGS
+    }
+    else executeret(body, *commandret);
+}
+COMMANDK(doargs, ID_DOARGS, "e");
+
 ICOMMANDK(if, ID_IF, "tee", (tagval *cond, uint *t, uint *f), executeret(getbool(*cond) ? t : f, *commandret));
 ICOMMAND(?, "tTT", (tagval *cond, tagval *t, tagval *f), result(*(getbool(*cond) ? t : f)));
 
@@ -3363,7 +3428,7 @@ static inline char *listelem(const char *start = liststart, const char *end = li
     else copystring(s, start, len+1);
     return s;
 }
- 
+
 void explodelist(const char *s, vector<char *> &elems, int limit)
 {
     const char *start, *end, *qstart;
@@ -3982,6 +4047,10 @@ MINMAXCMD(maxf, f, float, max);
 ICOMMAND(abs, "i", (int *n), intret(abs(*n)));
 ICOMMAND(absf, "f", (float *n), floatret(fabs(*n)));
 
+ICOMMAND(floor, "f", (float *n), floatret(floor(*n)));
+ICOMMAND(ceil, "f", (float *n), floatret(ceil(*n)));
+ICOMMAND(round, "f", (float *n), floatret(floor(*n + 0.5)));
+
 ICOMMAND(cond, "ee2V", (tagval *args, int numargs),
 {
     for(int i = 0; i < numargs; i += 2)
@@ -4073,7 +4142,7 @@ ICOMMAND(unistr, "i", (int *i), { char *s = newstring(1); s[0] = uni2cube(*i); s
 
 STRMAPCOMMAND(strlower, cubelower);
 STRMAPCOMMAND(strupper, cubeupper);
- 
+
 char *strreplace(const char *s, const char *oldval, const char *newval, const char *newval2)
 {
     vector<char> buf;
