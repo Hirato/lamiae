@@ -67,14 +67,13 @@ do
 			echo "			passed to lamiae when 'run' is invokved in gdb."
 			echo ""
 			echo "   Engine Options"
-			echo "  -q<string>		use <string> as the home directory (default: ${LAMIAE_HOME})"
+			echo "  -u<string>		use <string> as the home directory (default: ${LAMIAE_HOME})"
 			echo "  -k<string>		mounts <string> as a package directory"
-			echo "  -t<num>		sets fullscreen to <num>"
+			echo "  -f<num>		sets fullscreen to <num>"
 			echo "  -d<num>		runs a dedicated server (0), or a listen server (1)"
 			echo "  -w<num>		sets window width, height is set to width * 3 / 4 unless also provided"
 			echo "  -h<num>		sets window height, width is set to height * 4 / 3 unless also provided"
 			echo "  -v<num>		sets vsync to <num> -- -1 turns vsync on but allows tearing."
-			echo "  -t<num>		sets fullscreen to <num>"
 			echo "  -l<string>		loads map <string> after initialisation"
 			echo "  -x<string>		executes script <string> after initialisation"
 			echo ""
@@ -90,7 +89,7 @@ do
 	argument=$(expr substr "$1" 3 1022)
 
 	case $tag in
-		"-q")
+		"-u")
 			LAMIAE_HOME="$argument"
 		;;
 		"--")
@@ -165,7 +164,7 @@ function run {
 	cd ${LAMIAE_DIR}
 	if [ -a "bin_${LAMIAE_PLATFORM}/lamiae${MACHINE_BIT}${LAMIAE_SUFFIX}" ]
 	then
-		eval ${LAMIAE_EXEC} "./bin_${LAMIAE_PLATFORM}/lamiae${MACHINE_BIT}${LAMIAE_SUFFIX}" "-q${LAMIAE_HOME}" ${LAMIAE_OPTIONS}
+		eval ${LAMIAE_EXEC} "./bin_${LAMIAE_PLATFORM}/lamiae${MACHINE_BIT}${LAMIAE_SUFFIX}" "-u${LAMIAE_HOME}" ${LAMIAE_OPTIONS}
 	else
 		if [ $1 -ne 1 ]
 		then
