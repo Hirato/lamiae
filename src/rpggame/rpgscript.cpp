@@ -1335,7 +1335,7 @@ namespace rpgscript
 		popstack();
 	)
 
-	ICOMMAND(r_loop_ents, "sse", (const char *mapref, const char *ref, uint *body),
+	ICOMMAND(r_loop_ents, "sse", (const char *ref, const char *mapref, uint *body),
 		if(!*ref) {ERRORF("r_loop_ents; requires map reference and a reference to alias ents to"); return;}
 		getreference(r_loop_ents, mapref, map, map->getmap(mapidx), )
 
@@ -1364,7 +1364,7 @@ namespace rpgscript
 			entstack->pushref(map->getmap(mapidx)->objs[i]);
 	)
 
-	ICOMMAND(r_loop_aeffects, "ssse", (const char *mapref, const char *vic, const char *ref, uint *body),
+	ICOMMAND(r_loop_aeffects, "ssse", (const char *ref, const char *mapref, const char *vic, uint *body),
 		if(!*ref) {ERRORF("r_loop_aeffects; requires map reference and a reference to alias ents to"); return;}
 		getreference(r_loop_aeffects, mapref, map, map->getmap(mapidx), )
 
@@ -1393,7 +1393,7 @@ namespace rpgscript
 		popstack();
 	)
 
-	ICOMMAND(r_loop_inv, "sse", (const char *entref, const char *ref, uint *body),
+	ICOMMAND(r_loop_inv, "sse", (const char *ref, const char *entref, uint *body),
 		if(!*ref) {ERRORF("r_loop_inv, requires ent reference and reference to alias items to"); return;}
 		getreference(r_loop_inv, entref, ent, ent->getchar(entidx) || ent->getcontainer(entidx), )
 
@@ -1467,7 +1467,7 @@ namespace rpgscript
 		}
 	)
 
-	ICOMMAND(r_loop_veffects, "sse", (const char *entref, const char *ref, uint *body),
+	ICOMMAND(r_loop_veffects, "sse", (const char *ref, const char *entref, uint *body),
 		if(!*ref) {ERRORF("r_loop_veffects; requires ent reference and a reference name"); return;}
 		getreference(r_loop_veffects, entref, ent, ent->getent(entidx), )
 
