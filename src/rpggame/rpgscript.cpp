@@ -1287,6 +1287,39 @@ namespace rpgscript
 	}
 	COMMANDN(r_signal, sendsignal, "sssi");
 
+	ICOMMAND(r_loop_ref, "sse", (const char *ref, const char *list, uint *body),
+		reference *l = searchstack(list, false);
+		if(!l) return;
+
+		pushstack();
+		reference *cur = registertemp(ref, NULL);
+		loopv(l->list)
+		{
+			cur->setref(l->list[i], true);
+			rpgexecute(body);
+		}
+		popstack();
+	)
+
+	ICOMMAND(r_loop_ref_slice, "ssiie", (const char *ref, const char *list, int *start, int *end, uint *body),
+		reference *l = searchstack(list, false);
+		if(!l) return;
+
+		if(*start < 0) *start = max(0, l->list.length() - *start);
+		if(*end < 0) *end = max(0, l->list.length() - *end);
+		if(*start > *end) swap(*start, *end);
+
+		pushstack();
+		reference *cur = registertemp(ref, NULL);
+		for(; *start < *end && l->list.inrange(*start); (*start)++)
+		{
+			cur->setref(l->list[*start], true);
+			rpgexecute(body);
+		}
+		popstack();
+	)
+
+
 	ICOMMAND(r_loop_maps, "se", (const char *ref, uint *body),
 		if(!*ref) {ERRORF("r_loop_maps; requires reference to alias maps to"); return;}
 
