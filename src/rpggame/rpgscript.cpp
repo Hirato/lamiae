@@ -1273,19 +1273,16 @@ namespace rpgscript
 				{
 					if(DEBUG_VSCRIPT) DEBUGF("receiver:%i is map, sending signal", recidx);
 					receiver->getmap(recidx)->getsignal(sig, prop, source);
-					return;
 				}
 				else if(receiver->getent(recidx))
 				{
 					if(DEBUG_VSCRIPT) DEBUGF("receiver:%i is ent, sending signal", recidx);
 					receiver->getent(recidx)->getsignal(sig, prop, source);
-					return;
 				}
 				else if(receiver->getinv(recidx))
 				{
 					if(DEBUG_VSCRIPT) DEBUGF("receiver:%i is item, sending signal", recidx);
 					receiver->getinv(recidx)->getsignal(sig, prop, source);
-					return;
 				}
 			}
 		}
