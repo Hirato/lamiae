@@ -1193,31 +1193,36 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_local_set, "sss", (const char *ref, const char *name, const char *val),
-		getreference(r_local_set, ref, gen, gen->getinv(genidx) || gen->getent(genidx) || gen->getmap(genidx), )
+		getbasicreference(r_local_set, ref, gen, )
 
-		int *li = NULL;
+		domultiref(fun, gen, gen->getinv(genidx) || gen->getent(genidx) || gen->getmap(genidx),
+			int *li = NULL;
 
-		if(gen->getinv(genidx))
-			li = &gen->getinv(genidx)->locals;
-		else if(gen->getent(genidx))
-			li = &gen->getent(genidx)->locals;
-		else if(gen->getmap(genidx))
-			li = &gen->getmap(genidx)->locals;
+			if(gen->getinv(genidx))
+				li = &gen->getinv(genidx)->locals;
+			else if(gen->getent(genidx))
+				li = &gen->getent(genidx)->locals;
+			else if(gen->getmap(genidx))
+				li = &gen->getmap(genidx)->locals;
 
-		//critical error really
-		if(!li) return;
+			if(!li)
+			{
+				ERRORF("Reference %s:%i cannot hold locals", gen->name, genidx);
+				return;
+			}
 
-		if(*li == -1) *li = alloclocal();
-		else if(locals[*li]->refs >= 2)
-		{
-			freelocal(*li);
-			*li = copylocal(*li);
-		}
+			if(*li == -1) *li = alloclocal();
+			else if(locals[*li]->refs >= 2)
+			{
+				freelocal(*li);
+				*li = copylocal(*li);
+			}
 
-		rpgvar &var = locals[*li]->variables[name];
-		if(!var.name) var.name = queryhashpool(name);
-		delete[] var.value;
-		var.value = newstring(val);
+			rpgvar &var = locals[*li]->variables[name];
+			if(!var.name) var.name = queryhashpool(name);
+			delete[] var.value;
+			var.value = newstring(val);
+		)
 	)
 
 	ICOMMAND(r_cat_get, "i", (int *i),
