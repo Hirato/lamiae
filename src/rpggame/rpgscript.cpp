@@ -1310,8 +1310,8 @@ namespace rpgscript
 		reference *l = searchstack(list, false);
 		if(!l) return;
 
-		if(*start < 0) *start = max(0, l->list.length() - *start);
-		if(*end < 0) *end = max(0, l->list.length() - *end);
+		if(*start < 0) *start = max(0, l->list.length() + *start);
+		if(*end <= 0) *end = max(0, l->list.length() + *end);
 		if(*start > *end) swap(*start, *end);
 
 		pushstack();
@@ -1323,7 +1323,6 @@ namespace rpgscript
 		}
 		popstack();
 	)
-
 
 	ICOMMAND(r_loop_maps, "se", (const char *ref, uint *body),
 		if(!*ref) {ERRORF("r_loop_maps; requires reference to alias maps to"); return;}
