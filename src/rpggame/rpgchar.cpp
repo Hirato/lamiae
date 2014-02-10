@@ -775,7 +775,8 @@ void rpgchar::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float 
 	if (attacker->type() == ENT_CHAR)
 	{
 		rpgchar *d = (rpgchar *) attacker;
-		if(game::friendlyfire >= 2 && faction == d->faction) protect = true;
+		if (game::friendlyfire && this == attacker) protect = true;
+		else if (game::friendlyfire >= 2 && faction == d->faction) protect = true;
 		else if (game::friendlyfire >= 3 && faction->getrelation(d->faction->key) > 50) protect = true;
 	}
 

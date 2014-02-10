@@ -288,10 +288,6 @@ bool projectile::update()
 				{
 					rpgent *d = game::curmap->objs[i];
 
-					//TODO improve friendly fire check
-					if((d == owner && game::friendlyfire) || hits.find(d) >= 0)
-						continue;
-
 					const vec min = vec(d->o.x - d->radius, d->o.y - d->radius, d->o.z - d->eyeheight);
 					const vec max = vec(d->o.x + d->radius, d->o.y + d->radius, d->o.z + d->aboveeye);
 
