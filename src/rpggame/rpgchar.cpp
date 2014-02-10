@@ -835,7 +835,6 @@ void rpgchar::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float 
 	}
 	else vel.add(kickback);
 
-	if(this == game::player1 && !hit_friendly && hit_total) damagecompass(hit_total, attacker->o);
 	getsignal("hit", false, attacker);
 }
 
