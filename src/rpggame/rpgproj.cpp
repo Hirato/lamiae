@@ -305,7 +305,6 @@ bool projectile::update()
 			case T_AREA:
 			case T_SAREA:
 			{
-				//TODO status effect specific particle effects
 				loopv(wep->effects)
 				{
 					areaeffect *aeff = game::curmap->aeffects.add(new areaeffect());
@@ -317,6 +316,9 @@ bool projectile::update()
 
 					if(wep->deatheffect)
 						aeff->fx = wep->deatheffect;
+					if(sg->areaeffect)
+						aeff->fx = sg->areaeffect;
+
 					aeff->group = sg;
 					aeff->elem = sg->friendly ? ATTACK_NONE : wep->effects[i]->element;
 

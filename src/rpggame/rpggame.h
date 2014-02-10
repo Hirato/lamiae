@@ -782,8 +782,9 @@ struct statusgroup
 
 	const char *icon, *name, *description;
 	effect *persisteffect;
+	effect *areaeffect
 
-	statusgroup() : key(NULL), friendly(false), icon(NULL), name(NULL), description(NULL), persisteffect(NULL) {}
+	statusgroup() : key(NULL), friendly(false), icon(NULL), name(NULL), description(NULL), persisteffect(NULL), areaeffect(NULL) {}
 	~statusgroup()
 	{
 		delete[] icon;

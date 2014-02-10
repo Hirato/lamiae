@@ -740,6 +740,7 @@ namespace game
 	STRING(name)
 	STRING(description)
 	SHASH(persisteffect, effects, 0)
+	SHASH(areaeffect, effects, 0)
 
 	#undef START
 	#undef INIT
