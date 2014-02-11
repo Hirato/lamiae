@@ -1181,7 +1181,7 @@ namespace game
 		if(!e || !(detours = e->routes.access(*from))) return;
 
 		if(DEBUG_CONF)
-			DEBUGF("attempting to remote route from %i to %i for " DEBUG_STR, *from, *to, DEBUG_IND);
+			DEBUGF("attempting to remove route from %i to %i for " DEBUG_STR, *from, *to, DEBUG_IND);
 		detours->removeobj(*to);
 	)
 
