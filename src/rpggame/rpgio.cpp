@@ -1694,7 +1694,7 @@ namespace rpgio
 
 		if(rpgscript::timers.access(name))
 		{
-			if(DEBUG_IO) DEBUGF("Timer %s already exists, ignoring saved version", name);
+			if(DEBUG_IO) DEBUGF("Timer %s already exists, restoring countdown only", name);
 			del = true;
 			loading = new timer();
 		}
@@ -1708,7 +1708,11 @@ namespace rpgio
 		loading->delay = f->getlil<int>();
 		loading->remaining = f->getlil<int>();
 
-		if(del) delete loading;
+		if(del)
+		{
+			rpgscript::timers[name].remaining = loading->remaining;
+			delete loading;
+		}
 	}
 
 	void loadgame(const char *name)
