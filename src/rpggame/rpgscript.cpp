@@ -2186,7 +2186,7 @@ namespace rpgscript
 		loopend(id, stack);
 	)
 
-	ICOMMAND(r_journal_loop_entries, "sre", (const char *bucket, ident *id, const uint *body),
+	ICOMMAND(r_journal_loop_entries, "rse", (ident *id, const char *bucket, const uint *body),
 		loopstart(id, stack);
 
 		journal *journ = game::journals.access(bucket);
