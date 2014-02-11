@@ -190,6 +190,12 @@ void reference::pushref(reference *d, bool force)
 	loopv(d->list)
 		list.add(d->list[i]);
 }
+void reference::pushref(reference::ref &d, bool force)
+{
+	if(!canset(force)) return;
+
+	list.add(d);
+}
 void reference::setnull(bool force) { if(!canset(force)) return; list.setsize(0); if(DEBUG_VSCRIPT) DEBUGF("reference %s set to null", name);}
 
 reference::~reference()

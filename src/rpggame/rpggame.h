@@ -782,7 +782,7 @@ struct statusgroup
 
 	const char *icon, *name, *description;
 	effect *persisteffect;
-	effect *areaeffect
+	effect *areaeffect;
 
 	statusgroup() : key(NULL), friendly(false), icon(NULL), name(NULL), description(NULL), persisteffect(NULL), areaeffect(NULL) {}
 	~statusgroup()
@@ -1965,6 +1965,7 @@ struct reference
 	void pushref(victimeffect *d, bool force = false);
 	void pushref(areaeffect *d, bool force = false);
 	void pushref(reference *d, bool force = false);
+	void pushref(reference::ref &d, bool force = false);
 	template<typename T>
 	inline void pushref(T, bool force = false) { setnull(force); }
 

@@ -197,7 +197,7 @@ ifneq (,$(STRIP))
 endif
 	mkdir -p ../$(PLATFORM_PATH)
 	cp lamiae$(MACHINE).$(BIN_SUFFIX) ../$(PLATFORM_PATH)/
-	chmod o+x ../$(PLATFORM_PATH)/lamiae$(MACHINE).$(BIN_SUFFIX)
+	chmod u+x ../$(PLATFORM_PATH)/lamiae$(MACHINE).$(BIN_SUFFIX)
 
 shared/tessfont.o: shared/tessfont.c
 	$(CXX) $(CXXFLAGS) -c -o $@ $< `freetype-config --cflags`
