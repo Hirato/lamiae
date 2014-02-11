@@ -55,14 +55,13 @@ bool rpgchar::useitem(item *it, equipment *slot, int u)
 
 			item *add = additem(newit);
 			delete newit;
-			it = add;
-
 			if(slot)
 			{
 				it->quantity++;
-				newit->quantity--;
+				add->quantity--;
 				slot->it = add;
 			}
+			it = add;
 		}
 		else if(!it->quantity && count == 1)
 		{
