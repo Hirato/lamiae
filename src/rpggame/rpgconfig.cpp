@@ -70,7 +70,11 @@ namespace game
 			intret(vec.length()); \
 		)
 
-	CHECK(script, script, scripts, NULL)
+	CHECK(script, script, scripts,
+		obj->getent(objidx) ? obj->getent(objidx)->getscript() :
+		obj->getinv(objidx) ? obj->getinv(objidx)->script :
+		NULL
+	)
 	CHECK(effect, effect, effects, NULL)
 	CHECK(statusgroup, status, statuses,
 		obj->getveffect(objidx) ? obj->getveffect(objidx)->group :
@@ -84,7 +88,10 @@ namespace game
 	)
 	CHECK(recipe, recipe, recipes, NULL)
 	CHECK(ammotype, ammo, ammotypes, NULL)
-	CHECK(mapscript, mapscript, mapscripts, NULL)
+	CHECK(mapscript, mapscript, mapscripts,
+		obj->getmap(objidx) ? obj->getmap(objidx)->script :
+		NULL
+	)
 	CHECK(merchant, merchant, merchants,
 		obj->getchar(objidx) ? obj->getchar(objidx)->merchant :
 		obj->getcontainer(objidx) ? obj->getcontainer(objidx)->merchant :
