@@ -888,15 +888,19 @@ namespace rpgscript
 		}
 		else
 		{
+			if(a->list.length() != b->list.length())
+			{
+				intret(0);
+				return;
+			}
 			loopv(a->list)
 			{
-				if(!b->list.inrange(i) || a->list[i].ptr != b->list[i].ptr)
+				if(a->list[i].ptr != b->list[i].ptr)
 				{
 					intret(0);
 					return;
 				}
 			}
-			intret(a->list.length() == b->list.length());
 		}
 	)
 

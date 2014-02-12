@@ -956,7 +956,7 @@ struct stats
 	float deltahregen, deltamregen;
 
 	///QUERIES
-	//no safety checks are done for these 2, make sure to use the ENUM!!
+	//no safety checks are done for these 3, make sure to use the ENUM!!
 	inline int getattr(int n) const {return max(0, baseattrs[n] + deltaattrs[n]);}
 	inline int getskill(int n) const {return max(0, baseskills[n] + deltaskills[n]);}
 	inline int critchance() const {return bonuscrit + deltacrit + getattr(STAT_LUCK) / 10;}
