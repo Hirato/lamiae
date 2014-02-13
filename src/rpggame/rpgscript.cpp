@@ -408,11 +408,6 @@ namespace rpgscript
 		if(r) r->setref(ref);
 		return r;
 	}
-	template<>
-	inline reference *registerref(const char *name, int)
-	{
-		return registerref(name, (void *) 0);
-	}
 
 	template<typename T>
 	reference *registertemp(const char *name, T ref)
@@ -498,7 +493,7 @@ namespace rpgscript
 		trader = searchstack("trader", true);
 		talker = searchstack("talker", true);
 		map = registerref("curmap", curmap);
-		config = registerref("config", NULL);
+		config = searchstack("config", true);
 
 		player->immutable = hover->immutable = looter->immutable = trader->immutable = talker-> immutable = map->immutable = config->immutable = true;
 	}
@@ -755,13 +750,13 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_ref, "V", (tagval *v, int n),
-		if(!n) {ERRORF("r_registerref; requires the reference to be named"); return;}
+		if(!n) {ERRORF("r_ref; requires the reference to be named"); return;}
 
 		loopi(n) searchstack(v[i].getstr(), true);
 	)
 
 	ICOMMAND(r_local, "V", (tagval *v, int n),
-		if(!n) {ERRORF("r_registertemp; requires the reference to be named"); return;}
+		if(!n) {ERRORF("r_local; requires the reference to be named"); return;}
 
 		loopi(n) registertemp(v[i].getstr(), NULL);
 	)
@@ -1367,7 +1362,7 @@ namespace rpgscript
 		if(!*ref) return;
 		getreference(r_setref_ents, mapref, map, map->getmap(mapidx), )
 
-		reference *entstack = registerref(ref, NULL);
+		reference *entstack = searchstack(ref, true);
 		if(!entstack->canset()) return;
 
 		entstack->setnull();
@@ -1428,7 +1423,7 @@ namespace rpgscript
 		if(!*ref) {ERRORF("r_setref_invstack; requires ent reference and a reference name"); return;}
 		getreference(r_setref_invstack, srcref, src, src->getchar(srcidx) || src->getcontainer(srcidx), )
 
-		reference *invstack = registerref(ref, NULL);
+		reference *invstack = searchstack(ref, true);
 		if(!invstack->canset()) return;
 
 		base = queryhashpool(base);
@@ -1439,28 +1434,28 @@ namespace rpgscript
 			invstack->setref(&src->getcontainer(srcidx)->inventory.access(base, vector<item *>()));
 	)
 
-	ICOMMAND(r_setref_inv, "sss", (const char *ref, const char *srcref, const char *base),
+	void r_setref_inv(const char *ref, const char *srcref, const char *base)
+	{
 		if(!*ref) {ERRORF("r_setref_inv; requires ent reference and a reference name"); return;}
 		getreference(r_setref_inv, srcref, src, src->getchar(srcidx) || src->getcontainer(srcidx), )
 
-		reference *inv = registerref(ref, NULL);
+		reference *inv = searchstack(ref, true);
 		if(!inv->canset()) return;
 
 		base = queryhashpool(base);
+		hashtable<const char *, vector<item *> > *inventory;
+		if(src->getchar(srcidx)) inventory = &src->getchar(srcidx)->inventory;
+		else inventory = &src->getcontainer(srcidx)->inventory;
 
-		if(src->getchar(srcidx))
+		vector<item *> &stack = inventory->access(base, vector<item *>());
+		if(!stack.length())
 		{
-			vector <item *> &stack = src->getchar(srcidx)->inventory.access(base, vector<item *>());
-			if(!stack.length()) { stack.add(new item())->init(base); stack[0]->quantity = 0; }
-			inv->setref(stack[0]);
+			stack.add(new item())->init(base);
+			stack[0]->quantity = 0;
 		}
-		else if(src->getcontainer(srcidx))
-		{
-			vector <item *> &stack = src->getcontainer(srcidx)->inventory.access(base, vector<item *>());
-			if(!stack.length()) { stack.add(new item())->init(base); stack[0]->quantity = 0; }
-			inv->setref(stack[0]);
-		}
-	)
+		inv->setref(stack[0]);
+	}
+	COMMAND(r_setref_inv, "sss");
 
 	ICOMMAND(r_setref_equip, "ssi", (const char *ref, const char *entref, int *filter),
 		getreference(r_setref_equip, entref, ent, ent->getchar(entidx), )

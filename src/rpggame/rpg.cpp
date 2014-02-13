@@ -835,7 +835,7 @@ namespace game
 
 	void preload()
 	{
-		///rpgconfig queues models for preloading as they are assigned - so just make sure the defualt model is loaded.
+		///rpgconfig queues models for preloading as they are assigned - so just make sure the default model is loaded.
 		preloadmodel(DEFAULTMODEL);
 	}
 
