@@ -1231,6 +1231,8 @@ namespace game
 
 	HASH(currency, true)
 	INT(credit, 0, 0xFFFFFF)
+	FLOAT(buyadjust, 0, 1)
+	FLOAT(selladjust, 0, 1)
 
 	START(setrate, "iff", (int *cat, float *buy, float *sell),
 		INIT

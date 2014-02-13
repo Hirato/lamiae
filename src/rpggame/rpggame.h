@@ -1544,10 +1544,11 @@ struct merchant
 	vector<rate> rates;
 	const char *currency;
 	int credit; //store credit, a measure of how much money the merchant owes you.
+	float buyadjust, selladjust; // percentage adjust rates for good diplomacy
 
 	rate getrate(const rpgchar &buyer, int cat) const;
 
-	merchant() : key(NULL), currency(NULL), credit(0) {}
+	merchant() : key(NULL), currency(NULL), credit(0), buyadjust(.2), selladjust(.2) {}
 };
 template<typename T>
 static inline bool htcmp(T *key, const merchant &ref) { return htcmp(key, ref.key); }
@@ -1679,10 +1680,10 @@ inline merchant::rate merchant::getrate(const rpgchar &buyer, int cat) const
 		return rate(0, 0);
 
 	rate r = rates[cat];
-	float diff = (r.buy - r.sell) * clamp(buyer.base.getskill(SKILL_DIPLOMACY), 0, 100) / 200.0f;
+	float diff = clamp(buyer.base.getskill(SKILL_DIPLOMACY), 0, 100) / 200.0f;
 
-	r.buy -= diff;
-	r.sell += diff;
+	r.buy *= 1 - (buyadjust * diff);
+	r.sell *= 1 + (selladjust * diff);
 	return r;
 }
 
