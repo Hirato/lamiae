@@ -1049,9 +1049,6 @@ void rpgchar::compactinventory(const char *base)
 		return;
 	}
 
-	base = game::hashpool.find(base, NULL);
-	if(!base) return;
-
 	vector<item *> &stack = *inventory.access(base);
 	loopvrev(stack)
 	{
