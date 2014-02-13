@@ -40,8 +40,11 @@ item *rpgcontainer::additem(const char *base, int q)
 	it.init(base);
 	it.quantity = q;
 
-	if(!it.validate()) return NULL;
-	return additem(&it);
+	item *ret = NULL;
+	if(it.validate()) ret = additem(&it);
+
+	rpgscript::replacerefs(&it, ret);
+	return ret;
 }
 
 int rpgcontainer::drop(item *it, int q, bool spawn)
