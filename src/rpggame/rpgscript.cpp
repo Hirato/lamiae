@@ -83,6 +83,12 @@ areaeffect *reference::getaeffect(int i) const
 	if(list[i].type == T_AEFFECT) return (areaeffect *) list[i].ptr;
 	return NULL;
 }
+projectile *reference::getprojectile(int i) const
+{
+	if(!list.inrange(i)) return NULL;
+	if(list[i].type == T_PROJECTILE) return (projectile *) list[i].ptr;
+	return NULL;
+}
 
 void reference::pushref(rpgchar *d, bool force)
 {
@@ -182,6 +188,13 @@ void reference::pushref(areaeffect *d, bool force)
 
 	list.add(ref(d, T_AEFFECT));
 	if(DEBUG_VSCRIPT) DEBUGF("pushed area effect type %p onto reference %s", d, name);
+}
+void reference::pushref(projectile *d, bool force)
+{
+	if(!canset(force)) return;
+
+	list.add(ref(d, T_PROJECTILE));
+	if(DEBUG_VSCRIPT) DEBUGF("pushed projectile type %p onto reference %s", d, name);
 }
 void reference::pushref(reference *d, bool force)
 {
@@ -530,7 +543,10 @@ namespace rpgscript
 			{
 				//projectiles depend on character instance of items
 				if(map.projs[j]->owner == ptr)
+				{
+					removeminorrefs(map.projs[j]);
 					delete map.projs.remove(j--);
+				}
 			}
 		);
 		if(references)

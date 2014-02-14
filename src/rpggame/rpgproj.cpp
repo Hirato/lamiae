@@ -129,7 +129,7 @@ vec normal;
 
 bool projectile::update()
 {
-	if(deleted) return false;
+	if(deleted) { rpgscript::removeminorrefs(this); return false; }
 
 	vector<rpgent *> victims;
 	if(pflags & P_TIME) time -= curtime;

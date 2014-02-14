@@ -1904,7 +1904,8 @@ struct reference
 		T_EQUIP,
 		T_MAP,
 		T_VEFFECT,
-		T_AEFFECT
+		T_AEFFECT,
+		T_PROJECTILE,
 	};
 
 	struct ref
@@ -1951,6 +1952,7 @@ struct reference
 	mapinfo *getmap(int i) const;
 	victimeffect *getveffect(int i) const;
 	areaeffect *getaeffect(int i) const;
+	projectile *getprojectile(int i) const;
 
 	void pushref(rpgchar *d, bool force = false);
 	void pushref(rpgitem *d, bool force = false);
@@ -1965,6 +1967,7 @@ struct reference
 	void pushref(mapinfo *d, bool force = false);
 	void pushref(victimeffect *d, bool force = false);
 	void pushref(areaeffect *d, bool force = false);
+	void pushref(projectile *d, bool force = false);
 	void pushref(reference *d, bool force = false);
 	void pushref(reference::ref &d, bool force = false);
 	template<typename T>

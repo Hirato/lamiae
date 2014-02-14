@@ -4,7 +4,7 @@ extern bool reloadtexture(const char *name); //texture.cpp
 
 namespace rpgio
 {
-	#define SAVE_VERSION 47
+	#define SAVE_VERSION 48
 	#define COMPAT_VERSION 47
 	#define SAVE_MAGIC "RPGS"
 
@@ -1473,7 +1473,28 @@ namespace rpgio
 
 						break;
 					}
+					case ::reference::T_PROJECTILE:
+					{
+						int map = -1;
+						int proj = -1;
+						loopv(maps)
+						{
+							proj = maps[i]->projs.find(sav.ptr);
+							if(proj >= 0) {map = i; break;}
+						}
+						if(proj < 0)
+						{
+							WARNINGF("proj reference \"%s:%i\" points to invalid projectile", saving.name, j);
+							f->putchar(::reference::T_INVALID);
+							continue;
+						}
 
+						if(DEBUG_IO) DEBUGF("writing reference \"%s:%i\" as type T_PROJECTILE with indices: %i %i", saving.name, j, map, proj);
+						f->putchar(type);
+						f->putlil(map);
+						f->putlil(proj);
+						break;
+					}
 					//
 					default:
 						ERRORF("unsupported reference type %i for reference %s, saving as T_INVALID", sav.type, saving.name);
@@ -1577,6 +1598,20 @@ namespace rpgio
 						}
 						else
 							WARNINGF("T_INV has out of range values: %i %i %s %i, loading failed", map, ent, base, offset);
+
+						break;
+					}
+					case ::reference::T_PROJECTILE:
+					{
+						int map = f->getlil<int>();
+						int proj = f->getlil<int>();
+
+						if(maps.inrange(map) && maps[map]->projs.inrange(proj))
+						{
+							if(DEBUG_IO) DEBUGF("reading valid proj reference %s: %i %i", loading->name, map, proj);
+							loading->pushref(maps[map]->projs[proj], true);
+						}
+						else WARNINGF("proj reference %s: %i %i - indices out of range", loading->name, map, proj);
 
 						break;
 					}
