@@ -1427,7 +1427,7 @@ namespace rpgio
 						f->putchar(type);
 						int map = maps.find(sav.ptr);
 						f->putlil(map);
-						if(DEBUG_IO) DEBUGF("writing reference %s as map reference: %i", saving.name, map);
+						if(DEBUG_IO) DEBUGF("writing reference %s:%i as map reference: %i", saving.name, j, map);
 						break;
 					}
 					case ::reference::T_INV:
@@ -1476,14 +1476,14 @@ namespace rpgio
 
 					//
 					default:
-						ERRORF("unsupported reference type %i for reference %s, saving as T_INVALID", sav.type, saving.name);
+						ERRORF("unsupported reference type %i for reference %s:%i, saving as T_INVALID", sav.type, saving.name, j);
 					// Temporary reference types below this line...
 					case ::reference::T_EQUIP:
 					case ::reference::T_VEFFECT:
 					case ::reference::T_AEFFECT:
 						type = ::reference::T_INVALID;
 					case ::reference::T_INVALID:
-						if(DEBUG_IO) DEBUGF("writing null reference %s", saving.name);
+						if(DEBUG_IO) DEBUGF("writing null reference %s:%i", saving.name, j);
 						f->putchar(type);
 						break;
 				}
@@ -1530,22 +1530,22 @@ namespace rpgio
 
 						if(map == -1 && ent == -1)
 						{
-							if(DEBUG_IO) DEBUGF("reading player char reference %s", loading->name);
+							if(DEBUG_IO) DEBUGF("reading player char reference %s:%i", loading->name, j);
 							loading->pushref(game::player1, true);
 						}
 						else if(maps.inrange(map) && maps[map]->objs.inrange(ent))
 						{
-							if(DEBUG_IO) DEBUGF("reading valid rpgent reference %s: %i %i", loading->name, map, ent);
+							if(DEBUG_IO) DEBUGF("reading valid rpgent reference %s:%i -> %i %i", loading->name, j, map, ent);
 							loading->pushref(maps[map]->objs[ent], true);
 						}
-						else WARNINGF("rpgent reference %s: %i %i - indices out of range", loading->name, map, ent);
+						else WARNINGF("rpgent reference %s:%i -> %i %i - indices out of range", loading->name, j, map, ent);
 
 						break;
 					}
 					case ::reference::T_MAP:
 					{
 						int map = f->getlil<int>();
-						if(DEBUG_IO) DEBUGF("reading map reference %s: %i", loading->name, map);
+						if(DEBUG_IO) DEBUGF("reading map reference %s:%i -> %i", loading->name, j, map);
 						if(maps.inrange(map)) loading->pushref(maps[map], true);
 						break;
 					}
@@ -1557,7 +1557,7 @@ namespace rpgio
 						READHASH(base);
 						int offset = f->getlil<int>();
 
-						if(DEBUG_IO) DEBUGF("reading T_INV reference with values %i %i %s %i...", map, ent, base, offset);
+						if(DEBUG_IO) DEBUGF("reading T_INV reference %s:%i with values %i %i %s %i...", loading->name, j, map, ent, base, offset);
 						vector <item *> *stack = NULL;
 
 						if(map == -1 && ent == -1)
@@ -1576,7 +1576,7 @@ namespace rpgio
 							loading->pushref((*stack)[offset], true);
 						}
 						else
-							WARNINGF("T_INV has out of range values: %i %i %s %i, loading failed", map, ent, base, offset);
+							WARNINGF("T_INV reference %s:%i has out of range values: %i %i %s %i, loading failed", loading->name, j, map, ent, base, offset);
 
 						break;
 					}
@@ -1585,12 +1585,13 @@ namespace rpgio
 					case ::reference::T_EQUIP:
 					case ::reference::T_VEFFECT:
 					case ::reference::T_AEFFECT:
+						WARNINGF("volatile reference type found for reference %s:%i, assuming invalid", loading->name, j);
 					case ::reference::T_INVALID:
-						if(DEBUG_IO) DEBUGF("reading now null reference %s", loading->name);
+						if(DEBUG_IO) DEBUGF("reading now null reference %s:%i", loading->name, j);
 						loading->pushref(NULL, true);
 						break;
 					default:
-						ERRORF("unsupported reference type %i for reference %s, this will cause issues; aborting", type, loading->name);
+						ERRORF("unsupported reference type %i for reference %s:%i, this will cause issues; aborting", type, loading->name, j);
 						abort = true;
 						return;
 				}
