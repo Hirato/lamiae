@@ -2325,10 +2325,6 @@ void cleardeferredlightshaders()
 VARF(lighttilebatch, 0, 8, 8, cleardeferredlightshaders());
 VARF(batchsunlight, 0, 2, 2, cleardeferredlightshaders());
 
-VAR(forcespotlights, 1, 0, 0);
-
-extern int spotlights;
-
 Shader *loaddeferredlightshader(const char *type = NULL)
 {
     string common, shadow, sun;
@@ -2348,7 +2344,7 @@ Shader *loaddeferredlightshader(const char *type = NULL)
     }
     if(usegatherforsm()) common[commonlen++] = smfilter > 2 ? 'G' : 'g';
     else if(smfilter) common[commonlen++] = smfilter > 2 ? 'E' : (smfilter > 1 ? 'F' : 'f');
-    if(spotlights || forcespotlights) common[commonlen++] = 's';
+    /*if(spotlights || forcespotlights)*/ common[commonlen++] = 's';
     if(!minimap) common[commonlen++] = 't';
     if(useavatarmask()) common[commonlen++] = 'd';
     common[commonlen] = '\0';

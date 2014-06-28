@@ -248,7 +248,6 @@ void modifyoctaentity(int flags, int id, extentity &e, cube *c, const ivec &cor,
 }
 
 vector<int> outsideents;
-int spotlights = 0;
 
 static bool modifyoctaent(int flags, int id, extentity &e)
 {
@@ -278,7 +277,6 @@ static bool modifyoctaent(int flags, int id, extentity &e)
     switch(e.type)
     {
         case ET_LIGHT: clearlightcache(id); break;
-        case ET_SPOTLIGHT: if(!(flags&MODOE_ADD ? spotlights++ : --spotlights)) cleardeferredlightshaders();
         case ET_PARTICLES: clearparticleemitters(); break;
         case ET_DECAL: if(flags&MODOE_CHANGED) changed(o, r, false); break;
     }
@@ -1526,7 +1524,6 @@ void resetmap()
 
     entities::clearents();
     outsideents.setsize(0);
-    spotlights = 0;
 }
 
 void startmap(const char *name)
