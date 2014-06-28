@@ -105,7 +105,8 @@ enum                            // static entity types
 	PARTICLES = ET_PARTICLES,
 	MAPSOUND = ET_SOUND,
 	SPOTLIGHT = ET_SPOTLIGHT,
-	TELEDEST, //attr1 = yaw, attr2 = from
+	DECAL = ET_DECAL,
+	TELEDEST = ET_GAMESPECIFIC, //attr1 = yaw, attr2 = from
 	JUMPPAD, //attr1 = Z, attr2 = Y, attr3 = X, attr4 = radius
 	CHECKPOINT,
 	SPAWN,

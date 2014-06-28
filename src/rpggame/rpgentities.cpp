@@ -528,8 +528,7 @@ namespace entities
 	{
 		static const char *entnames[] =
 		{
-			"none?", "light", "mapmodel", "playerstart", "envmap", "particles", "sound", "spotlight",
-			"teledest", "jumppad", "checkpoint", "spawn", "location", "reserved", "blip", "camera", "platformroute", "critter", "item", "obstacle", "container", "platform", "trigger"
+			"none?", "light", "mapmodel", "playerstart", "envmap", "particles", "sound", "spotlight", "decal", "teledest", "jumppad", "checkpoint", "spawn", "location", "reserved", "blip", "camera", "platformroute", "critter", "item", "obstacle", "container", "platform", "trigger"
 		};
 		return i>=0 && size_t(i)<sizeof(entnames)/sizeof(entnames[0]) ? entnames[i] : "";
 	}
