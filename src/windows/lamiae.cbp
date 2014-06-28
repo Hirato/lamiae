@@ -3,7 +3,6 @@
 	<FileVersion major="1" minor="6" />
 	<Project>
 		<Option title="Lamiae" />
-		<Option default_target="64bit release" />
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="32bit release">
@@ -166,7 +165,6 @@
 		<Unit filename="../engine/client.cpp" />
 		<Unit filename="../engine/command.cpp" />
 		<Unit filename="../engine/console.cpp" />
-		<Unit filename="../engine/decal.cpp" />
 		<Unit filename="../engine/dynlight.cpp" />
 		<Unit filename="../engine/engine.h" />
 		<Unit filename="../engine/explosion.h" />
@@ -208,6 +206,7 @@
 		<Unit filename="../engine/skelmodel.h" />
 		<Unit filename="../engine/smd.h" />
 		<Unit filename="../engine/sound.cpp" />
+		<Unit filename="../engine/stain.cpp" />
 		<Unit filename="../engine/textedit.h" />
 		<Unit filename="../engine/texture.cpp" />
 		<Unit filename="../engine/texture.h" />
