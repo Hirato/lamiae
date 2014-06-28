@@ -291,7 +291,7 @@ namespace game
 			{
 				if(clear)
 				{
-					if(DEBUG_WORLD) DEBUGF("Duplicate instance: \"%s/%s.cfg\" - overriding", dir, files[i]);
+					if(DEBUG_WORLD) DEBUGF("Duplicate instance: \"%s/%s.cfg\" - likely a mod present", dir, files[i]);
 					continue;
 				}
 				var->~T();
@@ -326,7 +326,7 @@ namespace game
 
 			if(objects.access(hash))
 			{
-				if(DEBUG_WORLD) DEBUGF("Duplicate instance: \"%s/%s.cfg\" - overriding", dir, files[i]);
+				if(DEBUG_WORLD) DEBUGF("Duplicate instance: \"%s/%s.cfg\" - likely a mod present", dir, files[i]);
 				delete[] files.remove(i--);
 				continue;
 			}
@@ -454,7 +454,7 @@ namespace game
 
 	ICOMMAND(r_rehash, "", (),
 		if(!connected) return;
-		conoutf("Reloading configuration files in /games/%s", data);
+		conoutf("Reloading configuration files in %s", datapath());
 		loadassets(datapath(), true, false);
 		if(abort)
 		{

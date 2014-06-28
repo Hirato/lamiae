@@ -471,9 +471,10 @@ struct rpgvar
 struct localinst
 {
 	int refs;
+	bool shared;
 	hashnameset<rpgvar> variables;
 
-	localinst() : refs(0), variables(128) {}
+	localinst() : refs(0), shared(false), variables(128) {}
 };
 
 struct response

@@ -4,8 +4,8 @@ extern bool reloadtexture(const char *name); //texture.cpp
 
 namespace rpgio
 {
-	#define SAVE_VERSION 47
-	#define COMPAT_VERSION 47
+	#define SAVE_VERSION 48
+	#define COMPAT_VERSION 48
 	#define SAVE_MAGIC "RPGS"
 
 	/**
@@ -1640,6 +1640,7 @@ namespace rpgio
 
 	void writelocal(stream *f, localinst *saving)
 	{
+		f->putchar(saving ? saving->shared : 0);
 		int n = 0;
 		if(saving) n = saving->variables.length();
 		f->putlil(n);
@@ -1657,6 +1658,7 @@ namespace rpgio
 
 		localinst *loading = rpgscript::locals[i];
 		loading->refs = 0;
+		loading->shared = f->getchar();
 
 		int n = f->getlil<int>();
 		loopj(n)

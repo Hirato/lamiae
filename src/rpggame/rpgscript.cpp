@@ -472,13 +472,7 @@ namespace rpgscript
 		timers.clear();
 		stack.deletecontents();
 
-		while(locals.length() && !locals.last()) locals.pop();
-		if(locals.length())
-		{
-			dumplocals();
-			ERRORF("The locals stack wasn't fully freed! REPORT A BUG!");
-			locals.deletecontents();
-		}
+		locals.deletecontents();
 
 		obits.setsize(0);
 		player = map = talker = looter = trader = hover = NULL;
@@ -1139,17 +1133,25 @@ namespace rpgscript
 		}
 	}
 
-	int copylocal(int od)
+
+	int copylocal(int od, bool force = false)
 	{
-		int id = alloclocal();
+		if(od == -1) return alloclocal();
 		if(!locals.inrange(od) || !locals[od])
 		{
 			ERRORF("copylocal called with a bad instance id: %i\f3REPORT A BUG!", od);
-			return id;
+			return alloclocal();
 		}
 
-		localinst &dst = *locals[id],
-			&src = *locals[od];
+		localinst &src = *locals[od];
+		if(src.shared && !force)
+		{
+			src.refs++;
+			return od;
+		}
+
+		int id = alloclocal();
+		localinst &dst = *locals[id];
 
 		enumerate(src.variables, rpgvar, var,
 			rpgvar &newvar = dst.variables[var.name];
@@ -1160,20 +1162,26 @@ namespace rpgscript
 		return id;
 	}
 
+	inline bool getlocals(int *&id, reference &ref, int idx)
+	{
+		if (ref.getinv(idx)) id = &ref.getinv(idx)->locals;
+		else if (ref.getent(idx)) id = &ref.getent(idx)->locals;
+		else if (ref.getmap(idx)) id = &ref.getmap(idx)->locals;
+		if(id) return true;
+
+		ERRORF("couldn't retrieve locals from reference %s:%i (doesn't have any?), this code should not be reached - FILE A BUG!!!", ref.name, idx);
+		return false;
+	}
+
 	ICOMMAND(r_local_get, "ss", (const char *ref, const char *name),
 		getreference(r_local_get, ref, gen, gen->getinv(genidx) || gen->getent(genidx) || gen->getmap(genidx), result(""))
 
-		int li = -1;
-		if(gen->getinv(genidx))
-			li = gen->getinv(genidx)->locals;
-		else if(gen->getent(genidx))
-			li = gen->getent(genidx)->locals;
-		else if(gen->getmap(genidx))
-			li = gen->getmap(genidx)->locals;
+		int *li = NULL;
+		if(!getlocals(li, *gen, genidx)) return;
 
-		if(li >= 0)
+		if(*li >= 0)
 		{
-			rpgvar *var = locals[li]->variables.access(name);
+			rpgvar *var = locals[*li]->variables.access(name);
 			if(var) result(var->value);
 		}
 	)
@@ -1181,40 +1189,67 @@ namespace rpgscript
 	ICOMMAND(r_local_exists, "ss", (const char *ref, const char *name),
 		getreference(r_local_exists, ref, gen, gen->getinv(genidx) || gen->getent(genidx) || gen->getmap(genidx), intret(0))
 
-		int li = -1;
-		if(gen->getinv(genidx))
-			li = gen->getinv(genidx)->locals;
-		else if(gen->getent(genidx))
-			li = gen->getent(genidx)->locals;
-		else if(gen->getmap(genidx))
-			li = gen->getmap(genidx)->locals;
+		int *li = NULL;
+		if(!getlocals(li, *gen, genidx)) {intret(0); return;}
 
-		if(li >= 0)
+		if(*li >= 0)
 		{
-			rpgvar *var = locals[li]->variables.access(name);
+			rpgvar *var = locals[*li]->variables.access(name);
 			intret(var != NULL);
 		}
 		intret(0);
 	)
 
+	ICOMMAND(r_local_share, "ss", (const char *ref, const char *shr),
+		getbasicreference(r_local_set, ref, gen, )
+		getreference(r_local_share, shr, dst, dst->getinv(dstidx) || dst->getent(dstidx) || dst->getmap(dstidx), )
+
+		int *dloc = NULL;
+		if(!getlocals(dloc, *dst, dstidx)) return;
+
+		if(*dloc == -1) *dloc = alloclocal();
+		//if this isn't already shared, we probably want to avoid side effects
+		if(locals[*dloc]->refs >= 2 && !locals[*dloc]->shared)
+		{
+			int id = copylocal(*dloc);
+			freelocal(*dloc);
+			*dloc = id;
+		}
+		else locals[*dloc]->shared = true;
+
+		domultiref(r_local_share, gen, gen->getinv(genidx) || gen->getent(genidx) || gen->getmap(genidx),
+			int *li = NULL;
+			if(!getlocals(li, *gen, genidx)) continue;
+			int orig = *li;
+
+			//just in case the src and dst match, we add to the ref before we subtract
+			*li = *dloc;
+			keeplocal(*dloc);
+			freelocal(orig);
+		)
+	)
+
+	ICOMMAND(r_local_unique, "s", (const char *ref),
+		getbasicreference(r_local_set, ref, gen, )
+
+		domultiref(r_local_share, gen, gen->getinv(genidx) || gen->getent(genidx) || gen->getmap(genidx),
+			int *li = NULL;
+			if(!getlocals(li, *gen, genidx)) continue;
+
+			int orig = *li;
+			//if already unique, don't make copies
+			if(locals.inrange(*li) && locals[*li]->refs == 1) continue;
+			*li = copylocal(*li, true);
+			freelocal(orig);
+		)
+	)
+
 	ICOMMAND(r_local_set, "sss", (const char *ref, const char *name, const char *val),
 		getbasicreference(r_local_set, ref, gen, )
 
-		domultiref(fun, gen, gen->getinv(genidx) || gen->getent(genidx) || gen->getmap(genidx),
+		domultiref(r_local_set, gen, gen->getinv(genidx) || gen->getent(genidx) || gen->getmap(genidx),
 			int *li = NULL;
-
-			if(gen->getinv(genidx))
-				li = &gen->getinv(genidx)->locals;
-			else if(gen->getent(genidx))
-				li = &gen->getent(genidx)->locals;
-			else if(gen->getmap(genidx))
-				li = &gen->getmap(genidx)->locals;
-
-			if(!li)
-			{
-				ERRORF("Reference %s:%i cannot hold locals", gen->name, genidx);
-				return;
-			}
+			if(!getlocals(li, *gen, genidx)) continue;
 
 			if(*li == -1) *li = alloclocal();
 			else if(locals[*li]->refs >= 2)
