@@ -1281,7 +1281,7 @@ SDL_Surface *loadsurface(const char *name)
     SDL_Surface *s = NULL;
     loopi(sizeof(exts)/sizeof(exts[0]))
     {
-        copystring(newname + 1, exts[i], 512 - namelen);
+        copystring(newname + namelen, exts[i], 512 - namelen);
         stream *z = openzipfile(newname, "rb");
         if(z)
         {
