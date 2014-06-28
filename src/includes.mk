@@ -98,7 +98,6 @@ CLIENT_OBJS= \
 	engine/client.o	\
 	engine/command.o \
 	engine/console.o \
-	engine/decal.o \
 	engine/dynlight.o \
 	engine/grass.o \
 	engine/light.o \
