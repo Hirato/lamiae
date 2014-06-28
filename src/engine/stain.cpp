@@ -1,14 +1,13 @@
 #include "engine.h"
 
-struct decalvert
+struct stainvert
 {
     vec pos;
-    bvec color;
-    uchar alpha;
+    bvec4 color;
     float u, v;
 };
 
-struct decalinfo
+struct staininfo
 {
     int millis;
     bvec color;
@@ -18,28 +17,28 @@ struct decalinfo
 
 enum
 {
-    DF_RND4       = 1<<0,
-    DF_ROTATE     = 1<<1,
-    DF_INVMOD     = 1<<2,
-    DF_OVERBRIGHT = 1<<3,
-    DF_GLOW       = 1<<4,
-    DF_SATURATE   = 1<<5
+    SF_RND4       = 1<<0,
+    SF_ROTATE     = 1<<1,
+    SF_INVMOD     = 1<<2,
+    SF_OVERBRIGHT = 1<<3,
+    SF_GLOW       = 1<<4,
+    SF_SATURATE   = 1<<5
 };
 
-VARFP(maxdecaltris, 1, 2048, 16384, initdecals());
-VARP(decalfade, 1000, 15000, 60000);
-VAR(dbgdec, 0, 0, 1);
+VARFP(maxstaintris, 1, 2048, 16384, initstains());
+VARMP(stainfade, 1, 15, 60, 1000);
+VAR(dbgstain, 0, 0, 1);
 
-struct decalbuffer
+struct stainbuffer
 {
-    decalvert *verts;
+    stainvert *verts;
     int maxverts, startvert, endvert, availverts;
     GLuint vbo;
 
-    decalbuffer() : verts(NULL), maxverts(0), startvert(0), endvert(0), availverts(0), vbo(0)
+    stainbuffer() : verts(NULL), maxverts(0), startvert(0), endvert(0), availverts(0), vbo(0)
     {}
 
-    ~decalbuffer()
+    ~stainbuffer()
     {
         DELETEA(verts);
     }
@@ -55,7 +54,7 @@ struct decalbuffer
         {
             maxverts = tris*3 + 3;
             availverts = maxverts - 3;
-            verts = new decalvert[maxverts];
+            verts = new stainvert[maxverts];
         }
     }
 
@@ -70,7 +69,7 @@ struct decalbuffer
         availverts = max(maxverts - 3, 0);
     }
 
-    int freedecal(const decalinfo &d)
+    int freestain(const staininfo &d)
     {
         int removed = d.endvert < d.startvert ? maxverts - (d.startvert - d.endvert) : d.endvert - d.startvert;
         startvert = d.endvert;
@@ -79,22 +78,21 @@ struct decalbuffer
         return removed;
     }
 
-    void cleardecals(const decalinfo &d)
+    void clearstains(const staininfo &d)
     {
         startvert = d.endvert;
         availverts = endvert < startvert ? startvert - endvert - 3 : maxverts - 3 - (endvert - startvert);
     }
 
-    bool faded(const decalinfo &d) const { return verts[d.startvert].alpha < 255; }
+    bool faded(const staininfo &d) const { return verts[d.startvert].color.a < 255; }
 
-    void fadedecal(const decalinfo &d, bvec color, uchar alpha)
+    void fadestain(const staininfo &d, const bvec4 &color)
     {
-        decalvert *vert = &verts[d.startvert],
+        stainvert *vert = &verts[d.startvert],
                   *end = &verts[d.endvert < d.startvert ? maxverts : d.endvert];
         while(vert < end)
         {
             vert->color = color;
-            vert->alpha = alpha;
             vert++;
         }
         if(d.endvert < d.startvert)
@@ -104,7 +102,6 @@ struct decalbuffer
             while(vert < end)
             {
                 vert->color = color;
-                vert->alpha = alpha;
                 vert++;
             }
         }
@@ -118,26 +115,26 @@ struct decalbuffer
         glBindBuffer_(GL_ARRAY_BUFFER, vbo);
 
         int count = endvert < startvert ? maxverts - startvert : endvert - startvert;
-        glBufferData_(GL_ARRAY_BUFFER, maxverts*sizeof(decalvert), NULL, GL_STREAM_DRAW);
-        glBufferSubData_(GL_ARRAY_BUFFER, 0, count*sizeof(decalvert), &verts[startvert]);
+        glBufferData_(GL_ARRAY_BUFFER, maxverts*sizeof(stainvert), NULL, GL_STREAM_DRAW);
+        glBufferSubData_(GL_ARRAY_BUFFER, 0, count*sizeof(stainvert), &verts[startvert]);
         if(endvert < startvert)
         {
-            glBufferSubData_(GL_ARRAY_BUFFER, count*sizeof(decalvert), endvert*sizeof(decalvert), verts);
+            glBufferSubData_(GL_ARRAY_BUFFER, count*sizeof(stainvert), endvert*sizeof(stainvert), verts);
             count += endvert;
         }
 
-        const decalvert *ptr = 0;
-        gle::vertexpointer(sizeof(decalvert), &ptr->pos);
-        gle::texcoord0pointer(sizeof(decalvert), &ptr->u);
-        gle::colorpointer(sizeof(decalvert), &ptr->color);
+        const stainvert *ptr = 0;
+        gle::vertexpointer(sizeof(stainvert), &ptr->pos);
+        gle::texcoord0pointer(sizeof(stainvert), &ptr->u);
+        gle::colorpointer(sizeof(stainvert), &ptr->color);
 
         glDrawArrays(GL_TRIANGLES, 0, count);
         xtravertsva += count;
     }
 
-    decalvert *addtri()
+    stainvert *addtri()
     {
-        decalvert *tri = &verts[endvert];
+        stainvert *tri = &verts[endvert];
         availverts -= 3;
         endvert += 3;
         if(endvert >= maxverts) endvert = 0;
@@ -162,39 +159,41 @@ struct decalbuffer
     }
 };
 
-struct decalrenderer
+struct stainrenderer
 {
     const char *texname;
     int flags, fadeintime, fadeouttime, timetolive;
     Texture *tex;
-    decalinfo *decals;
-    int maxdecals, startdecal, enddecal;
-    decalbuffer verts[NUMDB];
+    staininfo *stains;
+    int maxstains, startstain, endstain;
+    stainbuffer verts[NUMSTAINBUFS];
 
-    decalrenderer(const char *texname, int flags = 0, int fadeintime = 0, int fadeouttime = 1000, int timetolive = -1)
+    stainrenderer(const char *texname, int flags = 0, int fadeintime = 0, int fadeouttime = 1000, int timetolive = -1)
         : texname(texname), flags(flags),
           fadeintime(fadeintime), fadeouttime(fadeouttime), timetolive(timetolive),
           tex(NULL),
-          decals(NULL), maxdecals(0), startdecal(0), enddecal(0),
-          decalu(0), decalv(0)
+          stains(NULL), maxstains(0), startstain(0), endstain(0),
+          stainu(0), stainv(0)
     {
     }
 
-    ~decalrenderer()
+    ~stainrenderer()
     {
-        DELETEA(decals);
+        DELETEA(stains);
     }
+
+    bool usegbuffer() const { return !(flags&(SF_INVMOD|SF_GLOW)); }
 
     void init(int tris)
     {
-        if(decals)
+        if(stains)
         {
-            DELETEA(decals);
-            maxdecals = startdecal = enddecal = 0;
+            DELETEA(stains);
+            maxstains = startstain = endstain = 0;
         }
-        decals = new decalinfo[tris];
-        maxdecals = tris;
-        loopi(NUMDB) verts[i].init(i ? (hasDB2 ? tris/2 : 0) : tris);
+        stains = new staininfo[tris];
+        maxstains = tris;
+        loopi(NUMSTAINBUFS) verts[i].init(i ? tris/2 : tris);
     }
 
     void preload()
@@ -202,118 +201,118 @@ struct decalrenderer
         tex = textureload(texname, 3);
     }
 
-    int totaldecals()
+    int totalstains()
     {
-        return enddecal < startdecal ? maxdecals - (startdecal - enddecal) : enddecal - startdecal;
+        return endstain < startstain ? maxstains - (startstain - endstain) : endstain - startstain;
     }
 
-    bool hasdecals(int db)
+    bool hasstains(int sbuf)
     {
-        return verts[db].hasverts();
+        return verts[sbuf].hasverts();
     }
 
-    void cleardecals()
+    void clearstains()
     {
-        startdecal = enddecal = 0;
-        loopi(NUMDB) verts[i].clear();
+        startstain = endstain = 0;
+        loopi(NUMSTAINBUFS) verts[i].clear();
     }
 
-    int freedecal()
+    int freestain()
     {
-        if(startdecal==enddecal) return 0;
+        if(startstain==endstain) return 0;
 
-        decalinfo &d = decals[startdecal];
-        startdecal++;
-        if(startdecal >= maxdecals) startdecal = 0;
+        staininfo &d = stains[startstain];
+        startstain++;
+        if(startstain >= maxstains) startstain = 0;
 
-        return verts[d.owner].freedecal(d);
+        return verts[d.owner].freestain(d);
     }
 
-    bool faded(const decalinfo &d) const { return verts[d.owner].faded(d); }
+    bool faded(const staininfo &d) const { return verts[d.owner].faded(d); }
 
-    void fadedecal(const decalinfo &d, uchar alpha)
+    void fadestain(const staininfo &d, uchar alpha)
     {
         bvec color = d.color;
-        if(flags&(DF_OVERBRIGHT|DF_GLOW|DF_INVMOD)) color.scale(alpha, 255);
-        verts[d.owner].fadedecal(d, color, alpha);
+        if(flags&(SF_OVERBRIGHT|SF_GLOW|SF_INVMOD)) color.scale(alpha, 255);
+        verts[d.owner].fadestain(d, bvec4(color, alpha));
     }
 
-    void clearfadeddecals()
+    void clearfadedstains()
     {
-        int threshold = lastmillis - (timetolive>=0 ? timetolive : decalfade) - fadeouttime;
-        decalinfo *d = &decals[startdecal],
-                  *end = &decals[enddecal < startdecal ? maxdecals : enddecal],
-                  *cleared[NUMDB] = { NULL };
+        int threshold = lastmillis - (timetolive>=0 ? timetolive : stainfade) - fadeouttime;
+        staininfo *d = &stains[startstain],
+                  *end = &stains[endstain < startstain ? maxstains : endstain],
+                  *cleared[NUMSTAINBUFS] = { NULL };
         for(; d < end && d->millis <= threshold; d++)
             cleared[d->owner] = d;
-        if(d >= end && enddecal < startdecal)
-            for(d = decals, end = &decals[enddecal]; d < end && d->millis <= threshold; d++)
+        if(d >= end && endstain < startstain)
+            for(d = stains, end = &stains[endstain]; d < end && d->millis <= threshold; d++)
                 cleared[d->owner] = d;
-        startdecal = d - decals;
-        if(startdecal == enddecal) loopi(NUMDB) verts[i].clear();
-        else loopi(NUMDB) if(cleared[i]) verts[i].cleardecals(*cleared[i]);
+        startstain = d - stains;
+        if(startstain == endstain) loopi(NUMSTAINBUFS) verts[i].clear();
+        else loopi(NUMSTAINBUFS) if(cleared[i]) verts[i].clearstains(*cleared[i]);
     }
 
-    void fadeindecals()
+    void fadeinstains()
     {
         if(!fadeintime) return;
-        decalinfo *d = &decals[enddecal],
-                  *end = &decals[enddecal < startdecal ? 0 : startdecal];
+        staininfo *d = &stains[endstain],
+                  *end = &stains[endstain < startstain ? 0 : startstain];
         while(d > end)
         {
             d--;
             int fade = lastmillis - d->millis;
-            if(fade < fadeintime) fadedecal(*d, (fade<<8)/fadeintime);
-            else if(faded(*d)) fadedecal(*d, 255);
+            if(fade < fadeintime) fadestain(*d, (fade<<8)/fadeintime);
+            else if(faded(*d)) fadestain(*d, 255);
             else return;
         }
-        if(enddecal < startdecal)
+        if(endstain < startstain)
         {
-            d = &decals[maxdecals];
-            end = &decals[startdecal];
+            d = &stains[maxstains];
+            end = &stains[startstain];
             while(d > end)
             {
                 d--;
                 int fade = lastmillis - d->millis;
-                if(fade < fadeintime) fadedecal(*d, (fade<<8)/fadeintime);
-                else if(faded(*d)) fadedecal(*d, 255);
+                if(fade < fadeintime) fadestain(*d, (fade<<8)/fadeintime);
+                else if(faded(*d)) fadestain(*d, 255);
                 else return;
             }
         }
     }
 
-    void fadeoutdecals()
+    void fadeoutstains()
     {
-        decalinfo *d = &decals[startdecal],
-                  *end = &decals[enddecal < startdecal ? maxdecals : enddecal];
-        int offset = (timetolive>=0 ? timetolive : decalfade) + fadeouttime - lastmillis;
+        staininfo *d = &stains[startstain],
+                  *end = &stains[endstain < startstain ? maxstains : endstain];
+        int offset = (timetolive>=0 ? timetolive : stainfade) + fadeouttime - lastmillis;
         while(d < end)
         {
             int fade = d->millis + offset;
             if(fade >= fadeouttime) return;
-            fadedecal(*d, (fade<<8)/fadeouttime);
+            fadestain(*d, (fade<<8)/fadeouttime);
             d++;
         }
-        if(enddecal < startdecal)
+        if(endstain < startstain)
         {
-            d = decals;
-            end = &decals[enddecal];
+            d = stains;
+            end = &stains[endstain];
             while(d < end)
             {
                 int fade = d->millis + offset;
                 if(fade >= fadeouttime) return;
-                fadedecal(*d, (fade<<8)/fadeouttime);
+                fadestain(*d, (fade<<8)/fadeouttime);
                 d++;
             }
         }
     }
 
-    static void setuprenderstate(int db)
+    static void setuprenderstate(int sbuf, bool gbuf)
     {
-        maskgbuffer("cg");
+        if(gbuf) maskgbuffer(sbuf ? "cg" : "c");
+        else zerofogcolor();
 
-        if(db) glColorMaski_(0, GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
-        else glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
 
         enablepolygonoffset(GL_POLYGON_OFFSET_FILL);
 
@@ -325,7 +324,7 @@ struct decalrenderer
         gle::enablecolor();
     }
 
-    static void cleanuprenderstate(int db)
+    static void cleanuprenderstate(int sbuf, bool gbuf)
     {
         glBindBuffer_(GL_ARRAY_BUFFER, 0);
 
@@ -340,151 +339,114 @@ struct decalrenderer
 
         glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
-        maskgbuffer("cngd");
+        if(gbuf) maskgbuffer(sbuf ? "cndg" : "cnd");
+        else resetfogcolor();
     }
 
     void cleanup()
     {
-        loopi(NUMDB) verts[i].cleanup();
+        loopi(NUMSTAINBUFS) verts[i].cleanup();
     }
 
-    void render(int db)
-     {
+    void render(int sbuf)
+    {
         float colorscale = 1, alphascale = 1;
-        if(flags&DF_OVERBRIGHT)
+        if(flags&SF_OVERBRIGHT)
         {
             glBlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
-            SETSWIZZLE(overbrightdecal, tex);
+            SETVARIANTSWIZZLE(overbrightstain, tex, sbuf);
         }
-        else if(flags&DF_GLOW)
+        else if(flags&SF_GLOW)
         {
             glBlendFunc(GL_ONE, GL_ONE);
-            SETSWIZZLE(glowdecal, tex);
             colorscale = ldrscale;
-            if(flags&DF_SATURATE) colorscale *= 2;
-            alphascale = 1/ldrscale;
+            if(flags&SF_SATURATE) colorscale *= 2;
+            alphascale = 0;
+            SETSWIZZLE(foggedstain, tex);
+        }
+        else if(flags&SF_INVMOD)
+        {
+            glBlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
+            alphascale = 0;
+            SETSWIZZLE(foggedstain, tex);
         }
         else
         {
-            if(flags&DF_INVMOD)
-            {
-                glBlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
-                alphascale = 0;
-            }
-            else
-            {
-                if(db) glBlendFuncSeparate_(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-                else glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-                colorscale = ldrscale;
-                if(flags&DF_SATURATE) colorscale *= 2;
-            }
-
-            SETSWIZZLE(decal, tex);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            colorscale = ldrscale;
+            if(flags&SF_SATURATE) colorscale *= 2;
+            SETVARIANTSWIZZLE(stain, tex, sbuf);
         }
         LOCALPARAMF(colorscale, colorscale, colorscale, colorscale, alphascale);
 
         glBindTexture(GL_TEXTURE_2D, tex->id);
 
-        verts[db].render();
+        verts[sbuf].render();
     }
 
-    decalinfo &newdecal()
+    staininfo &newstain()
     {
-        decalinfo &d = decals[enddecal];
-        int next = enddecal + 1;
-        if(next>=maxdecals) next = 0;
-        if(next==startdecal) freedecal();
-        enddecal = next;
+        staininfo &d = stains[endstain];
+        int next = endstain + 1;
+        if(next>=maxstains) next = 0;
+        if(next==startstain) freestain();
+        endstain = next;
         return d;
     }
 
     ivec bbmin, bbmax;
-    vec decalcenter, decalnormal, decaltangent, decalbitangent;
-    float decalradius, decalu, decalv;
-    bvec decalcolor;
+    vec staincenter, stainnormal, staintangent, stainbitangent;
+    float stainradius, stainu, stainv;
+    bvec4 staincolor;
 
-    void adddecal(const vec &center, const vec &dir, float radius, const bvec &color, int info)
+    void addstain(const vec &center, const vec &dir, float radius, const bvec &color, int info)
     {
         int bbradius = int(ceil(radius));
         bbmin = ivec(center).sub(bbradius);
         bbmax = ivec(center).add(bbradius);
 
-        decalcolor = color;
-        decalcenter = center;
-        decalradius = radius;
-        decalnormal = dir;
+        staincolor = bvec4(color, 255);
+        staincenter = center;
+        stainradius = radius;
+        stainnormal = dir;
 #if 0
-        decaltangent.orthogonal(dir);
+        staintangent.orthogonal(dir);
 #else
-        decaltangent = vec(dir.z, -dir.x, dir.y);
-        decaltangent.project(dir);
+        staintangent = vec(dir.z, -dir.x, dir.y);
+        staintangent.project(dir);
 #endif
-        if(flags&DF_ROTATE) decaltangent.rotate(sincos360[rnd(360)], dir);
-        decaltangent.normalize();
-        decalbitangent.cross(decaltangent, dir);
-        if(flags&DF_RND4)
+        if(flags&SF_ROTATE) staintangent.rotate(sincos360[rnd(360)], dir);
+        staintangent.normalize();
+        stainbitangent.cross(staintangent, dir);
+        if(flags&SF_RND4)
         {
-            decalu = 0.5f*(info&1);
-            decalv = 0.5f*((info>>1)&1);
+            stainu = 0.5f*(info&1);
+            stainv = 0.5f*((info>>1)&1);
         }
 
-        ushort startvert[NUMDB];
-        loopi(NUMDB) startvert[i] = verts[i].endvert;
+        ushort startvert[NUMSTAINBUFS];
+        loopi(NUMSTAINBUFS) startvert[i] = verts[i].endvert;
         gentris(worldroot, ivec(0, 0, 0), worldsize>>1);
-        loopi(NUMDB)
+        loopi(NUMSTAINBUFS)
         {
-            decalbuffer &buf = verts[i];
+            stainbuffer &buf = verts[i];
             int dstart = startvert[i];
             if(buf.endvert == dstart) continue;
 
-            if(dbgdec)
+            if(dbgstain)
             {
                 int nverts = buf.usedverts(dstart);
-                static const char * const dbname[NUMDB] = { "opaque", "transparent" };
-                conoutf(CON_DEBUG, "tris = %d, verts = %d, total tris = %d, %s", nverts/3, nverts, buf.totaltris(), dbname[i]);
+                static const char * const sbufname[NUMSTAINBUFS] = { "opaque", "transparent" };
+                conoutf(CON_DEBUG, "tris = %d, verts = %d, total tris = %d, %s", nverts/3, nverts, buf.totaltris(), sbufname[i]);
             }
 
-            decalinfo &d = newdecal();
+            staininfo &d = newstain();
             d.owner = i;
             d.color = color;
             d.millis = lastmillis;
             d.startvert = dstart;
             d.endvert = buf.endvert;
         }
-    }
-
-    static int clip(const vec *in, int numin, const vec &dir, float below, float above, vec *out)
-    {
-        int numout = 0;
-        const vec *p = &in[numin-1];
-        float pc = dir.dot(*p);
-        loopi(numin)
-        {
-            const vec &v = in[i];
-            float c = dir.dot(v);
-            if(c < below)
-            {
-                if(pc > above) out[numout++] = vec(*p).sub(v).mul((above - c)/(pc - c)).add(v);
-                if(pc > below) out[numout++] = vec(*p).sub(v).mul((below - c)/(pc - c)).add(v);
-            }
-            else if(c > above)
-            {
-                if(pc < below) out[numout++] = vec(*p).sub(v).mul((below - c)/(pc - c)).add(v);
-                if(pc < above) out[numout++] = vec(*p).sub(v).mul((above - c)/(pc - c)).add(v);
-            }
-            else
-            {
-                if(pc < below)
-                {
-                    if(c > below) out[numout++] = vec(*p).sub(v).mul((below - c)/(pc - c)).add(v);
-                }
-                else if(pc > above && c < above) out[numout++] = vec(*p).sub(v).mul((above - c)/(pc - c)).add(v);
-                out[numout++] = v;
-            }
-            p = &v;
-            pc = c;
-        }
-        return numout;
     }
 
     void gentris(cube &cu, int orient, const ivec &o, int size, materialsurface *mat = NULL, int vismask = 0)
@@ -538,60 +500,60 @@ struct decalrenderer
         }
         else return;
 
-        decalbuffer &buf = verts[(mat || cu.material&MAT_ALPHA) && hasDB2 ? DB_TRANSPARENT : DB_OPAQUE];
+        stainbuffer &buf = verts[mat || cu.material&MAT_ALPHA ? STAINBUF_TRANSPARENT : STAINBUF_OPAQUE];
         loopl(numplanes)
         {
             const vec &n = planes[l];
-            float facing = n.dot(decalnormal);
+            float facing = n.dot(stainnormal);
             if(facing <= 0) continue;
-            vec p = vec(pos[0]).sub(decalcenter);
+            vec p = vec(pos[0]).sub(staincenter);
 #if 0
-            // intersect ray along decal normal with plane
+            // intersect ray along stain normal with plane
             float dist = n.dot(p) / facing;
-            if(fabs(dist) > decalradius) continue;
-            vec pcenter = vec(decalnormal).mul(dist).add(decalcenter);
+            if(fabs(dist) > stainradius) continue;
+            vec pcenter = vec(stainnormal).mul(dist).add(staincenter);
 #else
-            // travel back along plane normal from the decal center
+            // travel back along plane normal from the stain center
             float dist = n.dot(p);
-            if(fabs(dist) > decalradius) continue;
-            vec pcenter = vec(n).mul(dist).add(decalcenter);
+            if(fabs(dist) > stainradius) continue;
+            vec pcenter = vec(n).mul(dist).add(staincenter);
 #endif
             vec ft, fb;
             ft.orthogonal(n);
             ft.normalize();
             fb.cross(ft, n);
-            vec pt = vec(ft).mul(ft.dot(decaltangent)).add(vec(fb).mul(fb.dot(decaltangent))).normalize(),
-                pb = vec(ft).mul(ft.dot(decalbitangent)).add(vec(fb).mul(fb.dot(decalbitangent))).project(pt).normalize();
+            vec pt = vec(ft).mul(ft.dot(staintangent)).add(vec(fb).mul(fb.dot(staintangent))).normalize(),
+                pb = vec(ft).mul(ft.dot(stainbitangent)).add(vec(fb).mul(fb.dot(stainbitangent))).project(pt).normalize();
             vec v1[MAXFACEVERTS+4], v2[MAXFACEVERTS+4];
             float ptc = pt.dot(pcenter), pbc = pb.dot(pcenter);
             int numv;
             if(numplanes >= 2)
             {
                 if(l) { pos[1] = pos[2]; pos[2] = pos[3]; }
-                numv = clip(pos, 3, pt, ptc - decalradius, ptc + decalradius, v1);
+                numv = polyclip(pos, 3, pt, ptc - stainradius, ptc + stainradius, v1);
                 if(numv<3) continue;
             }
             else
             {
-                numv = clip(pos, numverts, pt, ptc - decalradius, ptc + decalradius, v1);
+                numv = polyclip(pos, numverts, pt, ptc - stainradius, ptc + stainradius, v1);
                 if(numv<3) continue;
             }
-            numv = clip(v1, numv, pb, pbc - decalradius, pbc + decalradius, v2);
+            numv = polyclip(v1, numv, pb, pbc - stainradius, pbc + stainradius, v2);
             if(numv<3) continue;
-            float tsz = flags&DF_RND4 ? 0.5f : 1.0f, scale = tsz*0.5f/decalradius,
-                  tu = decalu + tsz*0.5f - ptc*scale, tv = decalv + tsz*0.5f - pbc*scale;
+            float tsz = flags&SF_RND4 ? 0.5f : 1.0f, scale = tsz*0.5f/stainradius,
+                  tu = stainu + tsz*0.5f - ptc*scale, tv = stainv + tsz*0.5f - pbc*scale;
             pt.mul(scale); pb.mul(scale);
-            decalvert dv1 = { v2[0], decalcolor, 255, pt.dot(v2[0]) + tu, pb.dot(v2[0]) + tv },
-                      dv2 = { v2[1], decalcolor, 255, pt.dot(v2[1]) + tu, pb.dot(v2[1]) + tv };
+            stainvert dv1 = { v2[0], staincolor, pt.dot(v2[0]) + tu, pb.dot(v2[0]) + tv },
+                      dv2 = { v2[1], staincolor, pt.dot(v2[1]) + tu, pb.dot(v2[1]) + tv };
             int totalverts = 3*(numv-2);
             if(totalverts > buf.maxverts-3) return;
             while(buf.availverts < totalverts)
             {
-                if(!freedecal()) return;
+                if(!freestain()) return;
             }
             loopk(numv-2)
             {
-                decalvert *tri = buf.addtri();
+                stainvert *tri = buf.addtri();
                 tri[0] = dv1;
                 tri[1] = dv2;
                 dv2.pos = v2[k+2];
@@ -611,7 +573,7 @@ struct decalrenderer
             materialsurface &m = matbuf[i];
             if(!isclipped(m.material&MATF_VOLUME)) { i += m.skip; continue; }
             int dim = dimension(m.orient), dc = dimcoord(m.orient);
-            if(dc ? decalnormal[dim] <= 0 : decalnormal[dim] >= 0) { i += m.skip; continue; }
+            if(dc ? stainnormal[dim] <= 0 : stainnormal[dim] >= 0) { i += m.skip; continue; }
             int c = C[dim], r = R[dim];
             for(;;)
             {
@@ -683,69 +645,69 @@ struct decalrenderer
     }
 };
 
-decalrenderer decals[] =
+stainrenderer stains[] =
 {
-    decalrenderer("media/particles/burn"), //improve collision detection first
-    decalrenderer("media/particles/blood", DF_RND4|DF_ROTATE|DF_INVMOD),
-    decalrenderer("media/particles/stain", 0, 10, 2000, 20),
-    decalrenderer("media/particles/ripple", 0, 10, 750, 20),
-    decalrenderer("media/particles/leaves", DF_RND4|DF_ROTATE),
+    stainrenderer("media/particles/burn"), //improve collision detection first
+    stainrenderer("media/particles/blood", SF_RND4|SF_ROTATE|SF_INVMOD),
+    stainrenderer("media/particles/stain", 0, 10, 2000, 20),
+    stainrenderer("media/particles/ripple", 0, 10, 750, 20),
+    stainrenderer("media/particles/leaves", SF_RND4|SF_ROTATE),
 };
 
-void initdecals()
+void initstains()
 {
     if(initing) return;
-    loopi(sizeof(decals)/sizeof(decals[0])) decals[i].init(maxdecaltris);
-    loopi(sizeof(decals)/sizeof(decals[0]))
+    loopi(sizeof(stains)/sizeof(stains[0])) stains[i].init(maxstaintris);
+    loopi(sizeof(stains)/sizeof(stains[0]))
     {
-        loadprogress = float(i+1)/(sizeof(decals)/sizeof(decals[0]));
-        decals[i].preload();
+        loadprogress = float(i+1)/(sizeof(stains)/sizeof(stains[0]));
+        stains[i].preload();
     }
     loadprogress = 0;
 }
 
-void cleardecals()
+void clearstains()
 {
-    loopi(sizeof(decals)/sizeof(decals[0])) decals[i].cleardecals();
+    loopi(sizeof(stains)/sizeof(stains[0])) stains[i].clearstains();
 }
 
-VARNP(decals, showdecals, 0, 1, 1);
+VARNP(stains, showstains, 0, 1, 1);
 
-void renderdecals(int db)
+void renderstains(int sbuf, bool gbuf)
 {
     bool rendered = false;
-    loopi(sizeof(decals)/sizeof(decals[0]))
+    loopi(sizeof(stains)/sizeof(stains[0]))
     {
-        decalrenderer &d = decals[i];
-        if(db == DB_OPAQUE)
+        stainrenderer &d = stains[i];
+        if(d.usegbuffer() != gbuf) continue;
+        if(sbuf == STAINBUF_OPAQUE)
         {
-            d.clearfadeddecals();
-            d.fadeindecals();
-            d.fadeoutdecals();
+            d.clearfadedstains();
+            d.fadeinstains();
+            d.fadeoutstains();
         }
-        if(!showdecals || !d.hasdecals(db)) continue;
+        if(!showstains || !d.hasstains(sbuf)) continue;
         if(!rendered)
         {
             rendered = true;
-            decalrenderer::setuprenderstate(db);
+            stainrenderer::setuprenderstate(sbuf, gbuf);
         }
-        d.render(db);
+        d.render(sbuf);
     }
     if(!rendered) return;
-    decalrenderer::cleanuprenderstate(db);
+    stainrenderer::cleanuprenderstate(sbuf, gbuf);
 }
 
-void cleanupdecals()
+void cleanupstains()
 {
-    loopi(sizeof(decals)/sizeof(decals[0])) decals[i].cleanup();
+    loopi(sizeof(stains)/sizeof(stains[0])) stains[i].cleanup();
 }
 
-VARP(maxdecaldistance, 1, 512, 10000);
+VARP(maxstaindistance, 1, 512, 10000);
 
-void adddecal(int type, const vec &center, const vec &surface, float radius, const bvec &color, int info)
+void addstain(int type, const vec &center, const vec &surface, float radius, const bvec &color, int info)
 {
-    if(!showdecals || type<0 || (size_t)type>=sizeof(decals)/sizeof(decals[0]) || center.dist(camera1->o) - radius > maxdecaldistance) return;
-    decalrenderer &d = decals[type];
-    d.adddecal(center, surface, radius, color, info);
+    if(!showstains || type<0 || (size_t)type>=sizeof(stains)/sizeof(stains[0]) || center.dist(camera1->o) - radius > maxstaindistance) return;
+    stainrenderer &d = stains[type];
+    d.addstain(center, surface, radius, color, info);
 }
-

@@ -875,12 +875,18 @@ struct matrix4x3
         d.mul(k);
     }
 
-    void scale(float k)
+    void setscale(float x, float y, float z) { a.x = x; b.y = y; c.z = z; }
+    void setscale(const vec &v) { setscale(v.x, v.y, v.z); }
+    void setscale(float n) { setscale(n, n, n); }
+
+    void scale(float x, float y, float z)
     {
-        a.mul(k);
-        b.mul(k);
-        c.mul(k);
+        a.mul(x);
+        b.mul(y);
+        c.mul(z);
     }
+    void scale(const vec &v) { scale(v.x, v.y, v.z); }
+    void scale(float n) { scale(n, n, n); }
 
     void settranslation(const vec &p) { d = p; }
     void settranslation(float x, float y, float z) { d = vec(x, y, z); }
@@ -1331,6 +1337,8 @@ static inline uint hthash(const ivec4 &k)
     return k.x^k.y^k.z^k.w;
 }
 
+struct bvec4;
+
 struct bvec
 {
     union
@@ -1343,6 +1351,7 @@ struct bvec
     bvec() {}
     bvec(uchar x, uchar y, uchar z) : x(x), y(y), z(z) {}
     bvec(const vec &v) : x((uchar)((v.x+1)*255/2)), y((uchar)((v.y+1)*255/2)), z((uchar)((v.z+1)*255/2)) {}
+    explicit bvec(const bvec4 &v);
 
     uchar &operator[](int i)       { return v[i]; }
     uchar  operator[](int i) const { return v[i]; }
@@ -1364,9 +1373,14 @@ struct bvec
         return *this;
     }
 
-    void lerp(const bvec &a, const bvec &b, float t) { x = uchar(a.x + (b.x-a.x)*t); y = uchar(a.y + (b.y-a.y)*t); z = uchar(a.z + (b.z-a.z)*t); }
+    void lerp(const bvec &a, const bvec &b, float t)
+    {
+        x = uchar(a.x + (b.x-a.x)*t);
+        y = uchar(a.y + (b.y-a.y)*t);
+        z = uchar(a.z + (b.z-a.z)*t);
+    }
 
-    void flip() { x -= 128; y -= 128; z -= 128; }
+    void flip() { x ^= 0x80; y ^= 0x80; z ^= 0x80; }
 
     void scale(int k, int d) { x = uchar((x*k)/d); y = uchar((y*k)/d); z = uchar((z*k)/d); }
 
@@ -1382,6 +1396,50 @@ struct bvec
     }
     int tohexcolor() const { return (int(r)<<16)|(int(g)<<8)|int(b); }
 };
+
+struct bvec4
+{
+    union
+    {
+        struct { uchar x, y, z, w; };
+        struct { uchar r, g, b, a; };
+        uchar v[4];
+        uint mask;
+    };
+
+    bvec4() {}
+    bvec4(uchar x, uchar y, uchar z, uchar w = 0) : x(x), y(y), z(z), w(w) {}
+    bvec4(const bvec &v, uchar w = 0) : x(v.x), y(v.y), z(v.z), w(w) {}
+
+    uchar &operator[](int i)       { return v[i]; }
+    uchar  operator[](int i) const { return v[i]; }
+
+    bool operator==(const bvec4 &v) const { return mask==v.mask; }
+    bool operator!=(const bvec4 &v) const { return mask!=v.mask; }
+
+    bool iszero() const { return mask==0; }
+
+    vec tonormal() const { return vec(x*(2.0f/255.0f)-1.0f, y*(2.0f/255.0f)-1.0f, z*(2.0f/255.0f)-1.0f); }
+
+    void lerp(const bvec4 &a, const bvec4 &b, float t)
+    {
+        x = uchar(a.x + (b.x-a.x)*t);
+        y = uchar(a.y + (b.y-a.y)*t);
+        z = uchar(a.z + (b.z-a.z)*t);
+        w = a.w;
+    }
+    void lerp(const bvec4 &a, const bvec4 &b, const bvec4 &c, float ta, float tb, float tc)
+    {
+        x = uchar(a.x*ta + b.x*tb + c.x*tc);
+        y = uchar(a.y*ta + b.y*tb + c.y*tc);
+        z = uchar(a.z*ta + b.z*tb + c.z*tc);
+        w = uchar(a.w*ta + b.w*tb + c.w*tc);
+    }
+
+    void flip() { mask ^= 0x80808080; }
+};
+
+inline bvec::bvec(const bvec4 &v) : x(v.x), y(v.y), z(v.z) {}
 
 struct usvec
 {
@@ -1417,6 +1475,23 @@ struct svec
 inline vec::vec(const svec &v) : x(v.x), y(v.y), z(v.z) {}
 inline ivec::ivec(const svec &v) : x(v.x), y(v.y), z(v.z) {}
 
+struct dvec4
+{
+    double x, y, z, w;
+
+    dvec4() {}
+    dvec4(double x, double y, double z, double w) : x(x), y(y), z(z), w(w) {}
+    dvec4(const vec4 &v) : x(v.x), y(v.y), z(v.z), w(v.w) {}
+
+    template<class B> dvec4 &madd(const dvec4 &a, const B &b) { return add(dvec4(a).mul(b)); }
+    dvec4 &mul(double f)       { x *= f; y *= f; z *= f; w *= f; return *this; }
+    dvec4 &mul(const dvec4 &o) { x *= o.x; y *= o.y; z *= o.z; w *= o.w; return *this; }
+    dvec4 &add(double f)       { x += f; y += f; z += f; w += f; return *this; }
+    dvec4 &add(const dvec4 &o) { x += o.x; y += o.y; z += o.z; w += o.w; return *this; }
+
+    operator vec4() const { return vec4(x, y, z, w); }
+};
+
 struct matrix4
 {
     vec4 a, b, c, d;
@@ -1442,19 +1517,24 @@ struct matrix4
     }
     void mul(const matrix3 &y) { mul(matrix4(*this), y); }
 
-    void mul(const matrix4 &x, const matrix4 &y)
+    template<class T> void mult(const matrix4 &x, const matrix4 &y)
     {
-        a = vec4(x.a).mul(y.a.x).madd(x.b, y.a.y).madd(x.c, y.a.z).madd(x.d, y.a.w);
-        b = vec4(x.a).mul(y.b.x).madd(x.b, y.b.y).madd(x.c, y.b.z).madd(x.d, y.b.w);
-        c = vec4(x.a).mul(y.c.x).madd(x.b, y.c.y).madd(x.c, y.c.z).madd(x.d, y.c.w);
-        d = vec4(x.a).mul(y.d.x).madd(x.b, y.d.y).madd(x.c, y.d.z).madd(x.d, y.d.w);
+        a = T(x.a).mul(y.a.x).madd(x.b, y.a.y).madd(x.c, y.a.z).madd(x.d, y.a.w);
+        b = T(x.a).mul(y.b.x).madd(x.b, y.b.y).madd(x.c, y.b.z).madd(x.d, y.b.w);
+        c = T(x.a).mul(y.c.x).madd(x.b, y.c.y).madd(x.c, y.c.z).madd(x.d, y.c.w);
+        d = T(x.a).mul(y.d.x).madd(x.b, y.d.y).madd(x.c, y.d.z).madd(x.d, y.d.w);
     }
-    void mul(const matrix4 &y) { mul(matrix4(*this), y); }
+
+    void mul(const matrix4 &x, const matrix4 &y) { mult<vec4>(x, y); }
+    void mul(const matrix4 &y) { mult<vec4>(matrix4(*this), y); }
+
+    void muld(const matrix4 &x, const matrix4 &y) { mult<dvec4>(x, y); }
+    void muld(const matrix4 &y) { mult<dvec4>(matrix4(*this), y); }
 
     void rotate_around_x(float ck, float sk)
     {
-        vec4 rb = vec4(b).mul(ck).add(vec4(c).mul(sk)),
-             rc = vec4(c).mul(ck).sub(vec4(b).mul(sk));
+        vec4 rb = vec4(b).mul(ck).madd(c, sk),
+             rc = vec4(c).mul(ck).msub(b, sk);
         b = rb;
         c = rc;
     }
@@ -1463,8 +1543,8 @@ struct matrix4
 
     void rotate_around_y(float ck, float sk)
     {
-        vec4 rc = vec4(c).mul(ck).add(vec4(a).mul(sk)),
-             ra = vec4(a).mul(ck).sub(vec4(c).mul(sk));
+        vec4 rc = vec4(c).mul(ck).madd(a, sk),
+             ra = vec4(a).mul(ck).msub(c, sk);
         c = rc;
         a = ra;
     }
@@ -1473,8 +1553,8 @@ struct matrix4
 
     void rotate_around_z(float ck, float sk)
     {
-        vec4 ra = vec4(a).mul(ck).add(vec4(b).mul(sk)),
-             rb = vec4(b).mul(ck).sub(vec4(a).mul(sk));
+        vec4 ra = vec4(a).mul(ck).madd(b, sk),
+             rb = vec4(b).mul(ck).msub(a, sk);
         a = ra;
         b = rb;
     }
@@ -1615,12 +1695,12 @@ struct matrix4
 
     void transform(const vec &in, vec4 &out) const
     {
-        out = vec4(a).mul(in.x).add(vec4(b).mul(in.y)).add(vec4(c).mul(in.z)).add(d);
+        out = vec4(a).mul(in.x).madd(b, in.y).madd(c, in.z).add(d);
     }
 
     void transform(const vec4 &in, vec4 &out) const
     {
-        out = vec4(a).mul(in.x).add(vec4(b).mul(in.y)).add(vec4(c).mul(in.z)).add(vec4(d).mul(in.w));
+        out = vec4(a).mul(in.x).madd(b, in.y).madd(c, in.z).madd(d, in.w);
     }
 
     template<class T, class U> T transform(const U &in) const
@@ -1644,7 +1724,7 @@ struct matrix4
 
     void transformnormal(const vec &in, vec4 &out) const
     {
-        out = vec4(a).mul(in.x).add(vec4(b).mul(in.y)).add(vec4(c).mul(in.z));
+        out = vec4(a).mul(in.x).madd(b, in.y).madd(c, in.z);
     }
 
     template<class T, class U> T transformnormal(const U &in) const
@@ -1692,7 +1772,7 @@ struct matrix4
     vec4 rowz() const { return vec4(a.z, b.z, c.z, d.z); }
     vec4 roww() const { return vec4(a.w, b.w, c.w, d.w); }
 
-    bool invert(const matrix4 &m, double mindet = 1.0e-10);
+    bool invert(const matrix4 &m, double mindet = 1.0e-12);
 
     vec2 lineardepthscale() const
     {
@@ -1810,6 +1890,7 @@ struct squat
 extern bool raysphereintersect(const vec &center, float radius, const vec &o, const vec &ray, float &dist);
 extern bool rayboxintersect(const vec &b, const vec &s, const vec &o, const vec &ray, float &dist, int &orient);
 extern bool linecylinderintersect(const vec &from, const vec &to, const vec &start, const vec &end, float radius, float &dist);
+extern int polyclip(const vec *in, int numin, const vec &dir, float below, float above, vec *out);
 
 extern const vec2 sincos360[];
 static inline int mod360(int angle)

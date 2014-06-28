@@ -8,7 +8,7 @@ void boxs(int orient, vec o, const vec &s)
 {
     int d = dimension(orient), dc = dimcoord(orient);
     float f = boxoutline ? (dc>0 ? 0.2f : -0.2f) : 0;
-    o[D[d]] += float(dc) * s[D[d]] + f,
+    o[D[d]] += dc * s[D[d]] + f;
 
     gle::defvertex();
     gle::begin(GL_LINE_LOOP);
@@ -565,7 +565,15 @@ void commitchanges(bool force)
     updatevabbs();
 }
 
-void changed(const block3 &sel, bool commit = true)
+void changed(const ivec &bbmin, const ivec &bbmax, bool commit)
+{
+    readychanges(bbmin, bbmax, worldroot, ivec(0, 0, 0), worldsize/2);
+    haschanged = true;
+
+    if(commit) commitchanges();
+}
+
+void changed(const block3 &sel, bool commit)
 {
     if(sel.s.iszero()) return;
     readychanges(ivec(sel.o).sub(1), ivec(sel.s).mul(sel.grid).add(sel.o).add(1), worldroot, ivec(0, 0, 0), worldsize/2);
@@ -953,17 +961,36 @@ struct prefabheader
 struct prefab : editinfo
 {
     char *name;
+    GLuint ebo, vbo;
+    int numtris, numverts;
 
-    prefab() : name(NULL) {}
+    prefab() : name(NULL), ebo(0), vbo(0), numtris(0), numverts(0) {}
     ~prefab() { DELETEA(name); if(copy) freeblock(copy); }
+
+    void cleanup()
+    {
+        if(ebo) { glDeleteBuffers_(1, &ebo); ebo = 0; }
+        if(vbo) { glDeleteBuffers_(1, &vbo); vbo = 0; }
+        numtris = numverts = 0;
+    }
 };
 
 static hashnameset<prefab> prefabs;
 
+void cleanupprefabs()
+{
+    enumerate(prefabs, prefab, p, p.cleanup());
+}
+
 void delprefab(char *name)
 {
-    if(prefabs.remove(name))
+    prefab *p = prefabs.access(name);
+    if(p)
+    {
+        p->cleanup();
+        prefabs.remove(name);
         conoutf("deleted prefab %s", name);
+    }
 }
 COMMAND(delprefab, "s");
 
@@ -1005,31 +1032,243 @@ void pasteblock(block3 &b, selinfo &sel, bool local)
     sel.orient = o;
 }
 
+prefab *loadprefab(const char *name, bool msg = true)
+{
+   prefab *b = prefabs.access(name);
+   if(b) return b;
+
+   defformatstring(filename, "media/prefab/%s.obr", name);
+   path(filename);
+   stream *f = opengzfile(filename, "rb");
+   if(!f) { if(msg) conoutf(CON_ERROR, "could not read prefab %s", filename); return NULL; }
+   prefabheader hdr;
+   if(f->read(&hdr, sizeof(hdr)) != sizeof(prefabheader) || memcmp(hdr.magic, "OEBR", 4)) { delete f; if(msg) conoutf(CON_ERROR, "prefab %s has malformatted header", filename); return NULL; }
+   lilswap(&hdr.version, 1);
+   if(hdr.version != 0) { delete f; if(msg) conoutf(CON_ERROR, "prefab %s uses unsupported version", filename); return NULL; }
+   streambuf<uchar> s(f);
+   block3 *copy = NULL;
+   if(!unpackblock(copy, s)) { delete f; if(msg) conoutf(CON_ERROR, "could not unpack prefab %s", filename); return NULL; }
+   delete f;
+
+   b = &prefabs[name];
+   b->name = newstring(name);
+   b->copy = copy;
+
+   return b;
+}
+
 void pasteprefab(char *name)
 {
     if(!name[0] || noedit() || (nompedit && multiplayer())) return;
-    prefab *b = prefabs.access(name);
-    if(!b)
-    {
-        defformatstring(filename, "media/prefab/%s.obr", name);
-        path(filename);
-        stream *f = opengzfile(filename, "rb");
-        if(!f) { conoutf(CON_ERROR, "could not read prefab %s", filename); return; }
-        prefabheader hdr;
-        if(f->read(&hdr, sizeof(hdr)) != sizeof(prefabheader) || memcmp(hdr.magic, "OEBR", 4)) { delete f; conoutf(CON_ERROR, "prefab %s has malformatted header", filename); return; }
-        lilswap(&hdr.version, 1);
-        if(hdr.version != 0) { delete f; conoutf(CON_ERROR, "prefab %s uses unsupported version", filename); return; }
-        streambuf<uchar> s(f);
-        block3 *copy = NULL;
-        if(!unpackblock(copy, s)) { delete f; conoutf(CON_ERROR, "could not unpack prefab %s", filename); return; }
-        delete f;
-        b = &prefabs[name];
-        b->name = newstring(name);
-        b->copy = copy;
-    }
-    pasteblock(*b->copy, sel, true);
+    prefab *b = loadprefab(name, true);
+    if(b) pasteblock(*b->copy, sel, true);
 }
 COMMAND(pasteprefab, "s");
+
+struct prefabmesh
+{
+    struct vertex { vec pos; bvec4 norm; };
+
+    static const int SIZE = 1<<9;
+    int table[SIZE];
+    vector<vertex> verts;
+    vector<int> chain;
+    vector<ushort> tris;
+
+    prefabmesh() { memset(table, -1, sizeof(table)); }
+
+    int addvert(const vertex &v)
+    {
+        uint h = hthash(v.pos)&(SIZE-1);
+        for(int i = table[h]; i>=0; i = chain[i])
+        {
+            const vertex &c = verts[i];
+            if(c.pos==v.pos && c.norm==v.norm) return i;
+        }
+        if(verts.length() >= USHRT_MAX) return -1;
+        verts.add(v);
+        chain.add(table[h]);
+        return table[h] = verts.length()-1;
+    }
+
+    int addvert(const vec &pos, const bvec &norm)
+    {
+        vertex vtx;
+        vtx.pos = pos;
+        vtx.norm = norm;
+        return addvert(vtx);
+   }
+
+    void setup(prefab &p)
+    {
+        if(tris.empty()) return;
+
+        p.cleanup();
+
+        loopv(verts) verts[i].norm.flip();
+        if(!p.vbo) glGenBuffers_(1, &p.vbo);
+        glBindBuffer_(GL_ARRAY_BUFFER, p.vbo);
+        glBufferData_(GL_ARRAY_BUFFER, verts.length()*sizeof(vertex), verts.getbuf(), GL_STATIC_DRAW);
+        glBindBuffer_(GL_ARRAY_BUFFER, 0);
+        p.numverts = verts.length();
+
+        if(!p.ebo) glGenBuffers_(1, &p.ebo);
+        glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, p.ebo);
+        glBufferData_(GL_ELEMENT_ARRAY_BUFFER, tris.length()*sizeof(ushort), tris.getbuf(), GL_STATIC_DRAW);
+        glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, 0);
+        p.numtris = tris.length()/3;
+    }
+
+};
+
+static void genprefabmesh(prefabmesh &r, cube &c, const ivec &co, int size)
+{
+    if(c.children)
+    {
+        neighbourstack[++neighbourdepth] = c.children;
+        loopi(8)
+        {
+            ivec o(i, co, size/2);
+            genprefabmesh(r, c.children[i], o, size/2);
+        }
+        --neighbourdepth;
+    }
+    else if(!isempty(c))
+    {
+        int vis;
+        loopi(6) if((vis = visibletris(c, i, co, size)))
+        {
+            ivec v[4];
+            genfaceverts(c, i, v);
+            int convex = 0;
+            if(!flataxisface(c, i)) convex = faceconvexity(v);
+            int order = vis&4 || convex < 0 ? 1 : 0, numverts = 0;
+            vec vo(co), pos[4], norm[4];
+            pos[numverts++] = vec(v[order]).mul(size/8.0f).add(vo);
+            if(vis&1) pos[numverts++] = vec(v[order+1]).mul(size/8.0f).add(vo);
+            pos[numverts++] = vec(v[order+2]).mul(size/8.0f).add(vo);
+            if(vis&2) pos[numverts++] = vec(v[(order+3)&3]).mul(size/8.0f).add(vo);
+            guessnormals(pos, numverts, norm);
+            int index[4];
+            loopj(numverts) index[j] = r.addvert(pos[j], norm[j]);
+            loopj(numverts-2) if(index[0]!=index[j+1] && index[j+1]!=index[j+2] && index[j+2]!=index[0])
+            {
+                r.tris.add(index[0]);
+                r.tris.add(index[j+1]);
+                r.tris.add(index[j+2]);
+            }
+        }
+    }
+}
+
+void genprefabmesh(prefab &p)
+{
+    block3 b = *p.copy;
+    b.o = ivec(0, 0, 0);
+
+    cube *oldworldroot = worldroot;
+    int oldworldscale = worldscale, oldworldsize = worldsize;
+
+    worldroot = newcubes();
+    worldscale = 1;
+    worldsize = 2;
+    while(worldsize < max(max(b.s.x, b.s.y), b.s.z)*b.grid)
+    {
+        worldscale++;
+        worldsize *= 2;
+    }
+
+    cube *s = p.copy->c();
+    loopxyz(b, b.grid, if(!isempty(*s) || s->children) pastecube(*s, c); s++);
+
+    prefabmesh r;
+    neighbourstack[++neighbourdepth] = worldroot;
+    loopi(8) genprefabmesh(r, worldroot[i], ivec(i, ivec(0, 0, 0), worldsize/2), worldsize/2);
+    --neighbourdepth;
+    r.setup(p);
+
+    freeocta(worldroot);
+
+    worldroot = oldworldroot;
+    worldscale = oldworldscale;
+    worldsize = oldworldsize;
+
+    useshaderbyname("prefab");
+}
+
+extern bvec outlinecolour;
+
+static void renderprefab(prefab &p, const vec &o, float yaw, float pitch, float roll, float size, const vec &color)
+{
+    if(!p.numtris)
+    {
+        genprefabmesh(p);
+        if(!p.numtris) return;
+    }
+
+    block3 &b = *p.copy;
+
+    matrix4 m;
+    m.identity();
+    m.settranslation(o);
+    if(yaw) m.rotate_around_z(yaw*RAD);
+    if(pitch) m.rotate_around_x(pitch*RAD);
+    if(roll) m.rotate_around_y(-roll*RAD);
+    matrix3 w(m);
+    if(size > 0 && size != 1) m.scale(size);
+    m.translate(vec(b.s).mul(-b.grid*0.5f));
+
+    glBindBuffer_(GL_ARRAY_BUFFER, p.vbo);
+    glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, p.ebo);
+    gle::enablevertex();
+    gle::enablenormal();
+    prefabmesh::vertex *v = (prefabmesh::vertex *)0;
+    gle::vertexpointer(sizeof(prefabmesh::vertex), v->pos.v);
+    gle::normalpointer(sizeof(prefabmesh::vertex), v->norm.v, GL_BYTE);
+
+    matrix4 pm;
+    pm.mul(camprojmatrix, m);
+    GLOBALPARAM(prefabmatrix, pm);
+    GLOBALPARAM(prefabworld, w);
+    SETSHADER(prefab);
+    gle::color(vec(color).mul(ldrscale));
+    glDrawRangeElements_(GL_TRIANGLES, 0, p.numverts-1, p.numtris*3, GL_UNSIGNED_SHORT, (ushort *)0);
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    enablepolygonoffset(GL_POLYGON_OFFSET_LINE);
+
+    pm.mul(camprojmatrix, m);
+    GLOBALPARAM(prefabmatrix, pm);
+    SETSHADER(prefab);
+    gle::color((outlinecolour).tocolor().mul(ldrscale));
+    glDrawRangeElements_(GL_TRIANGLES, 0, p.numverts-1, p.numtris*3, GL_UNSIGNED_SHORT, (ushort *)0);
+
+    disablepolygonoffset(GL_POLYGON_OFFSET_LINE);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    gle::disablevertex();
+    gle::disablenormal();
+    glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glBindBuffer_(GL_ARRAY_BUFFER, 0);
+}
+
+void renderprefab(const char *name, const vec &o, float yaw, float pitch, float roll, float size, const vec &color)
+{
+    prefab *p = loadprefab(name, false);
+    if(p) renderprefab(*p, o, yaw, pitch, roll, size, color);
+}
+
+void previewprefab(const char *name, const vec &color)
+{
+    prefab *p = loadprefab(name, false);
+    if(p)
+    {
+        block3 &b = *p->copy;
+        float yaw;
+        vec o = calcmodelpreviewpos(vec(b.s).mul(b.grid*0.5f), yaw);
+        renderprefab(*p, o, yaw, 0, 0, 1, color);
+    }
+}
 
 void mpcopy(editinfo *&e, selinfo &sel, bool local)
 {
@@ -2126,6 +2365,13 @@ void gettexname(int *tex, int *subslot)
     result(slot.sts[*subslot].name);
 }
 
+void getslottex(int *idx)
+{
+    if(*idx < 0 || !slots.inrange(*idx)) { intret(-1); return; }
+    Slot &slot = lookupslot(*idx, false);
+    intret(slot.variants->index);
+}
+
 ICOMMAND(texmrunum, "", (),
     filltexlist();
     intret(texmru.length())
@@ -2137,8 +2383,8 @@ ICOMMAND(texmruresolve, "i", (int *slot),
     else
         intret(*slot);
 );
-ICOMMAND(settex, "i", (int *slot), edittex(*slot));
 COMMANDN(edittex, edittex_, "i");
+ICOMMAND(settex, "i", (int *tex), { if(!vslots.inrange(*tex) || noedit()) return; filltexlist(); edittex(*tex); });
 COMMAND(gettex, "");
 COMMAND(getcurtex, "");
 COMMAND(getseltex, "");
@@ -2153,6 +2399,7 @@ ICOMMAND(looptexmru, "re", (ident *id, uint *body),
 });
 ICOMMAND(numvslots, "", (), intret(vslots.length()));
 ICOMMAND(numslots, "", (), intret(slots.length()));
+COMMAND(getslottex, "i");
 
 void replacetexcube(cube &c, int oldtex, int newtex)
 {
@@ -2185,10 +2432,10 @@ ICOMMAND(replace, "", (), replace(false));
 ICOMMAND(replacesel, "", (), replace(true));
 
 ////////// flip and rotate ///////////////
-uint dflip(uint face) { return face==F_EMPTY ? face : 0x88888888 - (((face&0xF0F0F0F0)>>4) | ((face&0x0F0F0F0F)<<4)); }
-uint cflip(uint face) { return ((face&0xFF00FF00)>>8) | ((face&0x00FF00FF)<<8); }
-uint rflip(uint face) { return ((face&0xFFFF0000)>>16)| ((face&0x0000FFFF)<<16); }
-uint mflip(uint face) { return (face&0xFF0000FF) | ((face&0x00FF0000)>>8) | ((face&0x0000FF00)<<8); }
+static inline uint dflip(uint face) { return face==F_EMPTY ? face : 0x88888888 - (((face&0xF0F0F0F0)>>4) | ((face&0x0F0F0F0F)<<4)); }
+static inline uint cflip(uint face) { return ((face&0xFF00FF00)>>8) | ((face&0x00FF00FF)<<8); }
+static inline uint rflip(uint face) { return ((face&0xFFFF0000)>>16)| ((face&0x0000FFFF)<<16); }
+static inline uint mflip(uint face) { return (face&0xFF0000FF) | ((face&0x00FF0000)>>8) | ((face&0x0000FF00)<<8); }
 
 void flipcube(cube &c, int d)
 {
@@ -2203,16 +2450,16 @@ void flipcube(cube &c, int d)
     }
 }
 
-void rotatequad(cube &a, cube &b, cube &c, cube &d)
+static inline void rotatequad(cube &a, cube &b, cube &c, cube &d)
 {
     cube t = a; a = b; b = c; c = d; d = t;
 }
 
 void rotatecube(cube &c, int d)   // rotates cube clockwise. see pics in cvs for help.
 {
-    c.faces[D[d]] = cflip (mflip(c.faces[D[d]]));
-    c.faces[C[d]] = dflip (mflip(c.faces[C[d]]));
-    c.faces[R[d]] = rflip (mflip(c.faces[R[d]]));
+    c.faces[D[d]] = cflip(mflip(c.faces[D[d]]));
+    c.faces[C[d]] = dflip(mflip(c.faces[C[d]]));
+    c.faces[R[d]] = rflip(mflip(c.faces[R[d]]));
     swap(c.faces[R[d]], c.faces[C[d]]);
 
     swap(c.texture[2*R[d]], c.texture[2*C[d]+1]);
@@ -2427,7 +2674,7 @@ void rendertexturepanel(int w, int h)
                     if(vslot.rotation >= 2 && vslot.rotation <= 4) { xoff *= -1; loopk(4) tc[k].x *= -1; }
                     if(vslot.rotation <= 2 || vslot.rotation == 5) { yoff *= -1; loopk(4) tc[k].y *= -1; }
                 }
-                loopk(4) { tc[k].x = tc[k].x/sx - xoff/tex->xs; tc[k].x = tc[k].x/sy - yoff/tex->ys; }
+                loopk(4) { tc[k].x = tc[k].x/sx - xoff/tex->xs; tc[k].y = tc[k].y/sy - yoff/tex->ys; }
                 glBindTexture(GL_TEXTURE_2D, tex->id);
                 loopj(glowtex ? 3 : 2)
                 {

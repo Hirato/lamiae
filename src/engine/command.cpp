@@ -203,7 +203,7 @@ static bool initidents()
     }
     return true;
 }
-static bool forceinitidents = initidents();
+UNUSED static bool forceinitidents = initidents();
 
 static const char *sourcefile = NULL, *sourcestr = NULL;
 
@@ -681,6 +681,8 @@ ICOMMAND(getfvarmin, "s", (char *s), floatret(getfvarmin(s)));
 ICOMMAND(getfvarmax, "s", (char *s), floatret(getfvarmax(s)));
 
 bool identexists(const char *name) { return idents.access(name)!=NULL; }
+ICOMMAND(identexists, "s", (char *s), intret(identexists(s) ? 1 : 0));
+
 ident *getident(const char *name) { return idents.access(name); }
 
 void touchvar(const char *name)
@@ -1949,8 +1951,7 @@ static inline const uint *forcecode(tagval &v)
         buf.reserve(64);
         compilemain(buf, v.getstr());
         freearg(v);
-        v.setcode(buf.getbuf()+1);
-        buf.disown();
+        v.setcode(buf.disown()+1);
     }
     return v.code;
 }
@@ -2418,8 +2419,7 @@ static const uint *runcode(const uint *code, tagval &result)
                     case VAL_STR: case VAL_MACRO: case VAL_CSTR: buf.reserve(64); compilemain(buf, arg.s); freearg(arg); break;
                     default: buf.reserve(8); buf.add(CODE_START); compilenull(buf); buf.add(CODE_RESULT); buf.add(CODE_EXIT); break;
                 }
-                arg.setcode(buf.getbuf()+1);
-                buf.disown();
+                arg.setcode(buf.disown()+1);
                 continue;
             }
             case CODE_COND:
@@ -2434,8 +2434,7 @@ static const uint *runcode(const uint *code, tagval &result)
                             buf.reserve(64);
                             compilemain(buf, arg.s);
                             freearg(arg);
-                            arg.setcode(buf.getbuf()+1);
-                            buf.disown();
+                            arg.setcode(buf.disown()+1);
                         }
                         else forcenull(arg);
                         break;
@@ -3041,7 +3040,7 @@ bool execfile(const char *cfgfile, bool msg)
     delete[] buf;
     return true;
 }
-ICOMMAND(exec, "s", (char *file), execfile(file));
+ICOMMAND(exec, "sb", (char *file, int *msg), intret(execfile(file, *msg != 0) ? 1 : 0));
 
 const char *escapestring(const char *s)
 {
@@ -3173,6 +3172,20 @@ void floatret(float v)
     commandret->setfloat(v);
 }
 
+const char *numberstr(double v)
+{
+    retidx = (retidx + 1)%4;
+    numberformat(retbuf[retidx], v);
+    return retbuf[retidx];
+}
+
+void numberret(double v)
+{
+    int i = int(v);
+    if(v == i) commandret->setint(i);
+    else commandret->setfloat(v);
+}
+
 #undef ICOMMANDNAME
 #define ICOMMANDNAME(name) _stdcmd
 #undef ICOMMANDSNAME
@@ -3209,7 +3222,7 @@ ICOMMAND(pushif, "rTe", (ident *id, tagval *v, uint *code),
     }
 });
 
-void loopiter(ident *id, identstack &stack, tagval &v)
+void loopiter(ident *id, identstack &stack, const tagval &v)
 {
     if(id->stack != &stack)
     {
@@ -3303,7 +3316,7 @@ static inline void loopconc(ident &id, int offset, int n, int step, uint *body, 
     }
     if(n > 0) poparg(id);
     s.add('\0');
-    commandret->setstr(newstring(s.getbuf(), s.length()-1));
+    commandret->setstr(s.disown());
 }
 ICOMMAND(loopconcat, "rie", (ident *id, int *n, uint *body), loopconc(*id, 0, *n, 1, body, true));
 ICOMMAND(loopconcat+, "riie", (ident *id, int *offset, int *n, uint *body), loopconc(*id, *offset, *n, 1, body, true));
@@ -3369,7 +3382,7 @@ void format(tagval *args, int numargs)
         else s.add(c);
     }
     s.add('\0');
-    result(s.getbuf());
+    commandret->setstr(s.disown());
 }
 COMMAND(format, "V");
 
@@ -3515,15 +3528,16 @@ void listfind(ident *id, const char *list, const uint *body)
 {
     if(id->type!=ID_ALIAS) { intret(-1); return; }
     identstack stack;
-    int n = 0;
-    for(const char *s = list, *start, *end; parselist(s, start, end); n++)
+    int n = -1;
+    for(const char *s = list, *start, *end; parselist(s, start, end);)
     {
+        ++n;
         setiter(*id, newstring(start, end-start), stack);
         if(executebool(body)) { intret(n); goto found; }
     }
     intret(-1);
 found:
-    if(n) poparg(*id);
+    if(n >= 0) poparg(*id);
 }
 COMMAND(listfind, "rse");
 
@@ -3531,14 +3545,15 @@ void listassoc(ident *id, const char *list, const uint *body)
 {
     if(id->type!=ID_ALIAS) return;
     identstack stack;
-    int n = 0;
-    for(const char *s = list, *start, *end, *qstart; parselist(s, start, end); n++)
+    int n = -1;
+    for(const char *s = list, *start, *end, *qstart; parselist(s, start, end);)
     {
+        ++n;
         setiter(*id, newstring(start, end-start), stack);
         if(executebool(body)) { if(parselist(s, start, end, qstart)) stringret(listelem(start, end, qstart)); break; }
         if(!parselist(s)) break;
     }
-    if(n) poparg(*id);
+    if(n >= 0) poparg(*id);
 }
 COMMAND(listassoc, "rse");
 
@@ -3641,7 +3656,7 @@ void looplistconc(ident *id, const char *list, const uint *body, bool space)
     }
     if(n) poparg(*id);
     r.add('\0');
-    commandret->setstr(newstring(r.getbuf(), r.length()-1));
+    commandret->setstr(r.disown());
 }
 ICOMMAND(looplistconcat, "rse", (ident *id, char *list, uint *body), looplistconc(id, list, body, true));
 ICOMMAND(looplistconcatword, "rse", (ident *id, char *list, uint *body), looplistconc(id, list, body, false));
@@ -3665,9 +3680,25 @@ void listfilter(ident *id, const char *list, const uint *body)
     }
     if(n) poparg(*id);
     r.add('\0');
-    commandret->setstr(newstring(r.getbuf(), r.length()-1));
+    commandret->setstr(r.disown());
 }
 COMMAND(listfilter, "rse");
+
+void listcount(ident *id, const char *list, const uint *body)
+{
+    if(id->type!=ID_ALIAS) return;
+    identstack stack;
+    int n = 0, r = 0;
+    for(const char *s = list, *start, *end; parselist(s, start, end); n++)
+    {
+        char *val = newstring(start, end-start);
+        setiter(*id, val, stack);
+        if(executebool(body)) r++;
+    }
+    if(n) poparg(*id);
+    intret(r);
+}
+COMMAND(listcount, "rse");
 
 void prettylist(const char *s, const char *conj)
 {
@@ -3689,7 +3720,7 @@ void prettylist(const char *s, const char *conj)
         }
     }
     p.add('\0');
-    result(p.getbuf());
+    commandret->setstr(p.disown());
 }
 COMMAND(prettylist, "ss");
 
@@ -3706,25 +3737,31 @@ int listincludes(const char *list, const char *needle, int needlelen)
 }
 ICOMMAND(indexof, "ss", (char *list, char *elem), intret(listincludes(list, elem, strlen(elem))));
 
-char *listdel(const char *s, const char *del)
-{
-    vector<char> p;
-    for(const char *start, *end, *qstart, *qend; parselist(s, start, end, qstart, qend);)
-    {
-        if(listincludes(del, start, end-start) < 0)
-        {
-            if(!p.empty()) p.add(' ');
-            p.put(qstart, qend-qstart);
-        }
-    }
-    p.add('\0');
-    return newstring(p.getbuf(), p.length()-1);
-}
-ICOMMAND(listdel, "ss", (char *list, char *del), commandret->setstr(listdel(list, del)));
+#define LISTMERGECMD(name, init, iter, filter, dir) \
+    ICOMMAND(name, "ss", (const char *list, const char *elems), \
+    { \
+        vector<char> p; \
+        init; \
+        for(const char *start, *end, *qstart, *qend; parselist(iter, start, end, qstart, qend);) \
+        { \
+            int len = end - start; \
+            if(listincludes(filter, start, len) dir 0) \
+            { \
+                if(!p.empty()) p.add(' '); \
+                p.put(qstart, qend-qstart); \
+            } \
+        } \
+        p.add('\0'); \
+        commandret->setstr(p.disown()); \
+    })
 
-void listsplice(const char *s, const char *vals, int *skip, int *count, int *numargs)
+LISTMERGECMD(listdel, , list, elems, <);
+LISTMERGECMD(listintersect, , list, elems, >=);
+LISTMERGECMD(listunion, p.put(list, strlen(list)), elems, list, <);
+
+void listsplice(const char *s, const char *vals, int *skip, int *count)
 {
-    int offset = max(*skip, 0), len = *numargs >= 4 ? max(*count, 0) : -1;
+    int offset = max(*skip, 0), len = max(*count, 0);
     const char *list = s, *start, *end, *qstart, *qend = s;
     loopi(offset) if(!parselist(s, start, end, qstart, qend)) break;
     vector<char> p;
@@ -3734,7 +3771,7 @@ void listsplice(const char *s, const char *vals, int *skip, int *count, int *num
         if(!p.empty()) p.add(' ');
         p.put(vals, strlen(vals));
     }
-    while(len-- > 0) if(!parselist(s)) break;
+    loopi(len) if(!parselist(s)) break;
     skiplist(s);
     switch(*s)
     {
@@ -3745,9 +3782,9 @@ void listsplice(const char *s, const char *vals, int *skip, int *count, int *num
             break;
     }
     p.add('\0');
-    commandret->setstr(newstring(p.getbuf(), p.length()-1));
+    commandret->setstr(p.disown());
 }
-COMMAND(listsplice, "ssiiN");
+COMMAND(listsplice, "ssii");
 
 ICOMMAND(loopfiles, "rsse", (ident *id, char *dir, char *ext, uint *body),
 {
@@ -3803,13 +3840,19 @@ ICOMMAND(loopdir, "rse", (ident *id, char *dir, uint *body),
     if(files.length()) poparg(*id);
 });
 
-ICOMMAND(findfile, "s", (char *name),
+void findfile_(char *name)
 {
     string fname;
     copystring(fname, name);
     path(fname);
-    intret(fileexists(fname, "e") || findfile(fname, "e") ? 1 : 0);
-});
+    intret(
+#ifndef STANDALONE
+        findzipfile(fname) ||
+#endif
+        fileexists(fname, "e") || findfile(fname, "e") ? 1 : 0
+    );
+}
+COMMANDN(findfile, findfile_, "s");
 
 struct sortitem
 {
@@ -4168,6 +4211,20 @@ char *strreplace(const char *s, const char *oldval, const char *newval, const ch
 }
 
 ICOMMAND(strreplace, "ssss", (char *s, char *o, char *n, char *n2), commandret->setstr(strreplace(s, o, n, n2[0] ? n2 : n)));
+
+void strsplice(const char *s, const char *vals, int *skip, int *count)
+{
+    int slen = strlen(s), vlen = strlen(vals),
+        offset = clamp(*skip, 0, slen),
+        len = clamp(*count, 0, slen - offset);
+    char *p = newstring(slen - len + vlen);
+    if(offset) memcpy(p, s, offset);
+    if(vlen) memcpy(&p[offset], vals, vlen);
+    if(offset + len < slen) memcpy(&p[offset + vlen], &s[offset + len], slen - (offset + len));
+    p[slen - len + vlen] = '\0';
+    commandret->setstr(p);
+}
+COMMAND(strsplice, "ssii");
 
 #ifndef STANDALONE
 struct sleepcmd

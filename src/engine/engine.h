@@ -121,8 +121,9 @@ static inline bool pvsoccluded(const ivec &bborigin, int size)
 }
 
 // rendergl
-extern bool hasVAO, hasTR, hasTSW, hasFBO, hasAFBO, hasDS, hasTF, hasCBF, hasS3TC, hasFXT1, hasLATC, hasRGTC, hasAF, hasFBB, hasFBMS, hasTMS, hasMSS, hasFBMSBS, hasNVFBMSC, hasNVTMS, hasUBO, hasMBR, hasDB2, hasDBB, hasTG, hasTQ, hasPF, hasTRG, hasTI, hasHFV, hasHFP, hasDBT, hasDC, hasDBGO, hasEGPU4, hasGPU4, hasGPU5, hasEAL, hasCR, hasOQ2, hasCB, hasCI;
+extern bool hasVAO, hasTR, hasTSW, hasFBO, hasAFBO, hasDS, hasTF, hasCBF, hasS3TC, hasFXT1, hasLATC, hasRGTC, hasAF, hasFBB, hasFBMS, hasTMS, hasMSS, hasFBMSBS, hasNVFBMSC, hasNVTMS, hasUBO, hasMBR, hasDB2, hasDBB, hasTG, hasTQ, hasPF, hasTRG, hasTI, hasHFV, hasHFP, hasDBT, hasDC, hasDBGO, hasEGPU4, hasGPU4, hasGPU5, hasBFE, hasEAL, hasCR, hasOQ2, hasCB, hasCI;
 extern int glversion, glslversion;
+extern int maxdrawbufs, maxdualdrawbufs;
 
 enum { DRAWTEX_NONE = 0, DRAWTEX_ENVMAP, DRAWTEX_MINIMAP, DRAWTEX_MODELPREVIEW };
 
@@ -137,7 +138,7 @@ extern int drawtex;
 extern const matrix4 viewmatrix, invviewmatrix;
 extern matrix4 cammatrix, projmatrix, camprojmatrix, invcammatrix, invcamprojmatrix, invprojmatrix;
 extern int fog;
-extern bvec fogcolor;
+extern bvec fogcolour;
 extern vec curfogcolor;
 extern int wireframe;
 
@@ -164,7 +165,6 @@ extern bool calcspotscissor(const vec &origin, float radius, const vec &dir, int
 extern void screenquad();
 extern void screenquad(float sw, float sh);
 extern void screenquadflipped(float sw, float sh);
-extern void screenquadreorient(float sw, float sh, bool flipx, bool flipy, bool swapxy);
 extern void screenquad(float sw, float sh, float sw2, float sh2);
 extern void screenquadoffset(float x, float y, float w, float h);
 extern void screenquadoffset(float x, float y, float w, float h, float x2, float y2, float w2, float h2);
@@ -177,8 +177,8 @@ extern void zerofogcolor();
 extern void resetfogcolor();
 extern float calcfogdensity(float dist);
 extern float calcfogcull();
-extern void renderavatar();
 extern void writecrosshairs(stream *f);
+extern void renderavatar();
 
 namespace modelpreview
 {
@@ -304,10 +304,6 @@ extern float shadowradius, shadowbias;
 extern int shadowside, shadowspot;
 extern matrix4 shadowmatrix;
 
-extern int rhinoq;
-
-extern void resetlights();
-extern void collectlights();
 extern void loaddeferredlightshaders();
 extern void cleardeferredlightshaders();
 extern void clearshadowcache();
@@ -325,6 +321,7 @@ extern bool useradiancehints();
 extern void renderradiancehints();
 extern void clearradiancehintscache();
 extern void cleanuplights();
+extern void workinoq();
 
 extern int calcbbsidemask(const vec &bbmin, const vec &bbmax, const vec &lightpos, float lightradius, float bias);
 extern int calcspheresidemask(const vec &p, float radius, float bias);
@@ -353,8 +350,8 @@ extern int gw, gh, gdepthformat, ghasstencil;
 extern GLuint gdepthtex, gcolortex, gnormaltex, gglowtex, gdepthrb, gstencilrb;
 extern int msaasamples;
 extern GLuint msdepthtex, mscolortex, msnormaltex, msglowtex, msdepthrb, msstencilrb;
-extern vec2 msaapositions[16];
-enum { AA_UNUSED = 0, AA_RESERVED, AA_LUMA, AA_VELOCITY, AA_VELOCITY_MASKED, AA_SPLIT, AA_SPLIT_LUMA, AA_SPLIT_VELOCITY, AA_SPLIT_VELOCITY_MASKED };
+extern vector<vec2> msaapositions;
+enum { AA_UNUSED = 0, AA_LUMA, AA_VELOCITY, AA_VELOCITY_MASKED, AA_SPLIT, AA_SPLIT_LUMA, AA_SPLIT_VELOCITY, AA_SPLIT_VELOCITY_MASKED };
 
 extern void cleanupgbuffer();
 extern void initgbuffer();
@@ -378,15 +375,22 @@ extern void doscale(GLuint outfbo = 0);
 extern bool debuglights();
 extern void cleanuplights();
 
+extern int avatarmask;
+extern bool useavatarmask();
+extern void enableavatarmask();
+extern void disableavatarmask();
+
 // aa
 extern matrix4 nojittermatrix;
 
 extern void setupaa(int w, int h);
-extern void jitteraa(bool init = true);
+extern void jitteraa();
 extern bool maskedaa();
 extern bool multisampledaa();
 extern void setaavelocityparams(GLenum tmu = GL_TEXTURE0);
 extern void setaamask(bool val);
+extern void enableaamask(int stencil = 0);
+extern void disableaamask();
 extern void doaa(GLuint outfbo, void (*resolve)(GLuint, int));
 extern bool debugaa();
 extern void cleanupaa();
@@ -402,8 +406,14 @@ extern void cancelsel();
 extern void rendertexturepanel(int w, int h);
 extern void addundo(undoblock *u);
 extern void commitchanges(bool force = false);
+extern void changed(const ivec &bbmin, const ivec &bbmax, bool commit = true);
+extern void changed(const block3 &sel, bool commit = true);
 extern void rendereditcursor();
 extern void tryedit();
+
+extern void renderprefab(const char *name, const vec &o, float yaw, float pitch, float roll, float size = 1, const vec &color = vec(1, 1, 1));
+extern void previewprefab(const char *name, const vec &color);
+extern void cleanupprefabs();
 
 // octarender
 extern ivec worldmin, worldmax, nogimin, nogimax;
@@ -411,6 +421,7 @@ extern vector<tjoint> tjoints;
 
 extern ushort encodenormal(const vec &n);
 extern vec decodenormal(ushort norm);
+extern void guessnormals(const vec *pos, int numverts, vec *normals);
 extern void reduceslope(ivec &n);
 extern void findtjoints();
 extern void octarender();
@@ -448,10 +459,14 @@ extern occludequery *newquery(void *owner);
 extern bool checkquery(occludequery *query, bool nowait = false);
 extern void resetqueries();
 extern int getnumqueries();
-extern void drawbb(const ivec &bo, const ivec &br, const vec &camera = camera1->o);
+extern void startbb(bool mask = true);
+extern void endbb(bool mask = true);
+extern void drawbb(const ivec &bo, const ivec &br);
 
 #define startquery(query) do { glBeginQuery_(GL_SAMPLES_PASSED, ((occludequery *)(query))->id); } while(0)
 #define endquery(query) do { glEndQuery_(GL_SAMPLES_PASSED); } while(0)
+
+extern void renderdecals();
 
 struct shadowmesh;
 extern void clearshadowmeshes();
@@ -507,12 +522,12 @@ extern float watersx1, watersy1, watersx2, watersy2;
         } \
     }
 
-extern const bvec &getwatercolor(int mat);
-extern const bvec &getwaterdeepcolor(int mat);
-extern const bvec &getwaterdeepfadecolor(int mat);
-extern const bvec &getwaterrefractcolor(int mat);
-extern const bvec &getwaterfallcolor(int mat);
-extern const bvec &getwaterfallrefractcolor(int mat);
+extern const bvec &getwatercolour(int mat);
+extern const bvec &getwaterdeepcolour(int mat);
+extern const bvec &getwaterdeepfade(int mat);
+extern const bvec &getwaterrefractcolour(int mat);
+extern const bvec &getwaterfallcolour(int mat);
+extern const bvec &getwaterfallrefractcolour(int mat);
 extern int getwaterfog(int mat);
 extern int getwaterdeep(int mat);
 extern int getwaterspec(int mat);
@@ -520,13 +535,13 @@ extern float getwaterrefract(int mat);
 extern int getwaterfallspec(int mat);
 extern float getwaterfallrefract(int mat);
 
-extern const bvec &getlavacolor(int mat);
+extern const bvec &getlavacolour(int mat);
 extern int getlavafog(int mat);
 extern float getlavaglowmin(int mat);
 extern float getlavaglowmax(int mat);
 extern int getlavaspec(int mat);
 
-extern const bvec &getglasscolor(int mat);
+extern const bvec &getglasscolour(int mat);
 extern float getglassrefract(int mat);
 extern int getglassspec(int mat);
 
@@ -676,7 +691,7 @@ extern void rendershadowmodelbatches(bool dynmodel = true);
 extern void shadowmaskbatchedmodels(bool dynshadow = true);
 extern void rendermapmodelbatches();
 extern void rendermodelbatches();
-extern void rendertransparentmodelbatches();
+extern void rendertransparentmodelbatches(int stencil = 0);
 extern void rendermapmodel(int idx, int anim, const vec &o, float yaw = 0, float pitch = 0, float roll = 0, int flags = MDL_CULL_VFC | MDL_CULL_DIST, int basetime = 0, float size = 1);
 extern void clearbatchedmapmodels();
 extern void preloadusedmapmodels(bool msg = false, bool bih = false);
@@ -711,13 +726,13 @@ extern void renderparticles(int layer = PL_ALL);
 extern bool printparticles(extentity &e, char *buf, int len);
 extern void cleanupparticles();
 
-// decal
-enum { DB_OPAQUE = 0, DB_TRANSPARENT, NUMDB };
+// stain
+enum { STAINBUF_OPAQUE = 0, STAINBUF_TRANSPARENT, NUMSTAINBUFS };
 
-extern void initdecals();
-extern void cleardecals();
-extern void renderdecals(int db = DB_OPAQUE);
-extern void cleanupdecals();
+extern void initstains();
+extern void clearstains();
+extern void renderstains(int sbuf, bool gbuf);
+extern void cleanupstains();
 
 // rendersky
 extern int skytexture, skyshadow, explicitsky;
@@ -757,6 +772,7 @@ extern void closemumble();
 extern void updatemumble();
 
 // grass
+extern void loadgrassshaders();
 extern void generategrass();
 extern void rendergrass();
 extern void cleanupgrass();

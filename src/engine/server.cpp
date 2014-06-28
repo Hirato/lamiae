@@ -49,10 +49,10 @@ void logoutf(const char *fmt, ...)
 static void writelog(FILE *file, const char *buf)
 {
     static uchar ubuf[512];
-    int len = strlen(buf), carry = 0;
+    size_t len = strlen(buf), carry = 0;
     while(carry < len)
     {
-        int numu = encodeutf8(ubuf, sizeof(ubuf)-1, &((const uchar *)buf)[carry], len - carry, &carry);
+        size_t numu = encodeutf8(ubuf, sizeof(ubuf)-1, &((const uchar *)buf)[carry], len - carry, &carry);
         if(carry >= len) ubuf[numu++] = '\n';
         fwrite(ubuf, 1, numu, file);
     }
@@ -528,6 +528,8 @@ void sendserverinforeply(ucharbuf &p)
     enet_socket_send(serverhost->socket, &serverinfoaddress, &buf, 1);
 }
 
+#define MAXPINGDATA 32
+
 void checkserversockets()        // reply all server info requests
 {
     static ENetSocketSet readset, writeset;
@@ -554,7 +556,7 @@ void checkserversockets()        // reply all server info requests
         buf.data = data;
         buf.dataLength = sizeof(data);
         int len = enet_socket_receive(lansock, &serverinfoaddress, &buf, 1);
-        if(len < 2 || data[0] != 0xFF || data[1] != 0xFF) return;
+        if(len < 2 || data[0] != 0xFF || data[1] != 0xFF || len-2 > MAXPINGDATA) return;
         ucharbuf req(data+2, len-2), p(data+2, sizeof(data)-2);
         p.len += len-2;
         server::serverinforeply(req, p);
@@ -586,7 +588,7 @@ void checkserversockets()        // reply all server info requests
 
 static int serverinfointercept(ENetHost *host, ENetEvent *event)
 {
-    if(host->receivedDataLength < 2 || host->receivedData[0] != 0xFF || host->receivedData[1] != 0xFF) return 0;
+    if(host->receivedDataLength < 2 || host->receivedData[0] != 0xFF || host->receivedData[1] != 0xFF || host->receivedDataLength-2 > MAXPINGDATA) return 0;
     serverinfoaddress = host->receivedAddress;
     ucharbuf req(host->receivedData+2, host->receivedDataLength-2), p(host->receivedData+2, sizeof(host->packetData[0])-2);
     p.len += host->receivedDataLength-2;
@@ -677,7 +679,7 @@ void serverslice(bool dedicated, uint timeout)   // main server update, called f
                 client &c = addclient(ST_TCPIP);
                 c.peer = event.peer;
                 c.peer->data = &c;
-                char hn[1024];
+                string hn;
                 copystring(c.hostname, (enet_address_get_host_ip(&c.peer->address, hn, sizeof(hn))==0) ? hn : "unknown");
                 logoutf("client connected (%s)", c.hostname);
                 int reason = server::clientconnect(c.num, c.peer->address.host);
@@ -824,10 +826,10 @@ static BOOL WINAPI consolehandler(DWORD dwCtrlType)
 static void writeline(logline &line)
 {
     static uchar ubuf[512];
-    int len = strlen(line.buf), carry = 0;
+    size_t len = strlen(line.buf), carry = 0;
     while(carry < len)
     {
-        int numu = encodeutf8(ubuf, sizeof(ubuf), &((uchar *)line.buf)[carry], len - carry, &carry);
+        size_t numu = encodeutf8(ubuf, sizeof(ubuf), &((uchar *)line.buf)[carry], len - carry, &carry);
         DWORD written = 0;
         WriteConsole(outhandle, ubuf, numu, &written, NULL);
     }
@@ -1061,7 +1063,6 @@ bool setuplistenserver(bool dedicated)
     serverhost = enet_host_create(&address, min(maxclients + server::reserveclients(), MAXCLIENTS), server::numchannels(), 0, serveruprate);
     if(!serverhost) return servererror(dedicated, "could not create server host");
     serverhost->duplicatePeers = maxdupclients ? maxdupclients : MAXCLIENTS;
-    loopi(maxclients) serverhost->peers[i].data = NULL;
     serverhost->intercept = serverinfointercept;
     address.port = server::laninfoport();
     lansock = enet_socket_create(ENET_SOCKET_TYPE_DATAGRAM);

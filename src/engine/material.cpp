@@ -683,12 +683,7 @@ extern const vec matnormals[6] =
 };
 
 #define GLASSVARS(name) \
-    bvec name##color(0xB0, 0xD8, 0xFF); \
-    HVARFR(name##colour, 0, 0xB0D8FF, 0xFFFFFF, \
-    { \
-        if(!name##colour) name##colour = 0xB0D8FF; \
-        name##color = bvec::hexcolor(name##colour); \
-    }); \
+    CVAR0R(name##colour, 0xB0D8FF); \
     FVARR(name##refract, 0, 0.1f, 1e3f); \
     VARR(name##spec, 0, 150, 200);
 
@@ -697,8 +692,7 @@ GLASSVARS(glass2)
 GLASSVARS(glass3)
 GLASSVARS(glass4)
 
-GETMATIDXVAR(glass, colour, int)
-GETMATIDXVAR(glass, color, const bvec &)
+GETMATIDXVAR(glass, colour, const bvec &)
 GETMATIDXVAR(glass, refract, float)
 GETMATIDXVAR(glass, spec, int)
 
@@ -711,7 +705,7 @@ void renderglass()
         vector<materialsurface> &surfs = glasssurfs[k];
         if(surfs.empty()) continue;
 
-        MSlot &gslot = lookupmaterialslot(MAT_GLASS+k);
+        MatSlot &gslot = lookupmaterialslot(MAT_GLASS+k);
 
         Texture *tex = gslot.sts.inrange(0) ? gslot.sts[0].t : notexture;
         glassxscale = TEX_SCALE/(tex->xs*gslot.scale);
@@ -722,7 +716,7 @@ void renderglass()
         glActiveTexture_(GL_TEXTURE0);
 
         float refractscale = (0.5f/255)/ldrscale;
-        const bvec &col = getglasscolor(k);
+        const bvec &col = getglasscolour(k);
         float refract = getglassrefract(k);
         int spec = getglassspec(k);
         GLOBALPARAMF(glassrefract, col.x*refractscale, col.y*refractscale, col.z*refractscale, refract*viewh);

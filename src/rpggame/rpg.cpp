@@ -863,7 +863,7 @@ namespace game
 			case MAT_WATER:
 				if (waterlevel==0) break;
 				playsound(waterlevel > 0 ? S_SPLASH1 : S_SPLASH2 , d==player1 ? NULL : &d->o);
-				particle_splash(PART_WATER, 200, 200, d->o, (watercolor.x<<16) | (watercolor.y<<8) | watercolor.z, 0.5);
+				particle_splash(PART_WATER, 200, 200, d->o, (watercolour.x<<16) | (watercolour.y<<8) | watercolour.z, 0.5);
 				break;
 			default:
 				if (floorlevel==0) break;

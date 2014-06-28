@@ -112,11 +112,11 @@ struct animmodel : model
     {
         part *owner;
         Texture *tex, *decal, *masks, *envmap, *normalmap;
-        Shader *shader;
+        Shader *shader, *rsmshader;
         bool cullface;
         shaderparamskey *key;
 
-        skin() : owner(0), tex(notexture), decal(NULL), masks(notexture), envmap(NULL), normalmap(NULL), shader(NULL), cullface(true), key(NULL) {}
+        skin() : owner(0), tex(notexture), decal(NULL), masks(notexture), envmap(NULL), normalmap(NULL), shader(NULL), rsmshader(NULL), cullface(true), key(NULL) {}
 
         bool masked() const { return masks != notexture; }
         bool envmapped() const { return envmapmax>0; }
@@ -166,12 +166,23 @@ struct animmodel : model
                 } while(0)
             #define LOADMODELSHADER(name) DOMODELSHADER(name, return name##shader)
             #define SETMODELSHADER(m, name) DOMODELSHADER(name, (m).setshader(name##shader))
+
             if(shadowmapping == SM_REFLECT)
             {
-                if(alphatested()) LOADMODELSHADER(rsmalphamodel);
-                else LOADMODELSHADER(rsmmodel);
+                if(rsmshader) return rsmshader;
+
+                string opts;
+                int optslen = 0;
+                if(alphatested()) opts[optslen++] = 'a';
+                if(!cullface) opts[optslen++] = 'c';
+                opts[optslen++] = '\0';
+
+                defformatstring(name, "rsmmodel%s", opts);
+                rsmshader = generateshader(name, "rsmmodelshader \"%s\"", opts);
+                return rsmshader;
             }
-            else if(shader) return shader;
+
+            if(shader) return shader;
 
             string opts;
             int optslen = 0;
@@ -180,6 +191,7 @@ struct animmodel : model
             if(bumpmapped()) opts[optslen++] = 'n';
             if(envmapped()) { opts[optslen++] = 'm'; opts[optslen++] = 'e'; }
             else if(masked()) opts[optslen++] = 'm';
+            if(!cullface) opts[optslen++] = 'c';
             opts[optslen++] = '\0';
 
             defformatstring(name, "model%s", opts);
@@ -206,7 +218,7 @@ struct animmodel : model
 
         void setshader(mesh &m, const animstate *as)
         {
-            m.setshader(loadshader());
+            m.setshader(loadshader(), !shadowmapping && colorscale.a < 1 ? 1 : 0);
         }
 
         void bind(mesh &b, const animstate *as)
@@ -310,9 +322,10 @@ struct animmodel : model
 
         virtual void genshadowmesh(vector<triangle> &tris, const matrix4x3 &m) {}
 
-        virtual void setshader(Shader *s)
+        virtual void setshader(Shader *s, int row = 0)
         {
-            s->set();
+            if(row) s->setvariant(0, row);
+            else s->set();
         }
 
         struct smoothdata

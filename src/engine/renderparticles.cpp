@@ -147,8 +147,7 @@ struct particle
 struct partvert
 {
     vec pos;
-    bvec color;
-    uchar alpha;
+    bvec4 color;
     float u, v;
 };
 
@@ -161,15 +160,15 @@ struct partrenderer
     const char *texname;
     int texclamp;
     uint type;
-    int decal;
+    int stain;
     string info;
 
-    partrenderer(const char *texname, int texclamp, int type, int decal = -1)
-        : tex(NULL), texname(texname), texclamp(texclamp), type(type), decal(decal)
+    partrenderer(const char *texname, int texclamp, int type, int stain = -1)
+        : tex(NULL), texname(texname), texclamp(texclamp), type(type), stain(stain)
     {
     }
-    partrenderer(int type, int decal = -1)
-        : tex(NULL), texname(NULL), texclamp(0), type(type), decal(decal)
+    partrenderer(int type, int stain = -1)
+        : tex(NULL), texname(NULL), texclamp(0), type(type), stain(stain)
     {
     }
     virtual ~partrenderer()
@@ -196,7 +195,7 @@ struct partrenderer
     }
 
     //blend = 0 => remove it
-    void calc(particle *p, int &blend, int &ts, vec &o, vec &d)
+    void calc(particle *p, int &blend, int &ts, vec &o, vec &d, bool step = true)
     {
         o = p->o;
         d = p->d;
@@ -217,9 +216,9 @@ struct partrenderer
                 o.add(vec(d).mul(t/5000.0f));
                 o.z -= t*t/(2.0f * 5000.0f * p->gravity);
             }
-            if(type&PT_COLLIDE && o.z < p->val && canstep)
+            if(type&PT_COLLIDE && o.z < p->val && step)
             {
-                if(decal >= 0)
+                if(stain >= 0)
                 {
                     vec surface;
                     float floorz = rayfloor(vec(o.x, o.y, p->val), surface, RAY_CLIPMAT, COLLIDERADIUS);
@@ -228,7 +227,7 @@ struct partrenderer
                         p->val = collidez+COLLIDEERROR;
                     else
                     {
-                        adddecal(decal, vec(o.x, o.y, collidez), vec(p->o).sub(o).normalize(), 2*p->size, p->color, type&PT_RND4 ? (p->flags>>5)&3 : 0);
+                        addstain(stain, vec(o.x, o.y, collidez), vec(p->o).sub(o).normalize(), 2*p->size, p->color, type&PT_RND4 ? (p->flags>>5)&3 : 0);
                         blend = 0;
                     }
                 }
@@ -268,12 +267,12 @@ struct listrenderer : partrenderer
     static listparticle *parempty;
     listparticle *list;
 
-    listrenderer(const char *texname, int texclamp, int type, int decal = -1)
-        : partrenderer(texname, texclamp, type, decal), list(NULL)
+    listrenderer(const char *texname, int texclamp, int type, int stain = -1)
+        : partrenderer(texname, texclamp, type, stain), list(NULL)
     {
     }
-    listrenderer(int type, int decal = -1)
-        : partrenderer(type, decal), list(NULL)
+    listrenderer(int type, int stain = -1)
+        : partrenderer(type, stain), list(NULL)
     {
     }
 
@@ -361,7 +360,7 @@ struct listrenderer : partrenderer
     {
         vec o, d;
         int blend, ts;
-        calc(p, blend, ts, o, d);
+        calc(p, blend, ts, o, d, canstep);
         if(blend <= 0) return false;
         renderpart(p, o, d, blend, ts);
         return p->fade > 5;
@@ -621,8 +620,8 @@ struct varenderer : partrenderer
     int maxparts, numparts, lastupdate, rndmask;
     GLuint vbo;
 
-    varenderer(const char *texname, int type, int decal = -1)
-        : partrenderer(texname, 3, type, decal),
+    varenderer(const char *texname, int type, int stain = -1)
+        : partrenderer(texname, 3, type, stain),
           verts(NULL), parts(NULL), maxparts(0), numparts(0), lastupdate(-1), rndmask(0), vbo(0)
     {
         if(type & PT_HFLIP) rndmask |= 0x01;
@@ -754,15 +753,15 @@ struct varenderer : partrenderer
 
             #define SETCOLOR(r, g, b, a) \
             do { \
-                uchar col[4] = { uchar(r), uchar(g), uchar(b), uchar(a) }; \
-                loopi(4) memcpy(vs[i].color.v, col, sizeof(col)); \
+                bvec4 col(r, g, b, a); \
+                loopi(4) vs[i].color = col; \
             } while(0)
-            #define SETMODCOLOR SETCOLOR((p->color[0]*blend)>>8, (p->color[1]*blend)>>8, (p->color[2]*blend)>>8, 255)
+            #define SETMODCOLOR SETCOLOR((p->color.r*blend)>>8, (p->color.g*blend)>>8, (p->color.b*blend)>>8, 255)
             if(type&PT_MOD) SETMODCOLOR;
-            else SETCOLOR(p->color[0], p->color[1], p->color[2], blend);
+            else SETCOLOR(p->color.r, p->color.g, p->color.b, blend);
         }
         else if(type&PT_MOD) SETMODCOLOR;
-        else loopi(4) vs[i].alpha = blend;
+        else loopi(4) vs[i].color.a = blend;
 
         if(type&PT_ROT) genrotpos<T>(o, d, p->size, ts, p->gravity, vs, (p->flags>>2)&0x1F);
         else genpos<T>(o, d, p->size, ts, p->gravity, vs);
@@ -838,16 +837,16 @@ typedef varenderer<PT_TRAIL> trailrenderer;
 
 struct softquadrenderer : quadrenderer
 {
-    softquadrenderer(const char *texname, int type, int decal = -1)
-        : quadrenderer(texname, type|PT_SOFT, decal)
+    softquadrenderer(const char *texname, int type, int stain = -1)
+        : quadrenderer(texname, type|PT_SOFT, stain)
     {
     }
 };
 
 static partrenderer *parts[] =
 {
-    new quadrenderer("<grey>media/particles/blood", PT_PART|PT_FLIP|PT_MOD|PT_RND4|PT_COLLIDE, DECAL_BLOOD),    // blood spats (note: rgb is inverted)
-    new trailrenderer("<grey>media/particles/base", PT_TRAIL|PT_LERP|PT_COLLIDE, DECAL_RIPPLE),                 // water, entity
+    new quadrenderer("<grey>media/particles/blood", PT_PART|PT_FLIP|PT_MOD|PT_RND4|PT_COLLIDE, STAIN_BLOOD),    // blood spats (note: rgb is inverted)
+    new trailrenderer("<grey>media/particles/base", PT_TRAIL|PT_LERP|PT_COLLIDE, STAIN_RIPPLE),                 // water, entity
     new quadrenderer("<grey>media/particles/smoke", PT_PART|PT_FLIP|PT_LERP),                        // smoke
     new quadrenderer("<grey>media/particles/steam", PT_PART|PT_FLIP),                                // steam
     new quadrenderer("<grey>media/particles/flames", PT_PART|PT_HFLIP|PT_RND4|PT_BRIGHT),            // flames
@@ -868,8 +867,8 @@ static partrenderer *parts[] =
     &texts,                                                                                          // text
     &meters,                                                                                         // meter
     &metervs,                                                                                        // meter vs
-    new quadrenderer("media/particles/snow", PT_PART|PT_BRIGHT|PT_RND4|PT_FLIP|PT_COLLIDE, DECAL_STAIN),        // snow
-    new quadrenderer("<grey>media/particles/leaves", PT_PART|PT_RND4|PT_FLIP|PT_LERP|PT_COLLIDE, DECAL_LEAVES), //leaves
+    new quadrenderer("media/particles/snow", PT_PART|PT_BRIGHT|PT_RND4|PT_FLIP|PT_COLLIDE, STAIN_STAIN),        // snow
+    new quadrenderer("<grey>media/particles/leaves", PT_PART|PT_RND4|PT_FLIP|PT_LERP|PT_COLLIDE, STAIN_LEAVES), //leaves
     &flares // must be done last
 };
 
@@ -1017,7 +1016,7 @@ VARP(maxparticledistance, 256, 1024, 4096);
 static void splash(int type, int color, int radius, int num, int fade, const vec &p, float size, int gravity)
 {
     if(camera1->o.dist(p) > maxparticledistance && !seedemitter) return;
-    float collidez = parts[type]->type&PT_COLLIDE ? p.z - raycube(p, vec(0, 0, -1), COLLIDERADIUS, RAY_CLIPMAT) + (parts[type]->decal >= 0 ? COLLIDEERROR : 0) : -1;
+    float collidez = parts[type]->type&PT_COLLIDE ? p.z - raycube(p, vec(0, 0, -1), COLLIDERADIUS, RAY_CLIPMAT) + (parts[type]->stain >= 0 ? COLLIDEERROR : 0) : -1;
     int fmin = 1;
     int fmax = fade*3;
     loopi(num)
@@ -1375,8 +1374,8 @@ static void makeparticles(entity &e)
             else
             {
                 int mat = MAT_WATER + clamp(-attr7, 0, 3);
-                color = getwaterfallcolor(mat).tohexcolor();
-                if(!color) color = getwatercolor(mat).tohexcolor();
+                color = getwaterfallcolour(mat).tohexcolor();
+                if(!color) color = getwatercolour(mat).tohexcolor();
             }
 
             regularsplash(PART_WATER, color, attr3 ? abs(attr3) : 150, 4, attr4 ? abs(attr4) : 200, offsetvec(e.o, attr2, rnd(10)), attr5 ? abs(attr5) *.01f : 0.6f, attr6 ? attr6 : 2);

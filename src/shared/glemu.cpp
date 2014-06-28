@@ -1,6 +1,7 @@
 #include "cube.h"
 
 extern int glversion;
+extern int intel_mapbufferrange_bug;
 
 namespace gle
 {
@@ -205,7 +206,7 @@ namespace gle
     void begin(GLenum mode, int numverts)
     {
         primtype = mode;
-        if(glversion >= 300)
+        if(glversion >= 300 && !intel_mapbufferrange_bug)
         {
             int len = numverts * vertexsize;
             if(vbooffset + len >= MAXVBOSIZE)
@@ -258,7 +259,8 @@ namespace gle
                     vbooffset = 0;
                 }
                 else if(!lastvertexsize) glBindBuffer_(GL_ARRAY_BUFFER, vbo);
-                void *dst = glMapBufferRange_(GL_ARRAY_BUFFER, vbooffset, attribbuf.length(), GL_MAP_WRITE_BIT|GL_MAP_INVALIDATE_RANGE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
+                void *dst = intel_mapbufferrange_bug ? NULL :
+                    glMapBufferRange_(GL_ARRAY_BUFFER, vbooffset, attribbuf.length(), GL_MAP_WRITE_BIT|GL_MAP_INVALIDATE_RANGE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
                 if(dst)
                 {
                     memcpy(dst, attribbuf.getbuf(), attribbuf.length());

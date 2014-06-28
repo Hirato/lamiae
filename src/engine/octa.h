@@ -86,8 +86,7 @@ struct vtxarray;
 
 struct octaentities
 {
-    vector<int> mapmodels;
-    vector<int> other;
+    vector<int> mapmodels, decals, other;
     occludequery *query;
     octaentities *next, *rnext;
     int distance;
@@ -122,13 +121,13 @@ struct vtxarray
     vector<vtxarray *> children;
     vtxarray *next, *rnext;  // linked list of visible VOBs
     vertex *vdata;           // vertex data
-    ushort voffset, eoffset, skyoffset; // offset into vertex data
-    ushort *edata, *skydata; // vertex indices
-    GLuint vbuf, ebuf, skybuf; // VBOs
+    ushort voffset, eoffset, skyoffset, decaloffset; // offset into vertex data
+    ushort *edata, *skydata, *decaldata; // vertex indices
+    GLuint vbuf, ebuf, skybuf, decalbuf; // VBOs
     ushort minvert, maxvert; // DRE info
-    elementset *eslist;      // List of element indices sets (range) per texture
+    elementset *texelems, *decalelems;   // List of element indices sets (range) per texture
     materialsurface *matbuf; // buffer of material surfaces
-    int verts, tris, texs, blendtris, blends, alphabacktris, alphaback, alphafronttris, alphafront, refracttris, refract, texmask, sky, matsurfs, matmask, distance, rdistance, dyntexs;
+    int verts, tris, texs, blendtris, blends, alphabacktris, alphaback, alphafronttris, alphafront, refracttris, refract, texmask, sky, matsurfs, matmask, distance, rdistance, dyntexs, decaltris, decaltexs;
     ivec o;
     int size;                // location and size of cube.
     ivec geommin, geommax;   // BB of geom
@@ -141,7 +140,7 @@ struct vtxarray
     ivec bbmin, bbmax;       // BB of everything including children
     uchar curvfc, occluded;
     occludequery *query;
-    vector<octaentities *> mapmodels;
+    vector<octaentities *> mapmodels, decals;
     vector<grasstri> grasstris;
     int hasmerges, mergelevel;
     int shadowmask;
@@ -283,7 +282,8 @@ enum
     O_BACK,
     O_FRONT,
     O_BOTTOM,
-    O_TOP
+    O_TOP,
+    O_ANY
 };
 
 #define dimension(orient) ((orient)>>1)

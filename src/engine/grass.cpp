@@ -29,8 +29,7 @@ static struct grasswedge
 struct grassvert
 {
     vec pos;
-    bvec color;
-    uchar alpha;
+    bvec4 color;
     float u, v;
 };
 
@@ -63,12 +62,7 @@ static void animategrass()
 }
 
 VARR(grassscale, 1, 2, 64);
-bvec grasscolor(255, 255, 255);
-HVARFR(grasscolour, 0, 0xFFFFFF, 0xFFFFFF,
-{
-    if(!grasscolour) grasscolour = 0xFFFFFF;
-    grasscolor = bvec::hexcolor(grasscolour);
-});
+CVAR0R(grasscolour, 0xFFFFFF);
 FVARR(grasstest, 0, 0.6f, 1);
 
 static void gengrassquads(grassgroup *&group, const grasswedge &w, const grasstri &g, Texture *tex)
@@ -178,12 +172,12 @@ static void gengrassquads(grassgroup *&group, const grasswedge &w, const grasstr
               tc1 = tc.dot(p1) + tcoffset, tc2 = tc.dot(p2) + tcoffset,
               fade = dist - t > taperdist ? (grassdist - (dist - t))*taperscale : 1,
               height = grassheight * fade;
-        uchar color[4] = { grasscolor.x, grasscolor.y, grasscolor.z, 255 };
+        bvec4 color(grasscolour, 255);
 
         #define GRASSVERT(n, tcv, modify) { \
             grassvert &gv = grassverts.add(); \
             gv.pos = p##n; \
-            memcpy(gv.color.v, color, sizeof(color)); \
+            gv.color = color; \
             gv.u = tc##n; gv.v = tcv; \
             modify; \
         }
@@ -256,9 +250,33 @@ void generategrass()
     glBindBuffer_(GL_ARRAY_BUFFER, 0);
 }
 
+static Shader *grassshader = NULL;
+
+Shader *loadgrassshader()
+{
+    string opts;
+    int optslen = 0;
+
+    opts[optslen] = '\0';
+
+    defformatstring(name, "grass%s", opts);
+    return generateshader(name, "grassshader \"%s\"", opts);
+
+}
+
+void loadgrassshaders()
+{
+    grassshader = loadgrassshader();
+}
+
+void cleargrassshaders()
+{
+    grassshader = NULL;
+}
+
 void rendergrass()
 {
-    if(!grass || !grassdist || grassgroups.empty() || dbggrass) return;
+    if(!grass || !grassdist || grassgroups.empty() || dbggrass || !grassshader) return;
 
     glDisable(GL_CULL_FACE);
 
@@ -272,9 +290,6 @@ void rendergrass()
     gle::enablecolor();
     gle::enabletexcoord0();
     gle::enablequads();
-
-    static Shader *grassshader = NULL;
-    if(!grassshader) grassshader = lookupshaderbyname("grass");
 
     GLOBALPARAMF(grasstest, grasstest);
 
@@ -320,5 +335,7 @@ void cleanupgrass()
 {
     if(grassvbo) { glDeleteBuffers_(1, &grassvbo); grassvbo = 0; }
     grassvbosize = 0;
+
+    cleargrassshaders();
 }
 

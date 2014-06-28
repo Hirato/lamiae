@@ -78,6 +78,9 @@ void resolverstop(resolverthread &rt)
     SDL_LockMutex(resolvermutex);
     if(rt.query)
     {
+#if SDL_VERSION_ATLEAST(2, 0, 2)
+        SDL_DetachThread(rt.thread);
+#endif
         rt.thread = SDL_CreateThread(resolverloop, "resolver", &rt);
     }
     rt.query = NULL;
@@ -222,7 +225,7 @@ struct serverinfo : servinfo
         MAXPINGS = 3
     };
 
-    int resolved, lastping, nextping;
+    int resolved, lastping, nextping, lastpong;
     int pings[MAXPINGS];
     ENetAddress address;
     bool keep;
@@ -245,6 +248,7 @@ struct serverinfo : servinfo
         loopk(MAXPINGS) pings[k] = WAITING;
         nextping = 0;
         lastping = -1;
+        lastpong = 0;
     }
 
     void cleanup()
@@ -258,6 +262,7 @@ struct serverinfo : servinfo
     void reset()
     {
         lastping = -1;
+        lastpong = 0;
     }
 
     void checkdecay(int decay)
@@ -265,6 +270,13 @@ struct serverinfo : servinfo
         if(lastping >= 0 && totalmillis - lastping >= decay)
             cleanup();
         if(lastping < 0) lastping = totalmillis;
+    }
+
+    bool limitpong()
+    {
+        if(lastpong && totalmillis - lastpong < 1000) return false;
+        lastpong = totalmillis;
+        return true;
     }
 
     void calcping()
@@ -360,8 +372,8 @@ void addserver(const char *name, int port, const char *password, bool keep)
 }
 
 VARP(searchlan, 0, 0, 1);
-VARP(servpingrate, 1000, 5000, 60000);
-VARP(servpingdecay, 1000, 15000, 60000);
+VARMP(servpingrate, 1, 5, 60, 1000);
+VARMP(servpingdecay, 1, 15, 60, 1000);
 VARP(maxservpings, 0, 10, 1000);
 
 void pingservers()
@@ -460,7 +472,7 @@ void checkpings()
         serverinfo *si = NULL;
         loopv(servers) if(addr.host == servers[i]->address.host && addr.port == servers[i]->address.port) { si = servers[i]; break; }
         if(!si && searchlan) si = newserver(NULL, addr.port, addr.host);
-        if(!si) continue;
+        if(!si || !si->limitpong()) continue;
         ucharbuf p(ping, len);
         int millis = getint(p), rtt = clamp(totalmillis - millis, 0, min(servpingdecay, totalmillis));
         if(millis >= lastreset && rtt < servpingdecay) si->addping(rtt, millis);
@@ -522,6 +534,8 @@ ICOMMAND(servinfodesc, "i", (int *i),
     }));
 ICOMMAND(servinfoname, "i", (int *i), GETSERVERINFO_(*i, si, result(si.name)));
 ICOMMAND(servinfoport, "i", (int *i), GETSERVERINFO_(*i, si, intret(si.address.port)));
+ICOMMAND(servinfohaspassword, "i", (int *i), GETSERVERINFO_(*i, si, intret(si.password && si.password[0] ? 1 : 0)));
+ICOMMAND(servinfokeep, "i", (int *i), GETSERVERINFO_(*i, si, intret(si.keep ? 1 : 0)));
 ICOMMAND(servinfomap, "i", (int *i), GETSERVERINFO(*i, si, result(si.map)));
 ICOMMAND(servinfoping, "i", (int *i), GETSERVERINFO(*i, si, intret(si.ping)));
 ICOMMAND(servinfonumplayers, "i", (int *i), GETSERVERINFO(*i, si, intret(si.numplayers)));
@@ -534,7 +548,7 @@ ICOMMAND(servinfoplayers, "i", (int *i),
     }));
 ICOMMAND(servinfoattr, "ii", (int *i, int *n), GETSERVERINFO(*i, si, { if(si.attr.inrange(*n)) intret(si.attr[*n]); }));
 
-ICOMMAND(connectservinfo, "i", (int *i), GETSERVERINFO(*i, si, connectserv(si.name, si.address.port, si.password)));
+ICOMMAND(connectservinfo, "is", (int *i, char *pw), GETSERVERINFO_(*i, si, connectserv(si.name, si.address.port, pw[0] ? pw : si.password)));
 
 servinfo *getservinfo(int i)
 {

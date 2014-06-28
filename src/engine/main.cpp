@@ -10,9 +10,9 @@ void cleanup()
 {
     recorder::stop();
     cleanupserver();
-    if(screen) SDL_SetWindowGrab(screen, SDL_FALSE);
-    SDL_SetRelativeMouseMode(SDL_FALSE);
     SDL_ShowCursor(SDL_TRUE);
+    SDL_SetRelativeMouseMode(SDL_FALSE);
+    if(screen) SDL_SetWindowGrab(screen, SDL_FALSE);
     cleargamma();
     freeocta(worldroot);
     extern void clear_command(); clear_command();
@@ -21,6 +21,9 @@ void cleanup()
     extern void clear_sound();   clear_sound();
     closelogfile();
     ovr::destroy();
+    #ifdef __APPLE__
+        if(screen) SDL_SetWindowFullscreen(screen, 0);
+    #endif
     SDL_Quit();
 }
 
@@ -52,15 +55,16 @@ void fatal(const char *s, ...)    // failure exit
         {
             if(SDL_WasInit(SDL_INIT_VIDEO))
             {
-                if(screen) SDL_SetWindowGrab(screen, SDL_FALSE);
-                SDL_SetRelativeMouseMode(SDL_FALSE);
                 SDL_ShowCursor(SDL_TRUE);
+                SDL_SetRelativeMouseMode(SDL_FALSE);
+                if(screen) SDL_SetWindowGrab(screen, SDL_FALSE);
                 cleargamma();
+                #ifdef __APPLE__
+                    if(screen) SDL_SetWindowFullscreen(screen, 0);
+                #endif
             }
-            #ifdef WIN32
-                MessageBox(NULL, msg, "Lamiae fatal error", MB_OK|MB_SYSTEMMODAL);
-            #endif
             SDL_Quit();
+            SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Lamiae fatal error", msg, NULL);
         }
     }
     exit(EXIT_FAILURE);
@@ -334,8 +338,8 @@ void inputgrab(bool on)
         SDL_ShowCursor(SDL_TRUE);
         if(relativemouse)
         {
-            SDL_SetWindowGrab(screen, SDL_FALSE);
             SDL_SetRelativeMouseMode(SDL_FALSE);
+            SDL_SetWindowGrab(screen, SDL_FALSE);
             relativemouse = false;
         }
     }
@@ -508,9 +512,10 @@ void resetgl()
     recorder::cleanup();
     cleanupva();
     cleanupparticles();
-    cleanupdecals();
+    cleanupstains();
     cleanupsky();
     cleanupmodels();
+    cleanupprefabs();
     cleanuptextures();
     cleanupblendmap();
     cleanuplights();
@@ -658,8 +663,8 @@ void checkinput()
 
             case SDL_TEXTINPUT:
             {
-                static uchar buf[SDL_TEXTINPUTEVENT_TEXT_SIZE+1];
-                int len = decodeutf8(buf, int(sizeof(buf)-1), (const uchar *)event.text.text, strlen(event.text.text));
+                uchar buf[SDL_TEXTINPUTEVENT_TEXT_SIZE+1];
+                size_t len = decodeutf8(buf, sizeof(buf)-1, (const uchar *)event.text.text, strlen(event.text.text));
                 if(len > 0) { buf[len] = '\0'; processtextinput((const char *)buf, len); }
                 break;
             }
@@ -788,7 +793,7 @@ void stackdumper(unsigned int type, EXCEPTION_POINTERS *ep)
     if(!ep) fatal("unknown type");
     EXCEPTION_RECORD *er = ep->ExceptionRecord;
     CONTEXT *context = ep->ContextRecord;
-    string out, t;
+    char out[512];
     formatstring(out, "Lamiae Win32 Exception: 0x%x [0x%x]\n\n", er->ExceptionCode, er->ExceptionCode==EXCEPTION_ACCESS_VIOLATION ? er->ExceptionInformation[1] : -1);
 #ifdef _AMD64_
     STACKFRAME64 sf = {{context->Rip, 0, AddrModeFlat}, {}, {context->Rbp, 0, AddrModeFlat}, {context->Rsp, 0, AddrModeFlat}, 0};
@@ -816,8 +821,7 @@ void stackdumper(unsigned int type, EXCEPTION_POINTERS *ep)
 #endif
         {
             char *del = strrchr(line.FileName, '\\');
-            formatstring(t, "%s - %s [%d]\n", sym.Name, del ? del + 1 : line.FileName, line.LineNumber);
-             concatstring(out, t);
+            concformatstring(out, "%s - %s [%d]\n", sym.Name, del ? del + 1 : line.FileName, line.LineNumber);
          }
      }
     fatal(out);
@@ -874,10 +878,13 @@ void getfps(int &fps, int &bestdiff, int &worstdiff)
 
 void getfps_(int *raw)
 {
-    int fps, bestdiff, worstdiff;
-    if(*raw) fps = 1000/fpshistory[(fpspos+MAXFPSHISTORY-1)%MAXFPSHISTORY];
-    else getfps(fps, bestdiff, worstdiff);
-    intret(fps);
+    if(*raw) floatret(1000.0f/fpshistory[(fpspos+MAXFPSHISTORY-1)%MAXFPSHISTORY]);
+    else
+    {
+        int fps, bestdiff, worstdiff;
+        getfps(fps, bestdiff, worstdiff);
+        intret(fps);
+    }
 }
 
 COMMANDN(getfps, getfps_, "i");
@@ -1066,13 +1073,12 @@ int main(int argc, char **argv)
     initsound();
 
     logoutf("init: render");
-    renderbackground("initializing...");
     restoregamma();
     restorevsync();
     initgbuffer();
     loadshaders();
     initparticles();
-    initdecals();
+    initstains();
 
     identflags |= IDF_PERSIST;
 

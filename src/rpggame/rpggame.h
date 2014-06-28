@@ -583,7 +583,7 @@ enum
 struct effect
 {
 	const char *key;
-	int flags, decal;
+	int flags, stain;
 	const char *mdl;
 	vec spin;
 
@@ -593,7 +593,7 @@ struct effect
 	int lightflags, lightfade, lightradius, lightinitradius;
 	vec lightcol, lightinitcol;
 
-	effect() : key(NULL), flags(FX_DYNLIGHT|FX_FIXEDFLARE), decal(DECAL_BURN), mdl(NULL), spin(0, 0, 0), particle(PART_FIREBALL1), colour(0xFFBF00), fade(500), gravity(50), size(4), lightflags(DL_EXPAND), lightfade(500), lightradius(64), lightinitradius(lightradius), lightcol(1, .9, 0), lightinitcol(lightcol) {}
+	effect() : key(NULL), flags(FX_DYNLIGHT|FX_FIXEDFLARE), stain(STAIN_BURN), mdl(NULL), spin(0, 0, 0), particle(PART_FIREBALL1), colour(0xFFBF00), fade(500), gravity(50), size(4), lightflags(DL_EXPAND), lightfade(500), lightradius(64), lightinitradius(lightradius), lightcol(1, .9, 0), lightinitcol(lightcol) {}
 	~effect() { delete[] mdl; }
 
 	enum

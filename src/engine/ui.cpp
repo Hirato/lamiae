@@ -1861,7 +1861,7 @@ namespace UI
                     if(slot.loaded || slot.thumbnail) drawslot(slot, vslot, sx, sy);
                     else if(totalmillis-lastthumbnail >= thumbtime)
                     {
-                        loadthumbnail(slot);
+                        slot.loadthumbnail();
                         lastthumbnail = totalmillis;
                     }
                 }

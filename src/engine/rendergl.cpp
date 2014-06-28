@@ -2,7 +2,7 @@
 
 #include "engine.h"
 
-bool hasVAO = false, hasTR = false, hasTSW = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasS3TC = false, hasFXT1 = false, hasLATC = false, hasRGTC = false, hasAF = false, hasFBB = false, hasFBMS = false, hasTMS = false, hasMSS = false, hasFBMSBS = false, hasNVFBMSC = false, hasNVTMS = false, hasUBO = false, hasMBR = false, hasDB2 = false, hasDBB = false, hasTG = false, hasTQ = false, hasPF = false, hasTRG = false, hasTI = false, hasHFV = false, hasHFP = false, hasDBT = false, hasDC = false, hasDBGO = false, hasEGPU4 = false, hasGPU4 = false, hasGPU5 = false, hasEAL = false, hasCR = false, hasOQ2 = false, hasCB = false, hasCI = false;
+bool hasVAO = false, hasTR = false, hasTSW = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasS3TC = false, hasFXT1 = false, hasLATC = false, hasRGTC = false, hasAF = false, hasFBB = false, hasFBMS = false, hasTMS = false, hasMSS = false, hasFBMSBS = false, hasNVFBMSC = false, hasNVTMS = false, hasUBO = false, hasMBR = false, hasDB2 = false, hasDBB = false, hasTG = false, hasTQ = false, hasPF = false, hasTRG = false, hasTI = false, hasHFV = false, hasHFP = false, hasDBT = false, hasDC = false, hasDBGO = false, hasEGPU4 = false, hasGPU4 = false, hasGPU5 = false, hasBFE = false, hasEAL = false, hasCR = false, hasOQ2 = false, hasCB = false, hasCI = false;
 bool mesa = false, intel = false, amd = false, nvidia = false;
 
 int hasstencil = 0;
@@ -16,19 +16,20 @@ PFNGLGETQUERYOBJECTI64VEXTPROC glGetQueryObjecti64v_  = NULL;
 PFNGLGETQUERYOBJECTUI64VEXTPROC glGetQueryObjectui64v_ = NULL;
 
 // GL_EXT_framebuffer_object
-PFNGLBINDRENDERBUFFERPROC        glBindRenderbuffer_        = NULL;
-PFNGLDELETERENDERBUFFERSPROC     glDeleteRenderbuffers_     = NULL;
-PFNGLGENFRAMEBUFFERSPROC         glGenRenderbuffers_        = NULL;
-PFNGLRENDERBUFFERSTORAGEPROC     glRenderbufferStorage_     = NULL;
-PFNGLCHECKFRAMEBUFFERSTATUSPROC  glCheckFramebufferStatus_  = NULL;
-PFNGLBINDFRAMEBUFFERPROC         glBindFramebuffer_         = NULL;
-PFNGLDELETEFRAMEBUFFERSPROC      glDeleteFramebuffers_      = NULL;
-PFNGLGENFRAMEBUFFERSPROC         glGenFramebuffers_         = NULL;
-PFNGLFRAMEBUFFERTEXTURE1DPROC    glFramebufferTexture1D_    = NULL;
-PFNGLFRAMEBUFFERTEXTURE2DPROC    glFramebufferTexture2D_    = NULL;
-PFNGLFRAMEBUFFERTEXTURE3DPROC    glFramebufferTexture3D_    = NULL;
-PFNGLFRAMEBUFFERRENDERBUFFERPROC glFramebufferRenderbuffer_ = NULL;
-PFNGLGENERATEMIPMAPPROC          glGenerateMipmap_          = NULL;
+PFNGLBINDRENDERBUFFERPROC           glBindRenderbuffer_           = NULL;
+PFNGLDELETERENDERBUFFERSPROC        glDeleteRenderbuffers_        = NULL;
+PFNGLGENFRAMEBUFFERSPROC            glGenRenderbuffers_           = NULL;
+PFNGLRENDERBUFFERSTORAGEPROC        glRenderbufferStorage_        = NULL;
+PFNGLGETRENDERBUFFERPARAMETERIVPROC glGetRenderbufferParameteriv_ = NULL;
+PFNGLCHECKFRAMEBUFFERSTATUSPROC     glCheckFramebufferStatus_     = NULL;
+PFNGLBINDFRAMEBUFFERPROC            glBindFramebuffer_            = NULL;
+PFNGLDELETEFRAMEBUFFERSPROC         glDeleteFramebuffers_         = NULL;
+PFNGLGENFRAMEBUFFERSPROC            glGenFramebuffers_            = NULL;
+PFNGLFRAMEBUFFERTEXTURE1DPROC       glFramebufferTexture1D_       = NULL;
+PFNGLFRAMEBUFFERTEXTURE2DPROC       glFramebufferTexture2D_       = NULL;
+PFNGLFRAMEBUFFERTEXTURE3DPROC       glFramebufferTexture3D_       = NULL;
+PFNGLFRAMEBUFFERRENDERBUFFERPROC    glFramebufferRenderbuffer_    = NULL;
+PFNGLGENERATEMIPMAPPROC             glGenerateMipmap_             = NULL;
 
 // GL_EXT_framebuffer_blit
 PFNGLBLITFRAMEBUFFERPROC         glBlitFramebuffer_         = NULL;
@@ -256,6 +257,9 @@ PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays_ = NULL;
 PFNGLGENVERTEXARRAYSPROC    glGenVertexArrays_    = NULL;
 PFNGLISVERTEXARRAYPROC      glIsVertexArray_      = NULL;
 
+// GL_ARB_blend_func_extended
+PFNGLBINDFRAGDATALOCATIONINDEXEDPROC glBindFragDataLocationIndexed_ = NULL;
+
 // GL_ARB_copy_image
 PFNGLCOPYIMAGESUBDATAPROC glCopyImageSubData_ = NULL;
 
@@ -283,10 +287,16 @@ void glerror(const char *file, int line, GLenum error)
 }
 
 VAR(amd_pf_bug, 0, 0, 1);
+VAR(amd_eal_bug, 0, 0, 1);
 VAR(mesa_texrectoffset_bug, 0, 0, 1);
+VAR(intel_texgatheroffsetcomp_bug, 0, 0, 1);
+VAR(intel_texalpha_bug, 0, 0, 1);
+VAR(intel_mapbufferrange_bug, 0, 0, 1);
 VAR(useubo, 1, 0, 0);
 VAR(usetexgather, 1, 0, 0);
 VAR(usetexcompress, 1, 0, 0);
+VAR(maxdrawbufs, 1, 0, 0);
+VAR(maxdualdrawbufs, 1, 0, 0);
 
 static bool checkseries(const char *s, const char *name, int low, int high)
 {
@@ -297,6 +307,17 @@ static bool checkseries(const char *s, const char *name, int low, int high)
     int n = 0;
     while(isdigit(*s)) n = n*10 + (*s++ - '0');
     return n >= low && n <= high;
+}
+
+static bool checkmesaversion(const char *s, int major, int minor, int patch)
+{
+    const char *v = strstr(s, "Mesa");
+    if(!v) return false;
+    int vmajor = 0, vminor = 0, vpatch = 0;
+    if(sscanf(v, "Mesa %d.%d.%d", &vmajor, &vminor, &vpatch) < 1) return false;
+    if(vmajor > major) return true; else if(vmajor < major) return false;
+    if(vminor > minor) return true; else if(vminor < minor) return false;
+    return vpatch >= patch;
 }
 
 VAR(dbgexts, 0, 0, 1);
@@ -332,6 +353,36 @@ void parseglexts()
 bool hasext(const char *ext)
 {
     return glexts.access(ext)!=NULL;
+}
+
+bool checkdepthtexstencilrb()
+{
+    int w = 256, h = 256;
+    GLuint fbo = 0;
+    glGenFramebuffers_(1, &fbo);
+    glBindFramebuffer_(GL_FRAMEBUFFER, fbo);
+
+    GLuint depthtex = 0;
+    glGenTextures(1, &depthtex);
+    createtexture(depthtex, w, h, NULL, 3, 0, GL_DEPTH_COMPONENT, GL_TEXTURE_RECTANGLE);
+    glBindTexture(GL_TEXTURE_RECTANGLE, 0);
+    glFramebufferTexture2D_(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_RECTANGLE, depthtex, 0);
+
+    GLuint stencilrb = 0;
+    glGenRenderbuffers_(1, &stencilrb);
+    glBindRenderbuffer_(GL_RENDERBUFFER, stencilrb);
+    glRenderbufferStorage_(GL_RENDERBUFFER, GL_STENCIL_INDEX8, w, h);
+    glBindRenderbuffer_(GL_RENDERBUFFER, 0);
+    glFramebufferRenderbuffer_(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, stencilrb);
+
+    bool supported = glCheckFramebufferStatus_(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
+
+    glBindFramebuffer_(GL_FRAMEBUFFER, 0);
+    glDeleteFramebuffers_(1, &fbo);
+    glDeleteTextures(1, &depthtex);
+    glDeleteRenderbuffers_(1, &stencilrb);
+
+    return supported;
 }
 
 void gl_checkextensions()
@@ -508,7 +559,7 @@ void gl_checkextensions()
     GLint texsize = 0, texunits = 0, vtexunits = 0, cubetexsize = 0, oqbits = 0, drawbufs = 0;
     glGetIntegerv(GL_MAX_TEXTURE_SIZE, &texsize);
     hwtexsize = texsize;
-    if(hwtexsize < 4096)
+    if(hwtexsize < 2048)
         fatal("Large texture support is required!");
     glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &texunits);
     hwtexunits = texunits;
@@ -516,12 +567,13 @@ void gl_checkextensions()
         fatal("Hardware does not support at least 16 texture units.");
     glGetIntegerv(GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS, &vtexunits);
     hwvtexunits = vtexunits;
-    if(hwvtexunits < 4)
-        fatal("Hardware does not support at least 4 vertex texture units.");
+    //if(hwvtexunits < 4)
+    //    fatal("Hardware does not support at least 4 vertex texture units.");
     glGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE, &cubetexsize);
     hwcubetexsize = cubetexsize;
     glGetIntegerv(GL_MAX_DRAW_BUFFERS, &drawbufs);
-    if(drawbufs < 4) fatal("Hardware does not support at least 4 draw buffers.");
+    maxdrawbufs = drawbufs;
+    if(maxdrawbufs < 4) fatal("Hardware does not support at least 4 draw buffers.");
     glGetQueryiv_(GL_SAMPLES_PASSED, GL_QUERY_COUNTER_BITS, &oqbits);
     if(!oqbits)
     {
@@ -685,20 +737,21 @@ void gl_checkextensions()
 
     if(glversion >= 300 || hasext("GL_ARB_framebuffer_object"))
     {
-        glBindRenderbuffer_        = (PFNGLBINDRENDERBUFFERPROC)       getprocaddress("glBindRenderbuffer");
-        glDeleteRenderbuffers_     = (PFNGLDELETERENDERBUFFERSPROC)    getprocaddress("glDeleteRenderbuffers");
-        glGenRenderbuffers_        = (PFNGLGENFRAMEBUFFERSPROC)        getprocaddress("glGenRenderbuffers");
-        glRenderbufferStorage_     = (PFNGLRENDERBUFFERSTORAGEPROC)    getprocaddress("glRenderbufferStorage");
-        glCheckFramebufferStatus_  = (PFNGLCHECKFRAMEBUFFERSTATUSPROC) getprocaddress("glCheckFramebufferStatus");
-        glBindFramebuffer_         = (PFNGLBINDFRAMEBUFFERPROC)        getprocaddress("glBindFramebuffer");
-        glDeleteFramebuffers_      = (PFNGLDELETEFRAMEBUFFERSPROC)     getprocaddress("glDeleteFramebuffers");
-        glGenFramebuffers_         = (PFNGLGENFRAMEBUFFERSPROC)        getprocaddress("glGenFramebuffers");
-        glFramebufferTexture1D_    = (PFNGLFRAMEBUFFERTEXTURE1DPROC)   getprocaddress("glFramebufferTexture1D");
-        glFramebufferTexture2D_    = (PFNGLFRAMEBUFFERTEXTURE2DPROC)   getprocaddress("glFramebufferTexture2D");
-        glFramebufferTexture3D_    = (PFNGLFRAMEBUFFERTEXTURE3DPROC)   getprocaddress("glFramebufferTexture3D");
-        glFramebufferRenderbuffer_ = (PFNGLFRAMEBUFFERRENDERBUFFERPROC)getprocaddress("glFramebufferRenderbuffer");
-        glGenerateMipmap_          = (PFNGLGENERATEMIPMAPPROC)         getprocaddress("glGenerateMipmap");
-        glBlitFramebuffer_         = (PFNGLBLITFRAMEBUFFERPROC)        getprocaddress("glBlitFramebuffer");
+        glBindRenderbuffer_               = (PFNGLBINDRENDERBUFFERPROC)              getprocaddress("glBindRenderbuffer");
+        glDeleteRenderbuffers_            = (PFNGLDELETERENDERBUFFERSPROC)           getprocaddress("glDeleteRenderbuffers");
+        glGenRenderbuffers_               = (PFNGLGENFRAMEBUFFERSPROC)               getprocaddress("glGenRenderbuffers");
+        glRenderbufferStorage_            = (PFNGLRENDERBUFFERSTORAGEPROC)           getprocaddress("glRenderbufferStorage");
+        glGetRenderbufferParameteriv_     = (PFNGLGETRENDERBUFFERPARAMETERIVPROC)    getprocaddress("glGetRenderbufferParameteriv");
+        glCheckFramebufferStatus_         = (PFNGLCHECKFRAMEBUFFERSTATUSPROC)        getprocaddress("glCheckFramebufferStatus");
+        glBindFramebuffer_                = (PFNGLBINDFRAMEBUFFERPROC)               getprocaddress("glBindFramebuffer");
+        glDeleteFramebuffers_             = (PFNGLDELETEFRAMEBUFFERSPROC)            getprocaddress("glDeleteFramebuffers");
+        glGenFramebuffers_                = (PFNGLGENFRAMEBUFFERSPROC)               getprocaddress("glGenFramebuffers");
+        glFramebufferTexture1D_           = (PFNGLFRAMEBUFFERTEXTURE1DPROC)          getprocaddress("glFramebufferTexture1D");
+        glFramebufferTexture2D_           = (PFNGLFRAMEBUFFERTEXTURE2DPROC)          getprocaddress("glFramebufferTexture2D");
+        glFramebufferTexture3D_           = (PFNGLFRAMEBUFFERTEXTURE3DPROC)          getprocaddress("glFramebufferTexture3D");
+        glFramebufferRenderbuffer_        = (PFNGLFRAMEBUFFERRENDERBUFFERPROC)       getprocaddress("glFramebufferRenderbuffer");
+        glGenerateMipmap_                 = (PFNGLGENERATEMIPMAPPROC)                getprocaddress("glGenerateMipmap");
+        glBlitFramebuffer_                = (PFNGLBLITFRAMEBUFFERPROC)               getprocaddress("glBlitFramebuffer");
         glRenderbufferStorageMultisample_ = (PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC)getprocaddress("glRenderbufferStorageMultisample");
 
         hasAFBO = hasFBO = hasFBB = hasFBMS = hasDS = true;
@@ -706,19 +759,20 @@ void gl_checkextensions()
     }
     else if(hasext("GL_EXT_framebuffer_object"))
     {
-        glBindRenderbuffer_        = (PFNGLBINDRENDERBUFFERPROC)       getprocaddress("glBindRenderbufferEXT");
-        glDeleteRenderbuffers_     = (PFNGLDELETERENDERBUFFERSPROC)    getprocaddress("glDeleteRenderbuffersEXT");
-        glGenRenderbuffers_        = (PFNGLGENFRAMEBUFFERSPROC)        getprocaddress("glGenRenderbuffersEXT");
-        glRenderbufferStorage_     = (PFNGLRENDERBUFFERSTORAGEPROC)    getprocaddress("glRenderbufferStorageEXT");
-        glCheckFramebufferStatus_  = (PFNGLCHECKFRAMEBUFFERSTATUSPROC) getprocaddress("glCheckFramebufferStatusEXT");
-        glBindFramebuffer_         = (PFNGLBINDFRAMEBUFFERPROC)        getprocaddress("glBindFramebufferEXT");
-        glDeleteFramebuffers_      = (PFNGLDELETEFRAMEBUFFERSPROC)     getprocaddress("glDeleteFramebuffersEXT");
-        glGenFramebuffers_         = (PFNGLGENFRAMEBUFFERSPROC)        getprocaddress("glGenFramebuffersEXT");
-        glFramebufferTexture1D_    = (PFNGLFRAMEBUFFERTEXTURE1DPROC)   getprocaddress("glFramebufferTexture1DEXT");
-        glFramebufferTexture2D_    = (PFNGLFRAMEBUFFERTEXTURE2DPROC)   getprocaddress("glFramebufferTexture2DEXT");
-        glFramebufferTexture3D_    = (PFNGLFRAMEBUFFERTEXTURE3DPROC)   getprocaddress("glFramebufferTexture3DEXT");
-        glFramebufferRenderbuffer_ = (PFNGLFRAMEBUFFERRENDERBUFFERPROC)getprocaddress("glFramebufferRenderbufferEXT");
-        glGenerateMipmap_          = (PFNGLGENERATEMIPMAPPROC)         getprocaddress("glGenerateMipmapEXT");
+        glBindRenderbuffer_           = (PFNGLBINDRENDERBUFFERPROC)          getprocaddress("glBindRenderbufferEXT");
+        glDeleteRenderbuffers_        = (PFNGLDELETERENDERBUFFERSPROC)       getprocaddress("glDeleteRenderbuffersEXT");
+        glGenRenderbuffers_           = (PFNGLGENFRAMEBUFFERSPROC)           getprocaddress("glGenRenderbuffersEXT");
+        glRenderbufferStorage_        = (PFNGLRENDERBUFFERSTORAGEPROC)       getprocaddress("glRenderbufferStorageEXT");
+        glGetRenderbufferParameteriv_ = (PFNGLGETRENDERBUFFERPARAMETERIVPROC)getprocaddress("glGetRenderbufferParameterivEXT");
+        glCheckFramebufferStatus_     = (PFNGLCHECKFRAMEBUFFERSTATUSPROC)    getprocaddress("glCheckFramebufferStatusEXT");
+        glBindFramebuffer_            = (PFNGLBINDFRAMEBUFFERPROC)           getprocaddress("glBindFramebufferEXT");
+        glDeleteFramebuffers_         = (PFNGLDELETEFRAMEBUFFERSPROC)        getprocaddress("glDeleteFramebuffersEXT");
+        glGenFramebuffers_            = (PFNGLGENFRAMEBUFFERSPROC)           getprocaddress("glGenFramebuffersEXT");
+        glFramebufferTexture1D_       = (PFNGLFRAMEBUFFERTEXTURE1DPROC)      getprocaddress("glFramebufferTexture1DEXT");
+        glFramebufferTexture2D_       = (PFNGLFRAMEBUFFERTEXTURE2DPROC)      getprocaddress("glFramebufferTexture2DEXT");
+        glFramebufferTexture3D_       = (PFNGLFRAMEBUFFERTEXTURE3DPROC)      getprocaddress("glFramebufferTexture3DEXT");
+        glFramebufferRenderbuffer_    = (PFNGLFRAMEBUFFERRENDERBUFFERPROC)   getprocaddress("glFramebufferRenderbufferEXT");
+        glGenerateMipmap_             = (PFNGLGENERATEMIPMAPPROC)            getprocaddress("glGenerateMipmapEXT");
         hasFBO = true;
         if(dbgexts) conoutf(CON_INIT, "Using GL_EXT_framebuffer_object extension.");
 
@@ -903,6 +957,18 @@ void gl_checkextensions()
         }
     }
 
+    if(glversion >= 330 || hasext("GL_ARB_blend_func_extended"))
+    {
+        glBindFragDataLocationIndexed_ = (PFNGLBINDFRAGDATALOCATIONINDEXEDPROC)getprocaddress("glBindFragDataLocationIndexed");
+
+        GLint dualbufs = 0;
+        glGetIntegerv(GL_MAX_DUAL_SOURCE_DRAW_BUFFERS, &dualbufs);
+        maxdualdrawbufs = dualbufs;
+
+        hasBFE = true;
+        if(glversion < 330 && dbgexts) conoutf(CON_INIT, "Using GL_ARB_blend_func_extended extension.");
+    }
+
     if(glversion >= 400)
     {
         hasTG = hasGPU5 = true;
@@ -972,12 +1038,13 @@ void gl_checkextensions()
         if(dbgexts) conoutf(CON_INIT, "Using GL_NV_copy_image extension.");
     }
 
-    extern int msaadepthstencil, gdepthstencil, glineardepth, msaalineardepth, batchsunlight, smgather, rhrect;
+    extern int gdepthstencil, gstencil, glineardepth, msaadepthstencil, msaalineardepth, batchsunlight, smgather, rhrect, tqaaresolvegather;
     if(amd)
     {
         msaalineardepth = glineardepth = 1; // reading back from depth-stencil still buggy on newer cards, and requires stencil for MSAA
         msaadepthstencil = gdepthstencil = 1; // some older AMD GPUs do not support reading from depth-stencil textures, so only use depth-stencil renderbuffer for now
         if(checkseries(renderer, "Radeon HD", 4000, 5199)) amd_pf_bug = 1;
+        if(glversion <= 330) amd_eal_bug = 1; // explicit_attrib_location broken when used with blend_func_extended on legacy Catalyst
         rhrect = 1; // bad cpu stalls on Catalyst 13.x when trying to use 3D textures previously bound to FBOs
     }
     else if(nvidia)
@@ -985,11 +1052,30 @@ void gl_checkextensions()
     }
     else if(intel)
     {
-        glineardepth = 1; // causes massive slowdown in windows driver (and sometimes in linux driver) if not using linear depth
-        if(mesa) batchsunlight = 0; // causes massive slowdown in linux driver
         smgather = 1; // native shadow filter is slow
-        if(mesa) mesa_texrectoffset_bug = 1; // mesa i965 driver has buggy textureOffset with texture rectangles
+        if(mesa)
+        {
+            batchsunlight = 0; // causes massive slowdown in linux driver
+            if(!checkmesaversion(version, 10, 0, 3))
+                mesa_texrectoffset_bug = 1; // mesa i965 driver has buggy textureOffset with texture rectangles
+        }
+        else
+        {
+            // causes massive slowdown in windows driver if reading depth-stencil texture
+            if(checkdepthtexstencilrb())
+            {
+                gdepthstencil = 1;
+                gstencil = 1;
+            }
+            // textureGatherOffset with component selection crashes Intel's GLSL compiler on Windows
+            intel_texgatheroffsetcomp_bug = 1;
+            // sampling alpha by itself from a texture generates garbage on Intel drivers on Windows
+            intel_texalpha_bug = 1;
+            // MapBufferRange is buggy on older Intel drivers on Windows
+            if(glversion <= 310) intel_mapbufferrange_bug = 1;
+        }
     }
+    if(hasGPU5 && hasTG && !intel_texgatheroffsetcomp_bug) tqaaresolvegather = 1;
 }
 
 ICOMMAND(glext, "s", (char *ext), intret(hasext(ext) ? 1 : 0));
@@ -1213,9 +1299,9 @@ void setcamprojmatrix(bool init = true, bool flush = false)
         if(ovr::enabled && !drawtex)
             projmatrix.jitter((viewidx ? -1 : 1) * ovr::distortoffset, 0);
     }
-    else camprojmatrix.mul(projmatrix, cammatrix);
+    else camprojmatrix.muld(projmatrix, cammatrix);
 
-    jitteraa(init);
+    jitteraa();
 
     GLOBALPARAM(camprojmatrix, camprojmatrix);
     GLOBALPARAM(lineardepthscale, projmatrix.lineardepthscale()); //(invprojmatrix.c.z, invprojmatrix.d.z));
@@ -1469,18 +1555,21 @@ vec calcavatarpos(const vec &pos, float dist)
 
 void renderavatar()
 {
-    if(!isthirdperson())
-    {
-        matrix4 oldprojmatrix = projmatrix;
-        float avatarfovy = curavatarfov;
-        if(ovr::enabled && ovr::fov) avatarfovy *= ovr::fov/fov;
-        projmatrix.perspective(avatarfovy, aspect, nearplane, farplane);
-        projmatrix.scalez(avatardepth);
-        setcamprojmatrix(false);
-        game::renderavatar();
-        projmatrix = oldprojmatrix;
-        setcamprojmatrix(false);
-    }
+    if(isthirdperson()) return;
+
+    matrix4 oldprojmatrix = nojittermatrix;
+    float avatarfovy = curavatarfov;
+    if(ovr::enabled && ovr::fov) avatarfovy *= ovr::fov/fov;
+    projmatrix.perspective(avatarfovy, aspect, nearplane, farplane);
+    projmatrix.scalez(avatardepth);
+    setcamprojmatrix(false);
+
+    enableavatarmask();
+    game::renderavatar();
+    disableavatarmask();
+
+    projmatrix = oldprojmatrix;
+    setcamprojmatrix(false);
 }
 
 FVAR(polygonoffsetfactor, -1e4f, -3.0f, 1e4f);
@@ -1704,19 +1793,76 @@ bool calcspotscissor(const vec &origin, float radius, const vec &dir, int spot, 
     return true;
 }
 
-void screenquad()
+static GLuint screenquadvbo = 0;
+
+static void setupscreenquad()
 {
-    gle::defvertex(2);
-    gle::begin(GL_TRIANGLE_STRIP);
-    gle::attribf(1, -1);
-    gle::attribf(-1, -1);
-    gle::attribf(1, 1);
-    gle::attribf(-1, 1);
-    gle::end();
-    gle::disable();
+    if(!screenquadvbo)
+    {
+        glGenBuffers_(1, &screenquadvbo);
+        glBindBuffer_(GL_ARRAY_BUFFER, screenquadvbo);
+        vec2 verts[4] = { vec2(1, -1), vec2(-1, -1), vec2(1, 1), vec2(-1, 1) };
+        glBufferData_(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
+        glBindBuffer_(GL_ARRAY_BUFFER, 0);
+    }
 }
 
-#define SCREENQUAD1(x1, y1, x2, y2, sx1, sy1, sx2, sy2) { \
+static void cleanupscreenquad()
+{
+    if(screenquadvbo) { glDeleteBuffers_(1, &screenquadvbo); screenquadvbo = 0; }
+}
+
+void screenquad()
+{
+    setupscreenquad();
+    glBindBuffer_(GL_ARRAY_BUFFER, screenquadvbo);
+    gle::enablevertex();
+    gle::vertexpointer(sizeof(vec2), (const vec2 *)0, GL_FLOAT, 2);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    gle::disablevertex();
+    glBindBuffer_(GL_ARRAY_BUFFER, 0);
+}
+
+static LocalShaderParam screentexcoord[2] = { LocalShaderParam("screentexcoord0"), LocalShaderParam("screentexcoord1") };
+
+static inline void setscreentexcoord(int i, float w, float h, float x = 0, float y = 0)
+{
+    screentexcoord[i].setf(w*0.5f, h*0.5f, x + w*0.5f, y + fabs(h)*0.5f);
+}
+
+void screenquad(float sw, float sh)
+{
+    setscreentexcoord(0, sw, sh);
+    screenquad();
+}
+
+void screenquadflipped(float sw, float sh)
+{
+    setscreentexcoord(0, sw, -sh);
+    screenquad();
+}
+
+void screenquad(float sw, float sh, float sw2, float sh2)
+{
+    setscreentexcoord(0, sw, sh);
+    setscreentexcoord(1, sw2, sh2);
+    screenquad();
+}
+
+void screenquadoffset(float x, float y, float w, float h)
+{
+    setscreentexcoord(0, w, h, x, y);
+    screenquad();
+}
+
+void screenquadoffset(float x, float y, float w, float h, float x2, float y2, float w2, float h2)
+{
+    setscreentexcoord(0, w, h, x, y);
+    setscreentexcoord(1, w2, h2, x2, y2);
+    screenquad();
+}
+
+#define HUDQUAD(x1, y1, x2, y2, sx1, sy1, sx2, sy2) { \
     gle::defvertex(2); \
     gle::deftexcoord0(); \
     gle::begin(GL_TRIANGLE_STRIP); \
@@ -1727,89 +1873,19 @@ void screenquad()
     gle::end(); \
 }
 
-void screenquad(float sw, float sh)
-{
-    SCREENQUAD1(-1, -1, 1, 1, 0, 0, sw, sh);
-    gle::disable();
-}
-
-void screenquadflipped(float sw, float sh)
-{
-    SCREENQUAD1(-1, -1, 1, 1, 0, sh, sw, 0);
-    gle::disable();
-}
-
-void screenquadreorient(float sw, float sh, bool flipx, bool flipy, bool swapxy)
-{
-    float sx1 = 0, sy1 = 0, sx2 = sw, sy2 = sh;
-    if(swapxy) swap(sx2, sy2);
-    if(flipx) swap(sx1, sx2);
-    if(flipy) swap(sy1, sy2);
-    gle::defvertex(2);
-    gle::deftexcoord0();
-    gle::begin(GL_TRIANGLE_STRIP);
-    if(swapxy)
-    {
-        gle::attribf( 1, -1); gle::attribf(sy1, sx2);
-        gle::attribf(-1, -1); gle::attribf(sy1, sx1);
-        gle::attribf( 1,  1); gle::attribf(sy2, sx2);
-        gle::attribf(-1,  1); gle::attribf(sy2, sx1);
-    }
-    else
-    {
-        gle::attribf( 1, -1); gle::attribf(sx2, sy1);
-        gle::attribf(-1, -1); gle::attribf(sx1, sy1);
-        gle::attribf( 1,  1); gle::attribf(sx2, sy2);
-        gle::attribf(-1,  1); gle::attribf(sx1, sy2);
-    }
-    gle::end();
-    gle::disable();
-}
-
-#define SCREENQUAD2(x1, y1, x2, y2, sx1, sy1, sx2, sy2, tx1, ty1, tx2, ty2) { \
-    gle::defvertex(2); \
-    gle::deftexcoord0(); \
-    gle::deftexcoord1(); \
-    gle::begin(GL_TRIANGLE_STRIP); \
-    gle::attribf(x2, y1); gle::attribf(sx2, sy1); gle::attribf(tx2, ty1); \
-    gle::attribf(x1, y1); gle::attribf(sx1, sy1); gle::attribf(tx1, ty1); \
-    gle::attribf(x2, y2); gle::attribf(sx2, sy2); gle::attribf(tx2, ty2); \
-    gle::attribf(x1, y2); gle::attribf(sx1, sy2); gle::attribf(tx1, ty2); \
-    gle::end(); \
-}
-
-void screenquad(float sw, float sh, float sw2, float sh2)
-{
-    SCREENQUAD2(-1, -1, 1, 1, 0, 0, sw, sh, 0, 0, sw2, sh2);
-    gle::disable();
-}
-
-void screenquadoffset(float x, float y, float w, float h)
-{
-    SCREENQUAD1(-1, -1, 1, 1, x, y, x+w, y+h);
-    gle::disable();
-}
-
-void screenquadoffset(float x, float y, float w, float h, float x2, float y2, float w2, float h2)
-{
-    SCREENQUAD2(-1, -1, 1, 1, x, y, x+w, y+h, x2, y2, x2+w2, y2+h2);
-    gle::disable();
-}
-
 void hudquad(float x, float y, float w, float h, float tx, float ty, float tw, float th)
 {
-    SCREENQUAD1(x, y, x+w, y+h, tx, ty, tx+tw, ty+th);
+    HUDQUAD(x, y, x+w, y+h, tx, ty, tx+tw, ty+th);
 }
 
 void debugquad(float x, float y, float w, float h, float tx, float ty, float tw, float th)
 {
-    SCREENQUAD1(x, y, x+w, y+h, tx, ty+th, tx+tw, ty);
+    HUDQUAD(x, y, x+w, y+h, tx, ty+th, tx+tw, ty);
     gle::disable();
 }
 
 VARR(fog, 16, 4000, 1000024);
-bvec fogcolor(0x80, 0x99, 0xB3);
-HVARFR(fogcolour, 0, 0x8099B3, 0xFFFFFF, { fogcolor = bvec::hexcolor(fogcolour); });
+CVARR(fogcolour, 0x8099B3);
 VAR(fogoverlay, 0, 1, 1);
 
 static float findsurface(int fogmat, const vec &v, int &abovemat)
@@ -1839,7 +1915,7 @@ static void blendfog(int fogmat, float below, float blend, float logblend, float
     {
         case MAT_WATER:
         {
-            const bvec &wcol = getwatercolor(fogmat), &wdeepcol = getwaterdeepcolor(fogmat);
+            const bvec &wcol = getwatercolour(fogmat), &wdeepcol = getwaterdeepcolour(fogmat);
             int wfog = getwaterfog(fogmat), wdeep = getwaterdeep(fogmat);
             float deepfade = clamp(below/max(wdeep, wfog), 0.0f, 1.0f);
             vec color;
@@ -1851,7 +1927,7 @@ static void blendfog(int fogmat, float below, float blend, float logblend, float
 
         case MAT_LAVA:
         {
-            const bvec &lcol = getlavacolor(fogmat);
+            const bvec &lcol = getlavacolour(fogmat);
             int lfog = getlavafog(fogmat);
             fogc.add(lcol.tocolor().mul(blend));
             end += logblend*min(fog, max(lfog*2, 16));
@@ -1859,7 +1935,7 @@ static void blendfog(int fogmat, float below, float blend, float logblend, float
         }
 
         default:
-            fogc.add(fogcolor.tocolor().mul(blend));
+            fogc.add(fogcolour.tocolor().mul(blend));
             start += logblend*(fog+64)/8;
             end += logblend*fog;
             break;
@@ -1920,7 +1996,7 @@ static void blendfogoverlay(int fogmat, float below, float blend, vec &overlay)
     {
         case MAT_WATER:
         {
-            const bvec &wcol = getwatercolor(fogmat), &wdeepcol = getwaterdeepcolor(fogmat);
+            const bvec &wcol = getwatercolour(fogmat), &wdeepcol = getwaterdeepcolour(fogmat);
             int wfog = getwaterfog(fogmat), wdeep = getwaterdeep(fogmat);
             float deepfade = clamp(below/max(wdeep, wfog), 0.0f, 1.0f);
             vec color = vec(wcol.r, wcol.g, wcol.b).lerp(vec(wdeepcol.r, wdeepcol.g, wdeepcol.b), deepfade);
@@ -1930,7 +2006,7 @@ static void blendfogoverlay(int fogmat, float below, float blend, vec &overlay)
 
         case MAT_LAVA:
         {
-            const bvec &lcol = getlavacolor(fogmat);
+            const bvec &lcol = getlavacolour(fogmat);
             maxc = max(lcol.r, max(lcol.g, lcol.b));
             overlay.add(vec(lcol.r, lcol.g, lcol.b).div(min(32.0f + maxc*7.0f/8.0f, 255.0f)).max(0.4f).mul(blend));
             break;
@@ -1969,12 +2045,11 @@ void clearminimap()
 }
 
 VARR(minimapheight, 0, 0, 2<<16);
-bvec minimapcolor(0, 0, 0);
-HVARFR(minimapcolour, 0, 0, 0xFFFFFF, { minimapcolor = bvec::hexcolor(minimapcolour); });
+CVARR(minimapcolour, 0);
 VARR(minimapclip, 0, 0, 1);
 VARFP(minimapsize, 7, 8, 10, { if(minimaptex) drawminimap(); });
 VARFP(showminimap, 0, 1, 1, { if(minimaptex) drawminimap(); });
-HVARFP(nominimapcolour, 0, 0x101010, 0xFFFFFF, { if(minimaptex && !showminimap) drawminimap(); });
+CVARFP(nominimapcolour, 0x101010, { if(minimaptex && !showminimap) drawminimap(); });
 
 void bindminimap()
 {
@@ -2002,8 +2077,7 @@ void drawminimap()
     if(!showminimap)
     {
         if(!minimaptex) glGenTextures(1, &minimaptex);
-        bvec color = bvec::hexcolor(nominimapcolour);
-        createtexture(minimaptex, 1, 1, color.v, 3, 0, GL_RGB, GL_TEXTURE_2D);
+        createtexture(minimaptex, 1, 1, nominimapcolour.v, 3, 0, GL_RGB, GL_TEXTURE_2D);
         return;
     }
 
@@ -2066,8 +2140,6 @@ void drawminimap()
     projmatrix.ortho(-minimapradius.x, minimapradius.x, -minimapradius.y, minimapradius.y, 0, 2*zscale);
     setcamprojmatrix();
 
-    resetlights();
-
     glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
 
@@ -2078,14 +2150,12 @@ void drawminimap()
     ldrscaleb = ldrscale/255;
 
     visiblecubes(false);
-    collectlights();
-    findmaterials();
 
     rendergbuffer();
 
     rendershadowatlas();
 
-    shademinimap(vec(minimapcolor.x*ldrscaleb, minimapcolor.y*ldrscaleb, minimapcolor.z*ldrscaleb));
+    shademinimap(minimapcolour.tocolor().mul(ldrscale));
 
     if(minimapheight > 0 && minimapheight < minimapcenter.z + minimapradius.z)
     {
@@ -2111,7 +2181,7 @@ void drawminimap()
     createtexture(minimaptex, size, size, NULL, 3, 1, GL_RGB5, GL_TEXTURE_2D);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    GLfloat border[4] = { minimapcolor.x/255.0f, minimapcolor.y/255.0f, minimapcolor.z/255.0f, 1.0f };
+    GLfloat border[4] = { minimapcolour.x/255.0f, minimapcolour.y/255.0f, minimapcolour.z/255.0f, 1.0f };
     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, border);
     glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -2165,8 +2235,6 @@ void drawcubemap(int size, const vec &o, float yaw, float pitch, const cubemapsi
     vieww = viewh = size;
     projmatrix.perspective(fovy, aspect, nearplane, farplane);
     setcamprojmatrix();
-
-    resetlights();
 
     glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
@@ -2294,8 +2362,6 @@ namespace modelpreview
         glEnable(GL_DEPTH_TEST);
 
         preparegbuffer();
-
-        resetmodelbatches();
     }
 
     void end()
@@ -2353,8 +2419,6 @@ void gl_drawview()
 
     farplane = worldsize*2;
 
-    resetlights();
-
     projmatrix.perspective(fovy, aspect, nearplane, farplane);
     setcamprojmatrix();
 
@@ -2383,11 +2447,8 @@ void gl_drawview()
 
     glFlush();
 
-    if(!rhinoq || !oqfrags || (wireframe && editmode))
-    {
-        renderradiancehints();
-        GLERROR;
-    }
+    renderradiancehints();
+    GLERROR;
 
     rendershadowatlas();
     GLERROR;
@@ -2818,6 +2879,7 @@ void cleanupgl()
 {
     clearminimap();
     cleanuptimers();
+    cleanupscreenquad();
     gle::cleanup();
     ovr::cleanup();
 }

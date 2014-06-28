@@ -1,5 +1,7 @@
 #include "engine.h"
 
+extern int intel_texalpha_bug;
+
 extern void cleanuptqaa();
 
 VARFP(tqaa, 0, 0, 1, cleanupaa());
@@ -8,12 +10,13 @@ VARF(tqaamovemask, 0, 1, 1, cleanupaa());
 VARP(tqaaquincunx, 0, 1, 1);
 FVAR(tqaacolorweightscale, 0, 0.25f, 1e3f);
 FVAR(tqaacolorweightbias, 0, 0.01f, 1);
+VAR(tqaaresolvegather, 1, 0, 0);
 
 struct tqaaview
 {
     int frame;
     GLuint prevtex, curtex, fbo[2];
-    matrix4 prevmvp;
+    matrix4 prevscreenmatrix;
 
     tqaaview() : frame(0), prevtex(0), curtex(0)
     {
@@ -46,7 +49,7 @@ struct tqaaview
         }
         glBindFramebuffer_(GL_FRAMEBUFFER, 0);
 
-        prevmvp.identity();
+        prevscreenmatrix.identity();
     }
 
     void setaavelocityparams(GLuint tmu)
@@ -55,7 +58,7 @@ struct tqaaview
         if(msaasamples) glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, msdepthtex);
         else glBindTexture(GL_TEXTURE_RECTANGLE, gdepthtex);
         matrix4 reproject;
-        reproject.mul(frame ? prevmvp : screenmatrix, worldmatrix);
+        reproject.muld(frame ? prevscreenmatrix : screenmatrix, worldmatrix);
         vec2 jitter = frame&1 ? vec2(0.5f, 0.5f) : vec2(-0.5f, -0.5f);
         if(multisampledaa()) { jitter.x *= 0.5f; jitter.y *= -0.5f; }
         if(frame) reproject.jitter(jitter.x, jitter.y);
@@ -89,14 +92,17 @@ struct tqaaview
 
         swap(fbo[0], fbo[1]);
         swap(curtex, prevtex);
-        prevmvp = screenmatrix;
+        prevscreenmatrix = screenmatrix;
         frame++;
     }
 } tqaaviews[2];
 
+int tqaatype = -1;
+
 void loadtqaashaders()
 {
-    loadhdrshaders(tqaamovemask ? AA_VELOCITY_MASKED : AA_VELOCITY);
+    tqaatype = tqaamovemask ? AA_VELOCITY_MASKED : AA_VELOCITY;
+    loadhdrshaders(tqaatype);
 
     useshaderbyname("tqaaresolve");
 }
@@ -110,6 +116,7 @@ void setuptqaa(int w, int h)
 
 void cleanuptqaa()
 {
+    tqaatype = -1;
     loopi(2) tqaaviews[i].cleanup();
 }
 
@@ -132,15 +139,17 @@ GLuint fxaafbo = 0, fxaatex = 0;
 
 extern int fxaaquality, fxaagreenluma;
 
+int fxaatype = -1;
 static Shader *fxaashader = NULL;
 
 void loadfxaashaders()
 {
-    loadhdrshaders(tqaa ? (tqaamovemask ? AA_VELOCITY_MASKED : AA_VELOCITY) : (!fxaagreenluma ? AA_LUMA : AA_UNUSED));
+    fxaatype = tqaatype >= 0 ? tqaatype : (!fxaagreenluma && !intel_texalpha_bug ? AA_LUMA : AA_UNUSED);
+    loadhdrshaders(fxaatype);
 
     string opts;
     int optslen = 0;
-    if(fxaagreenluma || tqaa) opts[optslen++] = 'g';
+    if(tqaa || fxaagreenluma || intel_texalpha_bug) opts[optslen++] = 'g';
     opts[optslen] = '\0';
 
     defformatstring(fxaaname, "fxaa%d%s", fxaaquality, opts);
@@ -149,6 +158,7 @@ void loadfxaashaders()
 
 void clearfxaashaders()
 {
+    fxaatype = -1;
     fxaashader = NULL;
 }
 
@@ -157,7 +167,7 @@ void setupfxaa(int w, int h)
     if(!fxaatex) glGenTextures(1, &fxaatex);
     if(!fxaafbo) glGenFramebuffers_(1, &fxaafbo);
     glBindFramebuffer_(GL_FRAMEBUFFER, fxaafbo);
-    createtexture(fxaatex, w, h, NULL, 3, 1, tqaa || !fxaagreenluma ? GL_RGBA8 : GL_RGB, GL_TEXTURE_RECTANGLE);
+    createtexture(fxaatex, w, h, NULL, 3, 1, tqaa || (!fxaagreenluma && !intel_texalpha_bug) ? GL_RGBA8 : GL_RGB, GL_TEXTURE_RECTANGLE);
     glFramebufferTexture2D_(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, fxaatex, 0);
     bindgdepth();
     if(glCheckFramebufferStatus_(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
@@ -200,19 +210,21 @@ int smaasubsampleorder = -1;
 
 extern int smaaquality, smaagreenluma, smaacoloredge, smaadepthmask, smaastencil;
 
+int smaatype = -1;
 static Shader *smaalumaedgeshader = NULL, *smaacoloredgeshader = NULL, *smaablendweightshader = NULL, *smaaneighborhoodshader = NULL;
 
 void loadsmaashaders(bool split = false)
 {
-    loadhdrshaders(split ? (tqaa ? (tqaamovemask ? AA_SPLIT_VELOCITY_MASKED : AA_SPLIT_VELOCITY) : (!smaagreenluma && !smaacoloredge ? AA_SPLIT_LUMA : AA_SPLIT)) :
-                           (tqaa ? (tqaamovemask ? AA_VELOCITY_MASKED : AA_VELOCITY) : (!smaagreenluma && !smaacoloredge ? AA_LUMA : AA_UNUSED)));
+    smaatype = tqaatype >= 0 ? tqaatype : (!smaagreenluma && !intel_texalpha_bug && !smaacoloredge ? AA_LUMA : AA_UNUSED);
+    if(split) smaatype += AA_SPLIT;
+    loadhdrshaders(smaatype);
 
     string opts;
     int optslen = 0;
     if(!hasTRG) opts[optslen++] = 'a';
     if(smaadepthmask || smaastencil) opts[optslen++] = 'd';
     if(split) opts[optslen++] = 's';
-    if(smaagreenluma || tqaa) opts[optslen++] = 'g';
+    if(tqaa || smaagreenluma || intel_texalpha_bug) opts[optslen++] = 'g';
     if(tqaa) opts[optslen++] = 't';
     opts[optslen] = '\0';
 
@@ -240,6 +252,7 @@ void loadsmaashaders(bool split = false)
 
 void clearsmaashaders()
 {
+    smaatype = -1;
     smaalumaedgeshader = NULL;
     smaacoloredgeshader = NULL;
     smaablendweightshader = NULL;
@@ -526,7 +539,7 @@ void setupsmaa(int w, int h)
         GLenum format = GL_RGB;
         switch(i)
         {
-            case 0: format = tqaa || (!smaagreenluma && !smaacoloredge) ? GL_RGBA8 : GL_RGB; break;
+            case 0: format = tqaa || (!smaagreenluma && !intel_texalpha_bug && !smaacoloredge) ? GL_RGBA8 : GL_RGB; break;
             case 1: format = hasTRG ? GL_RG8 : GL_RGBA8; break;
             case 2: case 3: format = GL_RGBA8; break;
         }
@@ -677,16 +690,15 @@ void dosmaa(GLuint outfbo = 0, bool split = false)
 
 void setupaa(int w, int h)
 {
+    if(tqaa && !tqaaviews[0].fbo[0]) setuptqaa(w, h);
+
     if(smaa) { if(!smaafbo[0]) setupsmaa(w, h); }
     else if(fxaa) { if(!fxaafbo) setupfxaa(w, h); }
-
-    if(tqaa && !tqaaviews[0].fbo[0]) setuptqaa(w, h);
 }
 
 matrix4 nojittermatrix;
-int aamask = -1;
 
-void jitteraa(bool init)
+void jitteraa()
 {
     nojittermatrix = projmatrix;
 
@@ -697,18 +709,49 @@ void jitteraa(bool init)
         if(multisampledaa()) { jitter.x *= 0.5f; jitter.y *= -0.5f; }
         projmatrix.jitter(jitter.x*2.0f/vieww, jitter.y*2.0f/viewh);
     }
-
-    if(init) aamask = -1;
 }
+
+int aamaskstencil = -1, aamask = -1;
 
 void setaamask(bool on)
 {
     int val = on && !drawtex ? 1 : 0;
     if(aamask == val) return;
 
+    if(!aamaskstencil)
+    {
+        glStencilOp(GL_KEEP, GL_KEEP, val ? GL_REPLACE : GL_KEEP);
+        if(aamask < 0)
+        {
+            glStencilFunc(GL_ALWAYS, 0x80, ~0);
+            glEnable(GL_STENCIL_TEST);
+        }
+    }
+    else if(aamaskstencil > 0)
+    {
+        if(val) glStencilFunc(GL_ALWAYS, 0x80 | aamaskstencil, ~0);
+        else if(aamask >= 0) glStencilFunc(GL_ALWAYS, aamaskstencil, ~0);
+    }
+
     aamask = val;
 
-    GLOBALPARAMF(aamask, aamask ? 1.0f : 0.0f);
+    GLOBALPARAMF(aamask, aamask);
+}
+
+void enableaamask(int stencil)
+{
+    aamask = -1;
+    aamaskstencil = !msaasamples && ghasstencil && tqaa && tqaamovemask && !drawtex ? stencil|avatarmask : -1;
+}
+
+void disableaamask()
+{
+    if(aamaskstencil >= 0 && aamask >= 0)
+    {
+        if(!aamaskstencil) glDisable(GL_STENCIL_TEST);
+        else if(aamask) glStencilFunc(GL_ALWAYS, aamaskstencil, ~0);
+        aamask = -1;
+    }
 }
 
 bool multisampledaa()
@@ -726,12 +769,11 @@ void doaa(GLuint outfbo, void (*resolve)(GLuint, int))
     if(smaa)
     {
         bool split = multisampledaa();
-        resolve(smaafbo[0], split ? (tqaa ? (tqaamovemask ? AA_SPLIT_VELOCITY_MASKED : AA_SPLIT_VELOCITY) : (!smaagreenluma && !smaacoloredge ? AA_SPLIT_LUMA : AA_SPLIT)) :
-                                    (tqaa ? (tqaamovemask ? AA_VELOCITY_MASKED : AA_VELOCITY) : (!smaagreenluma && !smaacoloredge ? AA_LUMA : AA_UNUSED)));
+        resolve(smaafbo[0], smaatype);
         dosmaa(outfbo, split);
     }
-    else if(fxaa) { resolve(fxaafbo, tqaa ? (tqaamovemask ? AA_VELOCITY_MASKED : AA_VELOCITY) : (!fxaagreenluma ? AA_LUMA : AA_UNUSED)); dofxaa(outfbo); }
-    else if(tqaa) { tqaaview &tv = tqaaviews[viewidx]; resolve(tv.fbo[0], tqaamovemask ? AA_VELOCITY_MASKED : AA_VELOCITY); dotqaa(tv, outfbo); }
+    else if(fxaa) { resolve(fxaafbo, fxaatype); dofxaa(outfbo); }
+    else if(tqaa) { tqaaview &tv = tqaaviews[viewidx]; resolve(tv.fbo[0], tqaatype); dotqaa(tv, outfbo); }
     else resolve(outfbo, AA_UNUSED);
 }
 

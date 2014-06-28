@@ -274,6 +274,7 @@ static void text_color(char c, char *stack, int size, int &sp, bvec colour, int 
             case '6': colour = bvec(255, 128,   0); break; // orange
             case '7': colour = bvec(255, 255, 255); break; // white
             case '8': colour = bvec( 80, 207, 229); break; // "Tesseract Blue"
+            case '9': colour = bvec(160, 240, 120); break;
 
             case 'A': colour = bvec(255, 224, 192); break; //apricot
             case 'B': colour = bvec(192,  96,   0); break; //brown
@@ -463,7 +464,7 @@ void draw_text(const char *str, float left, float top, int r, int g, int b, int 
         xtraverts += gle::end();
     }
     gle::disable();
-    if(oldshader == hudshader->detailshader)
+    if(oldshader == hudshader)
     {
         oldshader->bindprograms();
         gle::colorf(1, 1, 1);

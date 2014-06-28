@@ -43,9 +43,8 @@ struct PackNode
     void reserve(ushort tx, ushort ty, ushort tw, ushort th);
 };
 
-extern bvec ambientcolor, skylightcolor, sunlightcolor;
+extern bvec ambient, skylight, sunlight;
 extern float ambientscale, skylightscale, sunlightscale;
-extern int skylight, sunlight;
 extern float sunlightyaw, sunlightpitch;
 extern vec sunlightdir;
 extern int fullbright, fullbrightlevel;

@@ -102,11 +102,10 @@ void renderwaterfog(int mat, float surface)
 
     if((mat&MATF_VOLUME) == MAT_WATER)
     {
-        const bvec &deepcolor = getwaterdeepcolor(mat);
-        const bvec &deepfadecolor = getwaterdeepfadecolor(mat);
+        const bvec &deepcolor = getwaterdeepcolour(mat);
         int deep = getwaterdeep(mat);
         GLOBALPARAMF(waterdeepcolor, deepcolor.x*ldrscaleb, deepcolor.y*ldrscaleb, deepcolor.z*ldrscaleb);
-        vec deepfade = deepfadecolor.tocolor().mul(deep);
+        vec deepfade = getwaterdeepfade(mat).tocolor().mul(deep);
         GLOBALPARAMF(waterdeepfade,
             deepfade.x ? calcfogdensity(deepfade.x) : -1e4f,
             deepfade.y ? calcfogdensity(deepfade.y) : -1e4f,
@@ -154,7 +153,7 @@ static float whscale, whoffset;
     } \
     static inline void vertw(float v1, float v2, float v3) \
     { \
-        float angle = float((v1-wx1)*(v2-wy1))*float((v1-wx2)*(v2-wy2))*whscale+whoffset; \
+        float angle = (v1-wx1)*(v2-wy1)*(v1-wx2)*(v2-wy2)*whscale+whoffset; \
         float s = angle - int(angle) - 0.5f; \
         s *= 8 - fabs(s)*16; \
         float h = WATER_AMPLITUDE*s-WATER_OFFSET; \
@@ -222,7 +221,7 @@ VERTWN(vertln, {
     xtraverts += gle::end(); \
 }
 
-void rendervertwater(uint subdiv, int xo, int yo, int z, uint size, int mat)
+void rendervertwater(int subdiv, int xo, int yo, int z, int size, int mat)
 {
     wx1 = xo;
     wy1 = yo;
@@ -252,47 +251,40 @@ void rendervertwater(uint subdiv, int xo, int yo, int z, uint size, int mat)
     }
 }
 
-uint calcwatersubdiv(int x, int y, int z, uint size)
+int calcwatersubdiv(int x, int y, int z, int size)
 {
     float dist;
     if(camera1->o.x >= x && camera1->o.x < x + size &&
        camera1->o.y >= y && camera1->o.y < y + size)
         dist = fabs(camera1->o.z - float(z));
     else
-    {
-        vec t(x + size/2, y + size/2, z + size/2);
-        dist = t.dist(camera1->o) - size*1.42f/2;
-    }
-    uint subdiv = watersubdiv + int(dist) / (32 << waterlod);
-    if(subdiv >= 8*sizeof(subdiv))
-        subdiv = ~0;
-    else
-        subdiv = 1 << subdiv;
-    return subdiv;
+        dist = vec(x + size/2, y + size/2, z + size/2).dist(camera1->o) - size*1.42f/2;
+    int subdiv = watersubdiv + int(dist) / (32 << waterlod);
+    return subdiv >= 31 ? INT_MAX : 1<<subdiv;
 }
 
-uint renderwaterlod(int x, int y, int z, uint size, int mat)
+int renderwaterlod(int x, int y, int z, int size, int mat)
 {
-    if(size <= (uint)(32 << waterlod))
+    if(size <= (32 << waterlod))
     {
-        uint subdiv = calcwatersubdiv(x, y, z, size);
+        int subdiv = calcwatersubdiv(x, y, z, size);
         if(subdiv < size * 2) rendervertwater(min(subdiv, size), x, y, z, size, mat);
         return subdiv;
     }
     else
     {
-        uint subdiv = calcwatersubdiv(x, y, z, size);
+        int subdiv = calcwatersubdiv(x, y, z, size);
         if(subdiv >= size)
         {
             if(subdiv < size * 2) rendervertwater(size, x, y, z, size, mat);
             return subdiv;
         }
-        uint childsize = size / 2,
-             subdiv1 = renderwaterlod(x, y, z, childsize, mat),
-             subdiv2 = renderwaterlod(x + childsize, y, z, childsize, mat),
-             subdiv3 = renderwaterlod(x + childsize, y + childsize, z, childsize, mat),
-             subdiv4 = renderwaterlod(x, y + childsize, z, childsize, mat),
-             minsubdiv = subdiv1;
+        int childsize = size / 2,
+            subdiv1 = renderwaterlod(x, y, z, childsize, mat),
+            subdiv2 = renderwaterlod(x + childsize, y, z, childsize, mat),
+            subdiv3 = renderwaterlod(x + childsize, y + childsize, z, childsize, mat),
+            subdiv4 = renderwaterlod(x, y + childsize, z, childsize, mat),
+            minsubdiv = subdiv1;
         minsubdiv = min(minsubdiv, subdiv2);
         minsubdiv = min(minsubdiv, subdiv3);
         minsubdiv = min(minsubdiv, subdiv4);
@@ -321,7 +313,7 @@ uint renderwaterlod(int x, int y, int z, uint size, int mat)
         xtraverts += 4; \
     }
 
-void renderflatwater(int x, int y, int z, uint rsize, uint csize, int mat)
+void renderflatwater(int x, int y, int z, int rsize, int csize, int mat)
 {
     switch(mat)
     {
@@ -340,44 +332,21 @@ VARFP(vertwater, 0, 1, 1, allchanged());
 static inline void renderwater(const materialsurface &m, int mat = MAT_WATER)
 {
     if(!vertwater || drawtex == DRAWTEX_MINIMAP) renderflatwater(m.o.x, m.o.y, m.o.z, m.rsize, m.csize, mat);
-    else if(renderwaterlod(m.o.x, m.o.y, m.o.z, m.csize, mat) >= (uint)m.csize * 2)
+    else if(renderwaterlod(m.o.x, m.o.y, m.o.z, m.csize, mat) >= int(m.csize) * 2)
         rendervertwater(m.csize, m.o.x, m.o.y, m.o.z, m.csize, mat);
 }
 
 #define WATERVARS(name) \
-    bvec name##color(0x01, 0x21, 0x2C), name##deepcolor(0x01, 0x0A, 0x10), name##deepfadecolor(0x60, 0xBF, 0xFF), name##refractcolor(0xFF, 0xFF, 0xFF), name##fallcolor(0, 0, 0), name##fallrefractcolor(0xFF, 0xFF, 0xFF); \
-    HVARFR(name##colour, 0, 0x01212C, 0xFFFFFF, \
-    { \
-        if(!name##colour) name##colour = 0x01212C; \
-        name##color = bvec::hexcolor(name##colour); \
-    }); \
-    HVARFR(name##deepcolour, 0, 0x010A10, 0xFFFFFF, \
-    { \
-        if(!name##deepcolour) name##deepcolour = 0x010A10; \
-        name##deepcolor = bvec::hexcolor(name##deepcolour); \
-    }); \
-    HVARFR(name##deepfade, 0, 0x60BFFF, 0xFFFFFF, \
-    { \
-        if(!name##deepfade) name##deepfade = 0x60BFFF; \
-        name##deepfadecolor = bvec::hexcolor(name##deepfade); \
-    }); \
-    HVARFR(name##refractcolour, 0, 0xFFFFFF, 0xFFFFFF, \
-    { \
-        if(!name##refractcolour) name##refractcolour = 0xFFFFFF; \
-        name##refractcolor = bvec::hexcolor(name##refractcolour); \
-    }); \
+    CVAR0R(name##colour, 0x01212C); \
+    CVAR0R(name##deepcolour, 0x010A10); \
+    CVAR0R(name##deepfade, 0x60BFFF); \
+    CVAR0R(name##refractcolour, 0xFFFFFF); \
     VARR(name##fog, 0, 30, 10000); \
     VARR(name##deep, 0, 50, 10000); \
     VARR(name##spec, 0, 150, 200); \
     FVARR(name##refract, 0, 0.1f, 1e3f); \
-    HVARFR(name##fallcolour, 0, 0, 0xFFFFFF, \
-    { \
-        name##fallcolor = bvec::hexcolor(name##fallcolour); \
-    }); \
-    HVARFR(name##fallrefractcolour, 0, 0, 0xFFFFFF, \
-    { \
-        name##fallrefractcolor = bvec::hexcolor(name##fallrefractcolour); \
-    }); \
+    CVARR(name##fallcolour, 0); \
+    CVARR(name##fallrefractcolour, 0); \
     VARR(name##fallspec, 0, 150, 200); \
     FVARR(name##fallrefract, 0, 0.1f, 1e3f);
 
@@ -386,18 +355,12 @@ WATERVARS(water2)
 WATERVARS(water3)
 WATERVARS(water4)
 
-GETMATIDXVAR(water, colour, int)
-GETMATIDXVAR(water, color, const bvec &)
-GETMATIDXVAR(water, deepcolour, int)
-GETMATIDXVAR(water, deepcolor, const bvec &)
-GETMATIDXVAR(water, deepfade, int)
-GETMATIDXVAR(water, deepfadecolor, const bvec &)
-GETMATIDXVAR(water, refractcolour, int)
-GETMATIDXVAR(water, refractcolor, const bvec &)
-GETMATIDXVAR(water, fallcolour, int)
-GETMATIDXVAR(water, fallcolor, const bvec &)
-GETMATIDXVAR(water, fallrefractcolour, int)
-GETMATIDXVAR(water, fallrefractcolor, const bvec &)
+GETMATIDXVAR(water, colour, const bvec &)
+GETMATIDXVAR(water, deepcolour, const bvec &)
+GETMATIDXVAR(water, deepfade, const bvec &)
+GETMATIDXVAR(water, refractcolour, const bvec &)
+GETMATIDXVAR(water, fallcolour, const bvec &)
+GETMATIDXVAR(water, fallrefractcolour, const bvec &)
 GETMATIDXVAR(water, fog, int)
 GETMATIDXVAR(water, deep, int)
 GETMATIDXVAR(water, spec, int)
@@ -406,12 +369,7 @@ GETMATIDXVAR(water, fallspec, int)
 GETMATIDXVAR(water, fallrefract, float)
 
 #define LAVAVARS(name) \
-    bvec name##color(0xFF, 0x40, 0x00); \
-    HVARFR(name##colour, 0, 0xFF4000, 0xFFFFFF, \
-    { \
-        if(!name##colour) name##colour = 0xFF4000; \
-        name##color = bvec::hexcolor(name##colour); \
-    }); \
+    CVAR0R(name##colour, 0xFF4000); \
     VARR(name##fog, 0, 50, 10000); \
     FVARR(name##glowmin, 0, 0.25f, 2); \
     FVARR(name##glowmax, 0, 1.0f, 2); \
@@ -422,8 +380,7 @@ LAVAVARS(lava2)
 LAVAVARS(lava3)
 LAVAVARS(lava4)
 
-GETMATIDXVAR(lava, colour, int)
-GETMATIDXVAR(lava, color, const bvec &)
+GETMATIDXVAR(lava, colour, const bvec &)
 GETMATIDXVAR(lava, fog, int)
 GETMATIDXVAR(lava, glowmin, float)
 GETMATIDXVAR(lava, glowmax, float)
@@ -519,7 +476,7 @@ void renderlava()
     {
         if(lavasurfs[k].empty() && (drawtex == DRAWTEX_MINIMAP || lavafallsurfs[k].empty())) continue;
 
-        MSlot &lslot = lookupmaterialslot(MAT_LAVA+k);
+        MatSlot &lslot = lookupmaterialslot(MAT_LAVA+k);
 
         SETSHADER(lava);
         float t = lastmillis/2000.0f;
@@ -584,7 +541,7 @@ void renderwaterfalls()
         vector<materialsurface> &surfs = waterfallsurfs[k];
         if(surfs.empty()) continue;
 
-        MSlot &wslot = lookupmaterialslot(MAT_WATER+k);
+        MatSlot &wslot = lookupmaterialslot(MAT_WATER+k);
 
         Texture *tex = wslot.sts.inrange(2) ? wslot.sts[2].t : (wslot.sts.inrange(0) ? wslot.sts[0].t : notexture);
         float angle = fmod(float(lastmillis/600.0f/(2*M_PI)), 1.0f),
@@ -595,9 +552,9 @@ void renderwaterfalls()
         wfxscale = TEX_SCALE/(tex->xs*wslot.scale);
         wfyscale = TEX_SCALE/(tex->ys*wslot.scale);
 
-        bvec color = getwaterfallcolor(k), refractcolor = getwaterfallrefractcolor(k);
-        if(color.iszero()) color = getwatercolor(k);
-        if(refractcolor.iszero()) refractcolor = getwaterrefractcolor(k);
+        bvec color = getwaterfallcolour(k), refractcolor = getwaterfallrefractcolour(k);
+        if(color.iszero()) color = getwatercolour(k);
+        if(refractcolor.iszero()) refractcolor = getwaterrefractcolour(k);
         float colorscale = (0.5f/255), refractscale = colorscale/ldrscale;
         float refract = getwaterfallrefract(k);
         int spec = getwaterfallspec(k);
@@ -634,7 +591,7 @@ void renderwater()
         vector<materialsurface> &surfs = watersurfs[k];
         if(surfs.empty()) continue;
 
-        MSlot &wslot = lookupmaterialslot(MAT_WATER+k);
+        MatSlot &wslot = lookupmaterialslot(MAT_WATER+k);
 
         Texture *tex = wslot.sts.inrange(0) ? wslot.sts[0].t: notexture;
         wxscale = TEX_SCALE/(tex->xs*wslot.scale);
@@ -653,17 +610,16 @@ void renderwater()
         glActiveTexture_(GL_TEXTURE0);
 
         float colorscale = 0.5f/255, refractscale = colorscale/ldrscale, reflectscale = 0.5f/ldrscale;
-        const bvec &color = getwatercolor(k);
-        const bvec &deepcolor = getwaterdeepcolor(k);
-        const bvec &deepfadecolor = getwaterdeepfadecolor(k);
-        const bvec &refractcolor = getwaterrefractcolor(k);
+        const bvec &color = getwatercolour(k);
+        const bvec &deepcolor = getwaterdeepcolour(k);
+        const bvec &refractcolor = getwaterrefractcolour(k);
         int fog = getwaterfog(k), deep = getwaterdeep(k), spec = getwaterspec(k);
         float refract = getwaterrefract(k);
         GLOBALPARAMF(watercolor, color.x*colorscale, color.y*colorscale, color.z*colorscale);
         GLOBALPARAMF(waterdeepcolor, deepcolor.x*colorscale, deepcolor.y*colorscale, deepcolor.z*colorscale);
         float fogdensity = fog ? calcfogdensity(fog) : -1e4f;
         GLOBALPARAMF(waterfog, fogdensity);
-        vec deepfade = deepfadecolor.tocolor().mul(deep);
+        vec deepfade = getwaterdeepfade(k).tocolor().mul(deep);
         GLOBALPARAMF(waterdeepfade,
             deepfade.x ? calcfogdensity(deepfade.x) : -1e4f,
             deepfade.y ? calcfogdensity(deepfade.y) : -1e4f,

@@ -68,6 +68,7 @@ struct tagval : identval
 
     void setint(int val) { type = VAL_INT; i = val; }
     void setfloat(float val) { type = VAL_FLOAT; f = val; }
+    void setnumber(double val) { i = int(val); if(val == i) type = VAL_INT; else { type = VAL_FLOAT; f = val; } }
     void setstr(char *val) { type = VAL_STR; s = val; }
     void setnull() { type = VAL_NULL; i = 0; }
     void setcode(const uint *val) { type = VAL_CODE; code = val; }
@@ -78,6 +79,7 @@ struct tagval : identval
     const char *getstr() const;
     int getint() const;
     float getfloat() const;
+    double getnumber() const;
     bool getbool() const;
     void getval(tagval &r) const;
 
@@ -189,6 +191,7 @@ struct ident
 
     float getfloat() const;
     int getint() const;
+    double getnumber() const;
     const char *getstr() const;
     void getval(tagval &r) const;
     void getcstr(tagval &v) const;
@@ -202,6 +205,8 @@ extern const char *intstr(int v);
 extern void intret(int v);
 extern const char *floatstr(float v);
 extern void floatret(float v);
+extern const char *numberstr(double v);
+extern void numberret(double v);
 extern void stringret(char *s);
 extern void result(tagval &v);
 extern void result(const char *s);
@@ -211,16 +216,25 @@ static inline int parseint(const char *s)
     return int(strtoul(s, NULL, 0));
 }
 
-static inline float parsefloat(const char *s)
-{
-    // not all platforms (windows) can parse hexadecimal integers via strtod
-    char *end;
-    double val = strtod(s, &end);
-    return val || end==s || (*end!='x' && *end!='X') ? float(val) : float(parseint(s));
-}
+#define PARSEFLOAT(name, type) \
+    static inline type parse##name(const char *s) \
+    { \
+        /* not all platforms (windows) can parse hexadecimal integers via strtod */ \
+        char *end; \
+        double val = strtod(s, &end); \
+        return val || end==s || (*end!='x' && *end!='X') ? type(val) : type(parseint(s)); \
+    }
+PARSEFLOAT(float, float)
+PARSEFLOAT(number, double)
 
 static inline void intformat(char *buf, int v, int len = 20) { nformatstring(buf, len, "%d", v); }
 static inline void floatformat(char *buf, float v, int len = 20) { nformatstring(buf, len, v==int(v) ? "%.1f" : "%.7g", v); }
+static inline void numberformat(char *buf, double v, int len = 20)
+{
+    int i = int(v);
+    if(v == i) nformatstring(buf, len, "%d", i);
+    else nformatstring(buf, len, "%.7g", v);
+}
 
 static inline const char *getstr(const identval &v, int type)
 {
@@ -235,31 +249,22 @@ static inline const char *getstr(const identval &v, int type)
 inline const char *tagval::getstr() const { return ::getstr(*this, type); }
 inline const char *ident::getstr() const { return ::getstr(val, valtype); }
 
-static inline int getint(const identval &v, int type)
-{
-    switch(type)
-    {
-        case VAL_INT: return v.i;
-        case VAL_FLOAT: return int(v.f);
-        case VAL_STR: case VAL_MACRO: case VAL_CSTR: return parseint(v.s);
-        default: return 0;
-    }
-}
-inline int tagval::getint() const { return ::getint(*this, type); }
-inline int ident::getint() const { return ::getint(val, valtype); }
-
-static inline float getfloat(const identval &v, int type)
-{
-    switch(type)
-    {
-        case VAL_FLOAT: return v.f;
-        case VAL_INT: return float(v.i);
-        case VAL_STR: case VAL_MACRO: case VAL_CSTR: return parsefloat(v.s);
-        default: return 0.0f;
-    }
-}
-inline float tagval::getfloat() const { return ::getfloat(*this, type); }
-inline float ident::getfloat() const { return ::getfloat(val, valtype); }
+#define GETNUMBER(name, ret) \
+    static inline ret get##name(const identval &v, int type) \
+    { \
+        switch(type) \
+        { \
+            case VAL_FLOAT: return ret(v.f); \
+            case VAL_INT: return ret(v.i); \
+            case VAL_STR: case VAL_MACRO: case VAL_CSTR: return parse##name(v.s); \
+            default: return ret(0); \
+        } \
+    } \
+    inline ret tagval::get##name() const { return ::get##name(*this, type); } \
+    inline ret ident::get##name() const { return ::get##name(val, valtype); }
+GETNUMBER(int, int)
+GETNUMBER(float, float)
+GETNUMBER(number, double)
 
 static inline void getval(const identval &v, int type, tagval &r)
 {
@@ -300,8 +305,8 @@ inline void ident::getcval(tagval &v) const
 }
 
 // nasty macros for registering script functions, abuses globals to avoid excessive infrastructure
-#define KEYWORD(name, type) static bool __dummy_##type = addcommand(#name, (identfun)NULL, NULL, type)
-#define COMMANDKN(name, type, fun, nargs) static bool __dummy_##fun = addcommand(#name, (identfun)fun, nargs, type)
+#define KEYWORD(name, type) UNUSED static bool __dummy_##type = addcommand(#name, (identfun)NULL, NULL, type)
+#define COMMANDKN(name, type, fun, nargs) UNUSED static bool __dummy_##fun = addcommand(#name, (identfun)fun, nargs, type)
 #define COMMANDK(name, type, nargs) COMMANDKN(name, type, name, nargs)
 #define COMMANDN(name, fun, nargs) COMMANDKN(name, ID_COMMAND, fun, nargs)
 #define COMMAND(name, nargs) COMMANDN(name, name, nargs)
@@ -320,6 +325,9 @@ inline void ident::getcval(tagval &v) const
 #define VARFR(name, min, cur, max, body) _VARF(name, name, min, cur, max, body, IDF_OVERRIDE)
 #define VARFNP(name, global, min, cur, max, body) _VARF(name, global, min, cur, max, body, IDF_PERSIST)
 #define VARFNR(name, global, min, cur, max, body) _VARF(name, global, min, cur, max, body, IDF_OVERRIDE)
+#define _VARM(name, min, cur, max, scale, persist) int name = cur * scale; _VARF(name, _##name, min, cur, max, { name = _##name * scale; }, persist)
+#define VARMP(name, min, cur, max, scale) _VARM(name, min, cur, max, scale, IDF_PERSIST)
+#define VARMR(name, min, cur, max, scale) _VARM(name, min, cur, max, scale, IDF_OVERRIDE)
 
 #define _HVAR(name, global, min, cur, max, persist)  int global = variable(#name, min, cur, max, &global, NULL, persist | IDF_HEX)
 #define HVARN(name, global, min, cur, max) _HVAR(name, global, min, cur, max, 0)
@@ -335,6 +343,22 @@ inline void ident::getcval(tagval &v) const
 #define HVARFR(name, min, cur, max, body) _HVARF(name, name, min, cur, max, body, IDF_OVERRIDE)
 #define HVARFNP(name, global, min, cur, max, body) _HVARF(name, global, min, cur, max, body, IDF_PERSIST)
 #define HVARFNR(name, global, min, cur, max, body) _HVARF(name, global, min, cur, max, body, IDF_OVERRIDE)
+
+#define _CVAR(name, cur, init, body, persist) bvec name = bvec::hexcolor(cur); _HVARF(name, _##name, 0, cur, 0xFFFFFF, { init; name = bvec::hexcolor(_##name); body; }, persist)
+#define CVARP(name, cur) _CVAR(name, cur, , , IDF_PERSIST)
+#define CVARR(name, cur) _CVAR(name, cur, , , IDF_OVERRIDE)
+#define CVARFP(name, cur, body) _CVAR(name, cur, , body, IDF_PERSIST)
+#define CVARFR(name, cur, body) _CVAR(name, cur, , body, IDF_OVERRIDE)
+#define _CVAR0(name, cur, body, persist) _CVAR(name, cur, { if(!_##name) _##name = cur; }, body, persist)
+#define CVAR0P(name, cur) _CVAR0(name, cur, , IDF_PERSIST)
+#define CVAR0R(name, cur) _CVAR0(name, cur, , IDF_OVERRIDE)
+#define CVAR0FP(name, cur, body) _CVAR0(name, cur, body, IDF_PERSIST)
+#define CVAR0FR(name, cur, body) _CVAR0(name, cur, body, IDF_OVERRIDE)
+#define _CVAR1(name, cur, body, persist) _CVAR(name, cur, { if(_##name <= 255) _##name |= (_##name<<8) | (_##name<<16); }, body, persist)
+#define CVAR1P(name, cur) _CVAR1(name, cur, , IDF_PERSIST)
+#define CVAR1R(name, cur) _CVAR1(name, cur, , IDF_OVERRIDE)
+#define CVAR1FP(name, cur, body) _CVAR1(name, cur, body, IDF_PERSIST)
+#define CVAR1FR(name, cur, body) _CVAR1(name, cur, body, IDF_OVERRIDE)
 
 #define _FVAR(name, global, min, cur, max, persist) float global = fvariable(#name, min, cur, max, &global, NULL, persist)
 #define FVARN(name, global, min, cur, max) _FVAR(name, global, min, cur, max, 0)

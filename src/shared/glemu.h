@@ -52,6 +52,7 @@ namespace gle
     GLE_INITATTRIBF(color, ATTRIB_COLOR)
     GLE_INITATTRIBN(color, ATTRIB_COLOR, ub, uchar, 255)
     static inline void color(const bvec &v, uchar alpha = 255) { glVertexAttrib4Nub_(ATTRIB_COLOR, v.x, v.y, v.z, alpha); }
+    static inline void color(const bvec4 &v) { glVertexAttrib4Nubv_(ATTRIB_COLOR, v.v); }
     GLE_INITATTRIBF(texcoord0, ATTRIB_TEXCOORD0)
     GLE_INITATTRIBF(texcoord1, ATTRIB_TEXCOORD1)
     static inline void normal(float x, float y, float z) { glVertexAttrib4f_(ATTRIB_NORMAL, x, y, z, 0.0f); }
@@ -153,6 +154,7 @@ namespace gle
     static inline void attrib(const ivec4 &v) { attribi(v.x, v.y, v.z, v.w); }
     static inline void attrib(const bvec &b) { attribub(b.x, b.y, b.z); }
     static inline void attrib(const bvec &b, uchar w) { attribub(b.x, b.y, b.z, w); }
+    static inline void attrib(const bvec4 &b) { attribub(b.x, b.y, b.z, b.w); }
 
     extern int end();
     extern void disable();

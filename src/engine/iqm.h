@@ -332,7 +332,7 @@ struct iqm : skelmodel, skelloader<iqm>
             if(hdr.version != 2) goto error;
             if(hdr.filesize > (16<<20)) goto error; // sanity check... don't load files bigger than 16 MB
             buf = new uchar[hdr.filesize];
-            if(f->read(buf + sizeof(hdr), hdr.filesize - sizeof(hdr)) != int(hdr.filesize - sizeof(hdr))) goto error;
+            if(f->read(buf + sizeof(hdr), hdr.filesize - sizeof(hdr)) != hdr.filesize - sizeof(hdr)) goto error;
 
             if(doloadmesh && !loadiqmmeshes(filename, hdr, buf)) goto error;
             if(doloadanim && !loadiqmanims(filename, hdr, buf)) goto error;

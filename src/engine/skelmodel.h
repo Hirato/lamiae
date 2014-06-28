@@ -342,15 +342,18 @@ struct skelmodel : animmodel
                 T &dst = vdata[i];
                 const dualquat &b = (src.interpindex < blendoffset ? bdata1 : bdata2)[src.interpindex];
                 dst.pos = b.transform(src.pos);
-                dst.tangent = b.transform(src.tangent);
+                quat q = b.transform(src.tangent);
+                fixqtangent(q, src.tangent.w);
+                dst.tangent = q;
             }
         }
 
-        void setshader(Shader *s)
+        void setshader(Shader *s, int row)
         {
             skelmeshgroup *g = (skelmeshgroup *)group;
-            if(!g->skel->usegpuskel) s->set();
-            else s->setvariant(min(maxweights, g->vweights)-1, 0);
+            if(row) s->setvariant(g->skel->usegpuskel ? min(maxweights, g->vweights) : 0, row);
+            else if(g->skel->usegpuskel) s->setvariant(min(maxweights, g->vweights)-1, 0);
+            else s->set();
         }
 
         void render(const animstate *as, skin &s, vbocacheentry &vc)

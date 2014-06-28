@@ -44,10 +44,13 @@
 #endif
 
 #ifndef STANDALONE
-#include <SDL.h>
-#include <SDL_opengl.h>
   #ifdef __APPLE__
-  #define main SDL_main
+    #include "SDL2/SDL.h"
+    #include "SDL2/SDL_opengl.h"
+    #define main SDL_main
+  #else
+    #include <SDL.h>
+    #include <SDL_opengl.h>
   #endif
 #endif
 
@@ -55,19 +58,11 @@
 
 #include <zlib.h>
 
-#ifdef __sun__
-#undef sun
-#undef MAXNAMELEN
-#ifdef queue
-  #undef queue
-#endif
-#define queue __squeue
-#endif
-
 #include "tools.h"
 #include "geom.h"
 #include "ents.h"
 #include "command.h"
+
 #ifndef STANDALONE
 #include "glexts.h"
 #include "glemu.h"

@@ -5,7 +5,7 @@ extern int lastmillis;                  // last time
 extern int elapsedtime;                 // elapsed frame time
 extern int totalmillis;                 // total elapsed time
 extern uint totalsecs;
-extern bvec watercolor;
+extern bvec watercolour;
 extern char *version;
 
 enum
@@ -42,7 +42,7 @@ enum // cube empty-space materials
 #define isdeadly(mat) ((mat)==MAT_LAVA)
 
 extern void lightent(extentity &e, float height = 8.0f);
-extern void lightreaching(const vec &target, vec &color, vec &dir, bool fast = false, extentity *e = 0, float ambient = 0.1f);
+extern void lightreaching(const vec &target, vec &color, vec &dir, bool fast = false, extentity *e = 0, float minambient = 0.1f);
 
 enum { RAY_BB = 1, RAY_POLY = 3, RAY_ALPHAPOLY = 7, RAY_ENTS = 9, RAY_CLIPMAT = 16, RAY_SKIPFIRST = 32, RAY_EDITMAT = 64, RAY_SHADOW = 128, RAY_PASS = 256, RAY_SKIPSKY = 512 };
 
@@ -172,7 +172,7 @@ extern void printfvar(ident *id, float f);
 extern void printsvar(ident *id, const char *s);
 extern int clampvar(ident *id, int i, int minval, int maxval);
 extern float clampfvar(ident *id, float f, float minval, float maxval);
-extern void loopiter(ident *id, identstack &stack, tagval &v);
+extern void loopiter(ident *id, identstack &stack, const tagval &v);
 extern void loopend(ident *id, identstack &stack);
 
 #define loopstart(id, stack) if((id)->type != ID_ALIAS) return; identstack stack;
@@ -342,22 +342,22 @@ extern void removetrackedparticles(physent *owner = NULL);
 extern void regularshape(int type, int radius, int color, int dir, int num, int fade, const vec &p, float size = 4.0f, float vel = 200.0f, int gravity = 2 );
 extern void regularlensflare(vec o, uchar r, uchar g, uchar b, bool sun = false, bool sparkle = false, int sizemod = 100);
 
-// decal
+// stain
 enum
 {
-    DECAL_BURN = 0, //activate when colision detection for particles are improved
-    DECAL_BLOOD,
-    DECAL_STAIN,
-    DECAL_RIPPLE,
-    DECAL_LEAVES,
-    DECAL_MAX
+    STAIN_BURN = 0, //activate when colision detection for particles are improved
+    STAIN_BLOOD,
+    STAIN_STAIN,
+    STAIN_RIPPLE,
+    STAIN_LEAVES,
+    STAIN_MAX
 };
 
-extern void adddecal(int type, const vec &center, const vec &surface, float radius, const bvec &color = bvec(0xFF, 0xFF, 0xFF), int info = 0);
+extern void addstain(int type, const vec &center, const vec &surface, float radius, const bvec &color = bvec(0xFF, 0xFF, 0xFF), int info = 0);
 
-static inline void adddecal(int type, const vec &center, const vec &surface, float radius, int color, int info = 0)
+static inline void addstain(int type, const vec &center, const vec &surface, float radius, int color, int info = 0)
 {
-    adddecal(type, center, surface, radius, bvec::hexcolor(color), info);
+    addstain(type, center, surface, radius, bvec::hexcolor(color), info);
 }
 
 // worldio

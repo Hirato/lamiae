@@ -127,8 +127,8 @@ static float disttoent(octaentities *oc, const vec &o, const vec &ray, float rad
     float dist = radius, f = 0.0f;
     const vector<extentity *> &ents = entities::getents();
 
-    #define entintersect(mask, type, func) {\
-        if((mode&(mask))==(mask)) loopv(oc->type) \
+    #define entintersect(type, func) do { \
+        loopv(oc->type) \
         { \
             extentity &e = *ents[oc->type[i]]; \
             if(!(e.flags&EF_OCTA) || &e==t) continue; \
@@ -140,21 +140,24 @@ static float disttoent(octaentities *oc, const vec &o, const vec &ray, float rad
                 hitorient = orient; \
             } \
         } \
-    }
+    } while(0)
 
-    entintersect(RAY_POLY, mapmodels,
+    if((mode&RAY_POLY) == RAY_POLY) entintersect(mapmodels,
+    {
         if(!mmintersect(e, o, ray, radius, mode, f)) continue;
-    );
+    });
 
-    entintersect(RAY_ENTS, other,
-        entselectionbox(e, eo, es);
-        if(!rayboxintersect(eo, es, o, ray, f, orient)) continue;
-    );
+    #define entselintersect(type) entintersect(type, { \
+        entselectionbox(e, eo, es); \
+        if(!rayboxintersect(eo, es, o, ray, f, orient)) continue; \
+    })
 
-    entintersect(RAY_ENTS, mapmodels,
-        entselectionbox(e, eo, es);
-        if(!rayboxintersect(eo, es, o, ray, f, orient)) continue;
-    );
+    if((mode&RAY_ENTS) == RAY_ENTS)
+    {
+        entselintersect(other);
+        entselintersect(mapmodels);
+        entselintersect(decals);
+    }
 
     return dist;
 }

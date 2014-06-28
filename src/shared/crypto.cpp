@@ -320,34 +320,34 @@ template<int BI_DIGITS> struct bigint
         return *this;
     }
 
-    template<int X_DIGITS> bigint &rshift(const bigint<X_DIGITS> &x, int n)
+    bigint &rshift(int n)
     {
         if(!len || n<=0) return *this;
+        if(n >= len*BI_DIGIT_BITS) { len = 0; return *this; }
         int dig = (n-1)/BI_DIGIT_BITS;
         n = ((n-1) % BI_DIGIT_BITS)+1;
-        digit carry = digit(x.digits[dig]>>n);
-        for(int i = dig+1; i < x.len; i++)
+        digit carry = digit(digits[dig]>>n);
+        for(int i = dig+1; i < len; i++)
         {
-            digit tmp = x.digits[i];
+            digit tmp = digits[i];
             digits[i-dig-1] = digit((tmp<<(BI_DIGIT_BITS-n)) | carry);
             carry = digit(tmp>>n);
         }
         digits[len-dig-1] = carry;
-        len -= dig + (n>>BI_DIGIT_BITS);
+        len -= dig + (n/BI_DIGIT_BITS);
         shrink();
         return *this;
     }
-    bigint &rshift(int n) { return rshift(*this, n); }
 
-    template<int X_DIGITS> bigint &lshift(const bigint<X_DIGITS> &x, int n)
+    bigint &lshift(int n)
     {
         if(!len || n<=0) return *this;
         int dig = n/BI_DIGIT_BITS;
         n %= BI_DIGIT_BITS;
         digit carry = 0;
-        for(int i = len-1; i>=0; i--)
+        loopirev(len)
         {
-            digit tmp = x.digits[i];
+            digit tmp = digits[i];
             digits[i+dig] = digit((tmp<<n) | carry);
             carry = digit(tmp>>(BI_DIGIT_BITS-n));
         }
@@ -356,7 +356,6 @@ template<int BI_DIGITS> struct bigint
         if(dig) memset(digits, 0, dig*sizeof(digit));
         return *this;
     }
-    bigint &lshift(int n) { return lshift(*this, n); }
 
     void zerodigits(int i, int n)
     {
@@ -390,7 +389,7 @@ template<int BI_DIGITS> struct bigint
     template<int Y_DIGITS> bool operator==(const bigint<Y_DIGITS> &y) const
     {
         if(len!=y.len) return false;
-        for(int i = len-1; i>=0; i--) if(digits[i]!=y.digits[i]) return false;
+        loopirev(len) if(digits[i]!=y.digits[i]) return false;
         return true;
     }
     template<int Y_DIGITS> bool operator!=(const bigint<Y_DIGITS> &y) const { return !(*this==y); }
@@ -398,7 +397,7 @@ template<int BI_DIGITS> struct bigint
     {
         if(len<y.len) return true;
         if(len>y.len) return false;
-        for(int i = len-1; i>=0; i--)
+        loopirev(len)
         {
             if(digits[i]<y.digits[i]) return true;
             if(digits[i]>y.digits[i]) return false;
@@ -445,13 +444,12 @@ struct gfield : gfint
     template<int X_DIGITS> gfield &mul2(const bigint<X_DIGITS> &x) { return add(x, x); }
     gfield &mul2() { return mul2(*this); }
 
-    template<int X_DIGITS> gfield &div2(const bigint<X_DIGITS> &x)
+    gfield &div2()
     {
-        if(hasbit(0)) { gfint::add(x, P); rshift(1); }
-        else rshift(x, 1);
+        if(hasbit(0)) gfint::add(*this, P);
+        rshift(1);
         return *this;
     }
-    gfield &div2() { return div2(*this); }
 
     template<int X_DIGITS, int Y_DIGITS> gfield &sub(const bigint<X_DIGITS> &x, const bigint<Y_DIGITS> &y)
     {
@@ -753,7 +751,7 @@ struct ecjacobian
     template<int Q_DIGITS> void mul(const ecjacobian &p, const bigint<Q_DIGITS> &q)
     {
         *this = origin;
-        for(int i = q.numbits()-1; i >= 0; i--)
+        loopirev(q.numbits())
         {
             mul2();
             if(q.hasbit(i)) add(p);
@@ -864,8 +862,8 @@ bool hashstring(const char *str, char *result, int maxlen)
     loopi(sizeof(hv.bytes))
     {
         uchar c = hv.bytes[i];
-        *result++ = "0123456789abcdef"[c&0xF];
         *result++ = "0123456789abcdef"[c>>4];
+        *result++ = "0123456789abcdef"[c&0xF];
     }
     *result = '\0';
     return true;
@@ -898,7 +896,7 @@ void freepubkey(void *pubkey)
 void *genchallenge(void *pubkey, const void *seed, int seedlen, vector<char> &challengestr)
 {
     tiger::hashval hash;
-    tiger::hash((const uchar *)seed, sizeof(seed), hash);
+    tiger::hash((const uchar *)seed, seedlen, hash);
     gfint challenge;
     memcpy(challenge.digits, hash.bytes, sizeof(hash.bytes));
     challenge.len = 8*sizeof(hash.bytes)/BI_DIGIT_BITS;

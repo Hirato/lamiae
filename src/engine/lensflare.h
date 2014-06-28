@@ -24,7 +24,7 @@ struct flare
 {
     vec o, center;
     float size;
-    uchar color[3];
+    bvec color;
     bool sparkle;
 };
 
@@ -59,9 +59,9 @@ struct flarerenderer : partrenderer
         f.o = o;
         f.center = center;
         f.size = size;
-        f.color[0] = uchar(r*mod);
-        f.color[1] = uchar(g*mod);
-        f.color[2] = uchar(b*mod);
+        f.color.x = uchar(r*mod);
+        f.color.y = uchar(g*mod);
+        f.color.z = uchar(b*mod);
         f.sparkle = sparkle;
     }
 
@@ -116,7 +116,7 @@ struct flarerenderer : partrenderer
         {
             const flare &f = flares[i];
             vec axis = vec(f.o).sub(f.center);
-            uchar color[4] = {f.color[0], f.color[1], f.color[2], 255};
+            bvec4 color(f.color, 255);
             loopj(f.sparkle?12:9)
             {
                 const flaretype &ft = flaretypes[j];
@@ -127,26 +127,27 @@ struct flarerenderer : partrenderer
                 {
                     shinetime = (shinetime + 1) % 10;
                     tex = 6+shinetime;
-                    color[0] = 0;
-                    color[1] = 0;
-                    color[2] = 0;
+                    color.r = 0;
+                    color.g = 0;
+                    color.b = 0;
                     color[-ft.type-1] = f.color[-ft.type-1]; //only want a single channel
                 }
-                color[3] = ft.alpha;
+                color.a = ft.alpha;
                 const float tsz = 0.25; //flares are aranged in 4x4 grid
                 float tx = tsz*(tex&0x03), ty = tsz*((tex>>2)&0x03);
                 gle::attribf(o.x+(-camright.x+camup.x)*sz, o.y+(-camright.y+camup.y)*sz, o.z+(-camright.z+camup.z)*sz);
                     gle::attribf(tx,     ty+tsz);
-                    gle::attribv<4, uchar>(color);
+                    gle::attrib(color);
                 gle::attribf(o.x+( camright.x+camup.x)*sz, o.y+( camright.y+camup.y)*sz, o.z+( camright.z+camup.z)*sz);
                     gle::attribf(tx+tsz, ty+tsz);
-                    gle::attribv<4, uchar>(color);
+                    gle::attrib(color);
                 gle::attribf(o.x+( camright.x-camup.x)*sz, o.y+( camright.y-camup.y)*sz, o.z+( camright.z-camup.z)*sz);
                     gle::attribf(tx+tsz, ty);
-                    gle::attribv<4, uchar>(color);
+                    gle::attrib(color);
                 gle::attribf(o.x+(-camright.x-camup.x)*sz, o.y+(-camright.y-camup.y)*sz, o.z+(-camright.z-camup.z)*sz);
                     gle::attribf(tx,     ty);
-                    gle::attribv<4, uchar>(color);            }
+                    gle::attrib(color);
+            }
         }
         gle::end();
         gle::disable();

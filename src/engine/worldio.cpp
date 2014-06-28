@@ -50,7 +50,67 @@ void getmapfilenames(const char *map)
 
 static void fixent(entity &e, int version)
 {
+    if(version <= 3)
+    {
+        if(e.type >= ET_DECAL) e.type++;
+    }
 }
+
+static bool loadmapheader(stream *f, const char *ogzname, mapheader &hdr, octaheader &ohdr)
+{
+    if(f->read(&hdr, 3*sizeof(int)) != 3*sizeof(int)) { conoutf(CON_ERROR, "map %s has malformatted header", ogzname); return false; }
+    lilswap(&hdr.version, 2);
+
+    if(!memcmp(hdr.magic, "MLAM", 4))
+    {
+        if(hdr.version>LAMIAEMAPVERSION) { conoutf(CON_ERROR, "map %s requires a newer version of Lamiae", ogzname); return false; }
+        if (hdr.version < 4)
+        {
+            if(f->read(&ohdr.worldsize, 7*sizeof(int)) != 7*sizeof(int)) { conoutf(CON_ERROR, "map %s has malformatted header", ogzname); return false; }
+            lilswap(&ohdr.worldsize, 7);
+            hdr.headersize = sizeof(hdr);
+            hdr.worldsize = ohdr.worldsize;
+            hdr.numents = ohdr.numents;
+            hdr.numpvs = ohdr.numpvs;
+            hdr.blendmap = ohdr.blendmap;
+            hdr.numvars = ohdr.numvars;
+            hdr.numvslots = ohdr.numvslots;
+        }
+        else
+        {
+            if(f->read(&hdr.worldsize, 6*sizeof(int)) != 6*sizeof(int)) { conoutf(CON_ERROR, "map %s has malformatted header", ogzname); return false; }
+            lilswap(&hdr.worldsize, 6);
+        }
+        if(hdr.worldsize <= 0|| hdr.numents < 0) { conoutf(CON_ERROR, "map %s has malformatted header", ogzname); return false; }
+    }
+    else if(!memcmp(hdr.magic, "TMAP", 4))
+    {
+        if(hdr.version!=TESSMAPVERSION) { conoutf(CON_ERROR, "Tesseract map %s uses map version %i, Lamiae only supports loading version %i", ogzname, hdr.version, TESSMAPVERSION); return false; }
+        if(f->read(&hdr.worldsize, 6*sizeof(int)) != 6*sizeof(int)) { conoutf(CON_ERROR, "map %s has malformatted header", ogzname); return false; }
+        lilswap(&hdr.worldsize, 6);
+        if(hdr.worldsize <= 0|| hdr.numents < 0) { conoutf(CON_ERROR, "map %s has malformatted header", ogzname); return false; }
+        hdr.version = 4;
+    }
+    else if(!memcmp(hdr.magic, "OCTA", 4))
+    {
+        if(hdr.version!=OCTAVERSION) { conoutf(CON_ERROR, "Octa map %s uses version %i, Lamiae only supports loading version %i", ogzname, hdr.version, OCTAVERSION); return false; }
+        if(f->read(&ohdr.worldsize, 7*sizeof(int)) != 7*sizeof(int)) { conoutf(CON_ERROR, "map %s has malformatted header", ogzname); return false; }
+        lilswap(&ohdr.worldsize, 7);
+        if(ohdr.worldsize <= 0|| ohdr.numents < 0) { conoutf(CON_ERROR, "map %s has malformatted header", ogzname); return false; }
+        //memcpy(hdr.magic, "MLAM", 4);
+        hdr.version = 3;
+        hdr.headersize = sizeof(hdr);
+        hdr.worldsize = ohdr.worldsize;
+        hdr.numents = ohdr.numents;
+        hdr.numpvs = ohdr.numpvs;
+        hdr.blendmap = ohdr.blendmap;
+        hdr.numvars = ohdr.numvars;
+        hdr.numvslots = ohdr.numvslots;
+    }
+    else { conoutf(CON_ERROR, "garbage in header or unsupported map format (%4.4s) for %s", hdr.magic, ogzname); return false; }
+
+    return true;
+ }
 
 #ifndef STANDALONE
 string ogzname, bakname, mcfname, acfname, acfbakname, picname;
@@ -108,7 +168,6 @@ enum { OCTSAV_CHILDREN = 0, OCTSAV_EMPTY, OCTSAV_SOLID, OCTSAV_NORMAL };
 
 #define LM_PACKW 512
 #define LM_PACKH 512
-enum { LMID_AMBIENT = 0, LMID_AMBIENT1, LMID_BRIGHT, LMID_BRIGHT1, LMID_DARK, LMID_DARK1, LMID_RESERVED };
 #define LAYER_DUP (1<<7)
 
 struct polysurfacecompat
@@ -135,25 +194,28 @@ void savec(cube *c, const ivec &o, int size, stream *f, bool nolms)
         {
             int oflags = 0, surfmask = 0, totalverts = 0;
             if(c[i].material!=MAT_AIR) oflags |= 0x40;
-            if(!nolms)
-            {
-                if(c[i].merged) oflags |= 0x80;
-                if(c[i].ext) loopj(6)
-                {
-                    const surfaceinfo &surf = c[i].ext->surfaces[j];
-                    if(!surf.used()) continue;
-                    oflags |= 0x20;
-                    surfmask |= 1<<j;
-                    totalverts += surf.totalverts();
-                }
-            }
-
             if(isempty(c[i])) f->putchar(oflags | OCTSAV_EMPTY);
-            else if(isentirelysolid(c[i])) f->putchar(oflags | OCTSAV_SOLID);
             else
             {
-                f->putchar(oflags | OCTSAV_NORMAL);
-                f->write(c[i].edges, 12);
+                if(!nolms)
+                {
+                    if(c[i].merged) oflags |= 0x80;
+                    if(c[i].ext) loopj(6)
+                    {
+                        const surfaceinfo &surf = c[i].ext->surfaces[j];
+                        if(!surf.used()) continue;
+                        oflags |= 0x20;
+                        surfmask |= 1<<j;
+                        totalverts += surf.totalverts();
+                    }
+                }
+
+                if(isentirelysolid(c[i])) f->putchar(oflags | OCTSAV_SOLID);
+                else
+                {
+                    f->putchar(oflags | OCTSAV_NORMAL);
+                    f->write(c[i].edges, 12);
+                }
             }
 
             loopj(6) f->putlil<ushort>(c[i].texture[j]);
@@ -206,11 +268,7 @@ void savec(cube *c, const ivec &o, int size, stream *f, bool nolms)
                         if(matchnorm) vertmask |= 0x08;
                     }
                     surf.verts = vertmask;
-                    polysurfacecompat psurf;
-                    psurf.lmid[0] = psurf.lmid[1] = LMID_AMBIENT;
-                    psurf.verts = surf.verts;
-                    psurf.numverts = surf.numverts;
-                    f->write(&psurf, sizeof(polysurfacecompat));
+                    f->write(&surf, sizeof(surf));
                     bool hasxyz = (vertmask&0x04)!=0, hasnorm = (vertmask&0x80)!=0;
                     if(layerverts == 4)
                     {
@@ -264,7 +322,7 @@ void loadc(stream *f, cube &c, const ivec &co, int size, bool &failed)
 
     if(octsav&0x40)
     {
-        if(mapversion <= 32)
+        if(mapversion <= 1)
         {
             int mat = f->getchar();
             c.material = convertoldmaterial(mat);
@@ -284,30 +342,33 @@ void loadc(stream *f, cube &c, const ivec &co, int size, bool &failed)
         loopi(6) if(surfmask&(1<<i))
         {
             surfaceinfo &surf = c.ext->surfaces[i];
-            polysurfacecompat psurf;
-            f->read(&psurf, sizeof(polysurfacecompat));
-            surf.verts = psurf.verts;
-            surf.numverts = psurf.numverts;
+            if(mapversion <= 3)
+            {
+                polysurfacecompat psurf;
+                f->read(&psurf, sizeof(polysurfacecompat));
+                surf.verts = psurf.verts;
+                surf.numverts = psurf.numverts;
+            }
+            else f->read(&surf, sizeof(surf));
             int vertmask = surf.verts, numverts = surf.totalverts();
             if(!numverts) { surf.verts = 0; continue; }
             surf.verts = offset;
             vertinfo *verts = c.ext->verts() + offset;
             offset += numverts;
-            ivec v[4], n;
+            ivec v[4], n, vo = ivec(co).mask(0xFFF).shl(3);
             int layerverts = surf.numverts&MAXFACEVERTS, dim = dimension(i), vc = C[dim], vr = R[dim], bias = 0;
             genfaceverts(c, i, v);
-            bool hasxyz = (vertmask&0x04)!=0, hasuv = (vertmask&0x40)!=0, hasnorm = (vertmask&0x80)!=0;
+            bool hasxyz = (vertmask&0x04)!=0, hasuv = mapversion <= 3 && (vertmask&0x40)!=0, hasnorm = (vertmask&0x80)!=0;
             if(hasxyz)
             {
                 ivec e1, e2, e3;
                 n.cross((e1 = v[1]).sub(v[0]), (e2 = v[2]).sub(v[0]));
                 if(n.iszero()) n.cross(e2, (e3 = v[3]).sub(v[0]));
-                bias = -n.dot(ivec(v[0]).mul(size).add(ivec(co).mask(0xFFF).shl(3)));
+                bias = -n.dot(ivec(v[0]).mul(size).add(vo));
             }
             else
             {
                 int vis = layerverts < 4 ? (vertmask&0x02 ? 2 : 1) : 3, order = vertmask&0x01 ? 1 : 0, k = 0;
-                ivec vo = ivec(co).mask(0xFFF).shl(3);
                 verts[k++].setxyz(v[order].mul(size).add(vo));
                 if(vis&1) verts[k++].setxyz(v[order+1].mul(size).add(vo));
                 verts[k++].setxyz(v[order+2].mul(size).add(vo));
@@ -319,13 +380,13 @@ void loadc(stream *f, cube &c, const ivec &co, int size, bool &failed)
                 {
                     ushort c1 = f->getlil<ushort>(), r1 = f->getlil<ushort>(), c2 = f->getlil<ushort>(), r2 = f->getlil<ushort>();
                     ivec xyz;
-                    xyz[vc] = c1; xyz[vr] = r1; xyz[dim] = -(bias + n[vc]*xyz[vc] + n[vr]*xyz[vr])/n[dim];
+                    xyz[vc] = c1; xyz[vr] = r1; xyz[dim] = n[dim] ? -(bias + n[vc]*xyz[vc] + n[vr]*xyz[vr])/n[dim] : vo[dim];
                     verts[0].setxyz(xyz);
-                    xyz[vc] = c1; xyz[vr] = r2; xyz[dim] = -(bias + n[vc]*xyz[vc] + n[vr]*xyz[vr])/n[dim];
+                    xyz[vc] = c1; xyz[vr] = r2; xyz[dim] = n[dim] ? -(bias + n[vc]*xyz[vc] + n[vr]*xyz[vr])/n[dim] : vo[dim];
                     verts[1].setxyz(xyz);
-                    xyz[vc] = c2; xyz[vr] = r2; xyz[dim] = -(bias + n[vc]*xyz[vc] + n[vr]*xyz[vr])/n[dim];
+                    xyz[vc] = c2; xyz[vr] = r2; xyz[dim] = n[dim] ? -(bias + n[vc]*xyz[vc] + n[vr]*xyz[vr])/n[dim] : vo[dim];
                     verts[2].setxyz(xyz);
-                    xyz[vc] = c2; xyz[vr] = r1; xyz[dim] = -(bias + n[vc]*xyz[vc] + n[vr]*xyz[vr])/n[dim];
+                    xyz[vc] = c2; xyz[vr] = r1; xyz[dim] = n[dim] ? -(bias + n[vc]*xyz[vc] + n[vr]*xyz[vr])/n[dim] : vo[dim];
                     verts[3].setxyz(xyz);
                     hasxyz = false;
                 }
@@ -349,16 +410,13 @@ void loadc(stream *f, cube &c, const ivec &co, int size, bool &failed)
                 {
                     ivec xyz;
                     xyz[vc] = f->getlil<ushort>(); xyz[vr] = f->getlil<ushort>();
-                    xyz[dim] = -(bias + n[vc]*xyz[vc] + n[vr]*xyz[vr])/n[dim];
+                    xyz[dim] = n[dim] ? -(bias + n[vc]*xyz[vc] + n[vr]*xyz[vr])/n[dim] : vo[dim];
                     v.setxyz(xyz);
                 }
                 if(hasuv) { f->getlil<ushort>(); f->getlil<ushort>(); }
                 if(hasnorm) v.norm = f->getlil<ushort>();
             }
-            if(surf.numverts&LAYER_DUP) loopk(layerverts)
-            {
-                if(hasuv) { f->getlil<ushort>(); f->getlil<ushort>(); }
-            }
+            if(hasuv && surf.numverts&LAYER_DUP) loopk(layerverts) { f->getlil<ushort>(); f->getlil<ushort>(); }
         }
     }
 }
@@ -629,6 +687,123 @@ void loadvslots(stream *f, int numvslots)
     delete[] prev;
 }
 
+struct octaent
+{
+    vec o;
+    short attr1, attr2, attr3, attr4, attr5;
+    uchar type;
+    uchar reserved;
+};
+
+void octa_to_lamiae_entity(const mapheader &hdr, extentity &e)
+{
+    switch(e.type)
+    {
+        case ET_PARTICLES:
+            switch(e.attr[0])
+            {
+                case 0:
+                    if(!e.attr[3]) break;
+                case 4: case 5: case 6: case 7: case 8: case 9: case 10: case 12: case 13: case 14:
+                    e.attr[3] = ((e.attr[3] & 0xF00) << 12) | ((e.attr[3] & 0x0F0) << 8) | ((e.attr[3] & 0x00F) << 4) | 0x0F0F0F;
+                    if(e.attr[0] != 5 && e.attr[0] != 6) break;
+                case 3: case 11:
+                    e.attr[2] = ((e.attr[2] & 0xF00) << 12) | ((e.attr[2] & 0x0F0) << 8) | ((e.attr[2] & 0x00F) << 4) | 0x0F0F0F;
+                default:
+                    break;
+            }
+            switch(e.attr[0])
+            {
+                // fire/smoke
+                case 13: case 14:
+                    e.attr[0] -= 12;
+                    break;
+                    //fountains and explosion
+                case 1: case 2: case 3:
+                    e.attr[0] += 2; break;
+
+                    //bars
+                case 5: case 6:
+                    e.attr[0]++; break;
+
+                    //text
+                case 11:
+                    e.attr[0] = 8; break;
+
+                    //multi effect
+                case 4: case 7: case 8: case 9: case 10: case 12:
+                {
+                    int num[] = {9, 0, 0, 10, 11, 12, 13, 0, 14};
+                    e.attr[0] = num[e.attr[0] - 4];
+                    break;
+                }
+            }
+            break;
+        case ET_MAPMODEL:
+            if(memcmp(hdr.magic, "OCTA", 4)) break;
+            swap(e.attr[0], e.attr[1]);
+            e.attr[2] = e.attr[3] = e.attr[4] = 0;
+            break;
+    }
+}
+
+void lamiae_to_octa_entity(const extentity &e, octaent &oe)
+{
+    oe.o = e.o; oe.type = e.type;
+    oe.reserved = 0;
+    oe.attr1 = e.attr.length() >= 1 ? e.attr[0] : 0;
+    oe.attr2 = e.attr.length() >= 2 ? e.attr[1] : 0;
+    oe.attr3 = e.attr.length() >= 3 ? e.attr[2] : 0;
+    oe.attr4 = e.attr.length() >= 4 ? e.attr[3] : 0;
+    oe.attr5 = e.attr.length() >= 5 ? e.attr[4] : 0;
+
+    switch(e.type)
+    {
+        case ET_PARTICLES:
+            switch(e.attr[0])
+            {
+                case 0:
+                    if(!e.attr[3]) break;
+                case 1: case 2: case 6: case 7: case 9: case 10: case 11: case 12: case 13: case 14: case 15:
+                    oe.attr4 = ((e.attr[3] & 0xF00000) >> 12) | ((e.attr[3] & 0xF000) >> 8) | ((e.attr[3] & 0xF0) >> 4);
+                    if(e.attr[0] != 6 && e.attr[0] != 7) break;
+
+                case 5: case 8:
+                    oe.attr3 = ((e.attr[2] & 0xF00000) >> 12) | ((e.attr[2] & 0xF000) >> 8) | ((e.attr[2] & 0xF0) >> 4);
+                default:
+                    break;
+            }
+            switch(oe.attr1)
+            {
+                //fire/smoke 11/12
+                case 1: case 2:
+                    oe.attr1 += 12; break;
+
+                //fountains and explosion 1/2/3
+                case 3: case 4: case 5:
+                    oe.attr1 -= 2; break;
+
+                //bars 5/6
+                case 6: case 7:
+                    oe.attr1--; break;
+
+                //text
+                case 8:
+                    oe.attr1 = 11; break;
+
+                //multi effect
+                case 9: case 10: case 11: case 12: case 13: case 14:
+                {
+                    int num[] = {4, 7, 8, 9, 10, 12};
+                    oe.attr1 = num[oe.attr1 - 9];
+                    break;
+                }
+                default:
+                    break;
+            }
+    }
+}
+
 bool save_world(const char *mname, bool nolms, bool octa)
 {
     if(!*mname) mname = game::getclientmap();
@@ -648,15 +823,14 @@ bool save_world(const char *mname, bool nolms, bool octa)
     renderprogress(0, "saving map...");
 
     octaheader hdr;
-    memcpy(hdr.magic, (octa ? "OCTA" : "MLAM"), 4);
-    hdr.version = octa ? OCTAVERSION : LAMIAMAPVERSION;
+    memcpy(hdr.magic, (octa ? "TMAP" : "MLAM"), 4);
+    hdr.version = octa ? TESSMAPVERSION : LAMIAEMAPVERSION;
     hdr.headersize = sizeof(hdr);
     hdr.worldsize = worldsize;
     hdr.numents = 0;
     const vector<extentity *> &ents = entities::getents();
     loopv(ents) if(ents[i]->type!=ET_EMPTY || nolms) hdr.numents++;
     hdr.numpvs = nolms ? 0 : getnumviewcells();
-    hdr.lightmaps = 0;
     hdr.blendmap = shouldsaveblendmap();
     hdr.numvars = 0;
     hdr.numvslots = numvslots;
@@ -664,7 +838,7 @@ bool save_world(const char *mname, bool nolms, bool octa)
     {
         if((id.type == ID_VAR || id.type == ID_FVAR || id.type == ID_SVAR) && id.flags&IDF_OVERRIDE && !(id.flags&IDF_READONLY) && id.flags&IDF_OVERRIDDEN) hdr.numvars++;
     });
-    lilswap(&hdr.version, 9);
+    lilswap(&hdr.version, 8);
     f->write(&hdr, sizeof(hdr));
 
     enumerate(idents, ident, id,
@@ -713,82 +887,8 @@ bool save_world(const char *mname, bool nolms, bool octa)
         {
             if(octa)
             {
-                entity &tmp = *ents[i];
-                struct octaent
-                {
-                    vec o;
-                    short attr1, attr2, attr3, attr4, attr5;
-                    uchar type;
-                    uchar reserved;
-                } ent;
-
-                ent.o = tmp.o;
-                int numattrs = tmp.attr.length();
-
-                ent.attr1 = numattrs >= 1 ? tmp.attr[0] : 0;
-                ent.attr2 = numattrs >= 2 ? tmp.attr[1] : 0;
-                ent.attr3 = numattrs >= 3 ? tmp.attr[2] : 0;
-                ent.attr4 = numattrs >= 4 ? tmp.attr[3] : 0;
-                ent.attr5 = numattrs >= 5 ? tmp.attr[4] : 0;
-
-                ent.type = tmp.type;
-                ent.reserved = 0;
-
-                switch(tmp.type)
-                {
-                    case ET_PARTICLES:
-                    {
-                        switch(ent.attr1)
-                        {
-                            case 0:
-                                if(!ent.attr4) break;
-                            case 1: case 2: case 6: case 7: case 9: case 10: case 11: case 12: case 13: case 14: case 15:
-                                ent.attr4 = ((tmp.attr[3] & 0xF00000) >> 12) | ((tmp.attr[3] & 0xF000) >> 8) | ((tmp.attr[3] & 0xF0) >> 4);
-                                if(ent.attr1 != 6 && ent.attr1 != 7) break;
-
-                            case 5: case 8:
-                                ent.attr3 = ((tmp.attr[2] & 0xF00000) >> 12) | ((tmp.attr[2] & 0xF000) >> 8) | ((tmp.attr[2] & 0xF0) >> 4);
-                            default:
-                                break;
-
-                        }
-                        switch(ent.attr1)
-                        {
-                            //fire/smoke 11/12
-                            case 1: case 2:
-                                ent.attr1 += 12; break;
-
-                            //fountains and explosion 1/2/3
-                            case 3: case 4: case 5:
-                                ent.attr1 -= 2; break;
-
-                            //bars 5/6
-                            case 6: case 7:
-                                ent.attr1--; break;
-
-                            //text
-                            case 8:
-                                ent.attr1 = 11; break;
-
-                            //multi effect
-                            case 9: case 10: case 11: case 12: case 13: case 14:
-                            {
-                                int num[] = {4, 7, 8, 9, 10, 12};
-                                ent.attr1 = num[ent.attr1 - 9];
-                                break;
-                            }
-                            default:
-                                break;
-                        }
-                    }
-                        break;
-                    case ET_MAPMODEL:
-                        swap(ent.attr1, ent.attr2);
-                        ent.attr3 = ent.attr4 = ent.attr5 = 0;
-                        break;
-                    default:
-                        break;
-                }
+                octaent ent;
+                lamiae_to_octa_entity(*ents[i], ent);
 
                 lilswap(&ent.o.x, 3);
                 lilswap(&ent.attr1, 5);
@@ -831,41 +931,10 @@ bool save_world(const char *mname, bool nolms, bool octa)
     return true;
 }
 
-static uint mapcrc = 0;
-
-uint getmapcrc() { return mapcrc; }
-void clearmapcrc() { mapcrc = 0; }
-
-//Limited compat: supports version 29 and beyond.
-bool read_octaworld(stream *f, octaheader &hdr)
+static void readmapvars(stream *f, int numvars)
 {
-    int octaversion = hdr.version;
-
-    if(octaversion < 32 || octaversion > OCTAVERSION)
-    {
-        conoutf("unable to load map, version %i is too %s", hdr.version, octaversion > OCTAVERSION ? "new" : "old");
-        return false;
-    }
-
-    do
-    {
-        int extra = 0;
-        if(f->read(&hdr.blendmap, sizeof(hdr) - (7+extra)*sizeof(int)) != int(sizeof(hdr) - (7+extra)*sizeof(int))) { conoutf(CON_ERROR, "map %s has malformatted header", ogzname); return false; }
-    } while(0);
-
-    setvar("mapversion", octaversion, true, false);
-
-    lilswap(&hdr.blendmap, 2);
-    lilswap(&hdr.numvslots, 1);
-
-    setvar("mapsize", hdr.worldsize, true, false);
-    int worldscale = 0;
-    while(1<<worldscale < hdr.worldsize) worldscale++;
-    setvar("mapscale", worldscale, true, false);
-
     renderprogress(0, "loading vars...");
-
-    loopi(hdr.numvars)
+    loopi(numvars)
     {
         int type = f->getchar(), ilen = f->getlil<ushort>();
         string name;
@@ -918,7 +987,18 @@ bool read_octaworld(stream *f, octaheader &hdr)
                 break;
         }
     }
-    if(dbgvars) conoutf(CON_DEBUG, "read %d vars", hdr.numvars);
+    if(dbgvars) conoutf(CON_DEBUG, "read %d vars", numvars);
+}
+
+static uint mapcrc = 0;
+
+uint getmapcrc() { return mapcrc; }
+void clearmapcrc() { mapcrc = 0; }
+
+//Limited compat: supports only newest iteration
+bool read_octaworld(stream *f, mapheader &hdr, octaheader &ohdr)
+{
+    readmapvars(f, hdr.numvars);
 
     string gametype;
     bool samegame = true;
@@ -962,55 +1042,8 @@ bool read_octaworld(stream *f, octaheader &hdr)
         //OCTA entities have an unused reserved byte at the end
         f->getchar();
 
-        fixent(e, octaversion);
-
-        //need changes for larger attribute size and changed indices.
-        if(e.type == ET_PARTICLES)
-        {
-            switch(e.attr[0])
-            {
-                case 0:
-                    if(!e.attr[3]) break;
-                case 4: case 5: case 6: case 7: case 8: case 9: case 10: case 12: case 13: case 14:
-                    e.attr[3] = ((e.attr[3] & 0xF00) << 12) | ((e.attr[3] & 0x0F0) << 8) | ((e.attr[3] & 0x00F) << 4) | 0x0F0F0F;
-                    if(e.attr[0] != 5 && e.attr[0] != 6) break;
-                case 3: case 11:
-                    e.attr[2] = ((e.attr[2] & 0xF00) << 12) | ((e.attr[2] & 0x0F0) << 8) | ((e.attr[2] & 0x00F) << 4) | 0x0F0F0F;
-                default:
-                    break;
-            }
-            switch(e.attr[0])
-            {
-                // fire/smoke
-                case 13: case 14:
-                    e.attr[0] -= 12;
-                    break;
-                    //fountains and explosion
-                case 1: case 2: case 3:
-                    e.attr[0] += 2; break;
-
-                    //bars
-                case 5: case 6:
-                    e.attr[0]++; break;
-
-                    //text
-                case 11:
-                    e.attr[0] = 8; break;
-
-                    //multi effect
-                case 4: case 7: case 8: case 9: case 10: case 12:
-                {
-                    int num[] = {9, 0, 0, 10, 11, 12, 13, 0, 14};
-                    e.attr[0] = num[e.attr[0] - 4];
-                    break;
-                }
-            }
-        }
-        else if(e.type == ET_MAPMODEL)
-        {
-            swap(e.attr[0], e.attr[1]);
-            e.attr[2] = e.attr[3] = e.attr[4] = 0;
-        }
+        fixent(e, hdr.version);
+        octa_to_lamiae_entity(hdr, e);
 
         if(samegame)
         {
@@ -1055,7 +1088,7 @@ bool read_octaworld(stream *f, octaheader &hdr)
 
     if(!failed)
     {
-        loopi(hdr.lightmaps)
+        loopi(ohdr.lightmaps)
         {
             int type = f->getchar();
             if(type&0x80)
@@ -1076,99 +1109,108 @@ bool read_octaworld(stream *f, octaheader &hdr)
     return !failed;
 }
 
-bool read_lamiaeworld(stream *f, octaheader &hdr)
+bool read_tessworld(stream *f, mapheader &hdr)
 {
-    if(hdr.version > LAMIAMAPVERSION)
+    readmapvars(f, hdr.numvars);
+
+    string gametype;
+    bool samegame = true;
+    int len = f->getchar();
+    if(len >= 0) f->read(gametype, len+1);
+    gametype[max(len, 0)] = '\0';
+    if(strcmp(gametype, game::gameident())!=0)
     {
-        conoutf("A newer version of lamiae is required to load this map");
-        return false;
+        samegame = false;
+        conoutf(CON_WARN, "WARNING: loading map from %s game, ignoring entities except for lights/mapmodels)", gametype);
     }
 
-    //corresponding octaversions
-    static const int versions[] = {
-        32, 33, 33
-    };
+    int eif = f->getlil<ushort>();
+    int extrasize = f->getlil<ushort>();
+    vector<uchar> extras;
+    f->read(extras.pad(extrasize), extrasize);
 
-    if(hdr.version <= 0 || hdr.version > int(sizeof(versions)/sizeof(versions[0])))
+    if(samegame) game::readgamedata(extras);
+
+    texmru.shrink(0);
+    ushort nummru = f->getlil<ushort>();
+    loopi(nummru) texmru.add(f->getlil<ushort>());
+
+    renderprogress(0, "loading entities...");
+
+    vector<extentity *> &ents = entities::getents();
+    char *ebuf = eif > 0 ? new char[eif] : NULL;
+    loopi(min(hdr.numents, MAXENTS))
     {
-        conoutf("no corresponding map format for Lamiae map version %i - report a bug", hdr.version);
-        return false;
-    }
+        extentity &e = *entities::newentity();
+        ents.add(&e);
 
-    int octaversion = versions[hdr.version - 1];
+        e.o.x = f->getlil<float>();
+        e.o.y = f->getlil<float>();
+        e.o.z = f->getlil<float>();
 
-    if(f->read(&hdr.blendmap, sizeof(hdr) - 7*sizeof(int)) != int(sizeof(hdr) - 7*sizeof(int)))
-    {
-        conoutf(CON_ERROR, "map %s has malformatted header", ogzname);
-        return false;
-    }
+        loopj(5)
+            e.attr.add(f->getlil<short>());
+        e.type = f->getchar();
+        while(e.attr.length() < getattrnum(e.type)) e.attr.add(0);
+        //OCTA entities have an unused reserved byte at the end
+        f->getchar();
 
-    setvar("mapversion", octaversion, true, false);
+        fixent(e, hdr.version);
+        octa_to_lamiae_entity(hdr, e);
 
-    lilswap(&hdr.blendmap, 2);
-    lilswap(&hdr.numvslots, 1);
-
-    setvar("mapsize", hdr.worldsize, true, false);
-    int worldscale = 0;
-    while(1<<worldscale < hdr.worldsize) worldscale++;
-    setvar("mapscale", worldscale, true, false);
-
-    renderprogress(0, "loading vars...");
-
-    loopi(hdr.numvars)
-    {
-        int type = f->getchar(), ilen = f->getlil<ushort>();
-        string name;
-        f->read(name, min(ilen, MAXSTRLEN-1));
-        name[min(ilen, MAXSTRLEN-1)] = '\0';
-        if(ilen >= MAXSTRLEN) f->seek(ilen - (MAXSTRLEN-1), SEEK_CUR);
-        ident *id = getident(name);
-        tagval val;
-        string str;
-        switch(type)
+        if(samegame)
         {
-            case ID_VAR: val.setint(f->getlil<int>()); break;
-            case ID_FVAR: val.setfloat(f->getlil<float>()); break;
-            case ID_SVAR:
-            {
-                int slen = f->getlil<ushort>();
-                f->read(str, min(slen, MAXSTRLEN-1));
-                str[min(slen, MAXSTRLEN-1)] = '\0';
-                if(slen >= MAXSTRLEN) f->seek(slen - (MAXSTRLEN-1), SEEK_CUR);
-                val.setstr(str);
-                break;
-            }
-            default: continue;
+            if(eif > 0) f->read(ebuf, eif);
+            entities::readent(e, ebuf, mapversion);
         }
-        if(id && id->flags&IDF_OVERRIDE) switch(id->type)
+        else
         {
-            case ID_VAR:
+            f->seek(eif, SEEK_CUR);
+            if(e.type>=ET_GAMESPECIFIC)
             {
-                int i = val.getint();
-                if(id->minval <= id->maxval && i >= id->minval && i <= id->maxval)
-                {
-                    setvar(name, i);
-                    if(dbgvars) conoutf(CON_DEBUG, "read var %s: %d", name, i);
-                }
-                break;
+                entities::deleteentity(ents.pop());
+                continue;
             }
-            case ID_FVAR:
+        }
+        if(!insideworld(e.o))
+        {
+            if(e.type != ET_LIGHT && e.type != ET_SPOTLIGHT)
             {
-                float f = val.getfloat();
-                if(id->minvalf <= id->maxvalf && f >= id->minvalf && f <= id->maxvalf)
-                {
-                    setfvar(name, f);
-                    if(dbgvars) conoutf(CON_DEBUG, "read fvar %s: %f", name, f);
-                }
-                break;
+                conoutf(CON_WARN, "warning: ent outside of world: enttype[%s] index %d (%f, %f, %f)", entities::entname(e.type), i, e.o.x, e.o.y, e.o.z);
             }
-            case ID_SVAR:
-                setsvar(name, val.getstr());
-                if(dbgvars) conoutf(CON_DEBUG, "read svar %s: %s", name, val.getstr());
-                break;
         }
     }
-    if(dbgvars) conoutf(CON_DEBUG, "read %d vars", hdr.numvars);
+    if(ebuf) delete[] ebuf;
+
+    if(hdr.numents > MAXENTS)
+    {
+        conoutf(CON_WARN, "warning: map has %d entities", hdr.numents);
+        f->seek((hdr.numents-MAXENTS)*(sizeof(entity) + eif), SEEK_CUR);
+    }
+
+    renderprogress(0, "loading slots...");
+    loadvslots(f, hdr.numvslots);
+
+    renderprogress(0, "loading octree...");
+    bool failed = false;
+    worldroot = loadchildren(f, ivec(0, 0, 0), hdr.worldsize>>1, failed);
+    if(failed) conoutf(CON_ERROR, "garbage in map");
+
+    renderprogress(0, "validating...");
+    validatec(worldroot, hdr.worldsize>>1);
+
+    if(!failed)
+    {
+        if(hdr.numpvs > 0) loadpvs(f, hdr.numpvs);
+        if(hdr.blendmap) loadblendmap(f, hdr.blendmap);
+    }
+
+    return !failed;
+}
+
+bool read_lamiaeworld(stream *f, mapheader &hdr)
+{
+    readmapvars(f, hdr.numvars);
 
     string gametype;
     bool samegame = true;
@@ -1213,7 +1255,7 @@ bool read_lamiaeworld(stream *f, octaheader &hdr)
         e.type = f->getchar();
         while(e.attr.length() < getattrnum(e.type)) e.attr.add(0);
 
-        fixent(e, octaversion);
+        fixent(e, hdr.version);
         if(samegame)
         {
             if(eif > 0) f->read(ebuf, eif);
@@ -1262,20 +1304,6 @@ bool read_lamiaeworld(stream *f, octaheader &hdr)
 
     if(!failed)
     {
-        loopi(hdr.lightmaps)
-        {
-            int type = f->getchar();
-            if(type&0x80)
-            {
-                f->getlil<ushort>();
-                f->getlil<ushort>();
-            }
-
-            int bpp = 3;
-            if(type&(1<<4) && (type&0x0F)!=2) bpp = 4;
-            f->seek(bpp*512*512, SEEK_CUR);
-        }
-
         if(hdr.numpvs > 0) loadpvs(f, hdr.numpvs);
         if(hdr.blendmap) loadblendmap(f, hdr.blendmap);
     }
@@ -1286,16 +1314,17 @@ bool read_lamiaeworld(stream *f, octaheader &hdr)
 bool load_world(const char *mname, const char *cname)
 {
     int loadingstart = SDL_GetTicks();
+    bool loaded = false;
     setmapfilenames(mname);
 
     stream *f = opengzfile(ogzname, "rb");
     if(!f) { conoutf(CON_ERROR, "could not read map %s", ogzname); return false; }
 
-    octaheader hdr;
-    if(f->read(&hdr, 7*sizeof(int))!=int(7*sizeof(int))) { conoutf(CON_ERROR, "map %s has malformatted header", ogzname); delete f; return false; }
-    lilswap(&hdr.version, 6);
+    mapheader hdr;
+    octaheader ohdr;
+    memset(&ohdr, 0, sizeof(ohdr));
+    if(!loadmapheader(f, ogzname, hdr, ohdr)) { delete f; return false; }
 
-    bool loaded = false;
     resetmap();
 
     Texture *mapshot = textureload(picname, 3, true, false);
@@ -1304,22 +1333,30 @@ bool load_world(const char *mname, const char *cname)
     freeocta(worldroot);
     worldroot = NULL;
 
-    if(hdr.worldsize <= 0 || hdr.numents < 0 || hdr.version <= 0)
-    {
-        conoutf("map has malformatted header!");
-    }
-    else if(memcmp(hdr.magic, "MLAM", 4)==0)
+    int worldscale = 0;
+    while(1<<worldscale < hdr.worldsize) worldscale++;
+
+    setvar("mapversion", hdr.version, true, false);
+    setvar("mapsize", hdr.worldsize, true, false);
+    setvar("mapscale", worldscale, true, false);
+
+    if(memcmp(hdr.magic, "MLAM", 4)==0)
     {
         loaded = read_lamiaeworld(f, hdr);
     }
+    else if(memcmp(hdr.magic, "TMAP", 4)==0)
+    {
+        conoutf("Importing map from Tesseract format...");
+        loaded = read_tessworld(f, hdr);
+    }
     else if(memcmp(hdr.magic, "OCTA", 4)==0)
     {
-        conoutf("Importing map from native cube 2 format...");
-        loaded = read_octaworld(f, hdr);
+        conoutf("Importing map from Octa format...");
+        loaded = read_octaworld(f, hdr, ohdr);
     }
     else
     {
-        conoutf("garbage in header or unsupported map format (%4.4s)", hdr.magic);
+        conoutf(CON_ERROR, "Map format %4.4s missing handler in load_world! report a bug!", hdr.magic);
     }
 
     if(loaded)
@@ -1363,7 +1400,7 @@ void savemap(char *mname) { save_world(mname, false, false); }
 COMMAND(savemap, "s");
 COMMAND(savecurrentmap, "");
 
-ICOMMAND(exportocta, "s", (char *mname), save_world(mname, false, true););
+ICOMMAND(exporttess, "s", (char *mname), save_world(mname, false, true););
 
 void writeobj(char *name)
 {
@@ -1375,10 +1412,8 @@ void writeobj(char *name)
     path(mtlname);
     f->printf("mtllib %s\n\n", mtlname);
     extern vector<vtxarray *> valist;
-    vector<vec> verts;
-    vector<vec2> texcoords;
-    hashtable<vec, int> shareverts(1<<16);
-    hashtable<vec2, int> sharetc(1<<16);
+    vector<vec> verts, texcoords;
+    hashtable<vec, int> shareverts(1<<16), sharetc(1<<16);
     hashtable<int, vector<ivec2> > mtls(1<<8);
     vector<int> usedmtl;
     vec bbmin(1e16f, 1e16f, 1e16f), bbmax(-1e16f, -1e16f, -1e16f);
@@ -1391,14 +1426,14 @@ void writeobj(char *name)
         ushort *idx = edata;
         loopj(va.texs)
         {
-            elementset &es = va.eslist[j];
+            elementset &es = va.texelems[j];
             if(usedmtl.find(es.texture) < 0) usedmtl.add(es.texture);
             vector<ivec2> &keys = mtls[es.texture];
             loopk(es.length)
             {
                 const vertex &v = vdata[idx[k]];
                 const vec &pos = v.pos;
-                const vec2 &tc = v.tc;
+                const vec &tc = v.tc;
                 ivec2 &key = keys.add();
                 key.x = shareverts.access(pos, verts.length());
                 if(key.x == verts.length())
@@ -1426,7 +1461,7 @@ void writeobj(char *name)
     f->printf("\n");
     loopv(texcoords)
     {
-        const vec2 &tc = texcoords[i];
+        const vec &tc = texcoords[i];
         f->printf("vt %.6f %.6f\n", tc.x, 1-tc.y);
     }
     f->printf("\n");
@@ -1533,7 +1568,7 @@ void writecollideobj(char *name)
         ushort *idx = edata;
         loopj(va.texs)
         {
-            elementset &es = va.eslist[j];
+            elementset &es = va.texelems[j];
             for(int k = 0; k < es.length; k += 3)
             {
                 const vec &v0 = vdata[idx[k]].pos, &v1 = vdata[idx[k+1]].pos, &v2 = vdata[idx[k+2]].pos;

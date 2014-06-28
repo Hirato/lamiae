@@ -2,7 +2,12 @@
 
 #include "engine.h"
 
-#include "SDL_mixer.h"
+#ifdef __APPLE__
+  #include "SDL2_mixer/SDL_mixer.h"
+#else
+  #include "SDL_mixer.h"
+#endif
+
 #define MAXVOL MIX_MAX_VOLUME
 
 bool nosound = true;
@@ -350,6 +355,20 @@ static struct soundtype
         configs.setsize(0);
     }
 
+    void reset()
+    {
+        loopv(channels)
+        {
+            soundchannel &chan = channels[i];
+            if(chan.inuse && slots.inbuf(chan.slot))
+            {
+                Mix_HaltChannel(i);
+                freechannel(i);
+            }
+        }
+        clear();
+    }
+
     void cleanupsamples()
     {
         enumerate(samples, soundsample, s, s.cleanup());
@@ -365,7 +384,7 @@ static struct soundtype
 
     void preloadsound(int n)
     {
-        if(!configs.inrange(n)) return;
+        if(nosound || !configs.inrange(n)) return;
         soundconfig &config = configs[n];
         loopk(config.numslots) slots[config.slots+k].sample->load(dir, true);
     }
@@ -387,6 +406,18 @@ COMMAND(altsound, "si");
 
 void altmapsound(char *name, int *vol) { mapsounds.addalt(name, *vol); }
 COMMAND(altmapsound, "si");
+
+void soundreset()
+{
+    gamesounds.reset();
+}
+COMMAND(soundreset, "");
+
+void mapsoundreset()
+{
+    mapsounds.reset();
+}
+COMMAND(mapsoundreset, "");
 
 void resetchannels()
 {

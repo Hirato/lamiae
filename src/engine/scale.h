@@ -2,13 +2,13 @@ static void FUNCNAME(halvetexture)(uchar *src, uint sw, uint sh, uint stride, uc
 {
     for(uchar *yend = &src[sh*stride]; src < yend;)
     {
-        for(uchar *xend = &src[stride]; src < xend; src += 2*BPP, dst += BPP)
+        for(uchar *xend = &src[sw*BPP], *xsrc = src; xsrc < xend; xsrc += 2*BPP, dst += BPP)
         {
-            #define OP(c, n) dst[n] = (uint(src[n]) + uint(src[n+BPP]) + uint(src[stride+n]) + uint(src[stride+n+BPP]))>>2
+            #define OP(c, n) dst[n] = (uint(xsrc[n]) + uint(xsrc[n+BPP]) + uint(xsrc[stride+n]) + uint(xsrc[stride+n+BPP]))>>2
             PIXELOP
             #undef OP
         }
-        src += stride;
+        src += 2*stride;
     }
 }
 
@@ -20,12 +20,12 @@ static void FUNCNAME(shifttexture)(uchar *src, uint sw, uint sh, uint stride, uc
     uint tshift = wshift + hshift;
     for(uchar *yend = &src[sh*stride]; src < yend;)
     {
-        for(uchar *xend = &src[stride]; src < xend; src += wfrac*BPP, dst += BPP)
+        for(uchar *xend = &src[sw*BPP], *xsrc = src; xsrc < xend; xsrc += wfrac*BPP, dst += BPP)
         {
             #define OP(c, n) c##t = 0
             DEFPIXEL
             #undef OP
-            for(uchar *ycur = src, *xend = &ycur[wfrac*BPP], *yend = &src[hfrac*stride];
+            for(uchar *ycur = xsrc, *xend = &ycur[wfrac*BPP], *yend = &src[hfrac*stride];
                 ycur < yend;
                 ycur += stride, xend += stride)
             {
@@ -40,7 +40,7 @@ static void FUNCNAME(shifttexture)(uchar *src, uint sw, uint sh, uint stride, uc
             PIXELOP
             #undef OP
         }
-        src += (hfrac-1)*stride;
+        src += hfrac*stride;
     }
 }
 

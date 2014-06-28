@@ -76,6 +76,13 @@ static inline void mmcollisionbox(const entity &e, model *m, vec &center, vec &r
     transformbb(e, center, radius);
 }
 
+static inline void decalboundbox(const entity &e, DecalSlot &s, vec &center, vec &radius)
+{
+    float size = max(float(e.attr[4]), 1.0f);
+    center = vec(0, s.depth * size/2, 0);
+    radius = vec(size/2, s.depth * size/2, size/2);
+    rotatebb(center, radius, e.attr[1], e.attr[2], e.attr[3]);
+}
 
 bool getentboundingbox(const extentity &e, ivec &o, ivec &r)
 {
@@ -83,6 +90,17 @@ bool getentboundingbox(const extentity &e, ivec &o, ivec &r)
     {
         case ET_EMPTY:
             return false;
+        case ET_DECAL:
+            {
+                DecalSlot &s = lookupdecalslot(e.attr[0], false);
+                vec center, radius;
+                decalboundbox(e, s, center, radius);
+                center.add(e.o);
+                radius.max(entselradius);
+                o = vec(center).sub(radius);
+                r = vec(center).add(radius).add(1);
+                break;
+            }
         case ET_MAPMODEL:
         {
             model *m = loadmapmodel(e.attr[0]);
@@ -109,7 +127,8 @@ bool getentboundingbox(const extentity &e, ivec &o, ivec &r)
 enum
 {
     MODOE_ADD      = 1<<0,
-    MODOE_UPDATEBB = 1<<1
+    MODOE_UPDATEBB = 1<<1,
+    MODOE_CHANGED  = 1<<2
 };
 
 void modifyoctaentity(int flags, int id, extentity &e, cube *c, const ivec &cor, int size, const ivec &bo, const ivec &br, int leafsize, vtxarray *lastva = NULL)
@@ -126,6 +145,16 @@ void modifyoctaentity(int flags, int id, extentity &e, cube *c, const ivec &cor,
             octaentities &oe = *c[i].ext->ents;
             switch(e.type)
             {
+                case ET_DECAL:
+                    if(va)
+                    {
+                        va->bbmin.x = -1;
+                        if(oe.decals.empty()) va->decals.add(&oe);
+                    }
+                    oe.decals.add(id);
+                    oe.bbmin.min(bo).max(oe.o);
+                    oe.bbmax.max(br).min(ivec(oe.o).add(oe.size));
+                    break;
                 case ET_MAPMODEL:
                     if(loadmapmodel(e.attr[0]))
                     {
@@ -151,6 +180,28 @@ void modifyoctaentity(int flags, int id, extentity &e, cube *c, const ivec &cor,
             octaentities &oe = *c[i].ext->ents;
             switch(e.type)
             {
+                case ET_DECAL:
+                    oe.decals.removeobj(id);
+                    if(va)
+                    {
+                        va->bbmin.x = -1;
+                        if(oe.decals.empty()) va->decals.removeobj(&oe);
+                    }
+                    oe.bbmin = oe.bbmax = oe.o;
+                    oe.bbmin.add(oe.size);
+                    loopvj(oe.decals)
+                    {
+                        extentity &e = *entities::getents()[oe.decals[j]];
+                        ivec eo, er;
+                        if(getentboundingbox(e, eo, er))
+                        {
+                            oe.bbmin.min(eo);
+                            oe.bbmax.max(er);
+                        }
+                    }
+                    oe.bbmin.max(oe.o);
+                    oe.bbmax.min(ivec(oe.o).add(oe.size));
+                    break;
                 case ET_MAPMODEL:
                     if(loadmapmodel(e.attr[0]))
                     {
@@ -181,7 +232,7 @@ void modifyoctaentity(int flags, int id, extentity &e, cube *c, const ivec &cor,
                     oe.other.removeobj(id);
                     break;
             }
-            if(oe.mapmodels.empty() && oe.other.empty())
+            if(oe.mapmodels.empty() && oe.decals.empty() && oe.other.empty())
                 freeoctaentities(c[i]);
         }
         if(c[i].ext && c[i].ext->ents) c[i].ext->ents->query = NULL;
@@ -197,6 +248,7 @@ void modifyoctaentity(int flags, int id, extentity &e, cube *c, const ivec &cor,
 }
 
 vector<int> outsideents;
+int spotlights = 0;
 
 static bool modifyoctaent(int flags, int id, extentity &e)
 {
@@ -223,8 +275,13 @@ static bool modifyoctaent(int flags, int id, extentity &e)
         modifyoctaentity(flags, id, e, worldroot, ivec(0, 0, 0), worldsize>>1, o, r, leafsize);
     }
     e.flags ^= EF_OCTA;
-    if(e.type == ET_LIGHT) clearlightcache(id);
-    else if(e.type == ET_PARTICLES) clearparticleemitters();
+    switch(e.type)
+    {
+        case ET_LIGHT: clearlightcache(id); break;
+        case ET_SPOTLIGHT: if(!(flags&MODOE_ADD ? spotlights++ : --spotlights)) cleardeferredlightshaders();
+        case ET_PARTICLES: clearparticleemitters(); break;
+        case ET_DECAL: if(flags&MODOE_CHANGED) changed(o, r, false); break;
+    }
     return true;
 }
 
@@ -234,8 +291,10 @@ static inline bool modifyoctaent(int flags, int id)
     return ents.inrange(id) && modifyoctaent(flags, id, *ents[id]);
 }
 
-static inline void addentity(int id)    { modifyoctaent(MODOE_ADD|MODOE_UPDATEBB, id); }
-static inline void removeentity(int id) { modifyoctaent(MODOE_UPDATEBB, id); }
+static inline void addentity(int id)        { modifyoctaent(MODOE_ADD|MODOE_UPDATEBB, id); }
+static inline void addentityedit(int id)    { modifyoctaent(MODOE_ADD|MODOE_UPDATEBB|MODOE_CHANGED, id); }
+static inline void removeentity(int id)     { modifyoctaent(MODOE_UPDATEBB, id); }
+static inline void removeentityedit(int id) { modifyoctaent(MODOE_UPDATEBB|MODOE_CHANGED, id); }
 
 void freeoctaentities(cube &c)
 {
@@ -243,6 +302,7 @@ void freeoctaentities(cube &c)
     if(entities::getents().length())
     {
         while(c.ext->ents && !c.ext->ents->mapmodels.empty()) removeentity(c.ext->ents->mapmodels.pop());
+        while(c.ext->ents && !c.ext->ents->decals.empty())    removeentity(c.ext->ents->decals.pop());
         while(c.ext->ents && !c.ext->ents->other.empty())     removeentity(c.ext->ents->other.pop());
     }
     if(c.ext->ents)
@@ -457,10 +517,10 @@ void attachentities()
     entfocusv(i, \
     { \
         int oldtype = e.type; \
-        removeentity(n);  \
+        removeentityedit(n);  \
         f; \
         if(oldtype!=e.type) detachentity(e); \
-        if(e.type!=ET_EMPTY) { addentity(n); if(oldtype!=e.type) attachentity(e); } \
+        if(e.type!=ET_EMPTY) { addentityedit(n); if(oldtype!=e.type) attachentity(e); } \
         entities::editent(n, true); \
         clearshadowcache(); \
     }, v); \
@@ -469,7 +529,7 @@ void attachentities()
 #define addgroup(exp)   { vector<extentity *> &ents = entities::getents(); loopv(ents) entfocusv(i, if(exp) entadd(n), ents); }
 #define setgroup(exp)   { entcancel(); addgroup(exp); }
 #define groupeditloop(f){ vector<extentity *> &ents = entities::getents(); entlooplevel++; int _ = efocus; loopv(entgroup) enteditv(entgroup[i], f, ents); efocus = _; entlooplevel--; }
-#define groupeditpure(f){ if(entlooplevel>0) { entedit(efocus, f); } else groupeditloop(f); }
+#define groupeditpure(f){ if(entlooplevel>0) { entedit(efocus, f); } else { groupeditloop(f); commitchanges(); } }
 #define groupeditundo(f){ makeundoent(); groupeditpure(f); }
 #define groupedit(f)    { addimplicit(groupeditundo(f)); }
 
@@ -533,6 +593,13 @@ void entselectionbox(const entity &e, vec &eo, vec &es)
     if(m)
     {
         mmcollisionbox(e, m, eo, es);
+        es.max(entselradius);
+        eo.add(e.o);
+    }
+    else if(e.type == ET_DECAL)
+    {
+        DecalSlot &s = lookupdecalslot(e.attr[0], false);
+        decalboundbox(e, s, eo, es);
         es.max(entselradius);
         eo.add(e.o);
     }
@@ -666,6 +733,47 @@ void renderentcone(const extentity &e, const vec &dir, float radius, float angle
     xtraverts += gle::end();
 }
 
+void renderentbox(const extentity &e, const vec &center, const vec &radius, int yaw, int pitch, int roll)
+{
+    matrix4x3 orient;
+    orient.identity();
+    orient.settranslation(e.o);
+    if(yaw) orient.rotate_around_z(sincosmod360(yaw));
+    if(pitch) orient.rotate_around_x(sincosmod360(pitch));
+    if(roll) orient.rotate_around_y(sincosmod360(-roll));
+    orient.translate(center);
+
+    gle::defvertex();
+
+    vec front[4] = { vec(-radius.x, -radius.y, -radius.z), vec( radius.x, -radius.y, -radius.z), vec( radius.x, -radius.y,  radius.z), vec(-radius.x, -radius.y,  radius.z) },
+        back[4] = { vec(-radius.x, radius.y, -radius.z), vec( radius.x, radius.y, -radius.z), vec( radius.x, radius.y,  radius.z), vec(-radius.x, radius.y,  radius.z) };
+    loopi(4)
+    {
+        front[i] = orient.transform(front[i]);
+        back[i] = orient.transform(back[i]);
+    }
+
+    gle::begin(GL_LINE_LOOP);
+    loopi(4) gle::attrib(front[i]);
+    xtraverts += gle::end();
+
+    gle::begin(GL_LINES);
+    gle::attrib(front[0]);
+        gle::attrib(front[2]);
+    gle::attrib(front[1]);
+        gle::attrib(front[3]);
+    loopi(4)
+    {
+        gle::attrib(front[i]);
+        gle::attrib(back[i]);
+    }
+    xtraverts += gle::end();
+
+    gle::begin(GL_LINE_LOOP);
+    loopi(4) gle::attrib(back[i]);
+    xtraverts += gle::end();
+}
+
 void renderentradius(extentity &e, bool color)
 {
     switch(e.type)
@@ -718,6 +826,15 @@ void renderentradius(extentity &e, bool color)
             vec dir;
             vecfromyawpitch(e.attr[0], 0, 1, 0, dir);
             renderentarrow(e, dir, 4);
+            break;
+        }
+
+        case ET_DECAL:
+        {
+            if(color) gle::colorf(0, 1, 1);
+            DecalSlot &s = lookupdecalslot(e.attr[0], false);
+            float size = max(float(e.attr[4]), 1.0f);
+            renderentbox(e, vec(0, s.depth * size/2, 0), vec(size/2, s.depth * size/2, size/2), e.attr[1], e.attr[2], e.attr[3]);
             break;
         }
 
@@ -792,6 +909,7 @@ void renderentselection(const vec &o, const vec &ray, bool entmoving)
 
         if(enthover >= 0)
         {
+            gle::colorub(0, 40, 0);
             entfocus(enthover, entselectionbox(e, eo, es)); // also ensures enthover is back in focus
             boxs3D(eo, es, 1);
 
@@ -1066,7 +1184,8 @@ const int getattrnum(int type)
         3, //envmap
         9, //particles
         3, //sound
-        1  //spotlight
+        1, //spotlight
+        5, //decal
     };
     return type >= 0 && size_t(type) < sizeof(num)/sizeof(num[0]) ? num[type] : 0;
 }
@@ -1087,6 +1206,7 @@ extentity *newentity(int type, int *attrs, bool fix = true)
     enttoggle(idx);
     makeundoent();
     entedit(idx, e.type = type);
+    commitchanges();
     return t;
 }
 
@@ -1302,7 +1422,8 @@ COMMAND(entattr, "iiN");
 int findentity(int type, int index, int attr1, int attr2)
 {
     const vector<extentity *> &ents = entities::getents();
-    for(int i = index; i<ents.length(); i++)
+    if(index > ents.length()) index = ents.length();
+    else for(int i = index; i<ents.length(); i++)
     {
         extentity &e = *ents[i];
         if(e.type == type &&
@@ -1311,7 +1432,7 @@ int findentity(int type, int index, int attr1, int attr2)
         )
         return i;
     }
-    loopj(min(index, ents.length()))
+    loopj(index)
     {
         extentity &e = *ents[j];
         if(e.type == type &&
@@ -1325,16 +1446,30 @@ int findentity(int type, int index, int attr1, int attr2)
 
 int spawncycle = -1;
 
-void findplayerspawn(dynent *d, int forceent, int tag)   // place at random spawn. also used by monsters!
+void findplayerspawn(dynent *d, int forceent, int tag) // place at random spawn
 {
     int pick = forceent;
     if(pick<0)
     {
         int r = rnd(10)+1;
-        loopi(r) spawncycle = findentity(ET_PLAYERSTART, spawncycle+1, -1, tag);
         pick = spawncycle;
+        loopi(r)
+        {
+            pick = findentity(ET_PLAYERSTART, pick+1, -1, tag);
+            if(pick < 0) break;
+        }
+        if(pick < 0 && tag)
+        {
+            pick = spawncycle;
+            loopi(r)
+            {
+                pick = findentity(ET_PLAYERSTART, pick+1, -1, 0);
+                if(pick < 0) break;
+            }
+        }
+        if(pick >= 0) spawncycle = pick;
     }
-    if(pick!=-1)
+    if(pick>=0)
     {
         const vector<extentity *> &ents = entities::getents();
         d->pitch = 0;
@@ -1382,7 +1517,7 @@ void resetmap()
     clearpvs();
     clearslots();
     clearparticles();
-    cleardecals();
+    clearstains();
     clearsleep();
     cancelsel();
     pruneundos();
@@ -1391,6 +1526,7 @@ void resetmap()
 
     entities::clearents();
     outsideents.setsize(0);
+    spotlights = 0;
 }
 
 void startmap(const char *name)
@@ -1526,24 +1662,25 @@ void mpeditent(int i, const vec &o, int type, int *attrs, bool local)
     {
         extentity *e = newentity(local, o, type, attrs, i);
         if(!e) return;
-        addentity(i);
+        addentityedit(i);
         attachentity(*e);
     }
     else
     {
         extentity &e = *ents[i];
-        removeentity(i);
+        removeentityedit(i);
         int oldtype = e.type;
         if(oldtype!=type) detachentity(e);
         e.type = type;
         e.o = o;
         e.attr.setsize(0);
         e.attr.put(attrs, getattrnum(type));
-        addentity(i);
+        addentityedit(i);
         if(oldtype!=type) attachentity(e);
     }
     entities::editent(i, local);
     clearshadowcache();
+    commitchanges();
 }
 
 int getworldsize() { return worldsize; }

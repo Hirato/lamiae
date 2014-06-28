@@ -587,7 +587,8 @@ namespace game
 	#define DEBUG_IND e->key
 
 	INT(flags, 0, FX_MAX)
-	INT(decal, -1, DECAL_MAX - 1)
+    INTN(decal, stain, -1, STAIN_MAX - 1) //compat
+	INT(stain, -1, STAIN_MAX - 1)
 
 	MODEL(mdl)
 	VEC(spin, -100, -100, -100, 100, 100, 100)
