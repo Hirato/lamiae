@@ -1,6 +1,7 @@
 # ignore compiled objects
 *.o
 *.gch
+*.pch
 *.a
 
 # and backups
