@@ -11,18 +11,15 @@
 	} while(0);
 
 
-inline const vec &parsevec(const char *str)
+inline const vec parsevec(const char *str)
 {
-	static vec vals[3];
-	static int idx = 0;
-
-	vec &ret = vals[idx];
-	idx = (idx + 1) % 3;
-
-	vector<char *> list;
+	static vector<char *> list;
 	explodelist(str, list, 3);
 
-	loopi(3) ret.v[i] = (list.length() > i) ? parsefloat(list[i]) : 0;
+	vec ret(0);
+	loopi(list.length()) ret.v[i] = parsefloat(list[i]);
+
+	list.deletearrays();
 	return ret;
 }
 
