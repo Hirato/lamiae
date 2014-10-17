@@ -688,7 +688,7 @@ namespace rpgscript
 		if(hover && hover->getent(0) && hover->getent(0) != player1)
 		{
 			if(DEBUG_SCRIPT)
-				DEBUGF("Player interacted with %p", hover);
+				DEBUGF("Player interacted with %p", hover->getent(0));
 
 			hover->getent(0)->getsignal("interact", false, player1);
 		}
@@ -890,6 +890,7 @@ namespace rpgscript
 					return;
 				}
 			}
+			intret(1);
 		}
 	)
 
@@ -1279,7 +1280,7 @@ namespace rpgscript
 
 	// Script Commands
 
-	void sendsignal(const char *sig, const char *send, const char *rec, int prop)
+	void sendsignal(const char *sig, const char *send, const char *rec, int *prop)
 	{
 		if(!sig) return;
 		int sendidx, recidx;
@@ -1289,7 +1290,7 @@ namespace rpgscript
 
 		rpgent *source = sender ? sender->getent(sendidx) : NULL;
 
-		if(DEBUG_VSCRIPT) DEBUGF("r_signal called with sig: %s - send: %s - rec: %s - prop: %i", sig, send, rec, prop);
+		if(DEBUG_VSCRIPT) DEBUGF("r_signal called with sig: %s - send: %s - rec: %s - prop: %i", sig, send, rec, *prop);
 
 		if(*rec && !receiver)
 		{
@@ -1312,17 +1313,17 @@ namespace rpgscript
 				if(receiver->getmap(recidx))
 				{
 					if(DEBUG_VSCRIPT) DEBUGF("receiver:%i is map, sending signal", recidx);
-					receiver->getmap(recidx)->getsignal(sig, prop, source);
+					receiver->getmap(recidx)->getsignal(sig, *prop, source);
 				}
 				else if(receiver->getent(recidx))
 				{
 					if(DEBUG_VSCRIPT) DEBUGF("receiver:%i is ent, sending signal", recidx);
-					receiver->getent(recidx)->getsignal(sig, prop, source);
+					receiver->getent(recidx)->getsignal(sig, *prop, source);
 				}
 				else if(receiver->getinv(recidx))
 				{
 					if(DEBUG_VSCRIPT) DEBUGF("receiver:%i is item, sending signal", recidx);
-					receiver->getinv(recidx)->getsignal(sig, prop, source);
+					receiver->getinv(recidx)->getsignal(sig, *prop, source);
 				}
 			}
 		}
