@@ -11,4 +11,4 @@ IF EXIST binw64\lamiae.exe (
     )
 )
 
-start %LAMIAE_BIN%\lamiae.exe "-q$HOME\My Games\Lamiae" -gstdout.txt %*
+start %LAMIAE_BIN%\lamiae.exe "-u$HOME\My Games\Lamiae" -gstdout.txt %*
