@@ -1,6 +1,8 @@
 #compiled objects
 /.objs32/
 /.objs64/
+/.objs32-dbg/
+/.objs64-dbg/
 
 # codeblocks files
 *.depend
