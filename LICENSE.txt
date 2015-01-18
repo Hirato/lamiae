@@ -1,6 +1,6 @@
 Lamiae source code, any release.
 
-Copyright (C) 2012-2014 Kevin "Hirato Kirata" Meyer
+Copyright (C) 2012-2015 Kevin "Hirato Kirata" Meyer
 Copyright (C) 2013 Daniel "q66" Kolesa
 
 This software is provided 'as-is', without any express or implied
@@ -41,12 +41,33 @@ freely, subject to the following restrictions:
    misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 
+=====================================================================
+
+Tesseract game engine source code, any release.
+
+Copyright (C) 2001-2015 Wouter van Oortmerssen, Lee Salzman, Mike Dysart, Robert Pointon, Quinton Reeves, and Benjamin Segovia
+
+This software is provided 'as-is', without any express or implied
+warranty.  In no event will the authors be held liable for any damages
+arising from the use of this software.
+
+Permission is granted to anyone to use this software for any purpose,
+including commercial applications, and to alter it and redistribute it
+freely, subject to the following restrictions:
+
+1. The origin of this software must not be misrepresented; you must not
+   claim that you wrote the original software. If you use this software
+   in a product, an acknowledgment in the product documentation would be
+   appreciated but is not required.
+2. Altered source versions must be plainly marked as such, and must not be
+   misrepresented as being the original software.
+3. This notice may not be removed or altered from any source distribution.
 
 =====================================================================
 
 Sauerbraten game engine source code, any release.
 
-Copyright (C) 2001-2014 Wouter van Oortmerssen, Lee Salzman, Mike Dysart, Robert Pointon, and Quinton Reeves
+Copyright (C) 2001-2015 Wouter van Oortmerssen, Lee Salzman, Mike Dysart, Robert Pointon, and Quinton Reeves
 
 This software is provided 'as-is', without any express or implied
 warranty.  In no event will the authors be held liable for any damages
@@ -67,6 +88,5 @@ freely, subject to the following restrictions:
 =====================================================================
 
 The bundled art is under a variety of licenses, the licenses are typically with the respective files.
-In the absense of a license, as defined in a txt file alongside the content,  IT IS SAFE TO ASSUME THE CONTENT IS UNDER A NON-EXCLUSIVE CREATIVE COMMONS LICENSE WITH "ATTRIBUTION" AND "SHARE-ALIKE" CLAUSES IN EFFECT.
+In the absense of a license, as defined in a txt file alongside the content,  IT IS SAFE TO ASSUME THE CONTENT IS UNDER A NON-EXCLUSIVE CREATIVE COMMONS LICENSE WITH "ATTRIBUTION" AND "SHARE-ALIKE" CLAUSES IN EFFECT. But please file a bug report so that the licensing surrounding such content can be clarified.
 
-In a nutshell, all bundled content are all under licenses that allow redistribution, modification, and commercial use, although some have the caveat that to be able to use the related artwork commercially, requires you to use it as part of another work.
