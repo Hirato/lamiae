@@ -187,7 +187,7 @@ namespace UI
         else clipstack.last().scissor();
     }
 
-    static bool isfullyclipped(float x, float y, float w, float h)
+    static inline bool isfullyclipped(float x, float y, float w, float h)
     {
         if(clipstack.empty()) return false;
         return clipstack.last().isfullyclipped(x, y, w, h);
@@ -222,17 +222,29 @@ namespace UI
 
     enum
     {
+        //undrawn types
         TYPE_MISC = 0,
         TYPE_BUTTON,
+        TYPE_LIST,
         TYPE_SCROLLER,
         TYPE_SCROLLBAR,
         TYPE_SCROLLBUTTON,
         TYPE_SLIDER,
         TYPE_SLIDERBUTTON,
-        TYPE_IMAGE,
         TYPE_TAG,
         TYPE_WINDOW,
+        TYPE_WORLD,
+        //drawn types
+        TYPE_IMAGE,
+        TYPE_LINE,
+        TYPE_RECTANGLE,
+        TYPE_GRADIENT,
         TYPE_TEXTEDITOR,
+        TYPE_TEXT,
+        TYPE_CONSOLE,
+        TYPE_PREVIEW,
+        TYPE_SLOTVIEWER,
+        TYPE_OBJECT
     };
 
     enum
@@ -240,6 +252,30 @@ namespace UI
         ORIENT_HORIZ = 0,
         ORIENT_VERT,
     };
+
+    enum
+    {
+        CHANGE_SHADER = 1<<0,
+        CHANGE_COLOR  = 1<<1,
+        CHANGE_BLEND  = 1<<2
+    };
+    static int changed = 0;
+
+    static Object *drawing = NULL;
+
+    enum { BLEND_ALPHA, BLEND_CUSTOM };
+    static int blendtype = BLEND_ALPHA;
+
+    static inline void changeblend(int type, GLenum src, GLenum dst)
+    {
+        if(blendtype != type || type != BLEND_CUSTOM)
+        {
+            blendtype = type;
+            glBlendFunc(src, dst);
+        }
+    }
+
+    void resetblend() { changeblend(BLEND_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); }
 
     struct Object
     {
@@ -391,6 +427,41 @@ namespace UI
             return false;
         }
 
+        virtual void startdraw() {}
+        virtual void enddraw() {}
+
+        void enddraw(int change)
+        {
+            enddraw();
+
+            changed &= ~change;
+            if(changed)
+            {
+                if(changed&CHANGE_SHADER) hudshader->set();
+                if(changed&CHANGE_COLOR) gle::colorf(1, 1, 1);
+                if(changed&CHANGE_BLEND) resetblend();
+            }
+        }
+
+        void changedraw(int change = 0)
+        {
+//             if(drawing) conoutf("%i -> %i", drawing->gettype(), gettype());
+//             else conoutf("%i", gettype());
+
+            if(!drawing)
+            {
+                startdraw();
+                changed = change;
+            }
+            else if(drawing->gettype() != gettype())
+            {
+                drawing->enddraw(change);
+                startdraw();
+                changed = change;
+            }
+            drawing = this;
+        }
+
         virtual void draw(float sx, float sy)
         {
             loopchildren(o,
@@ -438,7 +509,7 @@ namespace UI
         }
 
         virtual const char *getname() const { return ""; }
-        virtual const int gettype() const { return TYPE_MISC; }
+        virtual const int gettype() const { return TYPE_OBJECT; }
         virtual bool takesinput() const { return true; }
 
         bool isnamed(const char *name) const { return !strcmp(name, getname()); }
@@ -536,6 +607,8 @@ namespace UI
             );
             return false;
         }
+
+        const int gettype() const { return TYPE_WORLD;}
     };
 
     World *main;
@@ -592,6 +665,7 @@ namespace UI
                 offset += cspace;
             });
         }
+        const int gettype() const { return TYPE_LIST;}
     };
 
     struct VerticalList : Object
@@ -627,7 +701,7 @@ namespace UI
                 offset += cspace;
             });
         }
-
+        const int gettype() const { return TYPE_LIST;}
     };
 
     struct Table : Object
@@ -686,6 +760,7 @@ namespace UI
                 }
             });
         }
+        const int gettype() const { return TYPE_LIST;}
     };
 
     struct Spacer : Object
@@ -714,6 +789,7 @@ namespace UI
         {
             adjustchildrento(spacew, spaceh, w - 2*spacew, h - 2*spaceh);
         }
+        const int gettype() const { return TYPE_MISC;}
     };
 
     struct Filler : Object
@@ -735,6 +811,7 @@ namespace UI
             w = max(w, minw);
             h = max(h, minh);
         }
+        const int gettype() const { return TYPE_MISC;}
     };
 
     struct Offsetter : Object
@@ -761,6 +838,7 @@ namespace UI
         {
             adjustchildrento(offsetx, offsety, w - offsetx, h - offsety);
         }
+        const int gettype() const { return TYPE_MISC;}
     };
 
     struct Clipper : Object
@@ -794,6 +872,7 @@ namespace UI
             }
             else Object::draw(sx, sy);
         }
+        const int gettype() const { return TYPE_MISC;}
     };
 
     struct Conditional : Object
@@ -805,6 +884,7 @@ namespace UI
 
         int forks() const { return 2; }
         int choosefork() const { return executebool(cond) ? 0 : 1; }
+        const int gettype() const { return TYPE_MISC;}
     };
 
     struct Button : Object
@@ -881,6 +961,7 @@ namespace UI
             }
             return NULL;
         }
+        const int gettype() const { return TYPE_MISC;}
     };
 
     struct Scroller : Clipper
@@ -1549,14 +1630,18 @@ namespace UI
             dstblend = getblendtype(dst);
         }
 
+        void startdraw()
+        {
+            hudnotextureshader->set();
+            gle::defvertex(2);
+        }
+
         void draw(float sx, float sy)
         {
-            if(type == BLEND) glBlendFunc(srcblend, dstblend);
-            hudnotextureshader->set();
+            changedraw(CHANGE_SHADER | CHANGE_COLOR | CHANGE_BLEND);
+            if(type == BLEND) changeblend(BLEND_CUSTOM, srcblend, dstblend); else resetblend();
+
             color.init();
-
-            gle::defvertex(2);
-
             gle::begin(GL_TRIANGLE_STRIP);
             gle::attribf(sx,     sy);
             gle::attribf(sx + w, sy);
@@ -1564,14 +1649,9 @@ namespace UI
             gle::attribf(sx + w, sy + h);
             gle::end();
 
-            hudshader->set();
-            gle::colorf(1, 1, 1);
-            gle::defvertex(2);
-            gle::deftexcoord0();
-
-            if(type!=SOLID) glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             Object::draw(sx, sy);
         }
+        const int gettype() const { return TYPE_RECTANGLE;}
     };
 
     struct Gradient : Rectangle
@@ -1586,13 +1666,17 @@ namespace UI
         Gradient(int src, int dst, int dir, const Color &color, const Color color2, float minw = 0, float minh = 0) : Rectangle(color, src, dst, minw, minh), dir(dir), color2(color2) {}
         ~Gradient() {}
 
-        void draw(float sx, float sy)
+        void startdraw()
         {
-            if(type == BLEND) glBlendFunc(srcblend, dstblend);
             hudnotextureshader->set();
-
             gle::defvertex(2);
             Color::def();
+        }
+
+        void draw(float sx, float sy)
+        {
+            changedraw(CHANGE_SHADER | CHANGE_COLOR | CHANGE_BLEND);
+            if(type == BLEND) changeblend(BLEND_CUSTOM, srcblend, dstblend); else resetblend();
 
             gle::begin(GL_TRIANGLE_STRIP);
             gle::attribf(sx+w, sy);   (dir == HORIZONTAL ? color2 : color).attrib();
@@ -1601,13 +1685,9 @@ namespace UI
             gle::attribf(sx,   sy+h); (dir == HORIZONTAL ? color : color2).attrib();
             gle::end();
 
-            hudshader->set();
-            gle::defvertex(2);
-            gle::deftexcoord0();
-
-            if(type!=SOLID) glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             Object::draw(sx, sy);
         }
+        const int gettype() const { return TYPE_GRADIENT;}
     };
 
     struct Line : Filler
@@ -1617,24 +1697,25 @@ namespace UI
         Line(const Color &color, float minw = 0, float minh = 0) : Filler(minw, minh), color(color) {}
         ~Line() {}
 
-        void draw(float sx, float sy)
+        void startdraw()
         {
             hudnotextureshader->set();
-            color.init();
-
             gle::defvertex(2);
+        }
+
+        void draw(float sx, float sy)
+        {
+            changedraw(CHANGE_SHADER | CHANGE_COLOR);
+
+            color.init();
             gle::begin(GL_LINES);
             gle::attribf(sx,   sy);
             gle::attribf(sx+w, sy+h);
             gle::end();
 
-            hudshader->set();
-            gle::colorf(1, 1, 1);
-            gle::defvertex(2);
-            gle::deftexcoord0();
-
             Object::draw(sx, sy);
         }
+        const int gettype() const { return TYPE_LINE; }
     };
 
     struct Outline : Filler
@@ -1644,12 +1725,17 @@ namespace UI
         Outline(const Color &color, float minw = 0, float minh = 0) : Filler(minw, minh), color(color) {}
         ~Outline() {}
 
-        void draw(float sx, float sy)
+        void startdraw()
         {
             hudnotextureshader->set();
-            color.init();
-
             gle::defvertex(2);
+        }
+
+        void draw(float sx, float sy)
+        {
+            changedraw(CHANGE_SHADER | CHANGE_COLOR);
+
+            color.init();
             gle::begin(GL_LINE_LOOP);
             gle::attribf(sx,   sy);
             gle::attribf(sx+w, sy);
@@ -1657,19 +1743,17 @@ namespace UI
             gle::attribf(sx,   sy+h);
             gle::end();
 
-            hudshader->set();
-            gle::colorf(1, 1, 1);
-            gle::defvertex(2);
-            gle::deftexcoord0();
-
             Object::draw(sx, sy);
         }
+
+        const int gettype() const { return TYPE_LINE; }
     };
 
     VARP(uialphatest, 0, 1, 1);
 
     struct Image : Filler
     {
+        static Texture *lasttex;
         Texture *tex;
 
         Image(Texture *tex, float minw = 0, float minh = 0) : Filler(minw, minh), tex(tex) {}
@@ -1682,12 +1766,30 @@ namespace UI
             return checkalphamask(tex, cx/w, cy/h) ? this : NULL;
         }
 
+        void startdraw()
+        {
+            lasttex = NULL;
+
+            gle::defvertex(2);
+            gle::deftexcoord0();
+            gle::begin(GL_QUADS);
+        }
+
+        void enddraw()
+        {
+            gle::end();
+        }
+
         void draw(float sx, float sy)
         {
-            glBindTexture(GL_TEXTURE_2D, tex->id);
-            gle::begin(GL_TRIANGLE_STRIP);
-            quadtri(sx, sy, w, h);
-            gle::end();
+            changedraw();
+
+            if(lasttex != tex)
+            {
+                if(lasttex) { gle::end(); }
+                lasttex = tex; glBindTexture(GL_TEXTURE_2D, tex->id);
+            }
+            quad(sx, sy, w, h);
 
             Object::draw(sx, sy);
         }
@@ -1695,6 +1797,7 @@ namespace UI
         const int gettype() const { return TYPE_IMAGE; }
     };
 
+    Texture *Image::lasttex = NULL;
     VAR(thumbtime, 0, 25, 1000);
     static int lastthumbnail = 0;
 
@@ -1797,6 +1900,7 @@ namespace UI
             }
             loopk(4) { tc[k][0] = tc[k][0]/xt - float(xoff)/tex->xs; tc[k][1] = tc[k][1]/yt - float(yoff)/tex->ys; }
 
+            changedraw(CHANGE_SHADER | CHANGE_COLOR);
             SETSHADER(hudrgb);
 
             glBindTexture(GL_TEXTURE_2D, tex->id);
@@ -1846,8 +1950,6 @@ namespace UI
                 gle::attribf(sx+w,   sy+h  ); gle::attrib(tc[3]);
                 gle::end();
             }
-            gle::colorf(1, 1, 1);
-            hudshader->set();
         }
 
         void draw(float sx, float sy)
@@ -1869,6 +1971,7 @@ namespace UI
 
             Object::draw(sx, sy);
         }
+        const int gettype() const { return TYPE_SLOTVIEWER; }
     };
 
     struct CroppedImage : Image
@@ -1888,10 +1991,13 @@ namespace UI
 
         void draw(float sx, float sy)
         {
-            glBindTexture(GL_TEXTURE_2D, tex->id);
-            gle::begin(GL_TRIANGLE_STRIP);
-            quadtri(sx, sy, w, h, cropx, cropy, cropw, croph);
-            gle::end();
+            changedraw();
+            if(lasttex != tex)
+            {
+                if(lasttex) { gle::end(); gle::begin(GL_QUADS); }
+                lasttex = tex; glBindTexture(GL_TEXTURE_2D, tex->id);
+            }
+            quad(sx, sy, w, h, cropx, cropy, cropw, croph);
 
             Object::draw(sx, sy);
         }
@@ -1922,8 +2028,13 @@ namespace UI
 
         void draw(float sx, float sy)
         {
-            glBindTexture(GL_TEXTURE_2D, tex->id);
-            gle::begin(GL_QUADS);
+            changedraw();
+            if(lasttex != tex)
+            {
+                if(lasttex) { gle::end(); gle::begin(GL_QUADS); }
+                lasttex = tex; glBindTexture(GL_TEXTURE_2D, tex->id);
+            }
+
             float splitw = (minw ? min(minw, w) : w) / 2,
                   splith = (minh ? min(minh, h) : h) / 2,
                   vy = sy, ty = 0;
@@ -1955,7 +2066,6 @@ namespace UI
                 ty += th;
                 if(ty >= 1) break;
             }
-            gle::end();
 
             Object::draw(sx, sy);
         }
@@ -1994,8 +2104,13 @@ namespace UI
 
         void draw(float sx, float sy)
         {
-            glBindTexture(GL_TEXTURE_2D, tex->id);
-            gle::begin(GL_QUADS);
+            changedraw();
+            if(lasttex != tex)
+            {
+                if(lasttex) { gle::end(); gle::begin(GL_QUADS); }
+                lasttex = tex; glBindTexture(GL_TEXTURE_2D, tex->id);
+            }
+
             float vy = sy, ty = 0;
             loopi(3)
             {
@@ -2023,7 +2138,6 @@ namespace UI
                 vy += vh;
                 ty += th;
             }
-            gle::end();
 
             Object::draw(sx, sy);
         }
@@ -2049,13 +2163,17 @@ namespace UI
 
         void draw(float sx, float sy)
         {
-            glBindTexture(GL_TEXTURE_2D, tex->id);
+            changedraw();
+            if(lasttex != tex)
+            {
+                if(lasttex) { gle::end(); gle::begin(GL_QUADS); }
+                lasttex = tex; glBindTexture(GL_TEXTURE_2D, tex->id);
+            }
 
             //we cannot use the built in OpenGL texture repeat with clamped textures.
             if(tex->clamp)
             {
                 float dx = 0, dy = 0;
-                gle::begin(GL_QUADS);
                 while(dx < w)
                 {
                     while(dy < h)
@@ -2070,14 +2188,10 @@ namespace UI
                     dy = 0;
                     dx += tilew;
                 }
-
-                gle::end();
             }
             else
             {
-                gle::begin(GL_TRIANGLE_STRIP);
-                quadtri(sx, sy, w, h, 0, 0, w/tilew, h/tileh);
-                gle::end();
+                quad(sx, sy, w, h, 0, 0, w/tilew, h/tileh);
             }
 
             Object::draw(sx, sy);
@@ -2099,12 +2213,11 @@ namespace UI
         void enddraw()
         {
             glEnable(GL_BLEND);
-            hudshader->set();
-            gle::defvertex(2);
-            gle::deftexcoord0();
 
             if(clipstack.length()) glEnable(GL_SCISSOR_TEST);
         }
+
+        const int gettype() const { return TYPE_PREVIEW; }
     };
 
     struct ModelPreview : Preview
@@ -2136,14 +2249,12 @@ namespace UI
 
         void draw(float sx, float sy)
         {
-            startdraw();
-
+            changedraw(CHANGE_SHADER);
             int x = floor( (sx + world->margin) * screenw / world->w),
                 dx = ceil(w * screenw / world->w),
                 y = ceil(( 1 - (h + sy) ) * world->size),
                 dy = ceil(h * world->size);
 
-            gle::disable();
             modelpreview::start(x, y, dx, dy, false, clipstack.length() >= 1);
 
             model *m = loadmodel(mdl);
@@ -2173,8 +2284,6 @@ namespace UI
             // modelpreview::start changes the clip area via preparegbuffer, we restore it here.
             if(clipstack.length()) clipstack.last().scissor();
             modelpreview::end();
-
-            enddraw();
 
             Object::draw(sx, sy);
         }
@@ -2238,6 +2347,7 @@ namespace UI
             Object::draw(sx, sy);
             popfont();
         }
+        const int gettype() const { return TYPE_MISC; }
     };
 
     // default size of text in terms of rows per screenful
@@ -2273,6 +2383,8 @@ namespace UI
 
         void draw(float sx, float sy)
         {
+            changedraw(CHANGE_SHADER | CHANGE_COLOR);
+
             float k = drawscale();
             pushhudmatrix();
             hudmatrix.scale(k, k, 1);
@@ -2280,7 +2392,6 @@ namespace UI
             draw_text(str, int(sx/k), int(sy/k), color.r, color.g, color.b, color.a, -1, wrap <= 0 ? -1 : wrap/k);
 
             pophudmatrix();
-            gle::colorf(1, 1, 1);
 
             Object::draw(sx, sy);
         }
@@ -2291,14 +2402,12 @@ namespace UI
 
             int tw, th;
             float k = drawscale();
-            text_bounds(str, tw, th, wrap <= 0 ? -1 : wrap/k);
-
-            if(wrap <= 0)
-                w = max(w, tw*k);
-            else
-                w = max(w, min(wrap, tw*k));
+            text_bounds(str, tw, th, wrap > 0 ? wrap/k : -1);
+            w = max(w, tw*k);
             h = max(h, th*k);
         }
+
+        const int gettype() const { return TYPE_TEXT; }
     };
 
     struct EvalText : Object
@@ -2324,31 +2433,31 @@ namespace UI
 
         void draw(float sx, float sy)
         {
+            changedraw(CHANGE_SHADER | CHANGE_COLOR);
+
             float k = drawscale();
             pushhudmatrix();
             hudmatrix.scale(k, k, 1);
             flushhudmatrix();
-
             draw_text(result.getstr(), int(sx/k), int(sy/k), color.r, color.g, color.b, color.a, -1, wrap <= 0 ? -1 : wrap/k);
 
             pophudmatrix();
-            gle::colorf(1, 1, 1);
 
             Object::draw(sx, sy);
         }
 
         void layout()
         {
-            executeret(cmd, result);
             Object::layout();
 
             int tw, th;
             float k = drawscale();
-            text_bounds(result.getstr(), tw, th, wrap <= 0 ? -1 : wrap/k);
-            if(wrap <= 0) w = max(w, tw*k);
-            else w = max(w, min(wrap, tw*k));
+            text_bounds(result.getstr(), tw, th, wrap > 0 ? wrap/k : -1);
+            w = max(w, tw*k);
             h = max(h, th*k);
         }
+
+        const int gettype() const { return TYPE_TEXT; }
     };
 
     struct Console : Filler
@@ -2359,7 +2468,7 @@ namespace UI
 
         void draw(float sx, float sy)
         {
-            Object::draw(sx, sy);
+            changedraw(CHANGE_SHADER | CHANGE_COLOR);
 
             float k = drawscale();
             pushhudmatrix();
@@ -2369,6 +2478,8 @@ namespace UI
             renderfullconsole(w/k, h/k);
             pophudmatrix();
         }
+
+        const int gettype() const { return TYPE_CONSOLE; }
     };
 
     struct TextEditor;
@@ -2503,6 +2614,7 @@ namespace UI
 
         void draw(float sx, float sy)
         {
+            changedraw(CHANGE_SHADER | CHANGE_COLOR);
             pushhudmatrix();
             hudmatrix.translate(sx, sy, 0);
             hudmatrix.scale(drawscale(), drawscale(), 1);
@@ -2602,6 +2714,7 @@ namespace UI
         ~NamedObject() { delete[] name; }
 
         const char *getname() const { return name; }
+        const int gettype() const { return TYPE_MISC; }
     };
 
     struct Tag : NamedObject
@@ -3125,6 +3238,15 @@ namespace UI
         uicontextscale = (FONTH*conscale)/th;
     }
 
+    static inline void stopdrawing()
+    {
+        if(drawing)
+        {
+            drawing->enddraw(0);
+            drawing = NULL;
+        }
+    }
+
     void update()
     {
         loopv(updatelater)
@@ -3176,6 +3298,7 @@ namespace UI
         if(world->children.empty()) return;
 
         glEnable(GL_BLEND);
+        blendtype = BLEND_ALPHA;
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         hudmatrix.ortho(world->x, world->x + world->w, world->y + world->h, world->y, -1, 1);
@@ -3183,8 +3306,9 @@ namespace UI
         hudshader->set();
 
         gle::colorf(1, 1, 1);
-        gle::defvertex(2);
-        gle::deftexcoord0();
+
+        changed = 0;
+        drawing = NULL;
 
         world->draw();
 
@@ -3207,6 +3331,8 @@ namespace UI
 
             tooltip->draw(x, y);
         }
+
+        stopdrawing();
 
         glDisable(GL_BLEND);
         gle::disable();

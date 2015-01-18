@@ -107,7 +107,7 @@ namespace camera
 			rpgexecute(post);
 
 		cutscene = false;
-        cancel = false;
+		cancel = false;
 		freecode(post); post = NULL;
 		attached = NULL;
 		interpfunc = linear;
@@ -463,6 +463,7 @@ namespace camera
 				pending[i]->debug(hoffset, true);
 
 			pophudmatrix();
+			resethudshader();
 		}
 
 		void getsignal(const char *signal)

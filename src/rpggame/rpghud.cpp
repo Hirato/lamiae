@@ -219,6 +219,7 @@ namespace game
 
 		vec col((colour >> 16) & 255, (colour >> 8) & 255, colour & 255);
 		draw_text(str, 0, 0, col.x, col.y, col.z);
+		resethudshader();
 
 		pophudmatrix();
 	}
@@ -369,6 +370,7 @@ namespace game
 			}
 
 			pophudmatrix();
+			resethudshader();
 		}
 
 		if(DEBUG_WORLD)
@@ -385,6 +387,7 @@ namespace game
 			draw_textf("projectiles: %i", 0, 200, curmap->projs.length());
 
 			pophudmatrix();
+			resethudshader();
 		}
 
 		pophudmatrix();
