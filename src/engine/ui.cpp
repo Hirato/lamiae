@@ -552,6 +552,15 @@ namespace UI
         }
     };
 
+    static inline void stopdrawing()
+    {
+        if(drawing)
+        {
+            drawing->enddraw(0);
+            drawing = NULL;
+        }
+    }
+
     struct World : Object
     {
         float margin;
@@ -866,8 +875,10 @@ namespace UI
         {
             if((clipw && virtw > clipw) || (cliph && virth > cliph))
             {
+                stopdrawing();
                 pushclip(sx, sy, w, h);
                 Object::draw(sx, sy);
+                stopdrawing();
                 popclip();
             }
             else Object::draw(sx, sy);
@@ -1009,8 +1020,10 @@ namespace UI
         {
             if((clipw && virtw > clipw) || (cliph && virth > cliph))
             {
+                stopdrawing();
                 pushclip(sx, sy, w, h);
                 Object::draw(sx - offsetx, sy - offsety);
+                stopdrawing();
                 popclip();
             }
             else Object::draw(sx, sy);
@@ -2385,13 +2398,11 @@ namespace UI
         {
             changedraw(CHANGE_SHADER | CHANGE_COLOR);
 
-            float k = drawscale();
-            pushhudmatrix();
-            hudmatrix.scale(k, k, 1);
-            flushhudmatrix();
+            float oldscale = textscale;
+            float k = textscale = drawscale();
             draw_text(str, int(sx/k), int(sy/k), color.r, color.g, color.b, color.a, -1, wrap <= 0 ? -1 : wrap/k);
+            textscale = oldscale;
 
-            pophudmatrix();
 
             Object::draw(sx, sy);
         }
@@ -2435,13 +2446,10 @@ namespace UI
         {
             changedraw(CHANGE_SHADER | CHANGE_COLOR);
 
-            float k = drawscale();
-            pushhudmatrix();
-            hudmatrix.scale(k, k, 1);
-            flushhudmatrix();
+            float oldscale = textscale;
+            float k = textscale = drawscale();
             draw_text(result.getstr(), int(sx/k), int(sy/k), color.r, color.g, color.b, color.a, -1, wrap <= 0 ? -1 : wrap/k);
-
-            pophudmatrix();
+            textscale = oldscale;
 
             Object::draw(sx, sy);
         }
@@ -3236,15 +3244,6 @@ namespace UI
         if(forceaspect) tw = int(ceil(th*forceaspect));
         gettextres(tw, th);
         uicontextscale = (FONTH*conscale)/th;
-    }
-
-    static inline void stopdrawing()
-    {
-        if(drawing)
-        {
-            drawing->enddraw(0);
-            drawing = NULL;
-        }
     }
 
     void update()
