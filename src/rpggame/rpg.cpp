@@ -727,6 +727,7 @@ namespace game
 			moveplayer(player1, 10, false);
 			return;
 		}
+		if(rpggui::open()) return;
 
 		loopv(curmap->objs)
 		{
@@ -917,7 +918,6 @@ namespace game
 
 	bool ispaused()
 	{
-		if(rpggui::open()) return true;
 		return false;
 	}
 	int scaletime(int t) { return t * gamespeed; }
@@ -953,6 +953,7 @@ namespace game
 	{
 		cleangame();
 		connected = false;
+		if(editmode) toggleedit(true);
 	}
 
 	const char *getclientmap() { return curmap ? curmap->name : ""; }

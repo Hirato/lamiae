@@ -2131,12 +2131,10 @@ namespace UI
             {
                 vec center, radius;
                 m->boundbox(center, radius);
-                float dist = 2.0f * max(radius.magnitude2(), 1.1f * radius.z),
-                    yaw = fmod(totalmillis / 10000.f * 360.f, 360.f);
-                vec o(-center.x, dist - center.y, -0.1f * dist - center.z);
+                float yaw;
+                vec o = calcmodelpreviewpos(radius, yaw).sub(center);
 
                 vector<modelattach> attach;
-
                 if(attachments[1].length())
                 {
                     attach.reserve(attachments[1].length());
@@ -2152,7 +2150,7 @@ namespace UI
 
             }
 
-            //note that modelpreview::start changes the clip area via preparegbuffer, we restore it here.
+            // modelpreview::start changes the clip area via preparegbuffer, we restore it here.
             if(clipstack.length()) clipstack.last().scissor();
             modelpreview::end();
 
