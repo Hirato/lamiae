@@ -2084,14 +2084,37 @@ namespace UI
         }
     };
 
-    struct ModelPreview : Filler
+    struct Preview : Filler
+    {
+        Preview(float minw, float minh) : Filler(minw, minh) {}
+        ~Preview() {}
+
+        void startdraw()
+        {
+            glDisable(GL_BLEND);
+            gle::disable();
+
+            if(clipstack.length()) glDisable(GL_SCISSOR_TEST);
+        }
+        void enddraw()
+        {
+            glEnable(GL_BLEND);
+            hudshader->set();
+            gle::defvertex(2);
+            gle::deftexcoord0();
+
+            if(clipstack.length()) glEnable(GL_SCISSOR_TEST);
+        }
+    };
+
+    struct ModelPreview : Preview
     {
         const char *mdl;
         int anim;
         vector <const char *> attachments[2];
         dynent ent;
 
-        ModelPreview(float minw, float minh, const char *m, int a, const char *attach) : Filler(minw, minh), mdl(newstring(m))
+        ModelPreview(float minw, float minh, const char *m, int a, const char *attach) : Preview(minw, minh), mdl(newstring(m))
         {
             int aprim = (a & ANIM_INDEX) | ANIM_LOOP;
             int asec = ((a >> 9) & ANIM_INDEX);
@@ -2113,10 +2136,7 @@ namespace UI
 
         void draw(float sx, float sy)
         {
-            glDisable(GL_BLEND);
-            // GL_SCISSOR_TEST causes problems with rendering
-            // disable it and restore it afterwards.
-            if(clipstack.length()) glDisable(GL_SCISSOR_TEST);
+            startdraw();
 
             int x = floor( (sx + world->margin) * screenw / world->w),
                 dx = ceil(w * screenw / world->w),
@@ -2154,11 +2174,7 @@ namespace UI
             if(clipstack.length()) clipstack.last().scissor();
             modelpreview::end();
 
-            hudshader->set();
-            gle::defvertex(2);
-            gle::deftexcoord0();
-            glEnable(GL_BLEND);
-            if(clipstack.length()) glEnable(GL_SCISSOR_TEST);
+            enddraw();
 
             Object::draw(sx, sy);
         }
