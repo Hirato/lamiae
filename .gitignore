@@ -28,3 +28,7 @@ src/windows/lamiae.depend
 # extra
 /wiki/
 /lilim/
+
+# special files
+/src/tessfont
+

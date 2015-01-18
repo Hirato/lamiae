@@ -472,8 +472,8 @@ void saveslotconfig(stream *h, Slot &s, int index)
             h->printf("texscale %g\n", vs.scale);
         if(vs.layer != 0)
             h->printf("texlayer %d\n", vs.layer);
-        if(vs.decal != 0)
-            h->printf("texdecal %d\n", vs.decal);
+        if(vs.detail != 0)
+            h->printf("texdetail %d\n", vs.detail);
         if(vs.alphafront != 0.5f || vs.alphaback != 0)
             h->printf("texalpha %g %g\n", vs.alphafront, vs.alphaback);
         if(vs.colorscale != vec(1, 1, 1))
@@ -584,7 +584,7 @@ void savevslot(stream *f, VSlot &vs, int prev)
         f->putlil<float>(vs.refractscale);
         loopk(3) f->putlil<float>(vs.refractcolor[k]);
     }
-    if(vs.changed & (1<<VSLOT_DECAL)) f->putlil<int>(vs.decal);
+    if(vs.changed & (1<<VSLOT_DETAIL)) f->putlil<int>(vs.detail);
 }
 
 void savevslots(stream *f, int numvslots)
@@ -661,7 +661,7 @@ void loadvslot(stream *f, VSlot &vs, int changed)
         vs.refractscale = f->getlil<float>();
         loopk(3) vs.refractcolor[k] = f->getlil<float>();
     }
-    if(vs.changed & (1<<VSLOT_DECAL)) vs.decal = f->getlil<int>();
+    if(vs.changed & (1<<VSLOT_DETAIL)) vs.detail = f->getlil<int>();
 }
 
 void loadvslots(stream *f, int numvslots)

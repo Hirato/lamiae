@@ -116,15 +116,19 @@ struct vec
     float zdot(const vec &o) const { return z*o.z; }
     vec &mul(const vec &o)   { x *= o.x; y *= o.y; z *= o.z; return *this; }
     vec &mul(float f)        { x *= f; y *= f; z *= f; return *this; }
+    vec &mul2(float f)       { x *= f; y *= f; return *this; }
     vec &square()            { mul(*this); return *this; }
     vec &div(const vec &o)   { x /= o.x; y /= o.y; z /= o.z; return *this; }
     vec &div(float f)        { x /= f; y /= f; z /= f; return *this; }
+    vec &div2(float f)       { x /= f; y /= f; return *this; }
     vec &recip()             { x = 1/x; y = 1/y; z = 1/z; return *this; }
     vec &add(const vec &o)   { x += o.x; y += o.y; z += o.z; return *this; }
     vec &add(float f)        { x += f; y += f; z += f; return *this; }
+    vec &add2(float f)       { x += f; y += f; return *this; }
     vec &addz(float f)       { z += f; return *this; }
     vec &sub(const vec &o)   { x -= o.x; y -= o.y; z -= o.z; return *this; }
     vec &sub(float f)        { x -= f; y -= f; z -= f; return *this; }
+    vec &sub2(float f)       { x -= f; y -= f; return *this; }
     vec &subz(float f)       { z -= f; return *this; }
     vec &neg2()              { x = -x; y = -y; return *this; }
     vec &neg()               { x = -x; y = -y; z = -z; return *this; }
@@ -204,10 +208,7 @@ struct vec
 
     void orthogonal(const vec &d)
     {
-        int i = fabs(d.x) > fabs(d.y) ? (fabs(d.x) > fabs(d.z) ? 0 : 2) : (fabs(d.y) > fabs(d.z) ? 1 : 2);
-        v[i] = d[(i+1)%3];
-        v[(i+1)%3] = -d[i];
-        v[(i+2)%3] = 0;
+        *this = fabs(d.x) > fabs(d.z) ? vec(-d.y, d.x, 0) : vec(0, -d.z, d.y);
     }
 
     void orthonormalize(vec &s, vec &t) const
@@ -216,16 +217,25 @@ struct vec
         t.project(*this).project(s);
     }
 
-    template<class T>
-    bool insidebb(const T &bbmin, const T &bbmax) const
+    template<class T> bool insidebb(const T &bbmin, const T &bbmax) const
     {
         return x >= bbmin.x && x <= bbmax.x && y >= bbmin.y && y <= bbmax.y && z >= bbmin.z && z <= bbmax.z;
     }
 
-    template<class T, class U>
-    bool insidebb(const T &o, U size) const
+    template<class T, class U> bool insidebb(const T &bbmin, const T &bbmax, U margin) const
+    {
+        return x >= bbmin.x-margin && x <= bbmax.x+margin && y >= bbmin.y-margin && y <= bbmax.y+margin && z >= bbmin.z-margin && z <= bbmax.z+margin;
+    }
+
+    template<class T, class U> bool insidebb(const T &o, U size) const
     {
         return x >= o.x && x <= o.x + size && y >= o.y && y <= o.y + size && z >= o.z && z <= o.z + size;
+    }
+
+    template<class T, class U> bool insidebb(const T &o, U size, U margin) const
+    {
+        size += margin;
+        return x >= o.x-margin && x <= o.x + size && y >= o.y-margin && y <= o.y + size && z >= o.z-margin && z <= o.z + size;
     }
 
     template<class T> float dist_to_bb(const T &min, const T &max) const
@@ -283,6 +293,7 @@ struct vec4
 
     vec4() {}
     explicit vec4(const vec &p, float w = 0) : x(p.x), y(p.y), z(p.z), w(w) {}
+    explicit vec4(const vec2 &p, float z = 0, float w = 0) : x(p.x), y(p.y), z(z), w(w) {}
     vec4(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {}
     explicit vec4(const float *v) : x(v[0]), y(v[1]), z(v[2]), w(v[3]) {}
 
@@ -1350,7 +1361,7 @@ struct bvec
 
     bvec() {}
     bvec(uchar x, uchar y, uchar z) : x(x), y(y), z(z) {}
-    bvec(const vec &v) : x((uchar)((v.x+1)*255/2)), y((uchar)((v.y+1)*255/2)), z((uchar)((v.z+1)*255/2)) {}
+    bvec(const vec &v) : x(uchar((v.x+1)*(255.0f/2.0f))), y(uchar((v.y+1)*(255.0f/2.0f))), z(uchar((v.z+1)*(255.0f/2.0f))) {}
     explicit bvec(const bvec4 &v);
 
     uchar &operator[](int i)       { return v[i]; }
@@ -1380,6 +1391,13 @@ struct bvec
         z = uchar(a.z + (b.z-a.z)*t);
     }
 
+    void lerp(const bvec &a, const bvec &b, int ka, int kb, int d)
+    {
+        x = uchar((a.x*ka + b.x*kb)/d);
+        y = uchar((a.y*ka + b.y*kb)/d);
+        z = uchar((a.z*ka + b.z*kb)/d);
+    }
+
     void flip() { x ^= 0x80; y ^= 0x80; z ^= 0x80; }
 
     void scale(int k, int d) { x = uchar((x*k)/d); y = uchar((y*k)/d); z = uchar((z*k)/d); }
@@ -1389,6 +1407,8 @@ struct bvec
 
     static bvec fromcolor(const vec &v) { return bvec(uchar(v.x*255.0f), uchar(v.y*255.0f), uchar(v.z*255.0f)); }
     vec tocolor() const { return vec(x*(1.0f/255.0f), y*(1.0f/255.0f), z*(1.0f/255.0f)); }
+
+    static bvec from565(ushort c) { return bvec((((c>>11)&0x1F)*527 + 15) >> 6, (((c>>5)&0x3F)*259 + 35) >> 6, ((c&0x1F)*527 + 15) >> 6); }
 
     static bvec hexcolor(int color)
     {
@@ -1428,6 +1448,15 @@ struct bvec4
         z = uchar(a.z + (b.z-a.z)*t);
         w = a.w;
     }
+
+    void lerp(const bvec4 &a, const bvec4 &b, int ka, int kb, int d)
+    {
+        x = uchar((a.x*ka + b.x*kb)/d);
+        y = uchar((a.y*ka + b.y*kb)/d);
+        z = uchar((a.z*ka + b.z*kb)/d);
+        w = a.w;
+    }
+
     void lerp(const bvec4 &a, const bvec4 &b, const bvec4 &c, float ta, float tb, float tc)
     {
         x = uchar(a.x*ta + b.x*tb + c.x*tc);
@@ -1506,6 +1535,9 @@ struct matrix4
     {}
     matrix4(const matrix4x3 &m)
         : a(m.a, 0), b(m.b, 0), c(m.c, 0), d(m.d, 1)
+    {}
+    matrix4(const matrix3 &rot, const vec &trans)
+        : a(rot.a, 0), b(rot.b, 0), c(rot.c, 0), d(trans, 1)
     {}
 
     void mul(const matrix4 &x, const matrix3 &y)

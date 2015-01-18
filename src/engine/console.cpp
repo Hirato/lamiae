@@ -66,11 +66,14 @@ float rendercommand(float x, float y, float w)
 {
     if(commandmillis < 0) return 0;
 
-    defformatstring(s, "%s %s", commandprompt ? commandprompt : ">", commandbuf);
+    char buf[CONSTRLEN];
+    const char *prompt = commandprompt ? commandprompt : ">";
+    formatstring(buf, "%s %s", prompt, commandbuf);
+
     float width, height;
-    text_boundsf(s, width, height, w);
+    text_boundsf(buf, width, height, w);
     y -= height;
-    draw_text(s, x, y, 0xFF, 0xFF, 0xFF, 0xFF, (commandpos>=0) ? (commandpos+1+(commandprompt?strlen(commandprompt):1)) : strlen(s), w);
+    draw_text(buf, x, y, 0xFF, 0xFF, 0xFF, 0xFF, commandpos>=0 ? commandpos+1 + strlen(prompt) : strlen(buf), w);
     return height;
 }
 

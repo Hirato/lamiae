@@ -1,9 +1,3 @@
-extern int renderpath;
-
-enum { R_GLSLANG = 0 };
-
-enum { SHPARAM_LOOKUP = 0, SHPARAM_VERTEX, SHPARAM_PIXEL, SHPARAM_UNIFORM };
-
 struct GlobalShaderParamState
 {
     const char *name;
@@ -75,13 +69,19 @@ struct LocalShaderParamState : ShaderParamBinding
 
 struct SlotShaderParam
 {
+    enum
+    {
+        REUSE = 1<<0
+    };
+
     const char *name;
-    int loc;
+    int loc, flags;
     float val[4];
 };
 
 struct SlotShaderParamState : LocalShaderParamState
 {
+    int flags;
     float val[4];
 
     SlotShaderParamState() {}
@@ -91,6 +91,7 @@ struct SlotShaderParamState : LocalShaderParamState
         loc = -1;
         size = 1;
         format = GL_FLOAT_VEC4;
+        flags = p.flags;
         memcpy(val, p.val, sizeof(val));
     }
 };
@@ -193,6 +194,10 @@ struct Shader
 
     bool isdynamic() const { return (type&SHADER_DYNAMIC)!=0; }
 
+    static inline bool isnull(const Shader *s) { return !s; }
+
+    bool isnull() const { return isnull(this); }
+
     int numvariants(int row) const
     {
         if(row < 0 || row >= MAXVARIANTROWS || !variantrows) return 0;
@@ -227,14 +232,14 @@ struct Shader
 
     void setvariant(int col, int row)
     {
-        if(!this || !loaded()) return;
+        if(isnull() || !loaded()) return;
         setvariant_(col, row);
         lastshader->flushparams();
     }
 
     void setvariant(int col, int row, Slot &slot)
     {
-        if(!this || !loaded()) return;
+        if(isnull() || !loaded()) return;
         setvariant_(col, row);
         lastshader->flushparams(&slot);
         lastshader->setslotparams(slot);
@@ -242,7 +247,7 @@ struct Shader
 
     void setvariant(int col, int row, Slot &slot, VSlot &vslot)
     {
-        if(!this || !loaded()) return;
+        if(isnull() || !loaded()) return;
         setvariant_(col, row);
         lastshader->flushparams(&slot);
         lastshader->setslotparams(slot, vslot);
@@ -255,14 +260,14 @@ struct Shader
 
     void set()
     {
-        if(!this || !loaded()) return;
+        if(isnull() || !loaded()) return;
         set_();
         lastshader->flushparams();
     }
 
     void set(Slot &slot)
     {
-        if(!this || !loaded()) return;
+        if(isnull() || !loaded()) return;
         set_();
         lastshader->flushparams(&slot);
         lastshader->setslotparams(slot);
@@ -270,7 +275,7 @@ struct Shader
 
     void set(Slot &slot, VSlot &vslot)
     {
-        if(!this || !loaded()) return;
+        if(isnull() || !loaded()) return;
         set_();
         lastshader->flushparams(&slot);
         lastshader->setslotparams(slot, vslot);
@@ -436,7 +441,6 @@ struct LocalShaderParam
 
     void setu(uint x = 0, uint y = 0, uint z = 0, uint w = 0) { sett<uint>(x, y, z, w); }
     void setv(const uint *u, int n = 1) { ShaderParamBinding *b = resolve(); if(b) glUniform1uiv_(b->loc, n, u); }
-
 };
 
 #define LOCALPARAM(name, vals) do { static LocalShaderParam param( #name ); param.set(vals); } while(0)
@@ -567,6 +571,7 @@ struct Texture
         TRANSIENT  = 1<<9,
         COMPRESSED = 1<<10,
         ALPHA      = 1<<11,
+        MIRROR     = 1<<12,
         FLAGS      = 0xFF00
     };
 
@@ -582,7 +587,7 @@ struct Texture
 };
 
 #define SETSWIZZLE(name, tex) SETVARIANT(name, (tex) ? (tex)->swizzle() : -1, 0)
-#define SETVARIANTSWIZZLE(name, tex, row) SETVARIANT(name, ((row) >= 0 ? 1 : 0) + ((tex) ? (tex)->swizzle() : -1), row)
+#define SETVARIANTSWIZZLE(name, tex, row) SETVARIANT(name, ((row) > 0 ? 1 : 0) + ((tex) ? (tex)->swizzle() : -1), row)
 
 enum
 {
@@ -595,7 +600,7 @@ enum
     TEX_DEPTH,
     TEX_UNKNOWN,
 
-    TEX_DECAL = TEX_SPEC
+    TEX_DETAIL = TEX_SPEC
 };
 
 enum
@@ -610,7 +615,7 @@ enum
     VSLOT_COLOR,
     VSLOT_RESERVED, // used by RE
     VSLOT_REFRACT,
-    VSLOT_DECAL,
+    VSLOT_DETAIL,
     VSLOT_NUM
 };
 
@@ -625,7 +630,7 @@ struct VSlot
     int rotation;
     ivec2 offset;
     vec2 scroll;
-    int layer, decal;
+    int layer, detail;
     float alphafront, alphaback;
     vec colorscale;
     vec glowcolor;
@@ -642,13 +647,13 @@ struct VSlot
 
     void reset()
     {
-        params.shrink(0);
+        params.setsize(0);
         linked = false;
         scale = 1;
         rotation = 0;
         offset = ivec2(0, 0);
         scroll = vec2(0, 0);
-        layer = decal = 0;
+        layer = detail = 0;
         alphafront = 0.5f;
         alphaback = 0;
         colorscale = vec(1, 1, 1);
@@ -710,9 +715,9 @@ struct Slot
     void reset()
     {
         smooth = -1;
-        sts.shrink(0);
+        sts.setsize(0);
         shader = NULL;
-        params.shrink(0);
+        params.setsize(0);
         loaded = false;
         texmask = 0;
         DELETEA(grass);
@@ -823,7 +828,8 @@ extern void setslotshader(Slot &s);
 extern void linkslotshader(Slot &s, bool load = true);
 extern void linkvslotshader(VSlot &s, bool load = true);
 extern void linkslotshaders();
-extern const char *getshaderparamname(const char *name);
+extern const char *getshaderparamname(const char *name, bool insert = true);
+extern bool shouldreuseparams(Slot &s, VSlot &p);
 extern void setupshaders();
 extern void reloadshaders();
 extern void cleanupshaders();
@@ -835,7 +841,7 @@ extern void setblurshader(int pass, int size, int radius, float *weights, float 
 
 extern void savepng(const char *filename, ImageData &image, bool flip = false);
 extern void savetga(const char *filename, ImageData &image, bool flip = false);
-extern bool loaddds(const char *filename, ImageData &image);
+extern bool loaddds(const char *filename, ImageData &image, int force = 0);
 extern bool loadimage(const char *filename, ImageData &image);
 
 extern MatSlot &lookupmaterialslot(int slot, bool load = true);
@@ -845,6 +851,8 @@ extern DecalSlot &lookupdecalslot(int slot, bool load = true);
 extern VSlot *findvslot(Slot &slot, const VSlot &src, const VSlot &delta);
 extern VSlot *editvslot(const VSlot &src, const VSlot &delta);
 extern void mergevslot(VSlot &dst, const VSlot &src, const VSlot &delta);
+extern void packvslot(vector<uchar> &buf, const VSlot &src);
+extern bool unpackvslot(ucharbuf &buf, VSlot &dst, bool delta);
 
 extern Slot dummyslot;
 extern VSlot dummyvslot;

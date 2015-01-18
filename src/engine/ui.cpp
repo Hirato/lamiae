@@ -1761,8 +1761,8 @@ namespace UI
 
         void drawslot(Slot &slot, VSlot &vslot, float sx, float sy)
         {
-            VSlot *layer = NULL, *decal = NULL;
-            Texture *tex = notexture, *glowtex = NULL, *layertex = NULL, *decaltex = NULL;
+            VSlot *layer = NULL, *detail = NULL;
+            Texture *tex = notexture, *glowtex = NULL, *layertex = NULL, *detailtex = NULL;
             if(slot.loaded)
             {
                 tex = slot.sts[0].t;
@@ -1776,10 +1776,10 @@ namespace UI
                     if(!layer->slot->sts.empty())
                         layertex = layer->slot->sts[0].t;
                 }
-                if(vslot.decal)
+                if(vslot.detail)
                 {
-                    decal = &lookupvslot(vslot.decal);
-                    if(!decal->slot->sts.empty()) decaltex = decal->slot->sts[0].t;
+                    detail = &lookupvslot(vslot.detail);
+                    if(!detail->slot->sts.empty()) detailtex = detail->slot->sts[0].t;
                 }
             }
             else if(slot.thumbnail) tex = slot.thumbnail;
@@ -1810,9 +1810,9 @@ namespace UI
             gle::attribf(sx+w, sy+h); gle::attrib(tc[3]);
             gle::end();
 
-            if(decaltex)
+            if(detailtex)
             {
-                glBindTexture(GL_TEXTURE_2D, decaltex->id);
+                glBindTexture(GL_TEXTURE_2D, detailtex->id);
                 gle::begin(GL_TRIANGLE_STRIP);
                 gle::attribf(sx,      sy);      gle::attrib(tc[0]);
                 gle::attribf(sx+w/2, sy);      gle::attrib(tc[1]);

@@ -100,6 +100,7 @@ extern void compacteditvslots();
 extern void compactmruvslots();
 extern void compactvslots(cube *c, int n = 8);
 extern void compactvslot(int &index);
+extern void compactvslot(VSlot &vs);
 extern int compactvslots(bool cull = false);
 extern void reloadtextures();
 extern void cleanuptextures();
@@ -121,7 +122,7 @@ static inline bool pvsoccluded(const ivec &bborigin, int size)
 }
 
 // rendergl
-extern bool hasVAO, hasTR, hasTSW, hasFBO, hasAFBO, hasDS, hasTF, hasCBF, hasS3TC, hasFXT1, hasLATC, hasRGTC, hasAF, hasFBB, hasFBMS, hasTMS, hasMSS, hasFBMSBS, hasNVFBMSC, hasNVTMS, hasUBO, hasMBR, hasDB2, hasDBB, hasTG, hasTQ, hasPF, hasTRG, hasTI, hasHFV, hasHFP, hasDBT, hasDC, hasDBGO, hasEGPU4, hasGPU4, hasGPU5, hasBFE, hasEAL, hasCR, hasOQ2, hasCB, hasCI;
+extern bool hasVAO, hasTR, hasTSW, hasFBO, hasAFBO, hasDS, hasTF, hasCBF, hasS3TC, hasFXT1, hasLATC, hasRGTC, hasAF, hasFBB, hasFBMS, hasTMS, hasMSS, hasFBMSBS, hasUBO, hasMBR, hasDB2, hasDBB, hasTG, hasTQ, hasPF, hasTRG, hasTI, hasHFV, hasHFP, hasDBT, hasDC, hasDBGO, hasEGPU4, hasGPU4, hasGPU5, hasBFE, hasEAL, hasCR, hasOQ2, hasCB, hasCI;
 extern int glversion, glslversion;
 extern int maxdrawbufs, maxdualdrawbufs;
 
@@ -295,8 +296,6 @@ static inline void masktiles(uint *tiles, float sx1, float sy1, float sx2, float
 
 enum { SM_NONE = 0, SM_REFLECT, SM_CUBEMAP, SM_CASCADE, SM_SPOT };
 
-enum { L_NOSHADOW = 1<<0, L_NODYNSHADOW = 1<<1 };
-
 extern int shadowmapping;
 
 extern vec shadoworigin, shadowdir;
@@ -307,6 +306,9 @@ extern matrix4 shadowmatrix;
 extern void loaddeferredlightshaders();
 extern void cleardeferredlightshaders();
 extern void clearshadowcache();
+
+extern void rendervolumetric();
+extern void cleanupvolumetric();
 
 extern void findshadowvas();
 extern void findshadowmms();
@@ -351,10 +353,11 @@ extern GLuint gdepthtex, gcolortex, gnormaltex, gglowtex, gdepthrb, gstencilrb;
 extern int msaasamples;
 extern GLuint msdepthtex, mscolortex, msnormaltex, msglowtex, msdepthrb, msstencilrb;
 extern vector<vec2> msaapositions;
-enum { AA_UNUSED = 0, AA_LUMA, AA_VELOCITY, AA_VELOCITY_MASKED, AA_SPLIT, AA_SPLIT_LUMA, AA_SPLIT_VELOCITY, AA_SPLIT_VELOCITY_MASKED };
+enum { AA_UNUSED = 0, AA_LUMA, AA_MASKED, AA_SPLIT, AA_SPLIT_LUMA, AA_SPLIT_MASKED };
 
 extern void cleanupgbuffer();
 extern void initgbuffer();
+extern bool usepacknorm();
 extern void maskgbuffer(const char *mask);
 extern void bindgdepth();
 extern void preparegbuffer(bool depthclear = true);
@@ -399,6 +402,7 @@ extern void cleanupaa();
 extern char *entname(entity &e);
 extern bool haveselent();
 extern undoblock *copyundoents(undoblock *u);
+extern void pasteundoent(int idx, const entity &ue);
 extern void pasteundoents(undoblock *u);
 
 // octaedit
@@ -478,7 +482,7 @@ extern void rendershadowmesh(shadowmesh *m);
 
 extern void updatedynlights();
 extern int finddynlights();
-extern bool getdynlight(int n, vec &o, float &radius, vec &color, vec &dir, int &spot);
+extern bool getdynlight(int n, vec &o, float &radius, vec &color, vec &dir, int &spot, int &flags);
 
 // material
 
@@ -727,12 +731,15 @@ extern bool printparticles(extentity &e, char *buf, int len);
 extern void cleanupparticles();
 
 // stain
-enum { STAINBUF_OPAQUE = 0, STAINBUF_TRANSPARENT, NUMSTAINBUFS };
+enum { STAINBUF_OPAQUE = 0, STAINBUF_TRANSPARENT, STAINBUF_MAPMODEL, NUMSTAINBUFS };
+
+struct stainrenderer;
 
 extern void initstains();
 extern void clearstains();
-extern void renderstains(int sbuf, bool gbuf);
+extern bool renderstains(int sbuf, bool gbuf, int layer = 0);
 extern void cleanupstains();
+extern void genstainmmtri(stainrenderer *s, const vec v[3]);
 
 // rendersky
 extern int skytexture, skyshadow, explicitsky;

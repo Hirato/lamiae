@@ -3244,7 +3244,7 @@ void loopend(ident *id, identstack &stack)
 
 static inline void setiter(ident &id, int i, identstack &stack)
 {
-    if(i)
+    if(id.stack == &stack)
     {
         if(id.valtype != VAL_INT)
         {
@@ -3256,9 +3256,9 @@ static inline void setiter(ident &id, int i, identstack &stack)
     }
     else
     {
-        tagval zero;
-        zero.setint(0);
-        pusharg(id, zero, stack);
+        tagval t;
+        t.setint(i);
+        pusharg(id, t, stack);
         id.flags &= ~IDF_UNKNOWN;
     }
 }
@@ -3438,7 +3438,7 @@ static inline char *listelem(const char *start = liststart, const char *end = li
     size_t len = end-start;
     char *s = newstring(len);
     if(*quotestart == '"') unescapestring(s, start, end);
-    else copystring(s, start, len+1);
+    else { memcpy(s, start, len); s[len] = '\0'; }
     return s;
 }
 
@@ -3501,7 +3501,7 @@ ICOMMAND(stripcolors, "s", (char *s),
 {
     int len = strlen(s);
     char *d = newstring(len);
-    filtertext(d, s, true, len);
+    filtertext(d, s, true, false, len);
     stringret(d);
 });
 ICOMMAND(isdir, "s", (char *dir), intret(isdir(dir)));
@@ -4019,8 +4019,8 @@ MATHICMD(|, 0, );
 MATHICMD(^~, 0, );
 MATHICMD(&~, 0, );
 MATHICMD(|~, 0, );
-MATHICMD(<<, 0, );
-MATHICMD(>>, 0, );
+MATHCMD("<<", i, int, val = val2 < 32 ? val << max(val2, 0) : 0, 0, );
+MATHCMD(">>", i, int, val >>= clamp(val2, 0, 31), 0, );
 
 MATHFCMD(+, 0, );
 MATHFCMD(*, 1, );
@@ -4070,6 +4070,7 @@ ICOMMAND(tan, "f", (float *a), floatret(tan(*a*RAD)));
 ICOMMAND(asin, "f", (float *a), floatret(asin(*a)/RAD));
 ICOMMAND(acos, "f", (float *a), floatret(acos(*a)/RAD));
 ICOMMAND(atan, "f", (float *a), floatret(atan(*a)/RAD));
+ICOMMAND(atan2, "ff", (float *y, float *x), floatret(atan2(*y, *x)/RAD));
 ICOMMAND(sqrt, "f", (float *a), floatret(sqrt(*a)));
 ICOMMAND(loge, "f", (float *a), floatret(log(*a)));
 ICOMMAND(log2, "f", (float *a), floatret(log(*a)/M_LN2));
@@ -4087,12 +4088,26 @@ MINMAXCMD(min, i, int, min);
 MINMAXCMD(max, i, int, max);
 MINMAXCMD(minf, f, float, min);
 MINMAXCMD(maxf, f, float, max);
+
+ICOMMAND(bitscan, "i", (int *n), intret(bitscan(*n)));
+
 ICOMMAND(abs, "i", (int *n), intret(abs(*n)));
 ICOMMAND(absf, "f", (float *n), floatret(fabs(*n)));
 
 ICOMMAND(floor, "f", (float *n), floatret(floor(*n)));
 ICOMMAND(ceil, "f", (float *n), floatret(ceil(*n)));
-ICOMMAND(round, "f", (float *n), floatret(floor(*n + 0.5)));
+ICOMMAND(round, "ff", (float *n, float *k),
+{
+    double step = *k;
+    double r = *n;
+    if(step > 0)
+    {
+        r += step * (r < 0 ? -0.5 : 0.5);
+        r -= fmod(r, step);
+    }
+    else r = r < 0 ? ceil(r - 0.5) : floor(r + 0.5);
+    floatret(float(r));
+});
 
 ICOMMAND(cond, "ee2V", (tagval *args, int numargs),
 {

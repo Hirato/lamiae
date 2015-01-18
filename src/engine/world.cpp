@@ -248,6 +248,7 @@ void modifyoctaentity(int flags, int id, extentity &e, cube *c, const ivec &cor,
 }
 
 vector<int> outsideents;
+int spotlights = 0, volumetriclights = 0;
 
 static bool modifyoctaent(int flags, int id, extentity &e)
 {
@@ -276,7 +277,8 @@ static bool modifyoctaent(int flags, int id, extentity &e)
     e.flags ^= EF_OCTA;
     switch(e.type)
     {
-        case ET_LIGHT: clearlightcache(id); break;
+        case ET_LIGHT: clearlightcache(id); if(e.attr[4]&L_VOLUMETRIC) { if(flags&MODOE_ADD) volumetriclights++; else --volumetriclights; } break;
+        case ET_SPOTLIGHT: if(!(flags&MODOE_ADD ? spotlights++ : --spotlights)) { cleardeferredlightshaders(); cleanupvolumetric(); } break;
         case ET_PARTICLES: clearparticleemitters(); break;
         case ET_DECAL: if(flags&MODOE_CHANGED) changed(o, r, false); break;
     }
@@ -316,26 +318,26 @@ void entitiesinoctanodes()
     loopv(ents) modifyoctaent(MODOE_ADD, i, *ents[i]);
 }
 
-static inline void findents(octaentities &oe, int low, int high, bool notspawned, const vec &pos, const vec &radius, vector<int> &found)
+static inline void findents(octaentities &oe, int low, int high, bool notspawned, const vec &pos, const vec &invradius, vector<int> &found)
 {
     vector<extentity *> &ents = entities::getents();
     loopv(oe.other)
     {
         int id = oe.other[i];
         extentity &e = *ents[id];
-        if(e.type >= low && e.type <= high && (e.spawned() || notspawned) && vec(e.o).mul(radius).squaredlen() <= 1) found.add(id);
+        if(e.type >= low && e.type <= high && (e.spawned() || notspawned) && vec(e.o).sub(pos).mul(invradius).squaredlen() <= 1) found.add(id);
     }
 }
 
-static inline void findents(cube *c, const ivec &o, int size, const ivec &bo, const ivec &br, int low, int high, bool notspawned, const vec &pos, const vec &radius, vector<int> &found)
+static inline void findents(cube *c, const ivec &o, int size, const ivec &bo, const ivec &br, int low, int high, bool notspawned, const vec &pos, const vec &invradius, vector<int> &found)
 {
     loopoctabox(o, size, bo, br)
     {
-        if(c[i].ext && c[i].ext->ents) findents(*c[i].ext->ents, low, high, notspawned, pos, radius, found);
+        if(c[i].ext && c[i].ext->ents) findents(*c[i].ext->ents, low, high, notspawned, pos, invradius, found);
         if(c[i].children && size > octaentsize)
         {
             ivec co(i, o, size);
-            findents(c[i].children, co, size>>1, bo, br, low, high, notspawned, pos, radius, found);
+            findents(c[i].children, co, size>>1, bo, br, low, high, notspawned, pos, invradius, found);
         }
     }
 }
@@ -551,11 +553,19 @@ undoblock *copyundoents(undoblock *u)
     return c;
 }
 
+void pasteundoent(int idx, const entity &ue)
+{
+    if(idx < 0 || idx >= MAXENTS) return;
+    vector<extentity *> &ents = entities::getents();
+    while(ents.length() < idx) ents.add(entities::newentity())->type = ET_EMPTY;
+    int efocus = -1;
+    entedit(idx, (entity &)e = ue);
+}
+
 void pasteundoents(undoblock *u)
 {
     undoent *ue = u->ents();
-    loopi(u->numents)
-        entedit(ue[i].i, (entity &)e = ue[i].e);
+    loopi(u->numents) pasteundoent(ue[i].i, ue[i].e);
 }
 
 void entflip()
@@ -1524,6 +1534,8 @@ void resetmap()
 
     entities::clearents();
     outsideents.setsize(0);
+    spotlights = 0;
+    volumetriclights = 0;
 }
 
 void startmap(const char *name)

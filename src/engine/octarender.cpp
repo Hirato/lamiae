@@ -219,14 +219,14 @@ static inline uint hthash(const sortkey &k)
 
 struct decalkey
 {
-    ushort tex, envmap;
+    ushort tex, envmap, reuse;
 
     decalkey() {}
-    decalkey(ushort tex, ushort envmap = EMID_NONE)
-     : tex(tex), envmap(envmap)
+    decalkey(ushort tex, ushort envmap = EMID_NONE, ushort reuse = 0)
+     : tex(tex), envmap(envmap), reuse(reuse)
     {}
 
-    bool operator==(const decalkey &o) const { return tex==o.tex && envmap==o.envmap; }
+    bool operator==(const decalkey &o) const { return tex==o.tex && envmap==o.envmap && reuse==o.reuse; }
 
     static inline bool sort(const decalkey &x, const decalkey &y)
     {
@@ -234,7 +234,8 @@ struct decalkey
         {
             if(x.envmap < y.envmap) return true;
             if(x.envmap > y.envmap) return false;
-            return false;
+            if(x.reuse < y.reuse) return true;
+            else return false;
         }
         DecalSlot &xs = lookupdecalslot(x.tex, false), &ys = lookupdecalslot(y.tex, false);
         if(xs.slot->shader < ys.slot->shader) return true;
@@ -342,8 +343,7 @@ struct vacollect : verthash
             if(t->xs < t->ys) size.x *= t->xs / float(t->ys);
             else if(t->xs > t->ys) size.z *= t->ys / float(t->xs);
         }
-        vec center = orient.transform(vec(0, size.y*0.5f, 0)), radius = orient.abstransform(vec(size).mul(0.5f));
-        center.add(e.o);
+        vec center = orient.transform(vec(0, size.y*0.5f, 0)).add(e.o), radius = orient.abstransform(vec(size).mul(0.5f));
         vec bbmin = vec(center).sub(radius), bbmax = vec(center).add(radius);
         vec clipoffset = orient.transposedtransform(center).msub(size, 0.5f);
         loopv(texs)
@@ -352,14 +352,18 @@ struct vacollect : verthash
             if(k.layer == LAYER_BLEND || k.alpha != NO_ALPHA) continue;
             const sortval &t = indices[k];
             if(t.tris.empty()) continue;
+            decalkey tkey(key);
+            if(shouldreuseparams(s, lookupvslot(k.tex, false))) tkey.reuse = k.tex;
             for(int j = 0; j < t.tris.length(); j += 3)
             {
                 const vertex &t0 = verts[t.tris[j]], &t1 = verts[t.tris[j+1]], &t2 = verts[t.tris[j+2]];
-                const vec &v0 = t0.pos, &v1 = t1.pos, &v2 = t2.pos;
+                vec v0 = t0.pos, v1 = t1.pos, v2 = t2.pos;
                 vec tmin = vec(v0).min(v1).min(v2), tmax = vec(v0).max(v1).max(v2);
                 if(tmin.x >= bbmax.x || tmin.y >= bbmax.y || tmin.z >= bbmax.z ||
                    tmax.x <= bbmin.x || tmax.y <= bbmin.y || tmax.z <= bbmin.z)
                     continue;
+                float f0 = t0.norm.tonormal().dot(orient.b), f1 = t1.norm.tonormal().dot(orient.b), f2 = t2.norm.tonormal().dot(orient.b);
+                if(f0 >= 0 && f1 >= 0 && f2 >= 0) continue;
                 vec p1[9], p2[9];
                 p1[0] = v0; p1[1] = v1; p1[2] = v2;
                 int nump = polyclip(p1, 3, orient.b, clipoffset.y, clipoffset.y + size.y, p2);
@@ -369,6 +373,8 @@ struct vacollect : verthash
                 nump = polyclip(p1, nump, orient.c, clipoffset.z, clipoffset.z + size.z, p2);
                 if(nump < 3) continue;
 
+                bvec4 n0 = t0.norm, n1 = t1.norm, n2 = t2.norm,
+                      x0 = t0.tangent, x1 = t1.tangent, x2 = t2.tangent;
                 vec e1 = vec(v1).sub(v0), e2 = vec(v2).sub(v0);
                 float d11 = e1.dot(e1), d12 = e1.dot(e2), d22 = e2.dot(e2);
                 int idx[9];
@@ -381,13 +387,14 @@ struct vacollect : verthash
                           b1 = (d22*dp1 - d12*dp2) / denom,
                           b2 = (d11*dp2 - d12*dp1) / denom,
                           b0 = 1 - b1 - b2;
-                    v.norm.lerp(t0.norm, t1.norm, t2.norm, b0, b1, b2);
+                    v.norm.lerp(n0, n1, n2, b0, b1, b2);
+                    v.norm.w = uchar(127.5f - 127.5f*(f0*b0 + f1*b1 + f2*b2));
                     vec tc = orient.transposedtransform(vec(center).sub(v.pos)).div(size).add(0.5f);
-                    v.tc = vec(tc.x, tc.z, s.fade ? tc.y * s.depth / s.fade : s.fade);
-                    v.tangent.lerp(t0.tangent, t1.tangent, t2.tangent, b0, b1, b2);
+                    v.tc = vec(tc.x, tc.z, s.fade ? tc.y * s.depth / s.fade : 1.0f);
+                    v.tangent.lerp(x0, x1, x2, b0, b1, b2);
                     idx[k] = addvert(v);
                 }
-                vector<ushort> &tris = decalindices[key].tris;
+                vector<ushort> &tris = decalindices[tkey].tris;
                 loopk(nump-2) if(idx[0] != idx[k+1] && idx[k+1] != idx[k+2] && idx[k+2] != idx[0])
                 {
                     tris.add(idx[0]);
@@ -571,8 +578,7 @@ struct vacollect : verthash
                 const sortval &t = decalindices[k];
                 elementset &e = va->decalelems[i];
                 e.texture = k.tex;
-                e.orient = O_TOP;
-                e.layer = LAYER_TOP;
+                e.reuse = k.reuse;
                 e.envmap = k.envmap;
                 ushort *startbuf = curbuf;
                 e.minvert = USHRT_MAX;
@@ -1152,7 +1158,7 @@ vtxarray *newva(const ivec &o, int size)
     va->nogimax = vc.nogimax;
 
     wverts += va->verts;
-    wtris  += va->tris + va->blends + va->alphabacktris + va->alphafronttris + va->refracttris;
+    wtris  += va->tris + va->blends + va->alphabacktris + va->alphafronttris + va->refracttris + va->decaltris;
     allocva++;
     valist.add(va);
 
@@ -1162,7 +1168,7 @@ vtxarray *newva(const ivec &o, int size)
 void destroyva(vtxarray *va, bool reparent)
 {
     wverts -= va->verts;
-    wtris -= va->tris + va->blends + va->alphabacktris + va->alphafronttris;
+    wtris -= va->tris + va->blends + va->alphabacktris + va->alphafronttris + va->refracttris + va->decaltris;
     allocva--;
     valist.removeobj(va);
     if(!va->parent) varoot.removeobj(va);
@@ -1691,7 +1697,7 @@ void precachetextures()
 
                 VSlot &vslot = lookupvslot(tex, false);
                 if(vslot.layer && texs.find(vslot.layer) < 0) texs.add(vslot.layer);
-                if(vslot.decal && texs.find(vslot.decal) < 0) texs.add(vslot.decal);
+                if(vslot.detail && texs.find(vslot.detail) < 0) texs.add(vslot.detail);
             }
         }
     }

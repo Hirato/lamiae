@@ -59,7 +59,7 @@ extern void scaledscreenshot(char *filename, int format, int x = 0, int y = 0);
 
 // octaedit
 
-enum { EDIT_FACE = 0, EDIT_TEX, EDIT_MAT, EDIT_FLIP, EDIT_COPY, EDIT_PASTE, EDIT_ROTATE, EDIT_REPLACE, EDIT_DELCUBE, EDIT_CALCLIGHT, EDIT_REMIP };
+enum { EDIT_FACE = 0, EDIT_TEX, EDIT_MAT, EDIT_FLIP, EDIT_COPY, EDIT_PASTE, EDIT_ROTATE, EDIT_REPLACE, EDIT_DELCUBE, EDIT_CALCLIGHT, EDIT_REMIP, EDIT_VSLOT, EDIT_UNDO, EDIT_REDO };
 
 struct selinfo
 {
@@ -91,22 +91,28 @@ extern editinfo *localedit;
 
 extern bool editmode;
 
+extern int shouldpacktex(int index);
 extern bool packeditinfo(editinfo *e, int &inlen, uchar *&outbuf, int &outlen);
 extern bool unpackeditinfo(editinfo *&e, const uchar *inbuf, int inlen, int outlen);
 extern void freeeditinfo(editinfo *&e);
 extern void pruneundos(int maxremain = 0);
+extern bool packundo(int op, int &inlen, uchar *&outbuf, int &outlen);
+extern bool unpackundo(const uchar *inbuf, int inlen, int outlen);
 extern bool noedit(bool view = false, bool msg = true);
 extern void toggleedit(bool force = true);
 extern void mpeditface(int dir, int mode, selinfo &sel, bool local);
 extern void mpedittex(int tex, int allfaces, selinfo &sel, bool local);
+extern bool mpedittex(int tex, int allfaces, selinfo &sel, ucharbuf &buf);
 extern void mpeditmat(int matid, int filter, selinfo &sel, bool local);
 extern void mpflip(selinfo &sel, bool local);
 extern void mpcopy(editinfo *&e, selinfo &sel, bool local);
 extern void mppaste(editinfo *&e, selinfo &sel, bool local);
 extern void mprotate(int cw, selinfo &sel, bool local);
 extern void mpreplacetex(int oldtex, int newtex, bool insel, selinfo &sel, bool local);
+extern bool mpreplacetex(int oldtex, int newtex, bool insel, selinfo &sel, ucharbuf &buf);
 extern void mpdelcube(selinfo &sel, bool local);
 extern void mpremip(bool local);
+extern bool mpeditvslot(int delta, int allfaces, selinfo &sel, ucharbuf &buf);
 extern void mpcalclight(bool local);
 
 // command
@@ -268,12 +274,23 @@ static inline void text_pos(const char *str, int cursor, int &cx, int &cy, int m
     cy = int(cyf);
 }
 
-// renderva
+// texture
+
+struct VSlot;
+
+extern void packvslot(vector<uchar> &buf, int index);
+extern void packvslot(vector<uchar> &buf, const VSlot *vs);
+
+// renderlights
+
+enum { L_NOSHADOW = 1<<0, L_NODYNSHADOW = 1<<1, L_VOLUMETRIC = 1<<2 };
+
+// dynlight
 enum
 {
-    DL_SHRINK = 1<<0,
-    DL_EXPAND = 1<<1,
-    DL_FLASH  = 1<<2
+    DL_SHRINK = 1<<8,
+    DL_EXPAND = 1<<9,
+    DL_FLASH  = 1<<10
 };
 
 extern void adddynlight(const vec &o, float radius, const vec &color, int fade = 0, int peak = 0, int flags = 0, float initradius = 0, const vec &initcolor = vec(0, 0, 0), physent *owner = NULL, const vec &dir = vec(0, 0, 0), int spot = 0);
@@ -301,6 +318,7 @@ extern void resethudmatrix();
 extern void pushhudmatrix();
 extern void flushhudmatrix(bool flushparams = true);
 extern void pophudmatrix(bool flush = true, bool flushparams = true);
+extern void resethudshader();
 
 extern void sethudnotextureshader();
 extern void sethudshader();

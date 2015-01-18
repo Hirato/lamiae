@@ -1134,7 +1134,6 @@ namespace recorder
         hudmatrix.ortho(0, w, h, 0, -1, 1);
         hudmatrix.scale(1/3.0f, 1/3.0f, 1);
         resethudmatrix();
-        hudshader->set();
 
         glEnable(GL_BLEND);
 

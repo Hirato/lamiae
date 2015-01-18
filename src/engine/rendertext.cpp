@@ -261,7 +261,7 @@ static void text_color(char c, char *stack, int size, int &sp, bvec colour, int 
     else
     {
         xtraverts += gle::end();
-        if(c=='r') c = stack[(sp > 0) ? --sp : sp]; // restore color
+        if(c=='r') { if(sp > 0) --sp; c = stack[sp]; } // restore color
         else stack[sp] = c;
         switch(c)
         {
@@ -435,7 +435,6 @@ void draw_text(const char *str, float left, float top, int r, int g, int b, int 
     bool usecolor = true;
     if(a < 0) { usecolor = false; a = -a; }
     Texture *tex = curfont->texs[0];
-    Shader *oldshader = Shader::lastshader;
     (textshader ? textshader : hudtextshader)->set();
     LOCALPARAMF(textparams, curfont->bordermin, curfont->bordermax, curfont->outlinemin, curfont->outlinemax);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -462,12 +461,6 @@ void draw_text(const char *str, float left, float top, int r, int g, int b, int 
         }
         else draw_char(tex, '_', left+cx, top+cy, scale);
         xtraverts += gle::end();
-    }
-    gle::disable();
-    if(oldshader == hudshader)
-    {
-        oldshader->bindprograms();
-        gle::colorf(1, 1, 1);
     }
 
     #undef TEXTINDEX

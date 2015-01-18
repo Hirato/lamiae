@@ -11,6 +11,7 @@
 typedef unsigned char uchar;
 typedef unsigned short ushort;
 typedef unsigned int uint;
+typedef unsigned long ulong;
 typedef signed long long int llong;
 typedef unsigned long long int ullong;
 
@@ -81,6 +82,30 @@ static inline T clamp(T a, U b, U c) //val min max
     return max(T(b), min(a, T(c)));
 }
 
+#ifdef __GNUC__
+#define bitscan(mask) (__builtin_ffs(mask)-1)
+#else
+#ifdef WIN32
+#pragma intrinsic(_BitScanForward)
+static inline int bitscan(uint mask)
+{
+    ulong i;
+    return _BitScanForward(&i, mask) ? i : -1;
+}
+#else
+static inline int bitscan(uint mask)
+{
+    if(!mask) return -1;
+    int i = 1;
+    if(!(mask&0xFFFF)) { i += 16; mask >>= 16; }
+    if(!(mask&0xFF)) { i += 8; mask >>= 8; }
+    if(!(mask&0xF)) { i += 4; mask >>= 4; }
+    if(!(mask&3)) { i += 2; mask >>= 2; }
+    return i - (mask&1);
+}
+#endif
+#endif
+
 #define rnd(x) ((int)(randomMT()&0x7FFFFFFF)%(x))
 #define rndscale(x) (float((randomMT()&0x7FFFFFFF)*double(x)/double(0x7FFFFFFF)))
 #define detrnd(s, x) ((int)(((((uint)(s))*1103515245+12345)>>16)%(x)))
@@ -102,6 +127,7 @@ static inline T clamp(T a, U b, U c) //val min max
 #define PI (3.14159265358979f)
 #define SQRT2 (1.4142135623731f)
 #define SQRT3 (1.73205080756888f)
+#define SQRT5 (2.23606797749979f)
 #define RAD (PI / 180.0f)
 
 #ifdef WIN32
@@ -141,16 +167,22 @@ static inline T clamp(T a, U b, U c) //val min max
 #define MAXSTRLEN 260
 typedef char string[MAXSTRLEN];
 
-inline void vformatstring(char *d, const char *fmt, va_list v, int len = MAXSTRLEN) { _vsnprintf(d, len, fmt, v); d[len-1] = 0; }
-inline char *copystring(char *d, const char *s, size_t len = MAXSTRLEN)
+inline void vformatstring(char *d, const char *fmt, va_list v, int len) { _vsnprintf(d, len, fmt, v); d[len-1] = 0; }
+template<size_t N> inline void vformatstring(char (&d)[N], const char *fmt, va_list v) { vformatstring(d, fmt, v, N); }
+
+inline char *copystring(char *d, const char *s, size_t len)
 {
-    size_t slen = min(strlen(s)+1, len);
+    size_t slen = min(strlen(s), len-1);
     memcpy(d, s, slen);
-    d[slen-1] = 0;
+    d[slen] = 0;
     return d;
 }
-inline char *concatstring(char *d, const char *s, size_t len = MAXSTRLEN) { size_t used = strlen(d); return used < len ? copystring(d+used, s, len-used) : d; }
-inline char *prependstring(char *d, const char *s, size_t len = MAXSTRLEN)
+template<size_t N> inline char *copystring(char (&d)[N], const char *s) { return copystring(d, s, N); }
+
+inline char *concatstring(char *d, const char *s, size_t len) { size_t used = strlen(d); return used < len ? copystring(d+used, s, len-used) : d; }
+template<size_t N> inline char *concatstring(char (&d)[N], const char *s) { return concatstring(d, s, N); }
+
+inline char *prependstring(char *d, const char *s, size_t len)
 {
     size_t slen = min(strlen(s), len);
     memmove(&d[slen], d, min(len - slen, strlen(d) + 1));
@@ -158,6 +190,7 @@ inline char *prependstring(char *d, const char *s, size_t len = MAXSTRLEN)
     d[len-1] = 0;
     return d;
 }
+template<size_t N> inline char *prependstring(char (&d)[N], const char *s) { return prependstring(d, s, N); }
 
 inline void nformatstring(char *d, int len, const char *fmt, ...) PRINTFARGS(3, 4);
 inline void nformatstring(char *d, int len, const char *fmt, ...)
@@ -191,6 +224,25 @@ extern char *tempformatstring(const char *fmt, ...) PRINTFARGS(1, 2);
 
 #define defformatstring(d,...) string d; formatstring(d, __VA_ARGS__)
 #define defvformatstring(d,last,fmt) string d; { va_list ap; va_start(ap, last); vformatstring(d, fmt, ap); va_end(ap); }
+
+template<size_t N> inline bool matchstring(const char *s, size_t len, const char (&d)[N])
+{
+    return len == N-1 && !memcmp(s, d, N-1);
+}
+
+inline char *newstring(size_t l)                { return new char[l+1]; }
+inline char *newstring(const char *s, size_t l) { return copystring(newstring(l), s, l+1); }
+inline char *newstring(const char *s)           { size_t l = strlen(s); char *d = newstring(l); memcpy(d, s, l+1); return d; }
+
+inline char *newconcatstring(const char *s, const char *t)
+{
+    size_t slen = strlen(s), tlen = strlen(t);
+    char *r = newstring(slen + tlen);
+    memcpy(r, s, slen);
+    memcpy(&r[slen], t, tlen);
+    r[slen+tlen] = '\0';
+    return r;
+}
 
 #define loopv(v)    for(int i = 0; i<(v).length(); i++)
 #define loopvj(v)   for(int j = 0; j<(v).length(); j++)
@@ -497,10 +549,20 @@ struct stringslice
     const char *end() const { return &str[len]; }
 };
 
+inline char *newstring(const stringslice &s) { return newstring(s.str, s.len); }
 inline const char *stringptr(const char *s) { return s; }
 inline const char *stringptr(const stringslice &s) { return s.str; }
 inline int stringlen(const char *s) { return int(strlen(s)); }
 inline int stringlen(const stringslice &s) { return s.len; }
+
+inline char *copystring(char *d, const stringslice &s, size_t len)
+{
+    size_t slen = min(size_t(s.len), len-1);
+    memcpy(d, s.str, slen);
+    d[slen] = 0;
+    return d;
+}
+template<size_t N> inline char *copystring(char (&d)[N], const stringslice &s) { return copystring(d, s, N); }
 
 static inline uint memhash(const void *ptr, int len)
 {
@@ -641,7 +703,7 @@ template <class T> struct vector
     {
         int olen = alen;
         if(!alen) alen = max(MINSIZE, sz);
-        else while(alen < sz) alen *= 2;
+        else while(alen < sz) alen += alen/2;
         if(alen <= olen) return;
         uchar *newbuf = new uchar[alen*sizeof(T)];
         if(olen > 0)
@@ -1310,21 +1372,6 @@ template <class T, int SIZE> struct reversequeue : queue<T, SIZE>
     const T &operator[](int offset) const { return queue<T, SIZE>::added(offset); }
 };
 
-inline char *newstring(size_t l)                { return new char[l+1]; }
-inline char *newstring(const char *s, size_t l) { return copystring(newstring(l), s, l+1); }
-inline char *newstring(const char *s)           { size_t l = strlen(s); char *d = newstring(l); memcpy(d, s, l+1); return d; }
-inline char *newstring(const stringslice &s)    { return newstring(s.str, s.len); }
-
-inline char *newconcatstring(const char *s, const char *t)
-{
-    size_t slen = strlen(s), tlen = strlen(t);
-    char *r = newstring(slen + tlen);
-    memcpy(r, s, slen);
-    memcpy(&r[slen], t, tlen);
-    r[slen+tlen] = '\0';
-    return r;
-}
-
 static inline bool islittleendian() { union { int i; uchar b[sizeof(int)]; } conv; conv.i = 1; return conv.b[0] != 0; }
 #ifdef SDL_BYTEORDER
 #define endianswap16 SDL_Swap16
@@ -1512,8 +1559,17 @@ extern void sendstring(const char *t, packetbuf &p);
 extern void sendstring(const char *t, vector<uchar> &p);
 extern void getstring(char *t, ucharbuf &p, size_t len);
 template<size_t N> static inline void getstring(char (&t)[N], ucharbuf &p) { getstring(t, p, N); }
-extern void filtertext(char *dst, const char *src, bool whitespace, size_t len);
-template<size_t N> static inline void filtertext(char (&dst)[N], const char *src, bool whitespace = true) { filtertext(dst, src, whitespace, N-1); }
+extern void filtertext(char *dst, const char *src, bool whitespace, bool forcespace, size_t len);
+template<size_t N> static inline void filtertext(char (&dst)[N], const char *src, bool whitespace = true, bool forcespace = false) { filtertext(dst, src, whitespace, forcespace, N-1); }
+
+struct ipmask
+{
+    enet_uint32 ip, mask;
+
+    void parse(const char *name);
+    int print(char *buf) const;
+    bool check(enet_uint32 host) const { return (host & mask) == ip; }
+};
 
 #endif
 

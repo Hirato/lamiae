@@ -957,7 +957,7 @@ namespace game
 	}
 
 	const char *getclientmap() { return curmap ? curmap->name : ""; }
-	void edittrigger(const selinfo &sel, int op, int arg1, int arg2, int arg3) {}
+	void edittrigger(const selinfo &sel, int op, int arg1, int arg2, int arg3, const VSlot *vs) {}
 
 	void resetgamestate() {}
 

@@ -28,14 +28,13 @@ static int tmpidx = 0;
 char *tempformatstring(const char *fmt, ...)
 {
     tmpidx = (tmpidx+1)%4;
-    char *buf = tmpstr[tmpidx];
 
     va_list v;
     va_start(v, fmt);
-    vformatstring(buf, fmt, v);
+    vformatstring(tmpstr[tmpidx], fmt, v);
     va_end(v);
 
-    return buf;
+    return tmpstr[tmpidx];
 }
 
 ////////////////////////// rnd numbers ////////////////////////////////////////
@@ -179,7 +178,7 @@ void getstring(char *text, ucharbuf &p, size_t len)
     while(*t++);
 }
 
-void filtertext(char *dst, const char *src, bool whitespace, size_t len)
+void filtertext(char *dst, const char *src, bool whitespace, bool forcespace, size_t len)
 {
     for(int c = uchar(*src); c; c = uchar(*++src))
     {
@@ -188,12 +187,64 @@ void filtertext(char *dst, const char *src, bool whitespace, size_t len)
             if(!*++src) break;
             continue;
         }
-        if(iscubeprint(c) || (iscubespace(c) && whitespace))
+        if(!iscubeprint(c))
         {
-            *dst++ = c;
-            if(!--len) break;
+            if(!iscubespace(c) || !whitespace) continue;
+            if(forcespace) c = ' ';
         }
+        *dst++ = c;
+        if(!--len) break;
     }
     *dst = '\0';
 }
 
+void ipmask::parse(const char *name)
+{
+    union { uchar b[sizeof(enet_uint32)]; enet_uint32 i; } ipconv, maskconv;
+    ipconv.i = 0;
+    maskconv.i = 0;
+    loopi(4)
+    {
+        char *end = NULL;
+        int n = strtol(name, &end, 10);
+        if(!end) break;
+        if(end > name) { ipconv.b[i] = n; maskconv.b[i] = 0xFF; }
+        name = end;
+        while(int c = *name)
+        {
+            ++name;
+            if(c == '.') break;
+            if(c == '/')
+            {
+                int range = clamp(int(strtol(name, NULL, 10)), 0, 32);
+                mask = range ? ENET_HOST_TO_NET_32(0xFFffFFff << (32 - range)) : maskconv.i;
+                ip = ipconv.i & mask;
+                return;
+            }
+        }
+    }
+    ip = ipconv.i;
+    mask = maskconv.i;
+}
+
+int ipmask::print(char *buf) const
+{
+    char *start = buf;
+    union { uchar b[sizeof(enet_uint32)]; enet_uint32 i; } ipconv, maskconv;
+    ipconv.i = ip;
+    maskconv.i = mask;
+    int lastdigit = -1;
+    loopi(4) if(maskconv.b[i])
+    {
+        if(lastdigit >= 0) *buf++ = '.';
+        loopj(i - lastdigit - 1) { *buf++ = '*'; *buf++ = '.'; }
+        buf += sprintf(buf, "%d", ipconv.b[i]);
+        lastdigit = i;
+    }
+    enet_uint32 bits = ~ENET_NET_TO_HOST_32(mask);
+    int range = 32;
+    for(; (bits&0xFF) == 0xFF; bits >>= 8) range -= 8;
+    for(; bits&1; bits >>= 1) --range;
+    if(!bits && range%8) buf += sprintf(buf, "/%d", range);
+    return int(buf-start);
+}

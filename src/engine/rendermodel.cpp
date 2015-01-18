@@ -1,7 +1,7 @@
 #include "engine.h"
 
-VARP(oqdynent, 0, 1, 1);
-VARP(animationinterpolationtime, 0, 200, 1000);
+VAR(oqdynent, 0, 1, 1);
+VAR(animationinterpolationtime, 0, 200, 1000);
 
 model *loadingmodel = NULL;
 
@@ -86,6 +86,13 @@ void mdlspec(float *percent)
     loadingmodel->setspec(spec);
 }
 COMMAND(mdlspec, "f");
+
+void mdlgloss(int *gloss)
+{
+    checkmdl;
+    loadingmodel->setgloss(clamp(*gloss, 0, 2));
+}
+COMMAND(mdlgloss, "i");
 
 void mdlalphatest(float *cutoff)
 {
@@ -535,7 +542,7 @@ static inline void renderbatchedmodel(model *m, const batchedmodel &b)
     m->render(anim, b.basetime, b.basetime2, b.pos, b.yaw, b.pitch, b.roll, b.d, a, b.sizescale, b.colorscale);
 }
 
-VARP(maxmodelradiusdistance, 10, 200, 1000);
+VAR(maxmodelradiusdistance, 10, 200, 1000);
 
 static inline void enablecullmodelquery()
 {

@@ -32,10 +32,10 @@ VAR(dbgstain, 0, 0, 1);
 struct stainbuffer
 {
     stainvert *verts;
-    int maxverts, startvert, endvert, availverts;
+    int maxverts, startvert, endvert, lastvert, availverts;
     GLuint vbo;
 
-    stainbuffer() : verts(NULL), maxverts(0), startvert(0), endvert(0), availverts(0), vbo(0)
+    stainbuffer() : verts(NULL), maxverts(0), startvert(0), endvert(0), lastvert(0), availverts(0), vbo(0)
     {}
 
     ~stainbuffer()
@@ -48,7 +48,7 @@ struct stainbuffer
         if(verts)
         {
             DELETEA(verts);
-            maxverts = startvert = endvert = availverts = 0;
+            maxverts = startvert = endvert = lastvert = availverts = 0;
         }
         if(tris)
         {
@@ -65,7 +65,7 @@ struct stainbuffer
 
     void clear()
     {
-        startvert = endvert = 0;
+        startvert = endvert = lastvert = 0;
         availverts = max(maxverts - 3, 0);
     }
 
@@ -73,7 +73,7 @@ struct stainbuffer
     {
         int removed = d.endvert < d.startvert ? maxverts - (d.startvert - d.endvert) : d.endvert - d.startvert;
         startvert = d.endvert;
-        if(startvert==endvert) startvert = endvert = 0;
+        if(startvert==endvert) startvert = endvert = lastvert = 0;
         availverts += removed;
         return removed;
     }
@@ -143,9 +143,9 @@ struct stainbuffer
 
     bool hasverts() const { return startvert != endvert; }
 
-    int usedverts(int dstart) const
+    int nextverts() const
     {
-        return endvert < dstart ? endvert + maxverts - dstart : endvert - dstart;
+        return endvert < lastvert ? endvert + maxverts - lastvert : endvert - lastvert;
     }
 
     int totalverts() const
@@ -193,7 +193,7 @@ struct stainrenderer
         }
         stains = new staininfo[tris];
         maxstains = tris;
-        loopi(NUMSTAINBUFS) verts[i].init(i ? tris/2 : tris);
+        loopi(NUMSTAINBUFS) verts[i].init(i == STAINBUF_TRANSPARENT ? tris/2 : tris);
     }
 
     void preload()
@@ -307,10 +307,16 @@ struct stainrenderer
         }
     }
 
-    static void setuprenderstate(int sbuf, bool gbuf)
+    static void setuprenderstate(int sbuf, bool gbuf, int layer)
     {
-        if(gbuf) maskgbuffer(sbuf ? "cg" : "c");
+        if(gbuf) maskgbuffer(sbuf == STAINBUF_TRANSPARENT ? "cg" : "c");
         else zerofogcolor();
+
+        if(layer && ghasstencil)
+        {
+            glStencilFunc(GL_EQUAL, layer, 0x07);
+            glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+        }
 
         glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
 
@@ -324,7 +330,7 @@ struct stainrenderer
         gle::enablecolor();
     }
 
-    static void cleanuprenderstate(int sbuf, bool gbuf)
+    static void cleanuprenderstate(int sbuf, bool gbuf, int layer)
     {
         glBindBuffer_(GL_ARRAY_BUFFER, 0);
 
@@ -339,7 +345,7 @@ struct stainrenderer
 
         glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
-        if(gbuf) maskgbuffer(sbuf ? "cndg" : "cnd");
+        if(gbuf) maskgbuffer(sbuf == STAINBUF_TRANSPARENT ? "cndg" : "cnd");
         else resetfogcolor();
     }
 
@@ -354,7 +360,7 @@ struct stainrenderer
         if(flags&SF_OVERBRIGHT)
         {
             glBlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
-            SETVARIANTSWIZZLE(overbrightstain, tex, sbuf);
+            SETVARIANTSWIZZLE(overbrightstain, tex, sbuf == STAINBUF_TRANSPARENT ? 1 : 0);
         }
         else if(flags&SF_GLOW)
         {
@@ -375,7 +381,7 @@ struct stainrenderer
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             colorscale = ldrscale;
             if(flags&SF_SATURATE) colorscale *= 2;
-            SETVARIANTSWIZZLE(stain, tex, sbuf);
+            SETVARIANTSWIZZLE(stain, tex, sbuf == STAINBUF_TRANSPARENT ? 1 : 0);
         }
         LOCALPARAMF(colorscale, colorscale, colorscale, colorscale, alphascale);
 
@@ -401,9 +407,8 @@ struct stainrenderer
 
     void addstain(const vec &center, const vec &dir, float radius, const bvec &color, int info)
     {
-        int bbradius = int(ceil(radius));
-        bbmin = ivec(center).sub(bbradius);
-        bbmax = ivec(center).add(bbradius);
+        bbmin = ivec(center).sub(radius);
+        bbmax = ivec(center).add(radius).add(1);
 
         staincolor = bvec4(color, 255);
         staincenter = center;
@@ -424,19 +429,17 @@ struct stainrenderer
             stainv = 0.5f*((info>>1)&1);
         }
 
-        ushort startvert[NUMSTAINBUFS];
-        loopi(NUMSTAINBUFS) startvert[i] = verts[i].endvert;
+        loopi(NUMSTAINBUFS) verts[i].lastvert = verts[i].endvert;
         gentris(worldroot, ivec(0, 0, 0), worldsize>>1);
         loopi(NUMSTAINBUFS)
         {
             stainbuffer &buf = verts[i];
-            int dstart = startvert[i];
-            if(buf.endvert == dstart) continue;
+            if(buf.endvert == buf.lastvert) continue;
 
             if(dbgstain)
             {
-                int nverts = buf.usedverts(dstart);
-                static const char * const sbufname[NUMSTAINBUFS] = { "opaque", "transparent" };
+                int nverts = buf.nextverts();
+                static const char * const sbufname[NUMSTAINBUFS] = { "opaque", "transparent", "mapmodel" };
                 conoutf(CON_DEBUG, "tris = %d, verts = %d, total tris = %d, %s", nverts/3, nverts, buf.totaltris(), sbufname[i]);
             }
 
@@ -444,7 +447,7 @@ struct stainrenderer
             d.owner = i;
             d.color = color;
             d.millis = lastmillis;
-            d.startvert = dstart;
+            d.startvert = buf.lastvert;
             d.endvert = buf.endvert;
         }
     }
@@ -593,52 +596,133 @@ struct stainrenderer
         }
     }
 
-    void findescaped(cube *cu, const ivec &o, int size, int escaped)
+    void findescaped(cube *c, const ivec &o, int size, int escaped)
     {
         loopi(8)
         {
+            cube &cu = c[i];
             if(escaped&(1<<i))
             {
                 ivec co(i, o, size);
-                if(cu[i].children) findescaped(cu[i].children, co, size>>1, cu[i].escaped);
+                if(cu.children) findescaped(cu.children, co, size>>1, cu.escaped);
                 else
                 {
-                    int vismask = cu[i].merged;
-                    if(vismask) loopj(6) if(vismask&(1<<j)) gentris(cu[i], j, co, size);
+                    int vismask = cu.merged;
+                    if(vismask) loopj(6) if(vismask&(1<<j)) gentris(cu, j, co, size);
                 }
             }
         }
     }
 
-    void gentris(cube *cu, const ivec &o, int size, int escaped = 0)
+    void genmmtri(const vec v[3])
+    {
+        vec n;
+        n.cross(v[0], v[1], v[2]).normalize();
+        float facing = n.dot(stainnormal);
+        if(facing <= 0) return;
+
+        vec p = vec(v[0]).sub(staincenter);
+#if 0
+        float dist = n.dot(p) / facing;
+        if(fabs(dist) > stainradius) return;
+        vec pcenter = vec(stainnormal).mul(dist).add(staincenter);
+#else
+        float dist = n.dot(p);
+        if(fabs(dist) > stainradius) return;
+        vec pcenter = vec(n).mul(dist).add(staincenter);
+#endif
+
+        vec ft, fb;
+        ft.orthogonal(n);
+        ft.normalize();
+        fb.cross(ft, n);
+        vec pt = vec(ft).mul(ft.dot(staintangent)).add(vec(fb).mul(fb.dot(staintangent))).normalize(),
+            pb = vec(ft).mul(ft.dot(stainbitangent)).add(vec(fb).mul(fb.dot(stainbitangent))).project(pt).normalize();
+        vec v1[3+4], v2[3+4];
+        float ptc = pt.dot(pcenter), pbc = pb.dot(pcenter);
+        int numv = polyclip(v, 3, pt, ptc - stainradius, ptc + stainradius, v1);
+        if(numv<3) return;
+        numv = polyclip(v1, numv, pb, pbc - stainradius, pbc + stainradius, v2);
+        if(numv<3) return;
+        float tsz = flags&SF_RND4 ? 0.5f : 1.0f, scale = tsz*0.5f/stainradius,
+              tu = stainu + tsz*0.5f - ptc*scale, tv = stainv + tsz*0.5f - pbc*scale;
+        pt.mul(scale); pb.mul(scale);
+        stainvert dv1 = { v2[0], staincolor, pt.dot(v2[0]) + tu, pb.dot(v2[0]) + tv },
+                  dv2 = { v2[1], staincolor, pt.dot(v2[1]) + tu, pb.dot(v2[1]) + tv };
+        int totalverts = 3*(numv-2);
+        stainbuffer &buf = verts[STAINBUF_MAPMODEL];
+        if(totalverts > buf.maxverts-3) return;
+        while(buf.availverts < totalverts)
+        {
+            if(!freestain()) return;
+        }
+        loopk(numv-2)
+        {
+            stainvert *tri = buf.addtri();
+            tri[0] = dv1;
+            tri[1] = dv2;
+            dv2.pos = v2[k+2];
+            dv2.u = pt.dot(v2[k+2]) + tu;
+            dv2.v = pb.dot(v2[k+2]) + tv;
+            tri[2] = dv2;
+        }
+    }
+
+    void genmmtris(octaentities &oe)
+    {
+        const vector<extentity *> &ents = entities::getents();
+        loopv(oe.mapmodels)
+        {
+            extentity &e = *ents[oe.mapmodels[i]];
+            model *m = loadmapmodel(e.attr[0]);
+            if(!m) continue;
+
+            vec center, radius;
+            float rejectradius = m->collisionbox(center, radius), scale = e.attr[4] > 0 ? e.attr[4]/100.0f : 1;
+            center.mul(scale);
+            if(staincenter.reject(vec(e.o).add(center), stainradius + rejectradius*scale)) continue;
+
+            if(m->animated() || (!m->bih && !m->setBIH())) continue;
+
+            int yaw = e.attr[1], pitch = e.attr[2], roll = e.attr[3];
+
+            m->bih->genstaintris(this, staincenter, stainradius, e.o, yaw, pitch, roll, scale);
+        }
+    }
+
+    void gentris(cube *c, const ivec &o, int size, int escaped = 0)
     {
         int overlap = octaboxoverlap(o, size, bbmin, bbmax);
         loopi(8)
         {
+            cube &cu = c[i];
             if(overlap&(1<<i))
             {
                 ivec co(i, o, size);
-                if(cu[i].ext && cu[i].ext->va && cu[i].ext->va->matsurfs)
-                    findmaterials(cu[i].ext->va);
-                if(cu[i].children) gentris(cu[i].children, co, size>>1, cu[i].escaped);
+                if(cu.ext)
+                {
+                    if(cu.ext->va && cu.ext->va->matsurfs) findmaterials(cu.ext->va);
+                    if(cu.ext->ents && cu.ext->ents->mapmodels.length()) genmmtris(*cu.ext->ents);
+                }
+                if(cu.children) gentris(cu.children, co, size>>1, cu.escaped);
                 else
                 {
-                    int vismask = cu[i].visible;
+                    int vismask = cu.visible;
                     if(vismask&0xC0)
                     {
-                        if(vismask&0x80) loopj(6) gentris(cu[i], j, co, size, NULL, vismask);
-                        else loopj(6) if(vismask&(1<<j)) gentris(cu[i], j, co, size);
+                        if(vismask&0x80) loopj(6) gentris(cu, j, co, size, NULL, vismask);
+                        else loopj(6) if(vismask&(1<<j)) gentris(cu, j, co, size);
                     }
                 }
             }
             else if(escaped&(1<<i))
             {
                 ivec co(i, o, size);
-                if(cu[i].children) findescaped(cu[i].children, co, size>>1, cu[i].escaped);
+                if(cu.children) findescaped(cu.children, co, size>>1, cu.escaped);
                 else
                 {
-                    int vismask = cu[i].merged;
-                    if(vismask) loopj(6) if(vismask&(1<<j)) gentris(cu[i], j, co, size);
+                    int vismask = cu.merged;
+                    if(vismask) loopj(6) if(vismask&(1<<j)) gentris(cu, j, co, size);
                 }
             }
         }
@@ -673,7 +757,7 @@ void clearstains()
 
 VARNP(stains, showstains, 0, 1, 1);
 
-void renderstains(int sbuf, bool gbuf)
+bool renderstains(int sbuf, bool gbuf, int layer)
 {
     bool rendered = false;
     loopi(sizeof(stains)/sizeof(stains[0]))
@@ -690,12 +774,13 @@ void renderstains(int sbuf, bool gbuf)
         if(!rendered)
         {
             rendered = true;
-            stainrenderer::setuprenderstate(sbuf, gbuf);
+            stainrenderer::setuprenderstate(sbuf, gbuf, layer);
         }
         d.render(sbuf);
     }
-    if(!rendered) return;
-    stainrenderer::cleanuprenderstate(sbuf, gbuf);
+    if(!rendered) return false;
+    stainrenderer::cleanuprenderstate(sbuf, gbuf, layer);
+    return true;
 }
 
 void cleanupstains()
@@ -710,4 +795,9 @@ void addstain(int type, const vec &center, const vec &surface, float radius, con
     if(!showstains || type<0 || (size_t)type>=sizeof(stains)/sizeof(stains[0]) || center.dist(camera1->o) - radius > maxstaindistance) return;
     stainrenderer &d = stains[type];
     d.addstain(center, surface, radius, color, info);
+}
+
+void genstainmmtri(stainrenderer *s, const vec v[3])
+{
+    s->genmmtri(v);
 }

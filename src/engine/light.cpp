@@ -273,10 +273,10 @@ bool dolightgc = false;
 
 void getlightprops(const extentity &e, int &radius, int &red, int &green, int &blue)
 {
-    radius = e.attr[0];
-    red = e.attr[1];
-    green = e.attr[2];
-    blue = e.attr[3];
+    radius = max(0, e.attr[0]);
+    red =    max(0, e.attr[1]);
+    green =  max(0, e.attr[2]);
+    blue =   max(0, e.attr[3]);
 
     if(e.attr[5] > 0)
     {
@@ -300,10 +300,10 @@ void getlightprops(const extentity &e, int &radius, int &red, int &green, int &b
 
                 switch(vals.length())
                 {
-                    case 4: dlp.blue = parseint(vals[3]);
-                    case 3: dlp.green = parseint(vals[2]);
-                    case 2: dlp.red = parseint(vals[1]);
-                    case 1: dlp.radius = parseint(vals[0]);
+                    case 4: dlp.blue =   max(0, parseint(vals[3]));
+                    case 3: dlp.green =  max(0, parseint(vals[2]));
+                    case 2: dlp.red =    max(0, parseint(vals[1]));
+                    case 1: dlp.radius = max(0, parseint(vals[0]));
                     case 0: break;
                 }
 
@@ -757,7 +757,7 @@ void lightreaching(const vec &target, vec &color, vec &dir, bool fast, extentity
         //    conoutf(CON_DEBUG, "%d - %f %f", i, intensity, mag);
         //}
 
-        vec lightcol = vec(red, green, blue).mul(1.0f/255);
+        vec lightcol = vec(red, green, blue).mul(1.0f/255).max(0);
         color.add(vec(lightcol).mul(intensity));
         dir.add(vec(ray).mul(-intensity*lightcol.x*lightcol.y*lightcol.z));
     }

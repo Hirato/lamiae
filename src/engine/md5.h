@@ -322,7 +322,7 @@ struct md5 : skelmodel, skelloader<md5>
                             basejoints.add(j);
                         }
                     }
-                    if(basejoints.length()!=skel->numbones) { delete f; return NULL; }
+                    if(basejoints.length()!=skel->numbones) { delete f; if(animdata) delete[] animdata; return NULL; }
                     animbones = new dualquat[(skel->numframes+animframes)*skel->numbones];
                     if(skel->framebones)
                     {
@@ -376,7 +376,7 @@ struct md5 : skelmodel, skelloader<md5>
                 }
             }
 
-            DELETEA(animdata);
+            if(animdata) delete[] animdata;
             delete f;
 
             return sa;

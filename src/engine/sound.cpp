@@ -377,9 +377,12 @@ static struct soundtype
     void cleanup(bool full = true)
     {
         cleanupsamples();
-        if(full) slots.setsize(0);
-        configs.setsize(0);
-        samples.clear();
+        if(full)
+        {
+            slots.setsize(0);
+            configs.setsize(0);
+            samples.clear();
+        }
     }
 
     void preloadsound(int n)

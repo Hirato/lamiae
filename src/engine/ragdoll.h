@@ -147,6 +147,7 @@ struct ragdolldata
           floating(0),
           lastmove(lastmillis),
           unsticks(INT_MAX),
+          radius(0),
           timestep(0),
           scale(scale),
           verts(new vert[skel->verts.length()]),

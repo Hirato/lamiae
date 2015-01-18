@@ -81,7 +81,10 @@ void rendercaustics(float surface, float syl, float syr)
 
 void renderwaterfog(int mat, float surface)
 {
-    glDisable(GL_DEPTH_TEST);
+    glDepthFunc(GL_NOTEQUAL);
+    glDepthMask(GL_FALSE);
+    glDepthRange(1, 1);
+
     glEnable(GL_BLEND);
 
     glActiveTexture_(GL_TEXTURE9);
@@ -125,17 +128,20 @@ void renderwaterfog(int mat, float surface)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     SETSHADER(waterfog);
-    gle::defvertex(2);
+    gle::defvertex(3);
     gle::begin(GL_TRIANGLE_STRIP);
-    gle::attribf(1, -1);
-    gle::attribf(-1, -1);
-    gle::attribf(1, syr);
-    gle::attribf(-1, syl);
+    gle::attribf(1, -1, 1);
+    gle::attribf(-1, -1, 1);
+    gle::attribf(1, syr, 1);
+    gle::attribf(-1, syl, 1);
     gle::end();
     gle::disable();
 
     glDisable(GL_BLEND);
-    glEnable(GL_DEPTH_TEST);
+
+    glDepthFunc(GL_LESS);
+    glDepthMask(GL_TRUE);
+    glDepthRange(0, 1);
 }
 
 /* vertex water */
@@ -486,7 +492,7 @@ void renderlava()
         float glowmin = getlavaglowmin(k), glowmax = getlavaglowmax(k);
         int spec = getlavaspec(k);
         LOCALPARAMF(lavaglow, 0.5f*(glowmin + (glowmax-glowmin)*t));
-        LOCALPARAMF(lavaspec, 0.5f*spec/100.0f);
+        LOCALPARAMF(lavaspec, spec/100.0f);
 
         if(lavasurfs[k].length())
         {
@@ -560,7 +566,7 @@ void renderwaterfalls()
         int spec = getwaterfallspec(k);
         GLOBALPARAMF(waterfallcolor, color.x*colorscale, color.y*colorscale, color.z*colorscale);
         GLOBALPARAMF(waterfallrefract, refractcolor.x*refractscale, refractcolor.y*refractscale, refractcolor.z*refractscale, refract*viewh);
-        GLOBALPARAMF(waterfallspec, 0.5f*spec/100.0f);
+        GLOBALPARAMF(waterfallspec, spec/100.0f);
 
         if(waterfallenv) SETSHADER(waterfallenv);
         else SETSHADER(waterfall);
@@ -625,7 +631,7 @@ void renderwater()
             deepfade.y ? calcfogdensity(deepfade.y) : -1e4f,
             deepfade.z ? calcfogdensity(deepfade.z) : -1e4f,
             deep ? calcfogdensity(deep) : -1e4f);
-        GLOBALPARAMF(waterspec, 0.5f*spec/100.0f);
+        GLOBALPARAMF(waterspec, spec/100.0f);
         GLOBALPARAMF(waterreflect, reflectscale, reflectscale, reflectscale, waterreflectstep);
         GLOBALPARAMF(waterrefract, refractcolor.x*refractscale, refractcolor.y*refractscale, refractcolor.z*refractscale, refract*viewh);
 

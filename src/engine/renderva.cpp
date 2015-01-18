@@ -233,13 +233,6 @@ void visiblecubes(bool cull)
     }
 }
 
-static inline bool insideva(const vtxarray *va, const vec &v, int margin = 2)
-{
-    int size = va->size + margin;
-    return v.x>=va->o.x-margin && v.y>=va->o.y-margin && v.z>=va->o.z-margin &&
-           v.x<=va->o.x+size && v.y<=va->o.y+size && v.z<=va->o.z+size;
-}
-
 ///////// occlusion queries /////////////
 
 #define MAXQUERY 2048
@@ -428,12 +421,6 @@ extern int octaentsize;
 
 static octaentities *visiblemms, **lastvisiblemms;
 
-static inline bool insideoe(const octaentities *oe, const vec &v, int margin = 1)
-{
-    return v.x>=oe->bbmin.x-margin && v.y>=oe->bbmin.y-margin && v.z>=oe->bbmin.z-margin &&
-           v.x<=oe->bbmax.x+margin && v.y<=oe->bbmax.y+margin && v.z<=oe->bbmax.z+margin;
-}
-
 void findvisiblemms(const vector<extentity *> &ents)
 {
     visiblemms = NULL;
@@ -528,7 +515,7 @@ void rendermapmodels()
     bool queried = false;
     for(octaentities *oe = visiblemms; oe; oe = oe->next) if(oe->distance<0)
     {
-        oe->query = doquery && !insideoe(oe, camera1->o) ? newquery(oe) : NULL;
+        oe->query = doquery && !camera1->o.insidebb(oe->bbmin, oe->bbmax, 1) ? newquery(oe) : NULL;
         if(!oe->query) continue;
         if(!queried)
         {
@@ -1384,10 +1371,16 @@ static void changeslottmus(renderstate &cur, int pass, Slot &slot, VSlot &vslot)
     if(cur.alphaing)
     {
         float alpha = cur.alphaing > 1 ? vslot.alphafront : vslot.alphaback;
-        if(cur.colorscale != vslot.colorscale || cur.alphascale != alpha)
+        if(cur.alphascale != alpha)
         {
-            cur.colorscale = vslot.colorscale;
             cur.alphascale = alpha;
+            cur.refractscale = 0;
+            goto changecolorparams;
+        }
+        if(cur.colorscale != vslot.colorscale)
+        {
+        changecolorparams:
+            cur.colorscale = vslot.colorscale;
             GLOBALPARAMF(colorparams, alpha*vslot.colorscale.x, alpha*vslot.colorscale.y, alpha*vslot.colorscale.z, alpha);
         }
         if(cur.alphaing > 1 && vslot.refractscale > 0 && (cur.refractscale != vslot.refractscale || cur.refractcolor != vslot.refractcolor))
@@ -1419,23 +1412,23 @@ static void changeslottmus(renderstate &cur, int pass, Slot &slot, VSlot &vslot)
         }
     }
 
-    if(pass == RENDERPASS_GBUFFER && vslot.decal)
+    if(pass == RENDERPASS_GBUFFER && vslot.detail)
     {
-        VSlot &decal = lookupvslot(vslot.decal);
-        loopvj(decal.slot->sts)
+        VSlot &detail = lookupvslot(vslot.detail);
+        loopvj(detail.slot->sts)
         {
-            Slot::Tex &t = decal.slot->sts[j];
+            Slot::Tex &t = detail.slot->sts[j];
             switch(t.type)
             {
                 case TEX_DIFFUSE:
                     if(slot.shader->type&SHADER_TRIPLANAR)
                     {
-                        float scale = TEX_SCALE/decal.scale;
-                        GLOBALPARAMF(decalscale, scale/t.t->xs, scale/t.t->ys);
+                        float scale = TEX_SCALE/detail.scale;
+                        GLOBALPARAMF(detailscale, scale/t.t->xs, scale/t.t->ys);
                     }
                     // fall-through
                 case TEX_NORMAL:
-                    bindslottex(cur, TEX_DECAL + t.type, t.t);
+                    bindslottex(cur, TEX_DETAIL + t.type, t.t);
                     break;
             }
         }
@@ -1711,7 +1704,7 @@ void rendergeom()
     {
         for(vtxarray *va = visibleva; va; va = va->next) if(va->texs)
         {
-            if(!insideva(va, camera1->o))
+            if(!camera1->o.insidebb(va->o, va->size, 2))
             {
                 if(va->parent && va->parent->occluded >= OCCLUDE_BB)
                 {
@@ -1937,9 +1930,9 @@ int findalphavas()
         if(va->occluded >= OCCLUDE_BB) continue;
         if(va->occluded >= OCCLUDE_GEOM && pvsoccluded(va->alphamin, va->alphamax)) continue;
         if(va->curvfc==VFC_FOGGED) continue;
-        alphavas.add(va);
         float sx1 = -1, sx2 = 1, sy1 = -1, sy2 = 1;
-        if(!calcbbscissor(va->alphamin, va->alphamax, sx1, sy1, sx2, sy2)) { sx1 = sy1 = -1; sx2 = sy2 = 1; }
+        if(!calcbbscissor(va->alphamin, va->alphamax, sx1, sy1, sx2, sy2)) continue;
+        alphavas.add(va);
         masktiles(alphatiles, sx1, sy1, sx2, sy2);
         alphafrontsx1 = min(alphafrontsx1, sx1);
         alphafrontsy1 = min(alphafrontsy1, sy1);
@@ -1955,8 +1948,8 @@ int findalphavas()
         }
         if(va->refracttris)
         {
+            if(!calcbbscissor(va->refractmin, va->refractmax, sx1, sy1, sx2, sy2)) continue;
             alpharefractvas++;
-            if(!calcbbscissor(va->refractmin, va->refractmax, sx1, sy1, sx2, sy2)) { sx1 = sy1 = -1; sx2 = sy2 = 1; }
             alpharefractsx1 = min(alpharefractsx1, sx1);
             alpharefractsy1 = min(alpharefractsy1, sy1);
             alpharefractsx2 = max(alpharefractsx2, sx2);
@@ -1986,6 +1979,8 @@ void renderrefractmask()
 
         drawvatris(va, 3*va->refracttris, 3*(va->tris + va->blendtris + va->alphabacktris + va->alphafronttris));
         xtravertsva += 3*va->refracttris;
+
+        prev = va;
     }
 
     glBindBuffer_(GL_ARRAY_BUFFER, 0);
@@ -2039,6 +2034,11 @@ bool renderexplicitsky(bool outline)
                     enablepolygonoffset(GL_POLYGON_OFFSET_LINE);
                     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
                 }
+                else if(editmode)
+                {
+                    maskgbuffer("d");
+                    SETSHADER(depth);
+                }
                 else
                 {
                     nocolorshader->set();
@@ -2060,6 +2060,10 @@ bool renderexplicitsky(bool outline)
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         disablepolygonoffset(GL_POLYGON_OFFSET_LINE);
         glDepthMask(GL_TRUE);
+    }
+    else if(editmode)
+    {
+        maskgbuffer("cnd");
     }
     else
     {
@@ -2110,8 +2114,8 @@ struct decalbatch
         if(es.envmap > b.es.envmap) return 1;
         if(slot.Slot::params.length() < b.slot.Slot::params.length()) return -1;
         if(slot.Slot::params.length() > b.slot.Slot::params.length()) return 1;
-        if(es.orient < b.es.orient) return -1;
-        if(es.orient > b.es.orient) return 1;
+        if(es.reuse < b.es.reuse) return -1;
+        if(es.reuse > b.es.reuse) return 1;
         return 0;
     }
 };
@@ -2199,7 +2203,7 @@ static void changevbuf(decalrenderer &cur, int pass, vtxarray *va)
 
     vertex *vdata = (vertex *)0;
     gle::vertexpointer(sizeof(vertex), vdata->pos.v);
-    gle::normalpointer(sizeof(vertex), vdata->norm.v, GL_BYTE);
+    gle::normalpointer(sizeof(vertex), vdata->norm.v, GL_BYTE, 4);
     gle::texcoord0pointer(sizeof(vertex), vdata->tc.v, GL_FLOAT, 3);
     gle::tangentpointer(sizeof(vertex), vdata->tangent.v, GL_BYTE);
 }
@@ -2276,7 +2280,13 @@ static void changeslottmus(decalrenderer &cur, int pass, DecalSlot &slot)
 static inline void changeshader(decalrenderer &cur, int pass, decalbatch &b)
 {
     DecalSlot &slot = b.slot;
-    if(pass) slot.shader->setvariant(0, 0, slot);
+    if(b.es.reuse)
+    {
+        VSlot &reuse = lookupvslot(b.es.reuse);
+        if(pass) slot.shader->setvariant(0, 0, slot, reuse);
+        else slot.shader->set(slot, reuse);
+    }
+    else if(pass) slot.shader->setvariant(0, 0, slot);
     else slot.shader->set(slot);
     cur.globals = GlobalShaderParamState::nextversion;
 }
@@ -2304,6 +2314,8 @@ static void renderdecalbatches(decalrenderer &cur, int pass)
     {
         decalbatch &b = decalbatches[curbatch];
         curbatch = b.next;
+
+        if(pass && !b.slot.shader->numvariants(0)) continue;
 
         if(cur.vbuf != b.va->vbuf) changevbuf(cur, pass, b.va);
         changebatchtmus(cur, pass, b);
@@ -2341,6 +2353,7 @@ void cleanupdecals(decalrenderer &cur)
 {
     disablepolygonoffset(GL_POLYGON_OFFSET_FILL);
     glDisable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     glDepthMask(GL_TRUE);
     maskgbuffer("cnd");
@@ -2373,20 +2386,20 @@ void renderdecals()
         maskgbuffer("c");
         for(vtxarray *va = decalva; va; va = va->next) if(va->decaltris && va->occluded < OCCLUDE_BB)
         {
-            vverts += 3*va->decaltris;
             mergedecals(cur, va);
             if(!batchdecals && decalbatches.length()) renderdecalbatches(cur, 0);
         }
         if(decalbatches.length()) renderdecalbatches(cur, 0);
 
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
+        if(usepacknorm())
+        {
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
+        }
         maskgbuffer("n");
         cur.vbuf = 0;
-        GLOBALPARAMF(colorparams, 1, 1, 1, 1);
         for(vtxarray *va = decalva; va; va = va->next) if(va->decaltris && va->occluded < OCCLUDE_BB)
         {
-            vverts += 3*va->decaltris;
             mergedecals(cur, va);
             if(!batchdecals && decalbatches.length()) renderdecalbatches(cur, 1);
         }
@@ -2399,7 +2412,6 @@ void renderdecals()
         maskgbuffer("cn");
         for(vtxarray *va = decalva; va; va = va->next) if(va->decaltris && va->occluded < OCCLUDE_BB)
         {
-            vverts += 3*va->decaltris;
             mergedecals(cur, va);
             if(!batchdecals && decalbatches.length()) renderdecalbatches(cur, 0);
         }

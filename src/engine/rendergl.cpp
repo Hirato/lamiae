@@ -2,12 +2,11 @@
 
 #include "engine.h"
 
-bool hasVAO = false, hasTR = false, hasTSW = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasS3TC = false, hasFXT1 = false, hasLATC = false, hasRGTC = false, hasAF = false, hasFBB = false, hasFBMS = false, hasTMS = false, hasMSS = false, hasFBMSBS = false, hasNVFBMSC = false, hasNVTMS = false, hasUBO = false, hasMBR = false, hasDB2 = false, hasDBB = false, hasTG = false, hasTQ = false, hasPF = false, hasTRG = false, hasTI = false, hasHFV = false, hasHFP = false, hasDBT = false, hasDC = false, hasDBGO = false, hasEGPU4 = false, hasGPU4 = false, hasGPU5 = false, hasBFE = false, hasEAL = false, hasCR = false, hasOQ2 = false, hasCB = false, hasCI = false;
+bool hasVAO = false, hasTR = false, hasTSW = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasS3TC = false, hasFXT1 = false, hasLATC = false, hasRGTC = false, hasAF = false, hasFBB = false, hasFBMS = false, hasTMS = false, hasMSS = false, hasFBMSBS = false, hasUBO = false, hasMBR = false, hasDB2 = false, hasDBB = false, hasTG = false, hasTQ = false, hasPF = false, hasTRG = false, hasTI = false, hasHFV = false, hasHFP = false, hasDBT = false, hasDC = false, hasDBGO = false, hasEGPU4 = false, hasGPU4 = false, hasGPU5 = false, hasBFE = false, hasEAL = false, hasCR = false, hasOQ2 = false, hasCB = false, hasCI = false;
 bool mesa = false, intel = false, amd = false, nvidia = false;
 
 int hasstencil = 0;
 
-VAR(renderpath, 1, 0, 0);
 VAR(glversion, 1, 0, 0);
 VAR(glslversion, 1, 0, 0);
 
@@ -51,17 +50,6 @@ PFNGLBLENDEQUATIONIPROC         glBlendEquationi_         = NULL;
 PFNGLBLENDEQUATIONSEPARATEIPROC glBlendEquationSeparatei_ = NULL;
 PFNGLBLENDFUNCIPROC             glBlendFunci_             = NULL;
 PFNGLBLENDFUNCSEPARATEIPROC     glBlendFuncSeparatei_     = NULL;
-
-// GL_NV_framebuffer_multisample_coverage
-PFNGLRENDERBUFFERSTORAGEMULTISAMPLECOVERAGENVPROC glRenderbufferStorageMultisampleCoverageNV_ = NULL;
-
-// GL_NV_texture_multisample
-PFNGLTEXIMAGE2DMULTISAMPLECOVERAGENVPROC     glTexImage2DMultisampleCoverageNV_     = NULL;
-PFNGLTEXIMAGE3DMULTISAMPLECOVERAGENVPROC     glTexImage3DMultisampleCoverageNV_     = NULL;
-PFNGLTEXTUREIMAGE2DMULTISAMPLENVPROC         glTextureImage2DMultisampleNV_         = NULL;
-PFNGLTEXTUREIMAGE3DMULTISAMPLENVPROC         glTextureImage3DMultisampleNV_         = NULL;
-PFNGLTEXTUREIMAGE2DMULTISAMPLECOVERAGENVPROC glTextureImage2DMultisampleCoverageNV_ = NULL;
-PFNGLTEXTUREIMAGE3DMULTISAMPLECOVERAGENVPROC glTextureImage3DMultisampleCoverageNV_ = NULL;
 
 // OpenGL 1.3
 #ifdef WIN32
@@ -242,10 +230,10 @@ PFNGLDEPTHBOUNDSEXTPROC glDepthBounds_ = NULL;
 PFNGLCLAMPCOLORPROC glClampColor_ = NULL;
 
 // GL_ARB_debug_output
-PFNGLDEBUGMESSAGECONTROLARBPROC  glDebugMessageControl_  = NULL;
-PFNGLDEBUGMESSAGEINSERTARBPROC   glDebugMessageInsert_   = NULL;
-PFNGLDEBUGMESSAGECALLBACKARBPROC glDebugMessageCallback_ = NULL;
-PFNGLGETDEBUGMESSAGELOGARBPROC   glGetDebugMessageLog_   = NULL;
+PFNGLDEBUGMESSAGECONTROLPROC  glDebugMessageControl_  = NULL;
+PFNGLDEBUGMESSAGEINSERTPROC   glDebugMessageInsert_   = NULL;
+PFNGLDEBUGMESSAGECALLBACKPROC glDebugMessageCallback_ = NULL;
+PFNGLGETDEBUGMESSAGELOGPROC   glGetDebugMessageLog_   = NULL;
 
 // GL_ARB_map_buffer_range
 PFNGLMAPBUFFERRANGEPROC         glMapBufferRange_         = NULL;
@@ -289,7 +277,6 @@ void glerror(const char *file, int line, GLenum error)
 VAR(amd_pf_bug, 0, 0, 1);
 VAR(amd_eal_bug, 0, 0, 1);
 VAR(mesa_texrectoffset_bug, 0, 0, 1);
-VAR(intel_texgatheroffsetcomp_bug, 0, 0, 1);
 VAR(intel_texalpha_bug, 0, 0, 1);
 VAR(intel_mapbufferrange_bug, 0, 0, 1);
 VAR(useubo, 1, 0, 0);
@@ -847,37 +834,20 @@ void gl_checkextensions()
         hasFBMSBS = true;
         if(dbgexts) conoutf(CON_INIT, "Using GL_EXT_framebuffer_multisample_blit_scaled extension.");
     }
-    if(hasext("GL_NV_framebuffer_multisample_coverage"))
-    {
-        glRenderbufferStorageMultisampleCoverageNV_ = (PFNGLRENDERBUFFERSTORAGEMULTISAMPLECOVERAGENVPROC)getprocaddress("glRenderbufferStorageMultisampleCoverageNV");
-        hasNVFBMSC = true;
-    }
-    if(hasext("GL_NV_texture_multisample"))
-    {
-        glTexImage2DMultisampleCoverageNV_     = (PFNGLTEXIMAGE2DMULTISAMPLECOVERAGENVPROC)    getprocaddress("glTexImage2DMultisampleCoverageNV");
-        glTexImage3DMultisampleCoverageNV_     = (PFNGLTEXIMAGE3DMULTISAMPLECOVERAGENVPROC)    getprocaddress("glTexImage3DMultisampleCoverageNV");
-        glTextureImage2DMultisampleNV_         = (PFNGLTEXTUREIMAGE2DMULTISAMPLENVPROC)        getprocaddress("glTextureImage2DMultisampleNV");
-        glTextureImage3DMultisampleNV_         = (PFNGLTEXTUREIMAGE3DMULTISAMPLENVPROC)        getprocaddress("glTextureImage3DMultisampleNV");
-        glTextureImage2DMultisampleCoverageNV_ = (PFNGLTEXTUREIMAGE2DMULTISAMPLECOVERAGENVPROC)getprocaddress("glTextureImage2DMultisampleCoverageNV");
-        glTextureImage3DMultisampleCoverageNV_ = (PFNGLTEXTUREIMAGE3DMULTISAMPLECOVERAGENVPROC)getprocaddress("glTextureImage3DMultisampleCoverageNV");
-        hasNVTMS = true;
-    }
 
-    if(hasext("GL_EXT_timer_query") || hasext("GL_ARB_timer_query"))
+    if(hasext("GL_EXT_timer_query"))
     {
-        if(hasext("GL_EXT_timer_query"))
-        {
-            glGetQueryObjecti64v_ =  (PFNGLGETQUERYOBJECTI64VEXTPROC)  getprocaddress("glGetQueryObjecti64vEXT");
-            glGetQueryObjectui64v_ = (PFNGLGETQUERYOBJECTUI64VEXTPROC) getprocaddress("glGetQueryObjectui64vEXT");
-            if(dbgexts) conoutf(CON_INIT, "Using GL_EXT_timer_query extension.");
-        }
-        else
-        {
-            glGetQueryObjecti64v_ =  (PFNGLGETQUERYOBJECTI64VEXTPROC)  getprocaddress("glGetQueryObjecti64v");
-            glGetQueryObjectui64v_ = (PFNGLGETQUERYOBJECTUI64VEXTPROC) getprocaddress("glGetQueryObjectui64v");
-            if(dbgexts) conoutf(CON_INIT, "Using GL_ARB_timer_query extension.");
-        }
+        glGetQueryObjecti64v_ =  (PFNGLGETQUERYOBJECTI64VEXTPROC)  getprocaddress("glGetQueryObjecti64vEXT");
+        glGetQueryObjectui64v_ = (PFNGLGETQUERYOBJECTUI64VEXTPROC) getprocaddress("glGetQueryObjectui64vEXT");
         hasTQ = true;
+        if(dbgexts) conoutf(CON_INIT, "Using GL_EXT_timer_query extension.");
+    }
+    else if(glversion >= 330 || hasext("GL_ARB_timer_query"))
+    {
+        glGetQueryObjecti64v_ =  (PFNGLGETQUERYOBJECTI64VEXTPROC)  getprocaddress("glGetQueryObjecti64v");
+        glGetQueryObjectui64v_ = (PFNGLGETQUERYOBJECTUI64VEXTPROC) getprocaddress("glGetQueryObjectui64v");
+        hasTQ = true;
+        if(glversion < 330 && dbgexts) conoutf(CON_INIT, "Using GL_ARB_timer_query extension.");
     }
 
     if(hasext("GL_EXT_texture_compression_s3tc"))
@@ -1012,23 +982,33 @@ void gl_checkextensions()
     }
     if(hasTG) usetexgather = hasGPU5 && !intel && !nvidia ? 2 : 1;
 
-    if(hasext("GL_ARB_debug_output"))
+    if(glversion >= 430)
     {
-        glDebugMessageControl_ =  (PFNGLDEBUGMESSAGECONTROLARBPROC) getprocaddress("glDebugMessageControlARB");
-        glDebugMessageInsert_ =   (PFNGLDEBUGMESSAGEINSERTARBPROC)  getprocaddress("glDebugMessageInsertARB");
-        glDebugMessageCallback_ = (PFNGLDEBUGMESSAGECALLBACKARBPROC)getprocaddress("glDebugMessageCallbackARB");
-        glGetDebugMessageLog_ =   (PFNGLGETDEBUGMESSAGELOGARBPROC)  getprocaddress("glGetDebugMessageLogARB");
-
+        glDebugMessageControl_ =  (PFNGLDEBUGMESSAGECONTROLPROC) getprocaddress("glDebugMessageControl");
+        glDebugMessageInsert_ =   (PFNGLDEBUGMESSAGEINSERTPROC)  getprocaddress("glDebugMessageInsert");
+        glDebugMessageCallback_ = (PFNGLDEBUGMESSAGECALLBACKPROC)getprocaddress("glDebugMessageCallback");
+        glGetDebugMessageLog_ =   (PFNGLGETDEBUGMESSAGELOGPROC)  getprocaddress("glGetDebugMessageLog");
         hasDBGO = true;
-        if(dbgexts) conoutf(CON_INIT, "Using GL_ARB_debug_output extension.");
+    }
+    else
+    {
+        if(hasext("GL_ARB_debug_output"))
+        {
+            glDebugMessageControl_ =  (PFNGLDEBUGMESSAGECONTROLPROC) getprocaddress("glDebugMessageControlARB");
+            glDebugMessageInsert_ =   (PFNGLDEBUGMESSAGEINSERTPROC)  getprocaddress("glDebugMessageInsertARB");
+            glDebugMessageCallback_ = (PFNGLDEBUGMESSAGECALLBACKPROC)getprocaddress("glDebugMessageCallbackARB");
+            glGetDebugMessageLog_ =   (PFNGLGETDEBUGMESSAGELOGPROC)  getprocaddress("glGetDebugMessageLogARB");
+            hasDBGO = true;
+            if(dbgexts) conoutf(CON_INIT, "Using GL_ARB_debug_output extension.");
+        }
     }
 
-    if(hasext("GL_ARB_copy_image"))
+    if(glversion >= 430 || hasext("GL_ARB_copy_image"))
     {
         glCopyImageSubData_ = (PFNGLCOPYIMAGESUBDATAPROC)getprocaddress("glCopyImageSubData");
 
         hasCI = true;
-        if(dbgexts) conoutf(CON_INIT, "Using GL_ARB_copy_image extension.");
+        if(glversion < 430 && dbgexts) conoutf(CON_INIT, "Using GL_ARB_copy_image extension.");
     }
     else if(hasext("GL_NV_copy_image"))
     {
@@ -1067,15 +1047,13 @@ void gl_checkextensions()
                 gdepthstencil = 1;
                 gstencil = 1;
             }
-            // textureGatherOffset with component selection crashes Intel's GLSL compiler on Windows
-            intel_texgatheroffsetcomp_bug = 1;
             // sampling alpha by itself from a texture generates garbage on Intel drivers on Windows
             intel_texalpha_bug = 1;
             // MapBufferRange is buggy on older Intel drivers on Windows
             if(glversion <= 310) intel_mapbufferrange_bug = 1;
         }
     }
-    if(hasGPU5 && hasTG && !intel_texgatheroffsetcomp_bug) tqaaresolvegather = 1;
+    if(hasGPU5 && hasTG) tqaaresolvegather = 1;
 }
 
 ICOMMAND(glext, "s", (char *ext), intret(hasext(ext) ? 1 : 0));
@@ -1229,8 +1207,6 @@ void gl_init()
     glCullFace(GL_BACK);
     glDisable(GL_CULL_FACE);
 
-    renderpath = R_GLSLANG;
-
     gle::setup();
     setupshaders();
     setuptexcompress();
@@ -1238,9 +1214,6 @@ void gl_init()
     GLERROR;
 
     gl_resize();
-
-    static const char * const rpnames[1] = { "GLSL shader" };
-    conoutf(CON_INIT, "Rendering using the OpenGL %s path.", rpnames[renderpath]);
 }
 
 VAR(wireframe, 0, 0, 1);
@@ -1346,11 +1319,11 @@ float curfov, curavatarfov, fovy, aspect;
 int farplane;
 VARP(zoominvel, 0, 40, 500);
 VARP(zoomoutvel, 0, 50, 500);
-VARP(zoomfov, 10, 42, 60);
+VARP(zoomfov, 10, 42, 90);
 VARP(fov, 10, 100, 150);
 VAR(avatarzoomfov, 1, 1, 1);
 VAR(avatarfov, 10, 40, 100);
-FVAR(avatardepth, 0, 0.8f, 1);
+FVAR(avatardepth, 0, 0.7f, 1);
 FVARNP(aspect, forceaspect, 0, 0, 1e3f);
 
 static float zoomprogress = 0;
@@ -1871,6 +1844,7 @@ void screenquadoffset(float x, float y, float w, float h, float x2, float y2, fl
     gle::attribf(x2, y2); gle::attribf(sx2, sy2); \
     gle::attribf(x1, y2); gle::attribf(sx1, sy2); \
     gle::end(); \
+    gle::disable(); \
 }
 
 void hudquad(float x, float y, float w, float h, float tx, float ty, float tw, float th)
@@ -1881,7 +1855,6 @@ void hudquad(float x, float y, float w, float h, float tx, float ty, float tw, f
 void debugquad(float x, float y, float w, float h, float tx, float ty, float tw, float th)
 {
     HUDQUAD(x, y, x+w, y+h, tx, ty+th, tx+tw, ty);
-    gle::disable();
 }
 
 VARR(fog, 16, 4000, 1000024);
@@ -2440,6 +2413,10 @@ void gl_drawview()
     renderao();
     GLERROR;
 
+    // render avatar after AO to avoid weird contact shadows
+    renderavatar();
+    GLERROR;
+
     // render grass after AO to avoid disturbing shimmering patterns
     generategrass();
     rendergrass();
@@ -2469,6 +2446,9 @@ void gl_drawview()
     GLERROR;
 
     if(fogmat) setfog(fogmat, fogbelow, 1, abovemat);
+
+    rendervolumetric();
+    GLERROR;
 
     if(editmode)
     {
@@ -2704,6 +2684,7 @@ void drawcrosshair(int w, int h)
     }
     if(crosshair->type&Texture::ALPHA) glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     else glBlendFunc(GL_ONE, GL_ONE);
+    hudshader->set();
     gle::color(color);
     float x = cx*w - (windowhit ? 0 : chsize/2.0f);
     float y = cy*h - (windowhit ? 0 : chsize/2.0f);
@@ -2724,6 +2705,12 @@ VAR(statrate, 1, 200, 1000);
 
 FVARP(conscale, 1e-3f, 0.33f, 1e3f);
 
+void resethudshader()
+{
+    hudshader->set();
+    gle::colorf(1, 1, 1);
+}
+
 void gl_drawhud()
 {
     int w = hudw, h = hudh;
@@ -2733,12 +2720,10 @@ void gl_drawhud()
 
     hudmatrix.ortho(0, w, h, 0, -1, 1);
     resethudmatrix();
-    hudshader->set();
+    resethudshader();
 
     pushfont();
     setfont("default_outline");
-
-    gle::colorf(1, 1, 1);
 
     debuglights();
 
@@ -2752,13 +2737,12 @@ void gl_drawhud()
         drawdamagecompass(w, h);
     }
 
-    hudshader->set();
-
     float conw = w/conscale, conh = h/conscale, abovehud = conh - FONTH;
     if(!hidehud && !UI::mainmenu)
     {
         if(hidestats || !editmode)
         {
+            resethudshader();
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             game::gameplayhud(w, h);
             abovehud = min(abovehud, conh*game::abovegameplayhud(w, h));

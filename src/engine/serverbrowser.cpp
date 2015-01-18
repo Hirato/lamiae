@@ -212,11 +212,54 @@ int connectwithtimeout(ENetSocket sock, const char *hostname, const ENetAddress 
     return -1;
 }
 
+struct pingattempts
+{
+    enum { MAXATTEMPTS = 2 };
+
+    int offset, attempts[MAXATTEMPTS];
+
+    pingattempts() : offset(0) { clearattempts(); }
+
+    void clearattempts() { memset(attempts, 0, sizeof(attempts)); }
+
+    void setoffset() { offset = 1 + rnd(0xFFFFFF); }
+
+    int encodeping(int millis)
+    {
+        millis += offset;
+        return millis ? millis : 1;
+    }
+
+    int decodeping(int val)
+    {
+        return val - offset;
+    }
+
+    int addattempt(int millis)
+    {
+        int val = encodeping(millis);
+        loopk(MAXATTEMPTS-1) attempts[k+1] = attempts[k];
+        attempts[0] = val;
+        return val;
+    }
+
+    bool checkattempt(int val, bool del = true)
+    {
+        if(val) loopk(MAXATTEMPTS) if(attempts[k] == val)
+        {
+            if(del) attempts[k] = 0;
+            return true;
+        }
+        return false;
+    }
+
+};
+
 static int currentprotocol = server::protocolversion();
 
 enum { UNRESOLVED = 0, RESOLVING, RESOLVED };
 
-struct serverinfo : servinfo
+struct serverinfo : servinfo, pingattempts
 {
     enum
     {
@@ -225,7 +268,7 @@ struct serverinfo : servinfo
         MAXPINGS = 3
     };
 
-    int resolved, lastping, nextping, lastpong;
+    int resolved, lastping, nextping;
     int pings[MAXPINGS];
     ENetAddress address;
     bool keep;
@@ -235,6 +278,7 @@ struct serverinfo : servinfo
      : resolved(UNRESOLVED), keep(false), password(NULL)
     {
         clearpings();
+        setoffset();
     }
 
     ~serverinfo()
@@ -248,7 +292,7 @@ struct serverinfo : servinfo
         loopk(MAXPINGS) pings[k] = WAITING;
         nextping = 0;
         lastping = -1;
-        lastpong = 0;
+        clearattempts();
     }
 
     void cleanup()
@@ -262,7 +306,6 @@ struct serverinfo : servinfo
     void reset()
     {
         lastping = -1;
-        lastpong = 0;
     }
 
     void checkdecay(int decay)
@@ -270,13 +313,6 @@ struct serverinfo : servinfo
         if(lastping >= 0 && totalmillis - lastping >= decay)
             cleanup();
         if(lastping < 0) lastping = totalmillis;
-    }
-
-    bool limitpong()
-    {
-        if(lastpong && totalmillis - lastpong < 1000) return false;
-        lastpong = totalmillis;
-        return true;
     }
 
     void calcping()
@@ -376,6 +412,17 @@ VARMP(servpingrate, 1, 5, 60, 1000);
 VARMP(servpingdecay, 1, 15, 60, 1000);
 VARP(maxservpings, 0, 10, 1000);
 
+pingattempts lanpings;
+
+template<size_t N> static inline void buildping(ENetBuffer &buf, uchar (&ping)[N], pingattempts &a)
+{
+    ucharbuf p(ping, N);
+    p.put(0xFF); p.put(0xFF);
+    putint(p, a.addattempt(totalmillis));
+    buf.data = ping;
+    buf.dataLength = p.length();
+}
+
 void pingservers()
 {
     if(pingsock == ENET_SOCKET_NULL)
@@ -388,12 +435,12 @@ void pingservers()
         }
         enet_socket_set_option(pingsock, ENET_SOCKOPT_NONBLOCK, 1);
         enet_socket_set_option(pingsock, ENET_SOCKOPT_BROADCAST, 1);
+
+        lanpings.setoffset();
     }
+
     ENetBuffer buf;
     uchar ping[MAXTRANS];
-    ucharbuf p(ping, sizeof(ping));
-    p.put(0xFF); p.put(0xFF);
-    putint(p, totalmillis ? totalmillis : 1);
 
     static int lastping = 0;
     if(lastping >= servers.length()) lastping = 0;
@@ -402,8 +449,7 @@ void pingservers()
         serverinfo &si = *servers[lastping];
         if(++lastping >= servers.length()) lastping = 0;
         if(si.address.host == ENET_HOST_ANY) continue;
-        buf.data = ping;
-        buf.dataLength = p.length();
+        buildping(buf, ping, si);
         enet_socket_send(pingsock, &si.address, &buf, 1);
 
         si.checkdecay(servpingdecay);
@@ -413,8 +459,7 @@ void pingservers()
         ENetAddress address;
         address.host = ENET_HOST_BROADCAST;
         address.port = server::laninfoport();
-        buf.data = ping;
-        buf.dataLength = p.length();
+        buildping(buf, ping, lanpings);
         enet_socket_send(pingsock, &address, &buf, 1);
     }
     lastinfo = totalmillis;
@@ -469,12 +514,22 @@ void checkpings()
     {
         int len = enet_socket_receive(pingsock, &addr, &buf, 1);
         if(len <= 0) return;
+        ucharbuf p(ping, len);
+        int millis = getint(p);
         serverinfo *si = NULL;
         loopv(servers) if(addr.host == servers[i]->address.host && addr.port == servers[i]->address.port) { si = servers[i]; break; }
-        if(!si && searchlan) si = newserver(NULL, addr.port, addr.host);
-        if(!si || !si->limitpong()) continue;
-        ucharbuf p(ping, len);
-        int millis = getint(p), rtt = clamp(totalmillis - millis, 0, min(servpingdecay, totalmillis));
+        if(si)
+        {
+            if(!si->checkattempt(millis)) continue;
+            millis = si->decodeping(millis);
+        }
+        else if(!searchlan || !lanpings.checkattempt(millis, false)) continue;
+        else
+        {
+            si = newserver(NULL, addr.port, addr.host);
+            millis = lanpings.decodeping(millis);
+        }
+        int rtt = clamp(totalmillis - millis, 0, min(servpingdecay, totalmillis));
         if(millis >= lastreset && rtt < servpingdecay) si->addping(rtt, millis);
         si->protocol = getint(p);
         si->numplayers = getint(p);

@@ -621,7 +621,7 @@ bool BIH::ellipsecollide(physent *d, const vec &dir, float cutoff, const vec &o,
     vec center(d->o.x, d->o.y, d->o.z + 0.5f*(d->aboveeye - d->eyeheight)),
         radius(d->radius, d->radius, 0.5f*(d->eyeheight + d->aboveeye));
     center.sub(o);
-    if(scale != 1) { scale = 1/scale; center.mul(scale); radius.mul(scale); }
+    if(scale != 1) { float invscale = 1/scale; center.mul(invscale); radius.mul(invscale); }
 
     matrix3 orient;
     orient.identity();
@@ -657,7 +657,7 @@ bool BIH::boxcollide(physent *d, const vec &dir, float cutoff, const vec &o, int
     vec center(d->o.x, d->o.y, d->o.z + 0.5f*(d->aboveeye - d->eyeheight)),
         radius(d->xradius, d->yradius, 0.5f*(d->eyeheight + d->aboveeye));
     center.sub(o);
-    if(scale != 1) { scale = 1/scale; center.mul(scale); radius.mul(scale); }
+    if(scale != 1) { float invscale = 1/scale; center.mul(invscale); radius.mul(invscale); }
 
     matrix3 orient;
     orient.identity();
@@ -694,4 +694,122 @@ bool BIH::boxcollide(physent *d, const vec &dir, float cutoff, const vec &o, int
         return true;
     }
     return false;
+}
+
+inline void BIH::genstaintris(stainrenderer *s, const mesh &m, int tidx, const vec &center, float radius, const matrix4x3 &orient, const ivec &bo, const ivec &br)
+{
+    const tribb &bb = m.tribbs[tidx];
+    if(abs(bo.x - bb.center.x) > br.x + bb.radius.x ||
+       abs(bo.y - bb.center.y) > br.y + bb.radius.y ||
+       abs(bo.z - bb.center.z) > br.z + bb.radius.z)
+        return;
+
+    const tri &t = m.tris[tidx];
+    vec v[3] =
+    {
+        orient.transform(m.getpos(t.vert[0])),
+        orient.transform(m.getpos(t.vert[1])),
+        orient.transform(m.getpos(t.vert[2]))
+    };
+
+    genstainmmtri(s, v);
+}
+
+void BIH::genstaintris(stainrenderer *s, const mesh &m, const vec &center, float radius, const matrix4x3 &orient, node *curnode, const ivec &bo, const ivec &br)
+{
+    node *stack[128];
+    int stacksize = 0;
+    ivec bmin = ivec(bo).sub(br), bmax = ivec(bo).add(br);
+    for(;;)
+    {
+        int axis = curnode->axis();
+        const int nearidx = 0, faridx = nearidx^1;
+        int nearsplit = bmin[axis] - curnode->split[nearidx],
+            farsplit = curnode->split[faridx] - bmax[axis];
+
+        if(nearsplit > 0)
+        {
+            if(farsplit <= 0)
+            {
+                if(!curnode->isleaf(faridx))
+                {
+                    curnode += curnode->childindex(faridx);
+                    continue;
+                }
+                else genstaintris(s, m, curnode->childindex(faridx), center, radius, orient, bo, br);
+            }
+        }
+        else if(curnode->isleaf(nearidx))
+        {
+            genstaintris(s, m, curnode->childindex(nearidx), center, radius, orient, bo, br);
+            if(farsplit <= 0)
+            {
+                if(!curnode->isleaf(faridx))
+                {
+                    curnode += curnode->childindex(faridx);
+                    continue;
+                }
+                else genstaintris(s, m, curnode->childindex(faridx), center, radius, orient, bo, br);
+            }
+        }
+        else
+        {
+            if(farsplit <= 0)
+            {
+                if(!curnode->isleaf(faridx))
+                {
+                    if(stacksize < int(sizeof(stack)/sizeof(stack[0])))
+                    {
+                        stack[stacksize++] = curnode + curnode->childindex(faridx);
+                    }
+                    else
+                    {
+                        genstaintris(s, m, center, radius, orient, &nodes[curnode->childindex(nearidx)], bo, br);
+                        curnode += curnode->childindex(faridx);
+                        continue;
+                    }
+                }
+                else genstaintris(s, m, curnode->childindex(faridx), center, radius, orient, bo, br);
+            }
+            curnode += curnode->childindex(nearidx);
+            continue;
+        }
+        if(stacksize <= 0) return;
+        curnode = stack[--stacksize];
+    }
+}
+
+void BIH::genstaintris(stainrenderer *s, const vec &staincenter, float stainradius, const vec &o, int yaw, int pitch, int roll, float scale)
+{
+    if(!numnodes) return;
+
+    vec center = vec(staincenter).sub(o);
+    float radius = stainradius;
+    if(scale != 1) { float invscale = 1/scale; center.mul(invscale); radius *= invscale; }
+
+    matrix3 orient;
+    orient.identity();
+    if(yaw) orient.rotate_around_z(sincosmod360(yaw));
+    if(pitch) orient.rotate_around_x(sincosmod360(pitch));
+    if(roll) orient.rotate_around_y(sincosmod360(-roll));
+
+    vec bo = orient.transposedtransform(center);
+    if(bo.x + radius < bbmin.x || bo.y + radius < bbmin.y || bo.z + radius < bbmin.z ||
+       bo.x - radius > bbmax.x || bo.y - radius > bbmax.y || bo.z - radius > bbmax.z)
+        return;
+
+    orient.scale(scale);
+
+    ivec imin = ivec::floor(vec(bo).sub(radius)), imax = ivec::ceil(vec(bo).add(radius)),
+         icenter = ivec(imin).add(imax).div(2),
+         iradius = ivec(imax).sub(imin).add(1).div(2);
+
+    loopi(nummeshes)
+    {
+        mesh &m = meshes[i];
+        if(!(m.flags&MESH_RENDER) || m.flags&MESH_ALPHA) continue;
+        matrix4x3 morient;
+        morient.mul(orient, o, m.xform);
+        genstaintris(s, m, m.invxform.transform(bo), radius, morient, m.nodes, icenter, iradius);
+    }
 }

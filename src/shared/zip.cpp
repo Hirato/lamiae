@@ -172,9 +172,8 @@ static bool readzipdirectory(const char *archname, FILE *f, int entries, int off
 
 static bool readlocalfileheader(FILE *f, ziplocalfileheader &h, uint offset)
 {
-    fseek(f, offset, SEEK_SET);
     uchar buf[ZIP_LOCAL_FILE_SIZE];
-    if(fread(buf, 1, ZIP_LOCAL_FILE_SIZE, f) != ZIP_LOCAL_FILE_SIZE)
+    if(fseek(f, offset, SEEK_SET) < 0 || fread(buf, 1, ZIP_LOCAL_FILE_SIZE, f) != ZIP_LOCAL_FILE_SIZE)
         return false;
     uchar *src = buf;
     h.signature = lilswap(*(uint *)src); src += 4;

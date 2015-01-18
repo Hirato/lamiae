@@ -338,8 +338,8 @@ static void bindworldtexlocs(Shader &s)
     UNIFORMTEX("normalmap", TEX_NORMAL);
     UNIFORMTEX("glowmap", TEX_GLOW);
     UNIFORMTEX("envmap", TEX_ENVMAP);
-    UNIFORMTEX("decaldiffusemap", TEX_DECAL+TEX_DIFFUSE);
-    UNIFORMTEX("decalnormalmap", TEX_DECAL+TEX_NORMAL);
+    UNIFORMTEX("detaildiffusemap", TEX_DETAIL+TEX_DIFFUSE);
+    UNIFORMTEX("detailnormalmap", TEX_DETAIL+TEX_NORMAL);
     UNIFORMTEX("blendmap", 7);
     UNIFORMTEX("refractmask", 7);
     UNIFORMTEX("refractlight", 8);
@@ -420,17 +420,17 @@ static void findfragdatalocs(Shader &s, const char *ps, const char *macroname, i
         GLenum format = GL_FLOAT_VEC4;
         if(ps > type)
         {
-            if(!strncmp(type, "vec3", ps-type)) format = GL_FLOAT_VEC3;
-            else if(!strncmp(type, "vec2", ps-type)) format = GL_FLOAT_VEC2;
-            else if(!strncmp(type, "float", ps-type)) format = GL_FLOAT;
-            else if(!strncmp(type, "ivec4", ps-type)) format = GL_INT_VEC4;
-            else if(!strncmp(type, "ivec3", ps-type)) format = GL_INT_VEC3;
-            else if(!strncmp(type, "ivec2", ps-type)) format = GL_INT_VEC2;
-            else if(!strncmp(type, "int", ps-type)) format = GL_INT;
-            else if(!strncmp(type, "uvec4", ps-type)) format = GL_UNSIGNED_INT_VEC4;
-            else if(!strncmp(type, "uvec3", ps-type)) format = GL_UNSIGNED_INT_VEC3;
-            else if(!strncmp(type, "uvec2", ps-type)) format = GL_UNSIGNED_INT_VEC2;
-            else if(!strncmp(type, "uint", ps-type)) format = GL_UNSIGNED_INT;
+            if(matchstring(type, ps-type, "vec3")) format = GL_FLOAT_VEC3;
+            else if(matchstring(type, ps-type, "vec2")) format = GL_FLOAT_VEC2;
+            else if(matchstring(type, ps-type, "float")) format = GL_FLOAT;
+            else if(matchstring(type, ps-type, "ivec4")) format = GL_INT_VEC4;
+            else if(matchstring(type, ps-type, "ivec3")) format = GL_INT_VEC3;
+            else if(matchstring(type, ps-type, "ivec2")) format = GL_INT_VEC2;
+            else if(matchstring(type, ps-type, "int")) format = GL_INT;
+            else if(matchstring(type, ps-type, "uvec4")) format = GL_UNSIGNED_INT_VEC4;
+            else if(matchstring(type, ps-type, "uvec3")) format = GL_UNSIGNED_INT_VEC3;
+            else if(matchstring(type, ps-type, "uvec2")) format = GL_UNSIGNED_INT_VEC2;
+            else if(matchstring(type, ps-type, "uint")) format = GL_UNSIGNED_INT;
         }
 
         s.fragdatalocs.add(FragDataLoc(getshaderparamname(name), loc, format, index));
@@ -587,32 +587,60 @@ void GlobalShaderParamState::resetversions()
     });
 }
 
-static inline void setslotparam(SlotShaderParamState &l, uint &mask, int i, const float *val)
+static float *findslotparam(Slot &s, const char *name, float *noval = NULL)
 {
-    if(!(mask&(1<<i)))
+    loopv(s.params)
     {
-        mask |= 1<<i;
-        switch(l.format)
-        {
-            case GL_BOOL:
-            case GL_FLOAT:      glUniform1fv_(l.loc, 1, val); break;
-            case GL_BOOL_VEC2:
-            case GL_FLOAT_VEC2: glUniform2fv_(l.loc, 1, val); break;
-            case GL_BOOL_VEC3:
-            case GL_FLOAT_VEC3: glUniform3fv_(l.loc, 1, val); break;
-            case GL_BOOL_VEC4:
-            case GL_FLOAT_VEC4: glUniform4fv_(l.loc, 1, val); break;
-            case GL_INT:      glUniform1i_(l.loc, int(val[0])); break;
-            case GL_INT_VEC2: glUniform2i_(l.loc, int(val[0]), int(val[1])); break;
-            case GL_INT_VEC3: glUniform3i_(l.loc, int(val[0]), int(val[1]), int(val[2])); break;
-            case GL_INT_VEC4: glUniform4i_(l.loc, int(val[0]), int(val[1]), int(val[2]), int(val[3])); break;
-            case GL_UNSIGNED_INT:      glUniform1ui_(l.loc, uint(val[0])); break;
-            case GL_UNSIGNED_INT_VEC2: glUniform2ui_(l.loc, uint(val[0]), uint(val[1])); break;
-            case GL_UNSIGNED_INT_VEC3: glUniform3ui_(l.loc, uint(val[0]), uint(val[1]), uint(val[2])); break;
-            case GL_UNSIGNED_INT_VEC4: glUniform4ui_(l.loc, uint(val[0]), uint(val[1]), uint(val[2]), uint(val[3])); break;
-        }
+        SlotShaderParam &param = s.params[i];
+        if(name == param.name) return param.val;
+    }
+    loopv(s.shader->defaultparams)
+    {
+        SlotShaderParamState &param = s.shader->defaultparams[i];
+        if(name == param.name) return param.val;
+    }
+    return noval;
+}
+
+static float *findslotparam(VSlot &s, const char *name, float *noval = NULL)
+{
+    loopv(s.params)
+    {
+        SlotShaderParam &param = s.params[i];
+        if(name == param.name) return param.val;
+    }
+    return findslotparam(*s.slot, name, noval);
+}
+
+static inline void setslotparam(SlotShaderParamState &l, const float *val)
+{
+    switch(l.format)
+    {
+        case GL_BOOL:
+        case GL_FLOAT:      glUniform1fv_(l.loc, 1, val); break;
+        case GL_BOOL_VEC2:
+        case GL_FLOAT_VEC2: glUniform2fv_(l.loc, 1, val); break;
+        case GL_BOOL_VEC3:
+        case GL_FLOAT_VEC3: glUniform3fv_(l.loc, 1, val); break;
+        case GL_BOOL_VEC4:
+        case GL_FLOAT_VEC4: glUniform4fv_(l.loc, 1, val); break;
+        case GL_INT:      glUniform1i_(l.loc, int(val[0])); break;
+        case GL_INT_VEC2: glUniform2i_(l.loc, int(val[0]), int(val[1])); break;
+        case GL_INT_VEC3: glUniform3i_(l.loc, int(val[0]), int(val[1]), int(val[2])); break;
+        case GL_INT_VEC4: glUniform4i_(l.loc, int(val[0]), int(val[1]), int(val[2]), int(val[3])); break;
+        case GL_UNSIGNED_INT:      glUniform1ui_(l.loc, uint(val[0])); break;
+        case GL_UNSIGNED_INT_VEC2: glUniform2ui_(l.loc, uint(val[0]), uint(val[1])); break;
+        case GL_UNSIGNED_INT_VEC3: glUniform3ui_(l.loc, uint(val[0]), uint(val[1]), uint(val[2])); break;
+        case GL_UNSIGNED_INT_VEC4: glUniform4ui_(l.loc, uint(val[0]), uint(val[1]), uint(val[2]), uint(val[3])); break;
     }
 }
+
+#define SETSLOTPARAM(l, mask, i, val) do { \
+    if(!(mask&(1<<i))) { \
+        mask |= 1<<i; \
+        setslotparam(l, val); \
+    } \
+} while(0)
 
 #define SETSLOTPARAMS(slotparams) \
     loopv(slotparams) \
@@ -620,13 +648,13 @@ static inline void setslotparam(SlotShaderParamState &l, uint &mask, int i, cons
         SlotShaderParam &p = slotparams[i]; \
         if(!defaultparams.inrange(p.loc)) continue; \
         SlotShaderParamState &l = defaultparams[p.loc]; \
-        setslotparam(l, unimask, p.loc, p.val); \
+        SETSLOTPARAM(l, unimask, p.loc, p.val); \
     }
 #define SETDEFAULTPARAMS \
     loopv(defaultparams) \
     { \
         SlotShaderParamState &l = defaultparams[i]; \
-        setslotparam(l, unimask, i, l.val); \
+        SETSLOTPARAM(l, unimask, i, l.val); \
     }
 
 void Shader::setslotparams(Slot &slot)
@@ -639,9 +667,21 @@ void Shader::setslotparams(Slot &slot)
 void Shader::setslotparams(Slot &slot, VSlot &vslot)
 {
     uint unimask = 0;
-    SETSLOTPARAMS(vslot.params)
-    SETSLOTPARAMS(slot.params)
-    SETDEFAULTPARAMS
+    if(vslot.slot == &slot)
+    {
+        SETSLOTPARAMS(vslot.params)
+        SETSLOTPARAMS(slot.params)
+        SETDEFAULTPARAMS
+    }
+    else
+    {
+        SETSLOTPARAMS(slot.params)
+        loopv(defaultparams)
+        {
+            SlotShaderParamState &l = defaultparams[i];
+            SETSLOTPARAM(l, unimask, i, l.flags&SlotShaderParam::REUSE ? findslotparam(vslot, l.name, l.val) : l.val);
+        }
+    }
 }
 
 void Shader::bindprograms()
@@ -1051,6 +1091,7 @@ void defershader(int *type, const char *name, const char *contents)
     s.type = SHADER_DEFERRED | (*type & ~SHADER_INVALID);
     s.standard = standardshaders;
 }
+COMMAND(defershader, "iss");
 
 void Shader::force()
 {
@@ -1094,6 +1135,7 @@ Shader *useshaderbyname(const char *name)
     s->forced = true;
     return s;
 }
+ICOMMAND(forceshader, "s", (const char *name), useshaderbyname(name));
 
 void shader(int *type, char *name, char *vs, char *ps)
 {
@@ -1121,6 +1163,7 @@ void shader(int *type, char *name, char *vs, char *ps)
     }
     slotparams.shrink(0);
 }
+COMMAND(shader, "isss");
 
 void variantshader(int *type, char *name, int *row, char *vs, char *ps, int *maxvariants)
 {
@@ -1150,6 +1193,7 @@ void variantshader(int *type, char *name, int *row, char *vs, char *ps, int *max
         if(strstr(ps, "#pragma CUBE2_swizzle")) genswizzle(*s, varname, ps, *row);
     }
 }
+COMMAND(variantshader, "isissi");
 
 void setshader(char *name)
 {
@@ -1161,31 +1205,7 @@ void setshader(char *name)
     }
     else slotshader = s;
 }
-
-static float *findslotparam(Slot &s, const char *name)
-{
-    loopv(s.params)
-    {
-        SlotShaderParam &param = s.params[i];
-        if(!strcmp(name, param.name)) return param.val;
-    }
-    loopv(s.shader->defaultparams)
-    {
-        SlotShaderParamState &param = s.shader->defaultparams[i];
-        if(!strcmp(name, param.name)) return param.val;
-    }
-    return NULL;
-}
-
-static float *findslotparam(VSlot &s, const char *name)
-{
-    loopv(s.params)
-    {
-        SlotShaderParam &param = s.params[i];
-        if(!strcmp(name, param.name)) return param.val;
-    }
-    return findslotparam(*s.slot, name);
-}
+COMMAND(setshader, "s");
 
 void resetslotshader()
 {
@@ -1244,16 +1264,34 @@ void linkvslotshader(VSlot &s, bool load)
 
     if(s.slot->texmask&(1<<TEX_GLOW))
     {
-        const float *cparam = findslotparam(s, "glowcolor");
-        if(cparam) loopk(3) s.glowcolor[k] = clamp(cparam[k], 0.0f, 1.0f);
+        static const char *paramname = getshaderparamname("glowcolor");
+        const float *param = findslotparam(s, paramname);
+        if(param) s.glowcolor = vec(param).clamp(0, 1);
     }
 }
 
-COMMAND(shader, "isss");
-COMMAND(variantshader, "isissi");
-COMMAND(setshader, "s");
-COMMAND(defershader, "iss");
-ICOMMAND(forceshader, "s", (const char *name), useshaderbyname(name));
+bool shouldreuseparams(Slot &s, VSlot &p)
+{
+    if(!s.shader) return false;
+
+    Shader &sh = *s.shader;
+    loopv(sh.defaultparams)
+    {
+        SlotShaderParamState &param = sh.defaultparams[i];
+        if(param.flags & SlotShaderParam::REUSE)
+        {
+            const float *val = findslotparam(p, param.name);
+            if(val && memcmp(param.val, val, sizeof(param.val)))
+            {
+                loopvj(s.params) if(s.params[j].name == param.name) goto notreused;
+                return true;
+            notreused:;
+            }
+        }
+    }
+    return false;
+}
+
 ICOMMAND(dumpshader, "sbi", (const char *name, int *col, int *row),
 {
     Shader *s = lookupshaderbyname(name);
@@ -1268,24 +1306,18 @@ ICOMMAND(dumpshader, "sbi", (const char *name, int *col, int *row),
     if(s->psstr) fprintf(l, "%s:%s\n%s\n", s->name, "FS", s->psstr);
 });
 
-void isshaderdefined(char *name)
-{
-    Shader *s = lookupshaderbyname(name);
-    intret(s ? 1 : 0);
-}
-
-COMMAND(isshaderdefined, "s");
+ICOMMAND(isshaderdefined, "s", (char *name), intret(lookupshaderbyname(name) ? 1 : 0));
 
 static hashset<const char *> shaderparamnames(256);
 
-const char *getshaderparamname(const char *name)
+const char *getshaderparamname(const char *name, bool insert)
 {
     const char *exists = shaderparamnames.find(name, NULL);
-    if(exists) return exists;
+    if(exists || !insert) return exists;
     return shaderparamnames.add(newstring(name));
 }
 
-void addslotparam(const char *name, float x, float y, float z, float w)
+void addslotparam(const char *name, float x, float y, float z, float w, int flags = 0)
 {
     if(name) name = getshaderparamname(name);
     loopv(slotparams)
@@ -1297,16 +1329,18 @@ void addslotparam(const char *name, float x, float y, float z, float w)
             param.val[1] = y;
             param.val[2] = z;
             param.val[3] = w;
+            param.flags |= flags;
             return;
         }
     }
-    SlotShaderParam param = {name, -1, {x, y, z, w}};
+    SlotShaderParam param = {name, -1, flags, {x, y, z, w}};
     slotparams.add(param);
 }
 
 ICOMMAND(setuniformparam, "sfFFf", (char *name, float *x, float *y, float *z, float *w), addslotparam(name, *x, *y, *z, *w));
 ICOMMAND(setshaderparam, "sfFFf", (char *name, float *x, float *y, float *z, float *w), addslotparam(name, *x, *y, *z, *w));
 ICOMMAND(defuniformparam, "sfFFf", (char *name, float *x, float *y, float *z, float *w), addslotparam(name, *x, *y, *z, *w));
+ICOMMAND(reuseuniformparam, "sfFFf", (char *name, float *x, float *y, float *z, float *w), addslotparam(name, *x, *y, *z, *w, SlotShaderParam::REUSE));
 
 #define NUMPOSTFXBINDS 10
 
@@ -1467,7 +1501,6 @@ void clearpostfx()
     postfxpasses.shrink(0);
     cleanuppostfx(false);
 }
-
 COMMAND(clearpostfx, "");
 
 ICOMMAND(addpostfx, "siisffff", (char *name, int *bind, int *scale, char *inputs, float *x, float *y, float *z, float *w),

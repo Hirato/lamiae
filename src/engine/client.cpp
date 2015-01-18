@@ -107,18 +107,22 @@ void connectserv(const char *servername, int serverport, const char *serverpassw
     }
 
     if(!clienthost)
-        clienthost = enet_host_create(NULL, 2, server::numchannels(), rate*1024, rate*1024);
-
-    if(clienthost)
     {
-        connpeer = enet_host_connect(clienthost, &address, server::numchannels(), 0);
-        enet_host_flush(clienthost);
-        connmillis = totalmillis;
-        connattempts = 0;
-
-        game::connectattempt(servername ? servername : "", serverpassword ? serverpassword : "", address);
+        clienthost = enet_host_create(NULL, 2, server::numchannels(), rate*1024, rate*1024);
+        if(!clienthost)
+        {
+            conoutf("\f3could not connect to server");
+            return;
+        }
+        clienthost->duplicatePeers = 0;
     }
-    else conoutf("\f3could not connect to server");
+
+    connpeer = enet_host_connect(clienthost, &address, server::numchannels(), 0);
+    enet_host_flush(clienthost);
+    connmillis = totalmillis;
+    connattempts = 0;
+
+    game::connectattempt(servername ? servername : "", serverpassword ? serverpassword : "", address);
 }
 
 void reconnect(const char *serverpassword)

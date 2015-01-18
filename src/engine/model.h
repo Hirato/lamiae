@@ -31,6 +31,7 @@ struct model
     virtual void setshader(Shader *shader) {}
     virtual void setenvmap(float envmapmin, float envmapmax, Texture *envmap) {}
     virtual void setspec(float spec) {}
+    virtual void setgloss(int gloss) {}
     virtual void setglow(float glow, float glowdelta, float glowpulse) {}
     virtual void setalphatest(float alpha) {}
     virtual void setfullbright(float fullbright) {}
