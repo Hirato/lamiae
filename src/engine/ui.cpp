@@ -2458,6 +2458,8 @@ namespace UI
         {
             Object::layout();
 
+            executeret(cmd, result);
+
             int tw, th;
             float k = drawscale();
             text_bounds(result.getstr(), tw, th, wrap > 0 ? wrap/k : -1);
