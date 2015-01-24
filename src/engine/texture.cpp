@@ -2270,7 +2270,7 @@ void texgrass(char *name)
     ) : NULL;
 }
 COMMAND(texgrass, "s");
-GETTEXPROP(texgrass, result(s.grass ? s.grass : ""), )
+GETTEXPROP(grass, result(s.grass ? s.grass : ""), )
 
 void texscroll(float *scrollS, float *scrollT)
 {
