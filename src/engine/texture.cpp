@@ -2409,7 +2409,8 @@ ICOMMAND(loopshaderparams, "irre", (int *slot, ident *param, ident *val, uint *b
         loopiter(val, stack2, vals);
         execute(body);
     }
-    if(s.params.length()) { poparg(*param); poparg(*val); }
+    loopend(param, stack);
+    loopend(val, stack2);
 )
 
 ICOMMAND(looptexslots, "irre", (int *slot, ident *type, ident *tex, uint *body),
@@ -2424,7 +2425,8 @@ ICOMMAND(looptexslots, "irre", (int *slot, ident *type, ident *tex, uint *body),
         loopiter(tex, stack2, s.sts[i].name);
         execute(body);
     }
-    if(s.sts.length()) { poparg(*type); poparg(*tex); }
+    loopend(type, stack);
+    loopend(tex, stack2);
 )
 
 static void addglow(ImageData &c, ImageData &g, const vec &glowcolor)
