@@ -1498,6 +1498,8 @@ namespace rpgio
 			CHECKEOF(*f, )
 			const char *name = NULL;
 			READHASH(name);
+			NOTNULL(name, )
+
 			::reference *loading = stack.access(name);
 			if(loading)
 			{
@@ -1554,6 +1556,7 @@ namespace rpgio
 						int ent = f->getlil<int>();
 						const char *base = NULL;
 						READHASH(base);
+						NOTNULL(base, )
 						int offset = f->getlil<int>();
 
 						if(DEBUG_IO) DEBUGF("reading T_INV reference %s:%i with values %i %i %s %i...", loading->name, j, map, ent, base, offset);
@@ -1626,6 +1629,8 @@ namespace rpgio
 	{
 		const char *name = NULL;
 		READHASH(name);
+		NOTNULL(name, )
+
 		journal *journ = &game::journals[name];
 		if(journ->name)
 			WARNINGF("additional instance of journal %s exists, merging", name);
@@ -1666,6 +1671,8 @@ namespace rpgio
 			CHECKEOF(*f, )
 			const char *name = NULL;
 			READHASH(name);
+			NOTNULL(name, );
+
 			const char *value = readstring(f);
 
 			rpgvar &var = loading->variables[name];

@@ -175,7 +175,7 @@ namespace game
 	ICOMMAND(r_hud_minimap, "sffff", (const char *r, float *x, float *y, float *dx, float *dy),
 		int idx; bool hasidx;
 		reference *ent = rpgscript::searchstack(r, idx, hasidx);
-		drawminimap(ent->getent(idx), *x, *y, *dx, *dy);
+		if(ent) drawminimap(ent->getent(idx), *x, *y, *dx, *dy);
 	)
 
 	void drawhorizbar(const char *img, float x, float y, float dx, float dy, float progress, int colour)

@@ -942,7 +942,7 @@ int rpgchar::drop(item *it, int q, bool spawn)
 int rpgchar::drop(const char *base, int q, bool spawn)
 {
 	base = game::hashpool.find(base, NULL);
-	if(base) return 0;
+	if(!base) return 0;
 
 	vector<item *> &inv = inventory.access(base, vector<item *>());
 	int rem = 0;
