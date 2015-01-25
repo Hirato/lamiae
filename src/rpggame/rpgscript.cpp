@@ -732,12 +732,11 @@ namespace rpgscript
 		loopi(n)
 		{
 			const char *ref = v[i].getstr();
-			reference r = searchstack(ref, false);
+			reference *r = searchstack(ref, false);
 			if(!r || !r->canset()) continue;
 
 			loopvrev(stack)
 				if(stack[i]->remove(r->name)) break;
-			)
 		}
 	)
 
