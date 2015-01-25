@@ -158,7 +158,7 @@ struct editor
 
     editor(const char *name, int mode, const char *initval) :
         mode(mode), active(true), rendered(false), name(newstring(name)), filename(NULL),
-        cx(0), cy(0), mx(-1), maxx(-1), maxy(-1), scrolly(0), linewrap(false), pixelwidth(-1), pixelheight(-1)
+        cx(0), cy(0), mx(-1), my(-1), maxx(-1), maxy(-1), scrolly(0), linewrap(false), pixelwidth(-1), pixelheight(-1)
     {
         //printf("editor %08x '%s'\n", this, name);
         lines.add().set(initval ? initval : "");

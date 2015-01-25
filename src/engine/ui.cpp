@@ -645,7 +645,7 @@ namespace UI
     {
         float space, subw;
 
-        HorizontalList(float space = 0) : space(space) {}
+        HorizontalList(float space = 0) : space(space), subw(0) {}
 
         void layout()
         {
@@ -681,7 +681,7 @@ namespace UI
     {
         float space, subh;
 
-        VerticalList(float space = 0) : space(space) {}
+        VerticalList(float space = 0) : space(space), subh(0) {}
 
         void layout()
         {
@@ -719,7 +719,7 @@ namespace UI
         float space, subh, subw;
         vector<float> widths, heights;
 
-        Table(int columns, float space = 0) : columns(columns), space(space) {}
+        Table(int columns, float space = 0) : columns(columns), space(space), subh(0), subw(0) {}
 
         void layout()
         {
@@ -980,7 +980,7 @@ namespace UI
         float offsetx, offsety;
         bool canscroll;
 
-        Scroller(float clipw = 0, float cliph = 0) : Clipper(clipw, cliph), offsetx(0), offsety(0) {}
+        Scroller(float clipw = 0, float cliph = 0) : Clipper(clipw, cliph), offsetx(0), offsety(0), canscroll(false) {}
 
         void layout()
         {
