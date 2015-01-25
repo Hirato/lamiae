@@ -106,17 +106,16 @@ bool rpgchar::checkammo(equipment &eq, equipment *&quiver, bool remove)
 
 	//check reserved types first...
 	float *fres = NULL;
-	int *ires = NULL;
 
 	if(at->key == reserved::amm_mana)
 		fres = &mana;
 	else if(at->key == reserved::amm_health)
 		fres = &health;
 
-	if(fres || ires)
+	if(fres)
 	{
 		quiver = NULL;
-		if((fres ? *fres : *ires) < wep->cost)
+		if(*fres < wep->cost)
 		{
 			if(this == game::player1) game::hudline("\f3 insufficient %s to use", at->name);
 			else if (DEBUG_AI) DEBUGF("AI attach interrupted for %p; too little %s", this, at->name);
@@ -125,8 +124,7 @@ bool rpgchar::checkammo(equipment &eq, equipment *&quiver, bool remove)
 		}
 		if(remove)
 		{
-			if(fres) *fres -= wep->cost;
-			else *ires -= wep->cost;
+			*fres -= wep->cost;
 		}
 		return true;
 	}
