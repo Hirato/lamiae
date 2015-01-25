@@ -1155,7 +1155,7 @@ namespace rpgio
 					case STATUS_POLYMORPH:
 					{
 						status_polymorph *poly = new status_polymorph();
-						st = poly;
+						st = aeff->effects.add(poly);
 
 						poly->mdl = readstring(f);
 						NOTNULL(poly->mdl, loading);
@@ -1165,7 +1165,7 @@ namespace rpgio
 					case STATUS_LIGHT:
 					{
 						status_light *light = new status_light();
-						st = light;
+						st = aeff->effects.add(light);
 
 						readvec(light->colour);
 						break;
@@ -1173,7 +1173,7 @@ namespace rpgio
 					case STATUS_SCRIPT:
 					{
 						status_script *scr = new status_script();
-						st = scr;
+						st = aeff->effects.add(scr);
 
 						scr->script = readstring(f);
 						break;
@@ -1181,13 +1181,13 @@ namespace rpgio
 					case STATUS_SIGNAL:
 					{
 						status_signal *sig = new status_signal();
-						st = sig;
+						st = aeff->effects.add(sig);
 
 						sig->signal = readstring(f);
 						break;
 					}
 					default:
-						st = new status_generic();
+						st = aeff->effects.add(new status_generic());
 						break;
 				}
 				st->type = type;
@@ -1195,8 +1195,6 @@ namespace rpgio
 				st->remain = f->getlil<int>();
 				st->strength = f->getlil<int>();
 				st->variance = f->getlil<float>();
-
-				aeff->effects.add(st);
 			}
 		}
 
