@@ -24,11 +24,20 @@ src/windows/lamiae.depend
 *.dbg
 *.bin
 *.exe
+/src/tessfont
 
 # extra
 /wiki/
 /lilim/
 
-# special files
-/src/tessfont
+# Coverity
+/src/cov-int/
+*.tmp_cov
 
+# archives
+*.zip
+*.rar
+*.tar
+*.tar.*
+*.tgz
+*.xz

@@ -313,6 +313,9 @@ namespace entities
 
 				break;
 			}
+			default:
+				ERRORF("Tried to create unsupported entity type %i", type);
+				return;
 		}
 
 		ent->init(id);

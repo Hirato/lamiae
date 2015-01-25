@@ -1298,7 +1298,7 @@ struct item
 	}
 
 	item() : name(NULL), icon(NULL), description(NULL), mdl(newstring(DEFAULTMODEL)), script(DEFAULTITEMSCR), base(NULL), colour(1, 1, 1), quantity(1), category(0), flags(0), value(0), maxdurability(0), charges(-2), scale(1), weight(0), durability(0), recovery(1), locals(-1) {}
-	~item()
+	virtual ~item()
 	{
 		delete[] name;
 		delete[] icon;
@@ -1887,7 +1887,7 @@ struct waypoint
 	vector<ushort> links;
 	int score;
 
-	waypoint() {}
+	waypoint() : parent(NULL), o(vec(0, 0, 0)), score(-1) {}
 	waypoint(const vec &o) : parent(NULL), o(o), score(-1) {}
 };
 

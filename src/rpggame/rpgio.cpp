@@ -273,7 +273,7 @@ namespace rpgio
 			{
 				case USE_WEAPON:
 				{
-					if(!u) u = new use_weapon(NULL);
+					if(!u) u = it->uses.add(new use_weapon(NULL));
 					use_weapon *wp = (use_weapon *) u;
 
 					READHASHEXTENDED(wp->projeffect, game::effects)
@@ -303,7 +303,7 @@ namespace rpgio
 				}
 				case USE_ARMOUR:
 				{
-					if(!u) u = new use_armour(NULL);
+					if(!u) u = it->uses.add(new use_armour(NULL));
 					use_armour *ar = (use_armour *) u;
 
 					delete[] ar->vwepmdl;
@@ -324,7 +324,7 @@ namespace rpgio
 				}
 				case USE_CONSUME:
 				{
-					if(!u) u = new use(NULL);
+					if(!u) u = it->uses.add(new use(NULL));
 
 					delete[] u->name;
 					delete[] u->description;
@@ -356,7 +356,6 @@ namespace rpgio
 					break;
 				}
 			}
-			it->uses.add(u);
 		}
 
 		return it;
@@ -709,38 +708,38 @@ namespace rpgio
 				{
 					case STATUS_POLYMORPH:
 					{
-						status_polymorph *poly = new status_polymorph();
-						st = poly;
+						st = eff->effects.add(new status_polymorph());
+						status_polymorph *poly = (status_polymorph *) st;
 
 						poly->mdl = readstring(f);
 						break;
 					}
 					case STATUS_LIGHT:
 					{
-						status_light *light = new status_light();
-						st = light;
+						st = eff->effects.add(new status_light());
+						status_light *light = (status_light *) st;
 
 						readvec(light->colour);
 						break;
 					}
 					case STATUS_SCRIPT:
 					{
-						status_script *scr = new status_script();
-						st = scr;
+						st = eff->effects.add(new status_script());
+						status_script *scr = (status_script *) st;
 
 						scr->script = readstring(f);
 						break;
 					}
 					case STATUS_SIGNAL:
 					{
-						status_signal *sig = new status_signal();
-						st = sig;
+						st = eff->effects.add(new status_signal());
+						status_signal *sig = (status_signal *) st;
 
 						sig->signal = readstring(f);
 						break;
 					}
 					default:
-						st = new status_generic();
+						st = eff->effects.add(new status_generic());
 						break;
 				}
 				st->type = type;
@@ -1586,6 +1585,7 @@ namespace rpgio
 					case ::reference::T_VEFFECT:
 					case ::reference::T_AEFFECT:
 						WARNINGF("volatile reference type found for reference %s:%i, assuming invalid", loading->name, j);
+						//fallthrough
 					case ::reference::T_INVALID:
 						if(DEBUG_IO) DEBUGF("reading now null reference %s:%i", loading->name, j);
 						loading->pushref(NULL, true);

@@ -125,7 +125,7 @@ namespace game
 			}
 			if(right && right->hudmdl)
 			{
-				rendermodel(left->hudmdl, ANIM_HIDLE|ANIM_LOOP, player1->o, player1->yaw, player1->pitch, player1->roll, MDL_NOBATCH, NULL, NULL, player1->lastaction, 500);
+				rendermodel(right->hudmdl, ANIM_HIDLE|ANIM_LOOP, player1->o, player1->yaw, player1->pitch, player1->roll, MDL_NOBATCH, NULL, NULL, player1->lastaction, 500);
 			}
 		}
 	}
