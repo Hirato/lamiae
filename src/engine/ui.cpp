@@ -1965,6 +1965,12 @@ namespace UI
             }
         }
 
+        void startdraw()
+        {
+            gle::defvertex(2);
+            gle::deftexcoord0();
+        }
+
         void draw(float sx, float sy)
         {
             if(texmru.inrange(slotnum))
