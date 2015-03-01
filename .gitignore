@@ -29,6 +29,7 @@ src/windows/lamiae.depend
 # extra
 /wiki/
 /lilim/
+/mediasource/
 
 # Coverity
 /src/cov-int/
