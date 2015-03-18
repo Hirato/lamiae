@@ -67,6 +67,7 @@
 #define WARNINGF(...) conoutf(CON_WARN,  "\fs\f6WARNING:\fr " __VA_ARGS__)
 
 struct ammotype;
+struct areatrigger;
 struct delayscript;
 struct timer;
 struct effect;
@@ -121,6 +122,7 @@ enum                            // static entity types
 	CONTAINER,
 	PLATFORM,
 	TRIGGER,
+	AREATRIGGER,
 	MAXENTTYPES
 };
 
@@ -2008,6 +2010,46 @@ struct timer
 	bool update();
 	timer() : name(NULL), cond(NULL), script(NULL), delay(0), remaining(0) {}
 	~timer() { delete[] cond; }
+};
+
+enum
+{
+	AT_SIGNALMAP = 1 << 0,
+	AT_SIGNALCRITTER = 1 << 1,
+
+	AT_ONENTRY = 1 << 8,
+	AT_ONEXIT = 1 << 9,
+	AT_ONFIXEDPERIOD = 1 << 10,
+	AT_ONFRAME = 1 << 11,
+
+	AT_TESTPLAYER = 1 << 16,
+	AT_TESTCRITTERS = 1 << 17,
+	AT_TESTEXTERNAL = 1 << 18,
+
+	AT_TARGET_MASK = 0x03 << 0,
+	AT_PERIOD_MASK = 0x0F << 8,
+	AT_TEST_MASK = 0x07 << 16,
+
+	AT_DEFAULT = AT_SIGNALMAP|AT_ONENTRY|AT_ONEXIT|AT_TESTPLAYER|AT_ONFRAME
+};
+
+struct areatrigger
+{
+	const char *sig;
+	vec min, max;
+	int flags;
+	int period, remaining;
+
+	vector<rpgent *> occupants;
+
+	areatrigger(int f) : flags(f) {
+		if(!(flags & AT_TARGET_MASK)) flags |= (AT_DEFAULT & AT_TARGET_MASK);
+		if(!(flags & AT_PERIOD_MASK)) flags |= (AT_DEFAULT & AT_PERIOD_MASK);
+		if(!(flags & AT_TEST_MASK)) flags |= (AT_DEFAULT & AT_TEST_MASK);
+	}
+	~areatrigger() {}
+
+	void update();
 };
 
 enum
