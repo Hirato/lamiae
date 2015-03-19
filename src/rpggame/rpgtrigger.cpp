@@ -56,3 +56,8 @@ bool rpgtrigger::validate()
 
 	return true;
 }
+
+void areatrigger::update()
+{
+
+}

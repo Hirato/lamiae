@@ -592,6 +592,7 @@ namespace game
 		map->projs.deletecontents();
 		map->aeffects.deletecontents();
 		map->blips.setsize(0);
+		map->areatriggers.setsize(0);
 	}
 
 	bool firstupdate = false;
@@ -626,6 +627,7 @@ namespace game
 		mapinfo *lastmap = curmap;
 		curmap = accessmap(name);
 		rpgscript::changemap();
+		entities::initareatriggers();
 
 		if(DEBUG_WORLD)
 			DEBUGF("adding player to curmap vector");
@@ -664,6 +666,7 @@ namespace game
 				DEBUGF("loaded %i", info.loaded);
 				DEBUGF("map objects %i", info.objs.length());
 				DEBUGF("deferred actions %i", info.loadactions.length());
+				DEBUGF("area triggers %i", info.areatriggers.length());
 			);
 		}
 
@@ -829,6 +832,9 @@ namespace game
 			if(!curmap->aeffects[i]->update())
 				delete curmap->aeffects.remove(i);
 
+		loopv(curmap->areatriggers)
+			curmap->areatriggers[i].update();
+
 		curmap->getsignal("update");
 		rpgscript::update();
 		camera::update();
@@ -972,7 +978,6 @@ namespace game
 
 	void edittoggled(bool on)
 	{
-		entities::intents.setsize(0);
 		if(!on && curmap)
 		{
 			if(edittogglereset)
@@ -988,6 +993,7 @@ namespace game
 			}
 
 			entities::genentlist();
+			entities::initareatriggers();
 		}
 
 	}

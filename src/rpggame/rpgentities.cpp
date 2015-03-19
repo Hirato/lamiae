@@ -36,10 +36,11 @@ namespace entities
 		memset(ent->id, 0, 64);
 		return ent;
 	}
-	void deleteentity(extentity *e) { intents.setsize(0); delete (rpgentity *)e; }
+	void deleteentity(extentity *e) { delete (rpgentity *)e; }
 
 	void genentlist() //filters all interactive ents
 	{
+		intents.setsize(0);
 		loopv(ents)
 		{
 			const int t = ents[i]->type;
@@ -51,6 +52,25 @@ namespace entities
 				default:
 					break;
 			}
+		}
+	}
+
+	void initareatriggers()
+	{
+		game::curmap->areatriggers.setsize(0);
+		loopv(ents)
+		{
+			rpgentity &e = *((rpgentity *) &ents[i]);
+			if(e.type != AREATRIGGER) continue;
+
+			areatrigger &at = game::curmap->areatriggers.add();
+			at.sig = game::queryhashpool(e.id);
+			at.setflags(e.attr[3]);
+			at.period = e.attr[4];
+
+			vec radius = vec(e.attr[0], e.attr[1], e.attr[2]).max(1);
+			at.bottom = vec(e.o).sub(radius);
+			at.top = vec(e.o).add(radius);
 		}
 	}
 

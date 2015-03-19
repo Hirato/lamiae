@@ -526,6 +526,8 @@ namespace rpgscript
 				if(map.projs[j]->owner == ptr)
 					delete map.projs.remove(j--);
 			}
+			loopvj(map.areatriggers)
+				map.areatriggers[j].occupants.removeobj(ptr);
 		);
 		if(references)
 		{

@@ -320,11 +320,11 @@ namespace rpgscript
 namespace entities
 {
 	extern vector<extentity *> ents;
-	extern vector<int> intents;
 	extern void startmap();
 	extern void spawn(const extentity &e, const char *ind, int type, int qty);
 	extern void teleport(rpgent *d, int dest, const int etype = TELEDEST);
 	extern void genentlist();
+	extern void initareatriggers();
 	extern void touchents(rpgent *d);
 	extern void renderentities();
 }
@@ -1867,6 +1867,7 @@ struct mapinfo
 	vector<projectile *> projs;
 	vector<areaeffect *> aeffects;
 	vector<blip> blips;
+	vector<areatrigger> areatriggers;
 
 	void getsignal(const char *sig, bool prop = true, rpgent *sender = NULL);
 	mapinfo() : name(NULL), script(DEFAULTMAPSCR), flags(0), locals(-1), loaded(false) {}
@@ -2036,19 +2037,22 @@ enum
 struct areatrigger
 {
 	const char *sig;
-	vec min, max;
+	vec bottom, top;
 	int flags;
 	int period, remaining;
 
 	vector<rpgent *> occupants;
 
-	areatrigger(int f) : flags(f) {
+	areatrigger() : remaining(0) {}
+	~areatrigger() {}
+
+	void setflags(int f)
+	{
+		flags = f;
 		if(!(flags & AT_TARGET_MASK)) flags |= (AT_DEFAULT & AT_TARGET_MASK);
 		if(!(flags & AT_PERIOD_MASK)) flags |= (AT_DEFAULT & AT_PERIOD_MASK);
 		if(!(flags & AT_TEST_MASK)) flags |= (AT_DEFAULT & AT_TEST_MASK);
 	}
-	~areatrigger() {}
-
 	void update();
 };
 
