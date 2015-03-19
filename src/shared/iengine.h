@@ -232,6 +232,8 @@ extern void mpeditent(int i, const vec &o, int type, int *attrs, bool local);
 extern vec getselpos();
 extern int getworldsize();
 extern int getmapversion();
+extern void renderentsimplebox(const extentity &e, const vec &radius);
+extern void renderentbox(const extentity &e, const vec &center, const vec &radius, int yaw, int pitch, int roll);
 extern void renderentcone(const extentity &e, const vec &dir, float radius, float angle);
 extern void renderentarrow(const extentity &e, const vec &dir, float radius);
 extern void renderentattachment(const extentity &e);

@@ -421,6 +421,13 @@ namespace entities
 
 				break;
 			}
+			case AREATRIGGER:
+			{
+				vec radius = vec(e.attr[0], e.attr[1], e.attr[2]).max(1);
+				renderentsimplebox(e, radius);
+
+				break;
+			}
 		}
 	}
 
@@ -518,12 +525,23 @@ namespace entities
 					e.attr[0]
 				);
 				break;
+			case AREATRIGGER:
+				pos.z += 7.5f;
+				nformatstring(buf, len, "X-rad: %i\nY-rad: %i\nZ-rad: %i\nFlags: %i\nPeriod: %ims",
+					max(1, e.attr[0]),
+					max(1, e.attr[1]),
+					max(1, e.attr[2]),
+					e.attr[3],
+					max(1, e.attr[4])
+				);
+				break;
 			case ITEM:
 				pos.z += 3.0f;
 				nformatstring(buf, len, "Yaw: %i\nQuantity: %i",
 					e.attr[0],
 					max(1, e.attr[1])
 				);
+				break;
 		}
 	}
 
@@ -531,7 +549,7 @@ namespace entities
 	{
 		static const char *entnames[] =
 		{
-			"none?", "light", "mapmodel", "playerstart", "envmap", "particles", "sound", "spotlight", "decal", "teledest", "jumppad", "checkpoint", "spawn", "location", "reserved", "blip", "camera", "platformroute", "critter", "item", "obstacle", "container", "platform", "trigger"
+			"none?", "light", "mapmodel", "playerstart", "envmap", "particles", "sound", "spotlight", "decal", "teledest", "jumppad", "checkpoint", "spawn", "location", "reserved", "blip", "camera", "platformroute", "critter", "item", "obstacle", "container", "platform", "trigger", "areatrigger"
 		};
 		return i>=0 && size_t(i)<sizeof(entnames)/sizeof(entnames[0]) ? entnames[i] : "";
 	}
@@ -555,6 +573,7 @@ namespace entities
 			1, //container
 			1, //platform
 			1, //trigger
+			5, //areatrigger
 		};
 
 		type -= ET_GAMESPECIFIC;
@@ -631,6 +650,7 @@ namespace entities
 			case JUMPPAD:
 			case SPAWN:
 			case LOCATION:
+			case AREATRIGGER:
 				return true;
 				break;
 			default:

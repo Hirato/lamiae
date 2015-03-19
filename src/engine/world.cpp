@@ -741,6 +741,32 @@ void renderentcone(const extentity &e, const vec &dir, float radius, float angle
     xtraverts += gle::end();
 }
 
+void renderentsimplebox(const extentity &e, const vec &radius)
+{
+    vec verts[8] = {
+        vec(-radius.x, -radius.y, -radius.z),
+        vec( radius.x, -radius.y, -radius.z),
+        vec( radius.x, -radius.y,  radius.z),
+        vec(-radius.x, -radius.y,  radius.z),
+        vec(-radius.x, radius.y, -radius.z),
+        vec( radius.x, radius.y, -radius.z),
+        vec( radius.x, radius.y,  radius.z),
+        vec(-radius.x, radius.y,  radius.z) };
+
+    loopi(8) verts[i].add(e.o);
+
+    gle::defvertex();
+    gle::begin(GL_LINES);
+
+    loopi(8) for(int j = i + 1; j < 8; j++)
+    {
+        gle::attrib(verts[i]);
+        gle::attrib(verts[j]);
+    }
+
+    xtraverts += gle::end();
+}
+
 void renderentbox(const extentity &e, const vec &center, const vec &radius, int yaw, int pitch, int roll)
 {
     matrix4x3 orient;
