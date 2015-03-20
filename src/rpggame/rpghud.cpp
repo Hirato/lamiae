@@ -385,6 +385,7 @@ namespace game
 			draw_textf("entities: %i", 0, 100, curmap->objs.length());
 			draw_textf("persistent effects: %i", 0, 150, curmap->aeffects.length());
 			draw_textf("projectiles: %i", 0, 200, curmap->projs.length());
+			draw_textf("areatriggers: %i", 0, 250, curmap->areatriggers.length());
 
 			pophudmatrix();
 			resethudshader();

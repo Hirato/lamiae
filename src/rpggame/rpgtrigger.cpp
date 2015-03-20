@@ -57,7 +57,77 @@ bool rpgtrigger::validate()
 	return true;
 }
 
+VAR(at_entry, 1, 0, -1);
+VAR(at_exit, 1, 0, -1);
+
 void areatrigger::update()
 {
+	if(flags & AT_ONFIXEDPERIOD)
+	{
+		remaining += curtime;
+		if(remaining >= period) remaining -= period;
+		else if ((flags & AT_PERIOD_MASK) == AT_ONFIXEDPERIOD) return;
+	}
+	// AT_ONENTRY|AT_ONEXIT|AT_ONFRAME all require evaluation each frame
 
+	static vector<rpgent *> inside;
+	mapinfo *curmap = game::curmap;
+	inside.setsize(0);
+
+	if(flags & AT_TESTCRITTERS)
+	{
+		loopv(curmap->objs)
+		{
+			rpgent *obj = curmap->objs[i];
+			if(obj->type() != ENT_CHAR) continue;
+			int j = 0;
+			for(;j < 3; j++) if(obj->o[j] > top[j] || obj->o[j] < bottom[j]) break;
+			if((j == 3) != !!(flags & AT_TESTEXTERNAL)) inside.add(obj); //mutually exclusive scenario
+		}
+	}
+	else //if (flags & AT_TESTPLAYER)
+	{
+		rpgent *obj = game::player1;
+		int j = 0;
+		for(;j < 3; j++) if(obj->o[j] > top[j] || obj->o[j] < bottom[j]) break;
+		if((j == 3) != !!(flags & AT_TESTEXTERNAL)) inside.add(obj);
+	}
+
+	// If these flags are set, then we need to track the new occupants.
+	if(flags & (AT_ONEXIT|AT_ONENTRY))
+	{
+		at_exit = 1;
+		loopv(occupants)
+		{
+			if(inside.find(occupants[i]) < 0)
+				occupants.removeunordered(i--);
+			else
+			{
+				if(flags & AT_SIGNALMAP) curmap->getsignal(sig, false, occupants[i]);
+				if(flags & AT_SIGNALCRITTER) occupants[i]->getsignal(sig, false, occupants[i]);
+			}
+		}
+		at_exit = 0;
+		at_entry = 1;
+		loopv(inside)
+		{
+			if(occupants.find(inside[i]) < 0)
+			{
+				//remove from the queue so we don't send a second signal
+				rpgent *ent = inside.removeunordered(i--);
+				occupants.add(ent);
+				if(flags & AT_SIGNALMAP) curmap->getsignal(sig, false, ent);
+				if(flags & AT_SIGNALCRITTER) ent->getsignal(sig, false, ent);
+			}
+		}
+		at_entry = 0;
+	}
+	if(flags & (AT_ONFIXEDPERIOD|AT_ONFRAME))
+	{
+		loopv(inside)
+		{
+			if(flags & AT_SIGNALMAP) curmap->getsignal(sig, false, inside[i]);
+			if(flags & AT_SIGNALCRITTER) inside[i]->getsignal(sig, false, inside[i]);
+		}
+	}
 }

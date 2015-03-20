@@ -60,8 +60,10 @@ namespace entities
 		game::curmap->areatriggers.setsize(0);
 		loopv(ents)
 		{
-			rpgentity &e = *((rpgentity *) &ents[i]);
+			rpgentity &e = *((rpgentity *) ents[i]);
 			if(e.type != AREATRIGGER) continue;
+
+			if(DEBUG_ENT) DEBUGF("Registering areatrigger");
 
 			areatrigger &at = game::curmap->areatriggers.add();
 			at.sig = game::queryhashpool(e.id);
