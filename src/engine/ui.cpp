@@ -972,7 +972,7 @@ namespace UI
             }
             return NULL;
         }
-        const int gettype() const { return TYPE_MISC;}
+        const int gettype() const { return TYPE_BUTTON;}
     };
 
     struct Scroller : Clipper
