@@ -822,7 +822,7 @@ bool save_world(const char *mname, bool nolms, bool octa)
     savemapprogress = 0;
     renderprogress(0, "saving map...");
 
-    octaheader hdr;
+    mapheader hdr;
     memcpy(hdr.magic, (octa ? "TMAP" : "MLAM"), 4);
     hdr.version = octa ? TESSMAPVERSION : LAMIAEMAPVERSION;
     hdr.headersize = sizeof(hdr);
