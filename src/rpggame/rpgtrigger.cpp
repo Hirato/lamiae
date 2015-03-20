@@ -83,6 +83,7 @@ void areatrigger::update()
 			int j = 0;
 			for(;j < 3; j++) if(obj->o[j] > top[j] || obj->o[j] < bottom[j]) break;
 			if((j == 3) != !!(flags & AT_TESTEXTERNAL)) inside.add(obj); //mutually exclusive scenario
+
 		}
 	}
 	else //if (flags & AT_TESTPLAYER)
@@ -91,6 +92,7 @@ void areatrigger::update()
 		int j = 0;
 		for(;j < 3; j++) if(obj->o[j] > top[j] || obj->o[j] < bottom[j]) break;
 		if((j == 3) != !!(flags & AT_TESTEXTERNAL)) inside.add(obj);
+
 	}
 
 	// If these flags are set, then we need to track the new occupants.
@@ -100,11 +102,10 @@ void areatrigger::update()
 		loopv(occupants)
 		{
 			if(inside.find(occupants[i]) < 0)
-				occupants.removeunordered(i--);
-			else
 			{
-				if(flags & AT_SIGNALMAP) curmap->getsignal(sig, false, occupants[i]);
-				if(flags & AT_SIGNALCRITTER) occupants[i]->getsignal(sig, false, occupants[i]);
+				rpgent *ent = occupants.removeunordered(i--);
+				if(flags & AT_SIGNALMAP) curmap->getsignal(sig, false, ent);
+				if(flags & AT_SIGNALCRITTER) ent->getsignal(sig, false, ent);
 			}
 		}
 		at_exit = 0;
