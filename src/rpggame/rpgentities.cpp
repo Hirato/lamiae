@@ -455,7 +455,16 @@ namespace entities
 
 	bool printent(extentity &e, char *buf, int len)
 	{
-		return false;
+		string tmp;
+		switch(e.type)
+		{
+			case AREATRIGGER:
+				formatstring(tmp, "%d %d %d 0x%.6X %d", e.attr[0], e.attr[1], e.attr[2], e.attr[3], e.attr[4]);
+				concatstring(buf, tmp, len);
+				return true;
+			default:
+				return false;
+		}
 	}
 
 	void fixentity(extentity &e)

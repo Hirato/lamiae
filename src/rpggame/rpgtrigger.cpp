@@ -65,8 +65,8 @@ void areatrigger::update()
 	if(flags & AT_ONFIXEDPERIOD)
 	{
 		remaining += curtime;
-		if(remaining >= period) remaining -= period;
-		else if ((flags & AT_PERIOD_MASK) == AT_ONFIXEDPERIOD) return;
+		if((remaining < period) && ((flags & AT_PERIOD_MASK) == AT_ONFIXEDPERIOD))
+			return;
 	}
 	// AT_ONENTRY|AT_ONEXIT|AT_ONFRAME all require evaluation each frame
 
@@ -122,8 +122,13 @@ void areatrigger::update()
 		}
 		at_entry = 0;
 	}
-	if(flags & (AT_ONFIXEDPERIOD|AT_ONFRAME))
+	if(flags & (AT_ONFRAME|AT_ONFIXEDPERIOD))
 	{
+		if(!(flags & AT_ONFRAME))
+		{
+			if (remaining < period) return;
+			remaining -= period;
+		}
 		loopv(inside)
 		{
 			if(flags & AT_SIGNALMAP) curmap->getsignal(sig, false, inside[i]);
