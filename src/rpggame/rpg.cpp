@@ -835,7 +835,7 @@ namespace game
 		loopv(curmap->areatriggers)
 			curmap->areatriggers[i].update();
 
-		curmap->getsignal("update");
+// 		curmap->getsignal("update");
 		rpgscript::update();
 		camera::update();
 	}
