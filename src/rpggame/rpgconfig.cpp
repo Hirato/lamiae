@@ -64,10 +64,42 @@ namespace game
 				ERRORF("unable to select reference %s as type " #c, ref); \
 			loading ## x = old; \
 		) \
+		ICOMMAND(r_select_static_ ## c, "se", (const char *ref, uint *contents), \
+			x *old = loading ## x; \
+			loading ## x = NULL; \
+			\
+			if((loading ## x = vec.access(ref)) && DEBUG_VCONF) \
+				DEBUGF("successfully selected \"" #c "\" using hash %s", ref); \
+			if(loading ## x) \
+			{\
+				rpgscript::config->setref(loading ## x, true); \
+				rpgexecute(contents); \
+				rpgscript::config->setnull(true); \
+			} \
+			else \
+				ERRORF("unable to select hash %s as type " #c, ref); \
+			loading ## x = old; \
+		) \
+		ICOMMAND(r_exists_ ## c, "s", (const char *ref), \
+			x *loading ## x = NULL; \
+			\
+			if((loading ## x = vec.access(ref)) && DEBUG_VCONF) \
+				DEBUGF("successfully selected \"" #c "\" using hash %s", ref); \
+			if(loading ## x) intret(1); \
+			else intret(0); \
+		) \
 		ICOMMAND(r_num_ ## c, "", (), \
 			if(DEBUG_VCONF) \
 				DEBUGF("r_num_" #c " requested, returning %i", vec.length()); \
 			intret(vec.length()); \
+		) \
+		ICOMMAND(r_loop_ ## c, "re", (ident *id, uint *body), \
+			loopstart(id, stack); \
+			enumerate(vec, x, it, \
+				loopiter(id, stack, it.key); \
+				rpgexecute(body); \
+			) \
+			loopend(id, stack) \
 		)
 
 	CHECK(script, script, scripts,
@@ -208,6 +240,24 @@ namespace game
 
 		if(loadinguse) rpgexecute(contents);
 		else ERRORF("unable to select reference %s as type use", ref);
+		loadinguse = old;
+	)
+	ICOMMAND(r_select_static_item_use, "ie", (int *idx, uint *contents),
+		use *old = loadinguse;
+		loadinguse = NULL;
+
+		if(loadingitem)
+		{
+			if(loadingitem->uses.inrange(*idx))
+			{
+				if(DEBUG_VCONF)
+					DEBUGF("successfully selected \"use\" using index %i", *idx);
+				loadinguse = loadingitem->uses[*idx];
+			}
+		}
+
+		if(loadinguse) rpgexecute(contents);
+		else ERRORF("unable to select index %i as type use", *idx);
 		loadinguse = old;
 	)
 	ICOMMAND(r_num_item_use, "", (),
