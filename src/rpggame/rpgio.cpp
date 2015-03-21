@@ -1502,6 +1502,7 @@ namespace rpgio
 			if(loading)
 			{
 				WARNINGF("reference \"%s\" appears to have already been loaded", name);
+				loading->dump();
 			}
 			else
 			{

@@ -1164,7 +1164,7 @@ static int keepents = 0;
 extentity *newentity(bool local, const vec &o, int type, int *attrs, int &idx, bool fix = true)
 {
     vector<extentity *> &ents = entities::getents();
-    if(local && fix)
+    if(local)
     {
         idx = -1;
         for(int i = keepents; i < ents.length(); i++) if(ents[i]->type == ET_EMPTY) { idx = i; break; }
@@ -1177,10 +1177,18 @@ extentity *newentity(bool local, const vec &o, int type, int *attrs, int &idx, b
         e.attr.add(attrs[i]);
 
     e.type = type;
-    if(local)
+    if(local && fix)
     {
         switch(type)
         {
+            case ET_DECAL:
+                if(!e.attr[1] && !e.attr[2] && ! e.attr[3])
+                {
+                    e.attr[1] = int(camera1->yaw);
+                    e.attr[2] = int(camera1->pitch);
+                    e.attr[3] = int(camera1->roll);
+                }
+                break;
             case ET_PARTICLES:
                 switch(e.attr[0])
                 {
