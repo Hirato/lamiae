@@ -61,7 +61,10 @@ namespace game
 				rpgscript::config->setnull(true); \
 			} \
 			else \
+			{ \
 				ERRORF("unable to select reference %s as type " #c, ref); \
+				if (obj) obj->dump(); \
+			} \
 			loading ## x = old; \
 		) \
 		ICOMMAND(r_select_static_ ## c, "se", (const char *ref, uint *contents), \
@@ -185,7 +188,10 @@ namespace game
 			if(loading ## x) \
 				rpgexecute(body); \
 			else \
+			{ \
 				ERRORF("unable to select reference %s as type " #c, ref); \
+				if (obj) obj->dump(); \
+			} \
 			loading ## x = old; \
 			loadingrpgent = oldrpgent; \
 		)
@@ -239,7 +245,11 @@ namespace game
 		}
 
 		if(loadinguse) rpgexecute(contents);
-		else ERRORF("unable to select reference %s as type use", ref);
+		else
+		{ \
+			ERRORF("unable to select reference %s as type use", ref);
+			if (obj) obj->dump();
+		}
 		loadinguse = old;
 	)
 	ICOMMAND(r_select_static_item_use, "ie", (int *idx, uint *contents),
