@@ -1684,7 +1684,7 @@ inline merchant::rate merchant::getrate(const rpgchar &buyer, int cat) const
 		return rate(0, 0);
 
 	rate r = rates[cat];
-	float diff = clamp(buyer.base.getskill(SKILL_DIPLOMACY), 0, 100) / 200.0f;
+	float diff = clamp(buyer.base.getskill(SKILL_DIPLOMACY), 0, 100) / 100.0f;
 
 	r.buy *= 1 - (buyadjust * diff);
 	r.sell *= 1 + (selladjust * diff);
