@@ -1699,7 +1699,8 @@ namespace rpgscript
 
 		int dropped = 0;
 		domultiref(r_drop, it, it->getinv(itidx),
-			dropped += ent->getent(entidx)->drop(it->getinv(itidx), max(0, *q), true);
+			if(dropped >= *q) break;
+			dropped += ent->getent(entidx)->drop(it->getinv(itidx), max(0, *q - dropped), true);
 			if(DEBUG_SCRIPT) DEBUGF("dropping %i of reference %s:%i from reference \"%s\" - total %i dropped", *q, it->name, itidx, ref, dropped);
 		)
 		intret(dropped);
@@ -1711,9 +1712,26 @@ namespace rpgscript
 
 		int dropped = 0;
 		domultiref(r_drop, it, it->getinv(itidx),
-			dropped += ent->getent(entidx)->drop(it->getinv(itidx), max(0, *q), false);
+			if(dropped >= *q) break;
+			dropped += ent->getent(entidx)->drop(it->getinv(itidx), max(0, *q - dropped), false);
 			if(DEBUG_SCRIPT) DEBUGF("removing %i of reference %s:%i from reference \"%s\" - total %i removed", *q, it->name, itidx, ref, dropped);
 		)
+		intret(dropped);
+	)
+
+	ICOMMAND(r_drop_generic, "ssi", (const char *ref, const char *base, int *q),
+		getreference(r_drop, ref, ent, ent->getchar(entidx) || ent->getcontainer(entidx), intret(0))
+
+		int dropped = ent->getent(entidx)->drop(base, *q, true);
+		if(DEBUG_SCRIPT) DEBUGF("Dropping %i of item %s from %s:%i - dropped %i", *q, base, ent->name, entidx, dropped);
+		intret(dropped);
+	)
+
+	ICOMMAND(r_remove_generic, "ssi", (const char *ref, const char *base, int *q),
+		getreference(r_remove, ref, ent, ent->getchar(entidx) || ent->getcontainer(entidx), intret(0))
+
+		int dropped = ent->getent(entidx)->drop(base, *q, false);
+		if(DEBUG_SCRIPT) DEBUGF("Removing %i of item %s from %s:%i - removed %i", *q, base, ent->name, entidx, dropped);
 		intret(dropped);
 	)
 
