@@ -838,6 +838,10 @@ void rpgchar::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float 
 ///Inventory
 void rpgchar::init(const char *base)
 {
+	//Reset default links for player
+	script = DEFAULTCHARSCR;
+	faction = DEFAULTFACTION;
+
 	game::loadingrpgchar = this;
 	rpgscript::config->setref(this, true);
 
