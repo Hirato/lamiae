@@ -89,7 +89,7 @@ void stats::skillpotency(int n, float &amnt, float &extra)
 			amnt += (getattr(STAT_LUCK) * 1      + getattr(STAT_AGILITY) * 2         + getskill(SKILL_STEALTH) * 5) / 100.0f;
 			break;
 	}
-	amnt += logf(1 + (amnt / 5));
+	amnt = log(1 + amnt);
 
 	extra = amnt * (50 + rnd(101)) / 100.0f;
 	if(rnd(100) < critchance())
