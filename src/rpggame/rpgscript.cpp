@@ -1201,7 +1201,7 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_local_share, "ss", (const char *ref, const char *shr),
-		getbasicreference(r_local_set, ref, gen, )
+		getbasicreference(r_local_share, ref, gen, )
 		getreference(r_local_share, shr, dst, dst->getinv(dstidx) || dst->getent(dstidx) || dst->getmap(dstidx), )
 
 		int *dloc = NULL;
@@ -1230,9 +1230,9 @@ namespace rpgscript
 	)
 
 	ICOMMAND(r_local_unique, "s", (const char *ref),
-		getbasicreference(r_local_set, ref, gen, )
+		getbasicreference(r_local_unique, ref, gen, )
 
-		domultiref(r_local_share, gen, gen->getinv(genidx) || gen->getent(genidx) || gen->getmap(genidx),
+		domultiref(r_local_unique, gen, gen->getinv(genidx) || gen->getent(genidx) || gen->getmap(genidx),
 			int *li = NULL;
 			if(!getlocals(li, *gen, genidx)) continue;
 

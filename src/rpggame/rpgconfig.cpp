@@ -851,7 +851,7 @@ namespace game
 		item *e = checkitem();
 		if(!e) return;
 
-		if(!e->charges) e->charges = 1;
+		if(e->charges == -2) e->charges = 1;
 
 		loadinguse = (e->uses.add(new use(e->script)));
 		if(DEBUG_CONF)
@@ -862,7 +862,7 @@ namespace game
 		item *e = checkitem();
 		if(!e) return;
 
-		if(!e->charges) e->charges = -1;
+		if(e->charges == -2) e->charges = -1;
 
 		loadinguse = (e->uses.add(new use_armour(e->script)));
 		if(DEBUG_CONF)
@@ -873,7 +873,7 @@ namespace game
 		item *e = checkitem();
 		if(!e) return;
 
-		if(!e->charges) e->charges = -1;
+		if(e->charges == -2) e->charges = -1;
 
 		loadinguse = (e->uses.add(new use_weapon(e->script)));
 		if(DEBUG_CONF)
