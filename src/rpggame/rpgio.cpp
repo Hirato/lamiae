@@ -1052,6 +1052,7 @@ namespace rpgio
 					{//how'd that happen?
 						WARNINGF("loaded teleport loadaction for invalid ent? ignoring");
 						f->getlil<int>();
+						f->getlil<int>();
 						continue;
 					}
 					int d = f->getlil<int>();
