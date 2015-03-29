@@ -1119,7 +1119,6 @@ int main(int argc, char **argv)
 
         checkinput();
         ovr::update();
-        UI::update();
         tryedit();
 
         if(lastmillis)
@@ -1127,8 +1126,8 @@ int main(int argc, char **argv)
             game::updateworld();
         }
 
+        UI::update();
         checksleep(lastmillis);
-
         serverslice(false, 0);
 
         if(frames) updatefpshistory(elapsedtime);

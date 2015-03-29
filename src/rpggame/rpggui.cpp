@@ -337,6 +337,7 @@ namespace rpggui
 			{
 				talker->setnull(true);
 				UI::hideui("chat");
+				forcegui();
 			}
 			else
 				refreshgui();
