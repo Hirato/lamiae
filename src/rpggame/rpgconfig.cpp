@@ -1296,13 +1296,26 @@ namespace game
 	FLOAT(selladjust, 0, 1)
 
 	START(setrate, "iff", (int *cat, float *buy, float *sell),
-		INIT
-		if(!e || *cat < 0) return;
+		INIT; if(!e) return;
 		if(DEBUG_CONF)
 			DEBUGF("setting " DEBUG_STR "->rate[%i] to %f%% and %f%%", DEBUG_IND, *cat, *buy * 100, *sell * 100);
 
-		while(!e->rates.inrange(*cat)) e->rates.add(merchant::rate(0, 0));
+		if(!categories.inrange(*cat))
+		{
+			ERRORF("not setting " DEBUG_STR "->rate[%i]; Category undefined", DEBUG_IND, *cat);
+			return;
+		}
+
+		while(e->rates.length() <= *cat) e->rates.add(merchant::rate(0, 0));
 		e->rates[*cat] = merchant::rate(*buy, *sell);
+	)
+
+	START(getrate, "i", (int *cat),
+		INIT; if(!e) return;
+		merchant::rate r = e->getrate(*player1, *cat);
+
+		defformatstring(str, "%g %g", r.buy, r.sell);
+		result(str);
 	)
 
 	#undef START

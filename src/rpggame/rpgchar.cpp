@@ -129,8 +129,8 @@ bool rpgchar::checkammo(equipment &eq, equipment *&quiver, bool remove)
 		return true;
 	}
 
-	if(quiver && at->items.find(quiver->it->base) >= 0) it = quiver->it;
-	else if (at->items.find(eq.it->base) >= 0) { quiver = NULL; it = eq.it; }
+	if (at->items.find(eq.it->base) >= 0) { quiver = NULL; it = eq.it; }
+	else if(quiver && at->items.find(quiver->it->base) >= 0) it = quiver->it;
 	else
 	{
 		if(this == game::player1) game::hudline("The current weapon cannot use %s!", at->name);
