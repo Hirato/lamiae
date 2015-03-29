@@ -92,7 +92,7 @@ void stats::skillpotency(int n, float &amnt, float &extra)
 	amnt = log(1 + amnt);
 
 	extra = amnt * (50 + rnd(101)) / 100.0f;
-	if(rnd(100) < critchance())
+	if(rnd(1000) < critchance())
 		extra = extra * (1.10 + (rnd(191) / 100.0f)) + (rnd(150) / 100.0f) * (rnd(150) / 100.0f);
 	extra -= amnt;
 }
