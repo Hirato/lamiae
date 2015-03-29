@@ -4,8 +4,8 @@ extern bool reloadtexture(const char *name); //texture.cpp
 
 namespace rpgio
 {
-	#define SAVE_VERSION 48
-	#define COMPAT_VERSION 48
+	#define SAVE_VERSION 49
+	#define COMPAT_VERSION 49
 	#define SAVE_MAGIC "RPGS"
 
 	/**
@@ -752,6 +752,7 @@ namespace rpgio
 			}
 		}
 
+		ent->maxheight = f->getlil<float>();
 		ent->eyeheight = f->getlil<float>();
 		readvec(ent->o);
 		ent->newpos = ent->o;
@@ -987,6 +988,7 @@ namespace rpgio
 			}
 		}
 
+		f->putlil(d->maxheight);
 		f->putlil(d->eyeheight);
 		writevec(d->o);
 		writevec(d->vel);
