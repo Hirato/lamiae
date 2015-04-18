@@ -1,4 +1,4 @@
-﻿@ECHO OFF
+@ECHO OFF
 
 set LAMIAE_BIN=binw32
 
