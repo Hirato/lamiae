@@ -15,10 +15,15 @@
 				<Option host_application="../../binw32/lamiae.exe" />
 				<Option run_host_application_in_terminal="0" />
 				<Compiler>
+					<Add option="-O2" />
+					<Add option="-fsigned-char" />
+					<Add option="-fno-rtti" />
+					<Add option="-fno-exceptions" />
 					<Add option="-m32" />
 					<Add directory="../rpggame" />
 				</Compiler>
 				<Linker>
+					<Add option="-s" />
 					<Add option="-m32" />
 					<Add directory="../../binw32" />
 					<Add directory="../lib" />
@@ -37,10 +42,15 @@
 				<Option host_application="../../binw64/lamiae.exe" />
 				<Option run_host_application_in_terminal="0" />
 				<Compiler>
+					<Add option="-O2" />
+					<Add option="-fsigned-char" />
+					<Add option="-fno-rtti" />
+					<Add option="-fno-exceptions" />
 					<Add option="-m64" />
 					<Add directory="../rpggame" />
 				</Compiler>
 				<Linker>
+					<Add option="-s" />
 					<Add option="-m64" />
 					<Add directory="../../binw64" />
 					<Add directory="../lib64" />
@@ -59,8 +69,10 @@
 				<Option host_application="../../binw32/lamiae-dbg.exe" />
 				<Option run_host_application_in_terminal="0" />
 				<Compiler>
-					<Add option="-Wall" />
 					<Add option="-g" />
+					<Add option="-fsigned-char" />
+					<Add option="-fno-rtti" />
+					<Add option="-fno-exceptions" />
 					<Add option="-m32" />
 					<Add directory="../rpggame" />
 				</Compiler>
@@ -82,10 +94,11 @@
 				<Option parameters='&quot;-u$HOME\My Games\Lamiae&quot; -gstdout.txt' />
 				<Option host_application="../../binw64/lamiae-dbg.exe" />
 				<Option run_host_application_in_terminal="0" />
-				<Option projectCompilerOptionsRelation="1" />
 				<Compiler>
-					<Add option="-Wall" />
 					<Add option="-g" />
+					<Add option="-fsigned-char" />
+					<Add option="-fno-rtti" />
+					<Add option="-fno-exceptions" />
 					<Add option="-m64" />
 					<Add directory="../rpggame" />
 				</Compiler>
@@ -104,11 +117,7 @@
 			<Add alias="Release" targets="32bit release;64bit release;" />
 		</VirtualTargets>
 		<Compiler>
-			<Add option="-O2" />
 			<Add option="-Wall" />
-			<Add option="-fsigned-char" />
-			<Add option="-fno-rtti" />
-			<Add option="-fno-exceptions" />
 			<Add directory="../enet/include" />
 			<Add directory="../include" />
 			<Add directory="../engine" />
@@ -119,7 +128,6 @@
 			<Add directory="resources" />
 		</ResourceCompiler>
 		<Linker>
-			<Add option="-s" />
 			<Add option="-mwindows" />
 			<Add library="SDL2" />
 			<Add library="SDL2_image" />
