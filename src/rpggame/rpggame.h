@@ -2059,38 +2059,65 @@ struct areatrigger
 enum
 {
 	ANIM_TRIGGER = ANIM_GAMESPECIFIC,
-	ANIM_DEAD, ANIM_DYING, ANIM_IDLE,
-	ANIM_FORWARD, ANIM_BACKWARD, ANIM_LEFT, ANIM_RIGHT,
-	ANIM_CROUCH, ANIM_CROUCH_FORWARD, ANIM_CROUCH_BACKWARD, ANIM_CROUCH_LEFT, ANIM_CROUCH_RIGHT,
-	ANIM_PAIN,
-	ANIM_JUMP, ANIM_SINK, ANIM_SWIM,
-	ANIM_CROUCH_JUMP, ANIM_CROUCH_SINK, ANIM_CROUCH_SWIM,
-	ANIM_EDIT, ANIM_LAG,
+	ANIM_DEAD, ANIM_DYING, ANIM_EDIT, ANIM_LAG, ANIM_PAIN,
+	ANIM_IDLE, ANIM_RUN_N, ANIM_RUN_NE, ANIM_RUN_E, ANIM_RUN_SE, ANIM_RUN_S, ANIM_RUN_SW, ANIM_RUN_W, ANIM_RUN_NW,
+	ANIM_JUMP, ANIM_JUMP_N, ANIM_JUMP_NE, ANIM_JUMP_E, ANIM_JUMP_SE, ANIM_JUMP_S, ANIM_JUMP_SW, ANIM_JUMP_W, ANIM_JUMP_NW,
+	ANIM_SINK, ANIM_SWIM,
+	ANIM_CROUCH, ANIM_CROUCH_N, ANIM_CROUCH_NE, ANIM_CROUCH_E, ANIM_CROUCH_SE, ANIM_CROUCH_S, ANIM_CROUCH_SW, ANIM_CROUCH_W, ANIM_CROUCH_NW,
+	ANIM_CROUCH_JUMP, ANIM_CROUCH_JUMP_N, ANIM_CROUCH_JUMP_NE, ANIM_CROUCH_JUMP_E, ANIM_CROUCH_JUMP_SE, ANIM_CROUCH_JUMP_S, ANIM_CROUCH_JUMP_SW, ANIM_CROUCH_JUMP_W, ANIM_CROUCH_JUMP_NW,
+	ANIM_CROUCH_SINK, ANIM_CROUCH_SWIM,
 
-	ANIM_BLOCK,
-	ANIM_MHOLD, ANIM_MSTRIKE, ANIM_MCHARGE, ANIM_MCOOL, //swords and stuff
-	ANIM_RHOLD, ANIM_RSTRIKE, ANIM_RCHARGE, ANIM_RCOOL, //bows and stuff
-	ANIM_CHOLD, ANIM_CSTRIKE, ANIM_CCHARGE, ANIM_CCOOL, //spell casting
+	ANIM_NONE_MELEE_IDLE, ANIM_NONE_RANGE_IDLE,  ANIM_NONE_MAGIC_IDLE,
+	ANIM_MELEE_NONE_IDLE, ANIM_MELEE_MELEE_IDLE, ANIM_MELEE_RANGE_IDLE, ANIM_MELEE_MAGIC_IDLE,
+	ANIM_RANGE_NONE_IDLE, ANIM_RANGE_MELEE_IDLE, ANIM_RANGE_RANGE_IDLE, ANIM_RANGE_MAGIC_IDLE,
+	ANIM_MAGIC_NONE_IDLE, ANIM_MAGIC_MELEE_IDLE, ANIM_MAGIC_RANGE_IDLE, ANIM_MAGIC_MAGIC_IDLE,
+	ANIM_DUAL_MELEE_IDLE, ANIM_DUAL_RANGE_IDLE,  ANIM_DUAL_MAGIC_IDLE,
 
-	ANIM_HIDLE, ANIM_HSTRIKE, ANIM_HCHARGE, ANIM_HCOOL, //HUD stuff
+	ANIM_LEFT_MELEE_STRIKE, ANIM_RIGHT_MELEE_STRIKE, ANIM_DUAL_MELEE_STRIKE,
+	ANIM_LEFT_RANGE_STRIKE, ANIM_RIGHT_RANGE_STRIKE, ANIM_DUAL_RANGE_STRIKE,
+	ANIM_LEFT_MAGIC_STRIKE, ANIM_RIGHT_MAGIC_STRIKE, ANIM_DUAL_MAGIC_STRIKE,
+
+	ANIM_LEFT_MELEE_CHARGE, ANIM_RIGHT_MELEE_CHARGE, ANIM_DUAL_MELEE_CHARGE,
+	ANIM_LEFT_RANGE_CHARGE, ANIM_RIGHT_RANGE_CHARGE, ANIM_DUAL_RANGE_CHARGE,
+	ANIM_LEFT_MAGIC_CHARGE, ANIM_RIGHT_MAGIC_CHARGE, ANIM_DUAL_MAGIC_CHARGE,
+
+	ANIM_LEFT_MELEE_COOLDOWN, ANIM_RIGHT_MELEE_COOLDOWN, ANIM_DUAL_MELEE_COOLDOWN,
+	ANIM_LEFT_RANGE_COOLDOWN, ANIM_RIGHT_RANGE_COOLDOWN, ANIM_DUAL_RANGE_COOLDOWN,
+	ANIM_LEFT_MAGIC_COOLDOWN, ANIM_RIGHT_MAGIC_COOLDOWN, ANIM_DUAL_MAGIC_COOLDOWN,
+
+	ANIM_HUD_IDLE, ANIM_HUD_STRIKE, ANIM_HUD_CHARGE, ANIM_HUD_COOL,
 	NUMANIMS
 };
 
 static const char * const animnames[] =
 {
 	"mapmodel", "trigger",
-	"dead", "dying", "idle",
-	"forward", "backward", "left", "right",
-	"crouch", "crouch forward", "crouch backward", "crouch left", "crouch right",
-	"pain",
-	"jump", "sink", "swim",
-	"crouch jump", "crouch sink", "crouch swim",
-	"edit", "lag",
+	"dead", "dying", "edit", "lag", "pain",
+	"idle", "run N", "run NE", "run E", "run SE", "run S", "run SW", "run W", "run NW",
+	"jump", "jump N", "jump NE", "jump E", "jump SE", "jump S", "jump SW", "jump W", "jump NW",
+	"crouch", "crouch N", "crouch NE", "crouch E", "crouch SE", "crouch S", "crouch SW", "crouch W", "crouch NW",
+	"crouch jump", "crouch jump N", "crouch jump NE", "crouch jump E", "crouch jump SE", "crouch jump S", "crouch jump SW", "crouch jump W", "crouch jump NW",
+	"sink", "swim",
+	"crouch sink", "crouch swim",
 
-	"block",
-	"melee hold", "melee strike", "melee charge", "melee cooldown",
-	"range hold", "range strike", "range charge", "range cooldown",
-	"cast hold", "cast strike", "cast charge", "cast cooldown",
+	"none melee idle", "none range idle", "none magic idle",
+	"melee none idle", "melee melee idle", "melee range idle", "melee magic idle",
+	"range none idle", "range melee idle", "range range idle", "range magic idle",
+	"magic none idle", "magic melee idle", "magic range idle", "magic magic idle",
+	"dual melee idle", "dual range idle", "dual magic idle",
+
+	"left melee strike", "right melee strike", "dual melee strike",
+	"left range strike", "right range strike", "dual range strike",
+	"left magic strike", "right magic strike", "dual magic strike",
+
+	"left melee charge", "right melee charge", "dual melee charge",
+	"left range charge", "right range charge", "dual range charge",
+	"left magic charge", "right magic charge", "dual magic charge",
+
+	"left melee cooldown", "right melee cooldown", "dual melee cooldown",
+	"left range cooldown", "right range cooldown", "dual range cooldown",
+	"left magic cooldown", "right magic cooldown", "dual magic cooldown",
+
 	"hud idle", "hud strike", "hud charge", "hud cooldown"
 };
 
