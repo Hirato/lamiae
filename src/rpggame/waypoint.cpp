@@ -478,7 +478,7 @@ namespace ai
 		}
 	}
 
-	#ifdef NO_DEBUG
+	#ifndef NO_DEBUG
 	vector<ushort> testroute;
 	ICOMMAND(waypointtest, "V", (tagval *args, int num),
 		testroute.setsize(0);
@@ -513,7 +513,7 @@ namespace ai
 		if(dropwaypoints && prev)
 			regular_particle_splash(PART_EDIT, 2, 100, prev->o, 0xFF0000, .5);
 
-		#ifdef NO_DEBUG
+		#ifndef NO_DEBUG
 		if(!DEBUG_AI) return;
 
 		for(int i = 1; i < testroute.length(); i++)

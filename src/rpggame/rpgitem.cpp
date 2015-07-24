@@ -73,7 +73,7 @@ bool item::validate()
 	{
 		if(!uses[i]->script)
 		{
-			ERRORF("Item[%p]->uses[%i] uses invalid script- trying fallback: null", this, i);
+			ERRORF("Item[%p]->uses[%i] uses invalid script - trying fallback: null", this, i);
 			uses[i]->script = DEFAULTSCR;
 
 			if(!uses[i]->script) return false;
