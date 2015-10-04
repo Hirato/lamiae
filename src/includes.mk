@@ -19,7 +19,7 @@ CLIENT_LIBS= -L/usr/X11R6/lib `sdl2-config --libs` -lSDL2_image -lSDL2_mixer -lz
 
 
 PLATFORM= $(shell uname -s)
-PLATFORM_PATH="bin_unk"
+PLATFORM_PATH="bin/unk"
 PLATFORM_ARCH= $(shell uname -m)
 PLATFORM_TYPE=windows
 
@@ -33,7 +33,7 @@ ifeq ($(PLATFORM),Linux)
 			CLIENT_LIBS+= -LLibOVR/Lib/Linux/Release/i386 -lovr -ludev -lXinerama
 		endif
 	endif
-	PLATFORM_PATH=bin_unix
+	PLATFORM_PATH=bin/unix
 	PLATFORM_TYPE=unix
 else
 	ifneq (,$(findstring GNU,$(PLATFORM)))
@@ -43,12 +43,12 @@ endif
 
 ifeq ($(PLATFORM),SunOS)
 	CLIENT_LIBS+= -lsocket -lnsl -lX11
-	PLATFORM_PATH=bin_sun
+	PLATFORM_PATH=bin/sun
 	PLATFORM_TYPE=unix
 endif
 
 ifeq ($(PLATFORM),FreeBSD)
-	PLATFORM_PATH=bin_bsd
+	PLATFORM_PATH=bin/bsd
 	PLATFORM_TYPE=unix
 endif
 

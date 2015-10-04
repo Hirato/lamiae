@@ -130,7 +130,7 @@ do
 done
 
 function build {
-	echo "${LAMIAE_DIR}/bin_${LAMIAE_PLATFORM}/lamiae${MACHINE_BIT}${LAMIAE_SUFFIX} does not exist"
+	echo "${LAMIAE_DIR}/bin/${LAMIAE_PLATFORM}/lamiae${MACHINE_BIT}${LAMIAE_SUFFIX} does not exist"
 	echo "Lamiae will attempt to compile one by executing the following command."
 	echo "	make -C src -f ${LAMIAE_MAKEFILE} install"
 	echo ""
@@ -150,7 +150,7 @@ function build {
 
 function failed {
 	echo ""
-	echo "\"${LAMIAE_DIR}/bin_${LAMIAE_PLATFORM}/lamiae${MACHINE_BIT}${LAMIAE_SUFFIX}\" does not exist and the program is unable to launch as a result."
+	echo "\"${LAMIAE_DIR}/bin/${LAMIAE_PLATFORM}/lamiae${MACHINE_BIT}${LAMIAE_SUFFIX}\" does not exist and the program is unable to launch as a result."
 	echo "This is typically due to there not being an available build for your system."
 	echo ""
 	echo "If you believe this is in error, try some combination of the --force flags or if not,"
@@ -162,9 +162,9 @@ function failed {
 
 function run {
 	cd ${LAMIAE_DIR}
-	if [ -a "bin_${LAMIAE_PLATFORM}/lamiae${MACHINE_BIT}${LAMIAE_SUFFIX}" ]
+	if [ -a "bin/${LAMIAE_PLATFORM}/lamiae${MACHINE_BIT}${LAMIAE_SUFFIX}" ]
 	then
-		eval ${LAMIAE_EXEC} "./bin_${LAMIAE_PLATFORM}/lamiae${MACHINE_BIT}${LAMIAE_SUFFIX}" "-u${LAMIAE_HOME}" ${LAMIAE_OPTIONS}
+		eval ${LAMIAE_EXEC} "./bin/${LAMIAE_PLATFORM}/lamiae${MACHINE_BIT}${LAMIAE_SUFFIX}" "-u${LAMIAE_HOME}" ${LAMIAE_OPTIONS}
 	else
 		if [ $1 -ne 1 ]
 		then

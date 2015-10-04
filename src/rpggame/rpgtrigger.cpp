@@ -62,10 +62,10 @@ VAR(at_exit, 1, 0, -1);
 
 void areatrigger::update()
 {
-	if(flags & AT_ONFIXEDPERIOD)
+	if((flags & (AT_ONFRAME|AT_ONFIXEDPERIOD)) == AT_ONFIXEDPERIOD)
 	{
 		remaining += curtime;
-		if((remaining < period) && ((flags & AT_PERIOD_MASK) == AT_ONFIXEDPERIOD))
+		if(remaining < period && ((flags & AT_PERIOD_MASK) == AT_ONFIXEDPERIOD))
 			return;
 	}
 	// AT_ONENTRY|AT_ONEXIT|AT_ONFRAME all require evaluation each frame
