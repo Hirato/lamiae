@@ -29,7 +29,7 @@ extern const uchar faceedgesidx[6][4];
 extern bool inbetweenframes, renderedframe;
 
 extern SDL_Window *screen;
-extern int screenw, screenh, renderw, renderh, hudx, hudy, hudw, hudh;
+extern int screenw, screenh, renderw, renderh, hudw, hudh;
 
 extern vector<int> entgroup;
 
@@ -128,7 +128,7 @@ extern int maxdrawbufs, maxdualdrawbufs;
 
 enum { DRAWTEX_NONE = 0, DRAWTEX_ENVMAP, DRAWTEX_MINIMAP, DRAWTEX_MODELPREVIEW };
 
-extern int vieww, viewh, viewidx;
+extern int vieww, viewh;
 extern int fov;
 extern float curfov, fovy, aspect, forceaspect;
 extern float nearplane;
@@ -190,27 +190,6 @@ namespace modelpreview
 struct timer;
 extern timer *begintimer(const char *name, bool gpu = true);
 extern void endtimer(timer *t);
-
-namespace ovr
-{
-    extern int enabled;
-    extern int lensw, lensh;
-    extern GLuint lensfbo[2], lenstex[2];
-    extern float viewoffset, distortoffset, distortscale, fov;
-    extern float yaw, pitch, roll;
-
-    extern void init();
-    extern void destroy();
-    extern bool enable();
-    extern void disable();
-    extern void setup();
-    extern void cleanup();
-    extern void update();
-    extern void warp();
-    extern void ortho(matrix4 &m, float dist = 0, float fov = 0);
-
-    static inline float modifyroll(float r) { return ovr::enabled ? r + roll : r; }
-}
 
 // renderextras
 extern void render3dbox(vec &o, float tofloor, float toceil, float xradius, float yradius = 0);
@@ -275,16 +254,17 @@ static inline cubeext &ext(cube &c)
 
 extern int lighttilealignw, lighttilealignh, lighttilevieww, lighttileviewh, lighttilew, lighttileh;
 
-static inline void calctilebounds(float sx1, float sy1, float sx2, float sy2, int &bx1, int &by1, int &bx2, int &by2)
+template<class T>
+static inline void calctilebounds(float sx1, float sy1, float sx2, float sy2, T &bx1, T &by1, T &bx2, T &by2)
 {
     int tx1 = max(int(floor(((sx1 + 1)*0.5f*vieww)/lighttilealignw)), 0),
         ty1 = max(int(floor(((sy1 + 1)*0.5f*viewh)/lighttilealignh)), 0),
         tx2 = min(int(ceil(((sx2 + 1)*0.5f*vieww)/lighttilealignw)), lighttilevieww),
         ty2 = min(int(ceil(((sy2 + 1)*0.5f*viewh)/lighttilealignh)), lighttileviewh);
-    bx1 = ((tx1 + 1) * lighttilew - 1) / lighttilevieww;
-    by1 = ((ty1 + 1) * lighttileh - 1) / lighttileviewh;
-    bx2 = (tx2 * lighttilew + lighttilevieww - 1) / lighttilevieww;
-    by2 = (ty2 * lighttileh + lighttileviewh - 1) / lighttileviewh;
+    bx1 = T((tx1 * lighttilew) / lighttilevieww);
+    by1 = T((ty1 * lighttileh) / lighttileviewh);
+    bx2 = T((tx2 * lighttilew + lighttilevieww - 1) / lighttilevieww);
+    by2 = T((ty2 * lighttileh + lighttileviewh - 1) / lighttileviewh);
 }
 
 static inline void masktiles(uint *tiles, float sx1, float sy1, float sx2, float sy2)
@@ -422,6 +402,7 @@ extern void cleanupprefabs();
 // octarender
 extern ivec worldmin, worldmax, nogimin, nogimax;
 extern vector<tjoint> tjoints;
+extern vector<vtxarray *> varoot, valist;
 
 extern ushort encodenormal(const vec &n);
 extern vec decodenormal(ushort norm);
@@ -440,6 +421,7 @@ extern void updatevabbs(bool force = false);
 extern int oqfrags;
 extern float alphafrontsx1, alphafrontsx2, alphafrontsy1, alphafrontsy2, alphabacksx1, alphabacksx2, alphabacksy1, alphabacksy2, alpharefractsx1, alpharefractsx2, alpharefractsy1, alpharefractsy2;
 extern uint alphatiles[LIGHTTILE_MAXH];
+extern vtxarray *visibleva;
 
 extern void visiblecubes(bool cull = true);
 extern void setvfcP(const vec &bbmin = vec(-1, -1, -1), const vec &bbmax = vec(1, 1, 1));
@@ -455,6 +437,7 @@ extern void cleanupva();
 
 extern bool isfoggedsphere(float rad, const vec &cv);
 extern int isvisiblesphere(float rad, const vec &cv);
+extern int isvisiblebb(const ivec &bo, const ivec &br);
 extern bool bboccluded(const ivec &bo, const ivec &br);
 
 extern int deferquery;

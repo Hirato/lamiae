@@ -20,7 +20,6 @@ void cleanup()
     extern void clear_models();  clear_models();
     extern void clear_sound();   clear_sound();
     closelogfile();
-    ovr::destroy();
     #ifdef __APPLE__
         if(screen) SDL_SetWindowFullscreen(screen, 0);
     #endif
@@ -200,25 +199,7 @@ void renderbackground(const char *caption, Texture *mapshot, const char *mapname
 
     loopi(3)
     {
-        if(ovr::enabled)
-        {
-            aspect = forceaspect ? forceaspect : hudw/float(hudh);
-            for(viewidx = 0; viewidx < 2; viewidx++, hudx += hudw)
-            {
-                if(!i)
-                {
-                    glBindFramebuffer_(GL_FRAMEBUFFER, ovr::lensfbo[viewidx]);
-                    glViewport(0, 0, hudw, hudh);
-                    glClearColor(0, 0, 0, 0);
-                    glClear(GL_COLOR_BUFFER_BIT);
-                    renderbackgroundview(w, h, caption, mapshot, mapname, mapinfo);
-                }
-                ovr::warp();
-            }
-            viewidx = 0;
-            hudx = 0;
-        }
-        else renderbackgroundview(w, h, caption, mapshot, mapname, mapinfo);
+        renderbackgroundview(w, h, caption, mapshot, mapname, mapinfo);
         swapbuffers(false);
     }
 
@@ -259,30 +240,8 @@ void renderprogress(float bar, const char *text,bool background)
     loadprogress = bar;
     loadtext = text;
 
-    if(ovr::enabled)
-    {
-        aspect = forceaspect ? forceaspect : hudw/float(hudh);
-        for(viewidx = 0; viewidx < 2; viewidx++, hudx += hudw)
-        {
-            glBindFramebuffer_(GL_FRAMEBUFFER, ovr::lensfbo[viewidx]);
-            glViewport(0, 0, hudw, hudh);
-            if(background)
-            {
-                glClearColor(0, 0, 0, 0);
-                glClear(GL_COLOR_BUFFER_BIT);
-                restorebackground(w, h);
-            }
-            renderprogressview(w, h, bar, text);
-            ovr::warp();
-        }
-        viewidx = 0;
-        hudx = 0;
-    }
-    else
-    {
-        if(background) restorebackground(w, h);
-        renderprogressview(w, h, bar, text);
-    }
+    if(background) restorebackground(w, h);
+    renderprogressview(w, h, bar, text);
 
     loadtext = NULL;
     swapbuffers(false);
@@ -359,7 +318,6 @@ void setfullscreen(bool enable)
         if(initwindowpos)
         {
             int winx = SDL_WINDOWPOS_CENTERED, winy = SDL_WINDOWPOS_CENTERED;
-            if(ovr::enabled) winx = winy = 0;
             SDL_SetWindowPosition(screen, winx, winy);
             initwindowpos = false;
         }
@@ -458,7 +416,6 @@ void setupscreen()
         flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
         initwindowpos = true;
     }
-    if(ovr::enabled) winx = winy = 0;
 
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
@@ -758,6 +715,7 @@ void checkinput()
 void swapbuffers(bool overlay)
 {
     recorder::capture(overlay);
+    gle::disable();
     SDL_GL_SwapWindow(screen);
 }
 
@@ -986,11 +944,8 @@ int main(int argc, char **argv)
     if(dedicated <= 1)
     {
         logoutf("init: sdl");
-        int par = 0;
-        #ifdef _DEBUG
-        par = SDL_INIT_NOPARACHUTE;
-        #endif
-        if(SDL_Init(SDL_INIT_TIMER|SDL_INIT_VIDEO|SDL_INIT_AUDIO|par)<0) fatal("Unable to initialize SDL: %s", SDL_GetError());
+
+        if(SDL_Init(SDL_INIT_TIMER|SDL_INIT_VIDEO|SDL_INIT_AUDIO)<0) fatal("Unable to initialize SDL: %s", SDL_GetError());
     }
 
     logoutf("init: net");
@@ -1118,7 +1073,6 @@ int main(int argc, char **argv)
         updatetime();
 
         checkinput();
-        ovr::update();
         tryedit();
 
         if(lastmillis)

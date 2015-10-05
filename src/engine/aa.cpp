@@ -2,8 +2,6 @@
 
 extern int intel_texalpha_bug;
 
-extern void cleanuptqaa();
-
 VARFP(tqaa, 0, 0, 1, cleanupaa());
 FVAR(tqaareproject, 0, 75, 1e3f);
 VARF(tqaamovemask, 0, 1, 1, cleanupaa());
@@ -12,88 +10,9 @@ FVAR(tqaacolorweightscale, 0, 0.25f, 1e3f);
 FVAR(tqaacolorweightbias, 0, 0.01f, 1);
 VAR(tqaaresolvegather, 1, 0, 0);
 
-struct tqaaview
-{
-    int frame;
-    GLuint prevtex, curtex, fbo[2];
-    matrix4 prevscreenmatrix;
-
-    tqaaview() : frame(0), prevtex(0), curtex(0)
-    {
-        memset(fbo, 0, sizeof(fbo));
-    }
-
-    void cleanup()
-    {
-        if(prevtex) { glDeleteTextures(1, &prevtex); prevtex = 0; }
-        if(curtex) { glDeleteTextures(1, &curtex); curtex = 0; }
-        loopi(2) if(fbo[i]) { glDeleteFramebuffers_(1, &fbo[i]); fbo[i] = 0; }
-        frame = 0;
-    }
-
-    void setup(int w, int h)
-    {
-        if(!prevtex) glGenTextures(1, &prevtex);
-        if(!curtex) glGenTextures(1, &curtex);
-        createtexture(prevtex, w, h, NULL, 3, 1, GL_RGBA8, GL_TEXTURE_RECTANGLE);
-        createtexture(curtex, w, h, NULL, 3, 1, GL_RGBA8, GL_TEXTURE_RECTANGLE);
-        loopi(2)
-        {
-            if(!fbo[i]) glGenFramebuffers_(1, &fbo[i]);
-            glBindFramebuffer_(GL_FRAMEBUFFER, fbo[i]);
-            GLuint tex = i ? prevtex : curtex;
-            glFramebufferTexture2D_(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, tex, 0);
-            bindgdepth();
-            if(glCheckFramebufferStatus_(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-                fatal("failed allocating TQAA buffer!");
-        }
-        glBindFramebuffer_(GL_FRAMEBUFFER, 0);
-
-        prevscreenmatrix.identity();
-    }
-
-    void setaavelocityparams(GLuint tmu)
-    {
-        glActiveTexture_(tmu);
-        if(msaasamples) glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, msdepthtex);
-        else glBindTexture(GL_TEXTURE_RECTANGLE, gdepthtex);
-        glActiveTexture_(++tmu);
-        if(msaasamples) glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, msnormaltex);
-        else glBindTexture(GL_TEXTURE_RECTANGLE, gnormaltex);
-        glActiveTexture_(GL_TEXTURE0);
-
-        matrix4 reproject;
-        reproject.muld(frame ? prevscreenmatrix : screenmatrix, worldmatrix);
-        vec2 jitter = frame&1 ? vec2(0.5f, 0.5f) : vec2(-0.5f, -0.5f);
-        if(multisampledaa()) { jitter.x *= 0.5f; jitter.y *= -0.5f; }
-        if(frame) reproject.jitter(jitter.x, jitter.y);
-        LOCALPARAM(reprojectmatrix, reproject);
-        float maxvel = sqrtf(vieww*vieww + viewh*viewh)/tqaareproject;
-        LOCALPARAMF(maxvelocity, maxvel, 1/maxvel);
-    }
-
-    void resolve(GLuint outfbo)
-    {
-        glBindFramebuffer_(GL_FRAMEBUFFER, outfbo);
-        SETSHADER(tqaaresolve);
-        LOCALPARAMF(colorweight, tqaacolorweightscale, -tqaacolorweightbias*tqaacolorweightscale);
-        glBindTexture(GL_TEXTURE_RECTANGLE, curtex);
-        glActiveTexture_(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_RECTANGLE, frame ? prevtex : curtex);
-        setaavelocityparams(GL_TEXTURE2);
-        glActiveTexture_(GL_TEXTURE0);
-        vec4 quincunx(0, 0, 0, 0);
-        if(tqaaquincunx) quincunx = frame&1 ? vec4(0.25f, 0.25f, -0.25f, -0.25f) : vec4(-0.25f, -0.25f, 0.25f, 0.25f);
-        if(multisampledaa()) { quincunx.x *= 0.5f; quincunx.y *= -0.5f; quincunx.z *= 0.5f; quincunx.w *= -0.5f; }
-        LOCALPARAM(quincunx, quincunx);
-        screenquad(vieww, viewh);
-
-        swap(fbo[0], fbo[1]);
-        swap(curtex, prevtex);
-        prevscreenmatrix = screenmatrix;
-        frame++;
-    }
-} tqaaviews[2];
+int tqaaframe = 0;
+GLuint tqaatex[2] = { 0, 0 }, tqaafbo[2] = { 0, 0 };
+matrix4 tqaaprevscreenmatrix;
 
 int tqaatype = -1;
 
@@ -107,7 +26,20 @@ void loadtqaashaders()
 
 void setuptqaa(int w, int h)
 {
-    loopi(ovr::enabled ? 2 : 1) tqaaviews[i].setup(w, h);
+    loopi(2)
+    {
+        if(!tqaatex[i]) glGenTextures(1, &tqaatex[i]);
+        if(!tqaafbo[i]) glGenFramebuffers_(1, &tqaafbo[i]);
+        glBindFramebuffer_(GL_FRAMEBUFFER, tqaafbo[i]);
+        createtexture(tqaatex[i], w, h, NULL, 3, 1, GL_RGBA8, GL_TEXTURE_RECTANGLE);
+        glFramebufferTexture2D_(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, tqaatex[i], 0);
+        bindgdepth();
+        if(glCheckFramebufferStatus_(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+            fatal("failed allocating TQAA buffer!");
+    }
+    glBindFramebuffer_(GL_FRAMEBUFFER, 0);
+
+    tqaaprevscreenmatrix.identity();
 
     loadtqaashaders();
 }
@@ -115,13 +47,29 @@ void setuptqaa(int w, int h)
 void cleanuptqaa()
 {
     tqaatype = -1;
-    loopi(2) tqaaviews[i].cleanup();
+    loopi(2) if(tqaatex[i]) { glDeleteTextures(1, &tqaatex[i]); tqaatex[i] = 0; }
+    loopi(2) if(tqaafbo[i]) { glDeleteFramebuffers_(1, &tqaafbo[i]); tqaafbo[i] = 0; }
+    tqaaframe = 0;
 }
 
 void setaavelocityparams(GLenum tmu)
 {
-    tqaaview &tv = tqaaviews[viewidx];
-    tv.setaavelocityparams(tmu);
+    glActiveTexture_(tmu);
+    if(msaasamples) glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, msdepthtex);
+    else glBindTexture(GL_TEXTURE_RECTANGLE, gdepthtex);
+    glActiveTexture_(++tmu);
+    if(msaasamples) glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, msnormaltex);
+    else glBindTexture(GL_TEXTURE_RECTANGLE, gnormaltex);
+    glActiveTexture_(GL_TEXTURE0);
+
+    matrix4 reproject;
+    reproject.muld(tqaaframe ? tqaaprevscreenmatrix : screenmatrix, worldmatrix);
+    vec2 jitter = tqaaframe&1 ? vec2(0.5f, 0.5f) : vec2(-0.5f, -0.5f);
+    if(multisampledaa()) { jitter.x *= 0.5f; jitter.y *= -0.5f; }
+    if(tqaaframe) reproject.jitter(jitter.x, jitter.y);
+    LOCALPARAM(reprojectmatrix, reproject);
+    float maxvel = sqrtf(vieww*vieww + viewh*viewh)/tqaareproject;
+    LOCALPARAMF(maxvelocity, maxvel, 1/maxvel);
 }
 
 VAR(debugtqaa, 0, 0, 2);
@@ -131,20 +79,41 @@ void viewtqaa()
     int w = min(hudw, hudh)*1.0f, h = (w*hudh)/hudw, tw = gw, th = gh;
     SETSHADER(hudrect);
     gle::colorf(1, 1, 1);
-    tqaaview &tv = tqaaviews[0];
     switch(debugtqaa)
     {
-        case 1: glBindTexture(GL_TEXTURE_RECTANGLE, tv.curtex); break;
-        case 2: glBindTexture(GL_TEXTURE_RECTANGLE, tv.prevtex); break;
+        case 1: glBindTexture(GL_TEXTURE_RECTANGLE, tqaatex[0]); break;
+        case 2: glBindTexture(GL_TEXTURE_RECTANGLE, tqaatex[1]); break;
     }
     debugquad(0, 0, w, h, 0, 0, tw, th);
 }
 
-void dotqaa(tqaaview &tv, GLuint outfbo = 0)
+void resolvetqaa(GLuint outfbo)
+{
+    glBindFramebuffer_(GL_FRAMEBUFFER, outfbo);
+    SETSHADER(tqaaresolve);
+    LOCALPARAMF(colorweight, tqaacolorweightscale, -tqaacolorweightbias*tqaacolorweightscale);
+    glBindTexture(GL_TEXTURE_RECTANGLE, tqaatex[0]);
+    glActiveTexture_(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_RECTANGLE, tqaaframe ? tqaatex[1] : tqaatex[0]);
+    setaavelocityparams(GL_TEXTURE2);
+    glActiveTexture_(GL_TEXTURE0);
+    vec4 quincunx(0, 0, 0, 0);
+    if(tqaaquincunx) quincunx = tqaaframe&1 ? vec4(0.25f, 0.25f, -0.25f, -0.25f) : vec4(-0.25f, -0.25f, 0.25f, 0.25f);
+    if(multisampledaa()) { quincunx.x *= 0.5f; quincunx.y *= -0.5f; quincunx.z *= 0.5f; quincunx.w *= -0.5f; }
+    LOCALPARAM(quincunx, quincunx);
+    screenquad(vieww, viewh);
+
+    swap(tqaafbo[0], tqaafbo[1]);
+    swap(tqaatex[0], tqaatex[1]);
+    tqaaprevscreenmatrix = screenmatrix;
+    tqaaframe++;
+}
+
+void dotqaa(GLuint outfbo = 0)
 {
     timer *tqaatimer = begintimer("tqaa");
 
-    tv.resolve(outfbo);
+    resolvetqaa(outfbo);
 
     endtimer(tqaatimer);
 }
@@ -207,14 +176,12 @@ void dofxaa(GLuint outfbo = 0)
 {
     timer *fxaatimer = begintimer("fxaa");
 
-    tqaaview &tv = tqaaviews[viewidx];
-
-    glBindFramebuffer_(GL_FRAMEBUFFER, tqaa ? tv.fbo[0] : outfbo);
+    glBindFramebuffer_(GL_FRAMEBUFFER, tqaa ? tqaafbo[0] : outfbo);
     fxaashader->set();
     glBindTexture(GL_TEXTURE_RECTANGLE, fxaatex);
     screenquad(vieww, viewh);
 
-    if(tqaa) tv.resolve(outfbo);
+    if(tqaa) resolvetqaa(outfbo);
 
     endtimer(fxaatimer);
 }
@@ -617,8 +584,6 @@ void dosmaa(GLuint outfbo = 0, bool split = false)
 {
     timer *smaatimer = begintimer("smaa");
 
-    tqaaview &tv = tqaaviews[viewidx];
-
     int cleardepth = msaasamples ? GL_DEPTH_BUFFER_BIT | (ghasstencil > 1 ? GL_STENCIL_BUFFER_BIT : 0) : 0;
     bool depthmask = smaadepthmask && (!tqaa || msaasamples),
          stencil = smaastencil && ghasstencil > (msaasamples ? 1 : 0);
@@ -662,8 +627,8 @@ void dosmaa(GLuint outfbo = 0, bool split = false)
         if(depthmask || stencil) glClear(GL_COLOR_BUFFER_BIT);
         smaablendweightshader->set();
         vec4 subsamples(0, 0, 0, 0);
-        if(tqaa && split) subsamples = tv.frame&1 ? (pass != smaasubsampleorder ? vec4(6, 4, 2, 4) : vec4(3, 5, 1, 4)) : (pass != smaasubsampleorder ? vec4(4, 6, 2, 3) : vec4(5, 3, 1, 3));
-        else if(tqaa) subsamples = tv.frame&1 ? vec4(2, 2, 2, 0) : vec4(1, 1, 1, 0);
+        if(tqaa && split) subsamples = tqaaframe&1 ? (pass != smaasubsampleorder ? vec4(6, 4, 2, 4) : vec4(3, 5, 1, 4)) : (pass != smaasubsampleorder ? vec4(4, 6, 2, 3) : vec4(5, 3, 1, 3));
+        else if(tqaa) subsamples = tqaaframe&1 ? vec4(2, 2, 2, 0) : vec4(1, 1, 1, 0);
         else if(split) subsamples = pass != smaasubsampleorder ? vec4(2, 2, 2, 0) : vec4(1, 1, 1, 0);
         LOCALPARAM(subsamples, subsamples);
         glBindTexture(GL_TEXTURE_RECTANGLE, smaatex[1]);
@@ -683,7 +648,7 @@ void dosmaa(GLuint outfbo = 0, bool split = false)
         else if(stencil) glDisable(GL_STENCIL_TEST);
     }
 
-    glBindFramebuffer_(GL_FRAMEBUFFER, tqaa ? tv.fbo[0] : outfbo);
+    glBindFramebuffer_(GL_FRAMEBUFFER, tqaa ? tqaafbo[0] : outfbo);
     smaaneighborhoodshader->set();
     glBindTexture(GL_TEXTURE_RECTANGLE, smaatex[0]);
     glActiveTexture_(GL_TEXTURE1);
@@ -698,14 +663,14 @@ void dosmaa(GLuint outfbo = 0, bool split = false)
     glActiveTexture_(GL_TEXTURE0);
     screenquad(vieww, viewh);
 
-    if(tqaa) tv.resolve(outfbo);
+    if(tqaa) resolvetqaa(outfbo);
 
     endtimer(smaatimer);
 }
 
 void setupaa(int w, int h)
 {
-    if(tqaa && !tqaaviews[0].fbo[0]) setuptqaa(w, h);
+    if(tqaa && !tqaafbo[0]) setuptqaa(w, h);
 
     if(smaa) { if(!smaafbo[0]) setupsmaa(w, h); }
     else if(fxaa) { if(!fxaafbo) setupfxaa(w, h); }
@@ -719,8 +684,7 @@ void jitteraa()
 
     if(!drawtex && tqaa)
     {
-        tqaaview &tv = tqaaviews[viewidx];
-        vec2 jitter = tv.frame&1 ? vec2(0.25f, 0.25f) : vec2(-0.25f, -0.25f);
+        vec2 jitter = tqaaframe&1 ? vec2(0.25f, 0.25f) : vec2(-0.25f, -0.25f);
         if(multisampledaa()) { jitter.x *= 0.5f; jitter.y *= -0.5f; }
         projmatrix.jitter(jitter.x*2.0f/vieww, jitter.y*2.0f/viewh);
     }
@@ -788,7 +752,7 @@ void doaa(GLuint outfbo, void (*resolve)(GLuint, int))
         dosmaa(outfbo, split);
     }
     else if(fxaa) { resolve(fxaafbo, fxaatype); dofxaa(outfbo); }
-    else if(tqaa) { tqaaview &tv = tqaaviews[viewidx]; resolve(tv.fbo[0], tqaatype); dotqaa(tv, outfbo); }
+    else if(tqaa) { resolve(tqaafbo[0], tqaatype); dotqaa(outfbo); }
     else resolve(outfbo, AA_UNUSED);
 }
 

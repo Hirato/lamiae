@@ -35,7 +35,7 @@ struct model
     virtual void setglow(float glow, float glowdelta, float glowpulse) {}
     virtual void setalphatest(float alpha) {}
     virtual void setfullbright(float fullbright) {}
-    virtual void setcullface(bool cullface) {}
+    virtual void setcullface(int cullface) {}
     virtual void setcolor(const vec &color) {}
 
     virtual void genshadowmesh(vector<triangle> &tris, const matrix4x3 &orient) {}

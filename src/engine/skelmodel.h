@@ -1187,7 +1187,7 @@ struct skelmodel : animmodel
                     loopv(blendcombos) blendcombos[i].interpindex = -1;
                 }
 
-                glBindBuffer_(GL_ARRAY_BUFFER, vc.vbuf);
+                gle::bindvbo(vc.vbuf);
                 #define GENVBO(type, args) \
                     do \
                     { \
@@ -1213,13 +1213,13 @@ struct skelmodel : animmodel
                 #undef GENVBO
                 #undef GENVBOANIM
                 #undef GENVBOSTAT
-                glBindBuffer_(GL_ARRAY_BUFFER, 0);
+                gle::clearvbo();
             }
 
             glGenBuffers_(1, &ebuf);
-            glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, ebuf);
+            gle::bindebo(ebuf);
             glBufferData_(GL_ELEMENT_ARRAY_BUFFER, idxs.length()*sizeof(ushort), idxs.getbuf(), GL_STATIC_DRAW);
-            glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, 0);
+            gle::clearebo();
         }
 
         template<class T>
@@ -1452,7 +1452,7 @@ struct skelmodel : animmodel
                     {
                         m.interpverts(sc.bdata, bc ? bc->bdata : NULL, (vvert *)vdata, p->skins[i]);
                     });
-                    glBindBuffer_(GL_ARRAY_BUFFER, vc.vbuf);
+                    gle::bindvbo(vc.vbuf);
                     glBufferData_(GL_ARRAY_BUFFER, vlen*vertsize, vdata, GL_STREAM_DRAW);
                 }
 
@@ -1515,7 +1515,6 @@ struct skelmodel : animmodel
 
         skelpart(animmodel *model, int index = 0) : part(model, index), buildingpartmask(NULL), partmask(NULL)
         {
-            disablepitch();
         }
 
         virtual ~skelpart()
@@ -1662,6 +1661,7 @@ template<class MDL> struct skelcommands : modelcommands<MDL, struct MDL::skelmes
         if(!mdl.meshes) conoutf("could not load %s", filename);
         else
         {
+            if(mdl.meshes && ((meshgroup *)mdl.meshes)->skel->numbones > 0) mdl.disablepitch();
             mdl.initanimparts();
             mdl.initskins();
         }

@@ -6,14 +6,28 @@ bool BIH::triintersect(const mesh &m, int tidx, const vec &mo, const vec &mray, 
 {
     const tri &t = m.tris[tidx];
     vec a = m.getpos(t.vert[0]), b = m.getpos(t.vert[1]).sub(a), c = m.getpos(t.vert[2]).sub(a),
-        n = vec().cross(b, c), r = vec(mo).sub(a), e = vec().cross(r, mray);
-    float det = mray.dot(n), adet = fabs(det), v = e.dot(c);
-    if(v < 0 || v > adet) return false;
-    float w = -e.dot(b);
-    if(w < 0 || v + w > adet) return false;
-    float f = r.dot(n)*m.scale;
-    if(f < 0 || f > maxdist*adet || !adet) return false;
-    float invdet = 1/adet;
+        n = vec().cross(b, c), r = vec(a).sub(mo), e = vec().cross(r, mray);
+    float det = mray.dot(n), v, w, f;
+    if(det >= 0)
+    {
+        if(!(mode&RAY_SHADOW) && m.flags&MESH_CULLFACE) return false;
+        v = e.dot(c);
+        if(v < 0 || v > det) return false;
+        w = -e.dot(b);
+        if(w < 0 || v + w > det) return false;
+        f = r.dot(n)*m.scale;
+        if(f < 0 || f > maxdist*det || !det) return false;
+    }
+    else
+    {
+        v = e.dot(c);
+        if(v > 0 || v < det) return false;
+        w = -e.dot(b);
+        if(w > 0 || v + w < det) return false;
+        f = r.dot(n)*m.scale;
+        if(f > 0 || f < maxdist*det) return false;
+    }
+    float invdet = 1/det;
     if(m.flags&MESH_ALPHA && (mode&RAY_ALPHAPOLY)==RAY_ALPHAPOLY && (m.tex->alphamask || loadalphamask(m.tex)))
     {
         vec2 at = m.gettc(t.vert[0]), bt = m.gettc(t.vert[1]).sub(at).mul(v*invdet), ct = m.gettc(t.vert[2]).sub(at).mul(w*invdet);
@@ -22,11 +36,7 @@ bool BIH::triintersect(const mesh &m, int tidx, const vec &mo, const vec &mray, 
             ti = clamp(int(m.tex->ys * at.y), 0, m.tex->ys-1);
         if(!(m.tex->alphamask[ti*((m.tex->xs+7)/8) + si/8] & (1<<(si%8)))) return false;
     }
-    if(!(mode&RAY_SHADOW))
-    {
-        hitsurface = m.xformnorm.transform(n).normalize();
-        if(det > 0) hitsurface.neg();
-    }
+    if(!(mode&RAY_SHADOW)) hitsurface = m.xformnorm.transform(n).normalize();
     dist = f*invdet;
     return true;
 }
@@ -255,8 +265,8 @@ BIH::BIH(vector<mesh> &buildmeshes)
             mmin.min(vmin);
             mmax.max(vmax);
             ivec imin = ivec::floor(vmin), imax = ivec::ceil(vmax);
-            dsttri->center = ivec(imin).add(imax).div(2);
-            dsttri->radius = ivec(imax).sub(imin).add(1).div(2);
+            dsttri->center = svec(ivec(imin).add(imax).div(2));
+            dsttri->radius = svec(ivec(imax).sub(imin).add(1).div(2));
             ++srctri;
             ++dsttri;
         }
@@ -302,9 +312,8 @@ bool mmintersect(const extentity &e, const vec &o, const vec &ray, float maxdist
     }
     else if((mode&RAY_ENTS)!=RAY_ENTS && (!m->collide || e.flags&EF_NOCOLLIDE)) return false;
     if(!m->bih && !m->setBIH()) return false;
-    vec mo = vec(o).sub(e.o), mray(ray);
-    int scale = e.attr[4];
-    if(scale > 0) mo.mul(100.0f/scale);
+    float scale = e.attr[4] ? 100.0f/e.attr[4] : 1.0f;
+    vec mo = vec(o).sub(e.o).mul(scale), mray(ray);
     float v = mo.dot(mray), inside = m->bih->entradius - mo.squaredlen();
     if((inside < 0 && v > 0) || inside + v*v < 0) return false;
     int yaw = e.attr[1], pitch = e.attr[2], roll = e.attr[3];
@@ -326,9 +335,9 @@ bool mmintersect(const extentity &e, const vec &o, const vec &ray, float maxdist
         mo.rotate_around_y(rot);
         mray.rotate_around_y(rot);
     }
-    if(m->bih->traverse(mo, mray, maxdist ? maxdist : 1e16f, dist, mode))
+    if(m->bih->traverse(mo, mray, maxdist ? maxdist*scale : 1e16f, dist, mode))
     {
-        if(scale > 0) dist *= scale/100.0f;
+        dist /= scale;
         if(!(mode&RAY_SHADOW))
         {
             if(roll != 0) hitsurface.rotate_around_y(sincosmod360(-roll));
@@ -477,11 +486,7 @@ static inline bool triboxoverlap(const vec &radius, const vec &a, const vec &b, 
 template<>
 inline void BIH::tricollide<COLLIDE_ELLIPSE>(const mesh &m, int tidx, physent *d, const vec &dir, float cutoff, const vec &center, const vec &radius, const matrix4x3 &orient, float &dist, const ivec &bo, const ivec &br)
 {
-    const tribb &bb = m.tribbs[tidx];
-    if(abs(bo.x - bb.center.x) > br.x + bb.radius.x ||
-       abs(bo.y - bb.center.y) > br.y + bb.radius.y ||
-       abs(bo.z - bb.center.z) > br.z + bb.radius.z)
-        return;
+    if(m.tribbs[tidx].outside(bo, br)) return;
 
     const tri &t = m.tris[tidx];
     vec a = m.getpos(t.vert[0]), b = m.getpos(t.vert[1]), c = m.getpos(t.vert[2]),
@@ -514,11 +519,7 @@ inline void BIH::tricollide<COLLIDE_ELLIPSE>(const mesh &m, int tidx, physent *d
 template<>
 inline void BIH::tricollide<COLLIDE_OBB>(const mesh &m, int tidx, physent *d, const vec &dir, float cutoff, const vec &center, const vec &radius, const matrix4x3 &orient, float &dist, const ivec &bo, const ivec &br)
 {
-    const tribb &bb = m.tribbs[tidx];
-    if(abs(bo.x - bb.center.x) > br.x + bb.radius.x ||
-       abs(bo.y - bb.center.y) > br.y + bb.radius.y ||
-       abs(bo.z - bb.center.z) > br.z + bb.radius.z)
-        return;
+    if(m.tribbs[tidx].outside(bo, br)) return;
 
     const tri &t = m.tris[tidx];
     vec a = orient.transform(m.getpos(t.vert[0])), b = orient.transform(m.getpos(t.vert[1])), c = orient.transform(m.getpos(t.vert[2]));
@@ -698,11 +699,7 @@ bool BIH::boxcollide(physent *d, const vec &dir, float cutoff, const vec &o, int
 
 inline void BIH::genstaintris(stainrenderer *s, const mesh &m, int tidx, const vec &center, float radius, const matrix4x3 &orient, const ivec &bo, const ivec &br)
 {
-    const tribb &bb = m.tribbs[tidx];
-    if(abs(bo.x - bb.center.x) > br.x + bb.radius.x ||
-       abs(bo.y - bb.center.y) > br.y + bb.radius.y ||
-       abs(bo.z - bb.center.z) > br.z + bb.radius.z)
-        return;
+    if(m.tribbs[tidx].outside(bo, br)) return;
 
     const tri &t = m.tris[tidx];
     vec v[3] =

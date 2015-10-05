@@ -293,6 +293,11 @@ char *path(char *s)
             {
                 if(prevdir+2==curdir && prevdir[0]=='.' && prevdir[1]=='.') continue;
                 memmove(prevdir, curdir+4, strlen(curdir+4)+1);
+                if(prevdir-2 >= curpart && prevdir[-1]==PATHDIV)
+                {
+                    prevdir -= 2;
+                    while(prevdir-1 >= curpart && prevdir[-1] != PATHDIV) --prevdir;
+                }
                 curdir = prevdir;
             }
         }

@@ -543,7 +543,7 @@ void gl_checkextensions()
 
     parseglexts();
 
-    GLint texsize = 0, texunits = 0, vtexunits = 0, cubetexsize = 0, oqbits = 0, drawbufs = 0;
+    GLint texsize = 0, texunits = 0, vtexunits = 0, cubetexsize = 0, drawbufs = 0;
     glGetIntegerv(GL_MAX_TEXTURE_SIZE, &texsize);
     hwtexsize = texsize;
     if(hwtexsize < 2048)
@@ -561,14 +561,6 @@ void gl_checkextensions()
     glGetIntegerv(GL_MAX_DRAW_BUFFERS, &drawbufs);
     maxdrawbufs = drawbufs;
     if(maxdrawbufs < 4) fatal("Hardware does not support at least 4 draw buffers.");
-    glGetQueryiv_(GL_SAMPLES_PASSED, GL_QUERY_COUNTER_BITS, &oqbits);
-    if(!oqbits)
-    {
-        conoutf(CON_WARN, "WARNING: No occlusion query support!");
-        extern int vacubesize, oqfrags;
-        vacubesize = 64;
-        oqfrags = 0;
-    }
 
     if(glversion >= 300 || hasext("GL_ARB_vertex_array_object"))
     {
@@ -931,9 +923,12 @@ void gl_checkextensions()
     {
         glBindFragDataLocationIndexed_ = (PFNGLBINDFRAGDATALOCATIONINDEXEDPROC)getprocaddress("glBindFragDataLocationIndexed");
 
-        GLint dualbufs = 0;
-        glGetIntegerv(GL_MAX_DUAL_SOURCE_DRAW_BUFFERS, &dualbufs);
-        maxdualdrawbufs = dualbufs;
+        if(hasGPU4)
+        {
+            GLint dualbufs = 0;
+            glGetIntegerv(GL_MAX_DUAL_SOURCE_DRAW_BUFFERS, &dualbufs);
+            maxdualdrawbufs = dualbufs;
+        }
 
         hasBFE = true;
         if(glversion < 330 && dbgexts) conoutf(CON_INIT, "Using GL_ARB_blend_func_extended extension.");
@@ -1098,7 +1093,7 @@ timer *findtimer(const char *name, bool gpu)
 
 timer *begintimer(const char *name, bool gpu)
 {
-    if(!usetimers || viewidx || inbetweenframes || (gpu && (!hasTQ || deferquery))) return NULL;
+    if(!usetimers || inbetweenframes || (gpu && (!hasTQ || deferquery))) return NULL;
     timer *t = findtimer(name, gpu);
     if(t->gpu)
     {
@@ -1220,7 +1215,7 @@ VAR(wireframe, 0, 0, 1);
 
 ICOMMAND(getcamyaw, "", (), floatret(camera1->yaw));
 ICOMMAND(getcampitch, "", (), floatret(camera1->pitch));
-ICOMMAND(getcamroll, "", (), floatret(ovr::modifyroll(camera1->roll)));
+ICOMMAND(getcamroll, "", (), floatret(camera1->roll));
 ICOMMAND(getcampos, "", (),
 {
     defformatstring(pos, "%s %s %s", floatstr(camera1->o.x), floatstr(camera1->o.y), floatstr(camera1->o.z));
@@ -1233,13 +1228,10 @@ void setcammatrix()
 {
     // move from RH to Z-up LH quake style worldspace
     cammatrix = viewmatrix;
-    cammatrix.rotate_around_y((!drawtex ? ovr::modifyroll(camera1->roll) : camera1->roll)*RAD);
+    cammatrix.rotate_around_y(camera1->roll*RAD);
     cammatrix.rotate_around_x(camera1->pitch*-RAD);
     cammatrix.rotate_around_z(camera1->yaw*-RAD);
     cammatrix.translate(vec(camera1->o).neg());
-
-    if(!drawtex && ovr::enabled)
-        cammatrix.jitter((viewidx ? -1 : 1) * ovr::viewoffset, 0);
 
     cammatrix.transposedtransformnormal(vec(viewmatrix.b), camdir);
     cammatrix.transposedtransformnormal(vec(viewmatrix.a).neg(), camright);
@@ -1269,8 +1261,6 @@ void setcamprojmatrix(bool init = true, bool flush = false)
     if(init)
     {
         setcammatrix();
-        if(ovr::enabled && !drawtex)
-            projmatrix.jitter((viewidx ? -1 : 1) * ovr::distortoffset, 0);
     }
     else camprojmatrix.muld(projmatrix, cammatrix);
 
@@ -1288,7 +1278,6 @@ int hudmatrixpos = 0;
 void resethudmatrix()
 {
     hudmatrixpos = 0;
-    if(ovr::enabled) ovr::ortho(hudmatrix);
     GLOBALPARAM(hudmatrix, hudmatrix);
 }
 
@@ -1314,7 +1303,24 @@ void pophudmatrix(bool flush, bool flushparams)
     }
 }
 
-int vieww = -1, viewh = -1, viewidx = 0;
+void pushhudscale(float sx, float sy)
+{
+    if(!sy) sy = sx;
+    pushhudmatrix();
+    hudmatrix.scale(sx, sy, 1);
+    flushhudmatrix();
+}
+
+void pushhudtranslate(float tx, float ty, float sx, float sy)
+{
+    if(!sy) sy = sx;
+    pushhudmatrix();
+    hudmatrix.translate(tx, ty, 0);
+    if(sy) hudmatrix.scale(sx, sy, 1);
+    flushhudmatrix();
+}
+
+int vieww = -1, viewh = -1;
 float curfov, curavatarfov, fovy, aspect;
 int farplane;
 VARP(zoominvel, 0, 40, 500);
@@ -1446,7 +1452,7 @@ void recomputecamera()
             orient.identity();
             orient.rotate_around_z(camera1->yaw*RAD);
             orient.rotate_around_x(camera1->pitch*RAD);
-            orient.rotate_around_y(ovr::modifyroll(camera1->roll)*-RAD);
+            orient.rotate_around_y(camera1->roll*-RAD);
             vec dir = vec(orient.b).neg(), side = vec(orient.a).neg(), up = orient.c;
 
             if(game::collidecamera())
@@ -1531,9 +1537,7 @@ void renderavatar()
     if(isthirdperson()) return;
 
     matrix4 oldprojmatrix = nojittermatrix;
-    float avatarfovy = curavatarfov;
-    if(ovr::enabled && ovr::fov) avatarfovy *= ovr::fov/fov;
-    projmatrix.perspective(avatarfovy, aspect, nearplane, farplane);
+    projmatrix.perspective(curavatarfov, aspect, nearplane, farplane);
     projmatrix.scalez(avatardepth);
     setcamprojmatrix(false);
 
@@ -1619,12 +1623,6 @@ bool calcspherescissor(const vec &center, float size, float &sx1, float &sy1, fl
         float cz = e.x/e.z, drt = sqrtf(dx)/size;
         CHECKPLANE(x, -, focaldist/aspect, sx1, sx2);
         CHECKPLANE(x, +, focaldist/aspect, sx1, sx2);
-        if(ovr::enabled)
-        {
-            float offset = (viewidx ? -1 : 1) * ovr::distortoffset;
-            if(sx1 > -1) sx1 += offset;
-            if(sx2 < 1) sx2 += offset;
-        }
     }
     if(dy > 0)
     {
@@ -1773,10 +1771,10 @@ static void setupscreenquad()
     if(!screenquadvbo)
     {
         glGenBuffers_(1, &screenquadvbo);
-        glBindBuffer_(GL_ARRAY_BUFFER, screenquadvbo);
+        gle::bindvbo(screenquadvbo);
         vec2 verts[4] = { vec2(1, -1), vec2(-1, -1), vec2(1, 1), vec2(-1, 1) };
         glBufferData_(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
-        glBindBuffer_(GL_ARRAY_BUFFER, 0);
+        gle::clearvbo();
     }
 }
 
@@ -1788,12 +1786,12 @@ static void cleanupscreenquad()
 void screenquad()
 {
     setupscreenquad();
-    glBindBuffer_(GL_ARRAY_BUFFER, screenquadvbo);
+    gle::bindvbo(screenquadvbo);
     gle::enablevertex();
     gle::vertexpointer(sizeof(vec2), (const vec2 *)0, GL_FLOAT, 2);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     gle::disablevertex();
-    glBindBuffer_(GL_ARRAY_BUFFER, 0);
+    gle::clearvbo();
 }
 
 static LocalShaderParam screentexcoord[2] = { LocalShaderParam("screentexcoord0"), LocalShaderParam("screentexcoord1") };
@@ -1844,7 +1842,6 @@ void screenquadoffset(float x, float y, float w, float h, float x2, float y2, fl
     gle::attribf(x2, y2); gle::attribf(sx2, sy2); \
     gle::attribf(x1, y2); gle::attribf(sx1, sy2); \
     gle::end(); \
-    gle::disable(); \
 }
 
 void hudquad(float x, float y, float w, float h, float tx, float ty, float tw, float th)
@@ -2066,7 +2063,6 @@ void drawminimap()
     while(size > sizelimit) size /= 2;
     if(!minimaptex) glGenTextures(1, &minimaptex);
 
-    extern vector<vtxarray *> valist;
     ivec bbmin(worldsize, worldsize, worldsize), bbmax(0, 0, 0);
     loopv(valist)
     {
@@ -2483,20 +2479,13 @@ void gl_drawview()
 
     if(fogoverlay && fogmat != MAT_AIR) drawfogoverlay(fogmat, fogbelow, clamp(fogbelow, 0.0f, 1.0f), abovemat);
 
-    GLuint outfbo = scalefbo ? scalefbo : ovr::lensfbo[viewidx];
-    doaa(setuppostfx(vieww, viewh, outfbo), processhdr);
-    renderpostfx(outfbo);
-    if(scalefbo) doscale(ovr::lensfbo[viewidx]);
+    doaa(setuppostfx(vieww, viewh, scalefbo), processhdr);
+    renderpostfx(scalefbo);
+    if(scalefbo) doscale();
 }
 
 void gl_drawmainmenu()
 {
-    if(ovr::enabled)
-    {
-        glBindFramebuffer_(GL_FRAMEBUFFER, ovr::lensfbo[viewidx]);
-        glViewport(0, 0, hudw, hudh);
-        glClear(GL_COLOR_BUFFER_BIT);
-    }
     renderbackground(NULL, NULL, NULL, NULL, true);
 }
 
@@ -2750,9 +2739,7 @@ void gl_drawhud()
 
         if(!hidestats)
         {
-            pushhudmatrix();
-            hudmatrix.scale(conscale, conscale, 1);
-            flushhudmatrix();
+            pushhudscale(conscale);
 
             int roffset = 0;
             if(showfps)
@@ -2798,16 +2785,13 @@ void gl_drawhud()
         rendertexturepanel(w, h);
     }
 
-    pushhudmatrix();
-    hudmatrix.scale(conscale, conscale, 1);
-    flushhudmatrix();
+    pushhudscale(conscale);
     abovehud -= rendercommand(FONTH/2, abovehud - FONTH/2, conw-FONTH);
     if(!hidehud && !UI::uivisible("fullconsole")) renderconsole(conw, conh, abovehud - FONTH/2);
     pophudmatrix();
 
     drawcrosshair(w, h);
 
-    gle::disable();
     glDisable(GL_BLEND);
 
     popfont();
@@ -2819,7 +2803,7 @@ void gl_drawhud()
     }
 }
 
-int renderw = 0, renderh = 0, hudx = 0, hudy = 0, hudw = 0, hudh = 0;
+int renderw = 0, renderh = 0, hudw = 0, hudh = 0;
 
 void gl_setupframe(bool force)
 {
@@ -2828,7 +2812,6 @@ void gl_setupframe(bool force)
     renderh = min(scr_h, screenh);
     hudw = screenw;
     hudh = screenh;
-    ovr::setup();
     if(!force) return;
     setuplights();
 }
@@ -2839,24 +2822,13 @@ void gl_drawframe()
     xtravertsva = xtraverts = glde = gbatches = vtris = vverts = 0;
     flipqueries();
     aspect = forceaspect ? forceaspect : hudw/float(hudh);
-    float fovx = curfov;
-    if(ovr::enabled && ovr::fov) fovx *= ovr::fov/fov;
-    fovy = 2*atan2(tan(fovx/2*RAD), aspect)/RAD;
+    fovy = 2*atan2(tan(curfov/2*RAD), aspect)/RAD;
     vieww = hudw;
     viewh = hudh;
-    loopi(2)
-    {
-        if(UI::mainmenu) gl_drawmainmenu();
-        else gl_drawview();
-        UI::render();
-        gl_drawhud();
-        if(!ovr::enabled) break;
-        ovr::warp();
-        ++viewidx;
-        hudx += hudw;
-    }
-    viewidx = 0;
-    hudx = 0;
+    if(UI::mainmenu) gl_drawmainmenu();
+    else gl_drawview();
+    UI::render();
+    gl_drawhud();
 }
 
 void cleanupgl()
@@ -2865,7 +2837,6 @@ void cleanupgl()
     cleanuptimers();
     cleanupscreenquad();
     gle::cleanup();
-    ovr::cleanup();
 }
 
 void sethudnotextureshader()

@@ -1320,7 +1320,7 @@ bool trystepdown(physent *d, vec &dir, float step, float xy, float z, bool init 
 
 bool trystepdown(physent *d, vec &dir, bool init = false)
 {
-    if(!game::allowmove(d) || (!d->move && !d->strafe)) return false;
+    if((!d->move && !d->strafe) || !game::allowmove(d)) return false;
     vec old(d->o);
     d->o.z -= STAIRHEIGHT;
     d->zmargin = -STAIRHEIGHT;
@@ -1705,8 +1705,12 @@ void vecfromyawpitch(float yaw, float pitch, int move, int strafe, vec &m)
 
 void vectoyawpitch(const vec &v, float &yaw, float &pitch)
 {
-    yaw = -atan2(v.x, v.y)/RAD;
-    pitch = asin(v.z/v.magnitude())/RAD;
+    if(v.iszero()) yaw = pitch = 0;
+    else
+    {
+        yaw = -atan2(v.x, v.y)/RAD;
+        pitch = asin(v.z/v.magnitude())/RAD;
+    }
 }
 
 #define PHYSFRAMETIME 8
@@ -1718,9 +1722,10 @@ VAR(floatspeed, 1, 100, 10000);
 
 void modifyvelocity(physent *pl, bool local, bool water, bool floating, int curtime)
 {
+    bool allowmove = game::allowmove(pl);
     if(floating)
     {
-        if(pl->jumping)
+        if(pl->jumping && allowmove)
         {
             pl->jumping = false;
             pl->vel.z = max(pl->vel.z, pl->jumpvel * (jumpvel / 200.0f));
@@ -1729,7 +1734,7 @@ void modifyvelocity(physent *pl, bool local, bool water, bool floating, int curt
     else if(pl->physstate >= PHYS_SLOPE || water)
     {
         if(water && !pl->inwater) pl->vel.div(8);
-        if(pl->jumping)
+        if(pl->jumping && allowmove)
         {
             pl->jumping = false;
 
@@ -1742,7 +1747,7 @@ void modifyvelocity(physent *pl, bool local, bool water, bool floating, int curt
     if(!floating && pl->physstate == PHYS_FALL) pl->timeinair += curtime;
 
     vec m(0.0f, 0.0f, 0.0f);
-    if(game::allowmove(pl) && (pl->move || pl->strafe))
+    if((pl->move || pl->strafe) && allowmove)
     {
         vecfromyawpitch(pl->yaw, floating || water || pl->type==ENT_CAMERA ? pl->pitch : 0, pl->move, pl->strafe, m);
 

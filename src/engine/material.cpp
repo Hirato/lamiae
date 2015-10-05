@@ -355,8 +355,6 @@ void preloadglassshaders(bool force = false)
     if(glassenv) useshaderbyname("glassenv");
 }
 
-extern vector<vtxarray *> valist;
-
 void setupmaterials(int start, int len)
 {
     int hasmat = 0;
@@ -572,8 +570,6 @@ float matsolidsx1 = -1, matsolidsy1 = -1, matsolidsx2 = 1, matsolidsy2 = 1;
 float matrefractsx1 = -1, matrefractsy1 = -1, matrefractsx2 = 1, matrefractsy2 = 1;
 uint matliquidtiles[LIGHTTILE_MAXH], matsolidtiles[LIGHTTILE_MAXH];
 
-extern vtxarray *visibleva;
-
 int findmaterials()
 {
     editsurfs.setsize(0);
@@ -668,7 +664,6 @@ void rendermaterialmask()
     loopk(4) { vector<materialsurface> &surfs = watersurfs[k]; loopv(surfs) drawmaterial(surfs[i], WATER_OFFSET); }
     loopk(4) { vector<materialsurface> &surfs = waterfallsurfs[k]; loopv(surfs) drawmaterial(surfs[i], 0.1f); }
     xtraverts += gle::end();
-    gle::disable();
     glEnable(GL_CULL_FACE);
 }
 
@@ -749,7 +744,6 @@ void renderliquidmaterials()
     renderwater();
     renderwaterfalls();
 
-    gle::disable();
     glEnable(GL_CULL_FACE);
 }
 
@@ -759,7 +753,6 @@ void rendersolidmaterials()
 
     renderglass();
 
-    gle::disable();
     glEnable(GL_CULL_FACE);
 }
 
@@ -813,7 +806,6 @@ void rendereditmaterials()
 
     rendermatgrid();
 
-    gle::disable();
     glEnable(GL_CULL_FACE);
 }
 
@@ -824,6 +816,6 @@ void renderminimapmaterials()
     renderlava();
     renderwater();
 
-    gle::disable();
     glEnable(GL_CULL_FACE);
 }
+

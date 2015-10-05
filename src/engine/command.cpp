@@ -1760,7 +1760,15 @@ static void compilestatements(vector<uint> &code, const char *&p, int rettype, i
 #endif
                     case 'C': comtype = CODE_COMC; if(more) while(numargs < MAXARGS && (more = compilearg(code, p, VAL_CANY, prevargs+numargs))) numargs++; goto compilecomv;
                     case 'V': comtype = CODE_COMV; if(more) while(numargs < MAXARGS && (more = compilearg(code, p, VAL_CANY, prevargs+numargs))) numargs++; goto compilecomv;
-                    case '1': case '2': case '3': case '4': if(more) { fmt -= *fmt-'0'+1; rep = true; } break;
+                    case '1': case '2': case '3': case '4':
+                        if(more && numargs < MAXARGS)
+                        {
+                            int numrep = *fmt-'0'+1;
+                            fmt -= numrep;
+                            rep = true;
+                        }
+                        else for(; numargs > MAXARGS; numargs--) code.add(CODE_POP);
+                        break;
                     }
                     code.add(comtype|retcodeany(rettype)|(id->index<<8));
                     break;
@@ -3141,6 +3149,15 @@ void writecfg(const char *name)
 
 COMMAND(writecfg, "s");
 #endif
+
+void changedvars()
+{
+    vector<ident *> ids;
+    enumerate(idents, ident, id, if(id.flags&IDF_OVERRIDDEN) ids.add(&id));
+    ids.sortname();
+    loopv(ids) printvar(ids[i]);
+}
+COMMAND(changedvars, "");
 
 // below the commands that implement a small imperative language. thanks to the semantics of
 // () and [] expressions, any control construct can be defined trivially.

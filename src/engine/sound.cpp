@@ -374,15 +374,12 @@ static struct soundtype
         enumerate(samples, soundsample, s, s.cleanup());
     }
 
-    void cleanup(bool full = true)
+    void cleanup()
     {
         cleanupsamples();
-        if(full)
-        {
-            slots.setsize(0);
-            configs.setsize(0);
-            samples.clear();
-        }
+        slots.setsize(0);
+        configs.setsize(0);
+        samples.clear();
     }
 
     void preloadsound(int n)
@@ -735,8 +732,8 @@ void resetsound()
         DELETEA(musicfile);
         DELETEA(musicdonecmd);
         music = NULL;
-        gamesounds.cleanup(false);
-        mapsounds.cleanup(false);
+        gamesounds.cleanupsamples();
+        mapsounds.cleanupsamples();
         return;
     }
     if(music && loadmusic(musicfile))

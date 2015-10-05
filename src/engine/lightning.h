@@ -96,7 +96,6 @@ struct lightningrenderer : listrenderer
 
     void endrender()
     {
-        gle::disable();
         glEnable(GL_CULL_FACE);
     }
 

@@ -97,8 +97,8 @@ bool getentboundingbox(const extentity &e, ivec &o, ivec &r)
                 decalboundbox(e, s, center, radius);
                 center.add(e.o);
                 radius.max(entselradius);
-                o = vec(center).sub(radius);
-                r = vec(center).add(radius).add(1);
+                o = ivec(vec(center).sub(radius));
+                r = ivec(vec(center).add(radius).add(1));
                 break;
             }
         case ET_MAPMODEL:
@@ -110,15 +110,15 @@ bool getentboundingbox(const extentity &e, ivec &o, ivec &r)
                 mmboundbox(e, m, center, radius);
                 center.add(e.o);
                 radius.max(entselradius);
-                o = vec(center).sub(radius);
-                r = vec(center).add(radius).add(1);
+                o = ivec(vec(center).sub(radius));
+                r = ivec(vec(center).add(radius).add(1));
                 break;
             }
         }
         // invisible mapmodels use entselradius
         default:
-            o = vec(e.o).sub(entselradius);
-            r = vec(e.o).add(entselradius+1);
+            o = ivec(vec(e.o).sub(entselradius));
+            r = ivec(vec(e.o).add(entselradius+1));
             break;
     }
     return true;
@@ -345,8 +345,8 @@ static inline void findents(cube *c, const ivec &o, int size, const ivec &bo, co
 void findents(int low, int high, bool notspawned, const vec &pos, const vec &radius, vector<int> &found)
 {
     vec invradius(1/radius.x, 1/radius.y, 1/radius.z);
-    ivec bo = vec(pos).sub(radius).sub(1),
-         br = vec(pos).add(radius).add(1);
+    ivec bo(vec(pos).sub(radius).sub(1)),
+         br(vec(pos).add(radius).add(1));
     int diff = (bo.x^br.x) | (bo.y^br.y) | (bo.z^br.z) | octaentsize,
         scale = worldscale-1;
     if(diff&~((1<<scale)-1) || uint(bo.x|bo.y|bo.z|br.x|br.y|br.z) >= uint(worldsize))
@@ -624,6 +624,7 @@ void entselectionbox(const entity &e, vec &eo, vec &es)
 VAR(entselsnap, 0, 0, 1);
 VAR(entmovingshadow, 0, 1, 1);
 
+extern void boxs(int orient, vec o, const vec &s, float size);
 extern void boxs(int orient, vec o, const vec &s);
 extern void boxs3D(const vec &o, vec s, int g);
 extern bool editmoveplane(const vec &o, const vec &ray, int d, float off, vec &handle, vec &dest, bool first);
@@ -646,7 +647,7 @@ void entdrag(const vec &ray)
         if(!editmoveplane(e.o, ray, d, eo[d] + (dc ? es[d] : 0), handle, dest, entmoving==1))
             return;
 
-        ivec g = dest;
+        ivec g(dest);
         int z = g[d]&(~(sel.grid-1));
         g.add(sel.grid/2).mask(~(sel.grid-1));
         g[d] = z;
@@ -957,6 +958,7 @@ void renderentselection(const vec &o, const vec &ray, bool entmoving)
             }
             gle::colorub(150,0,0);
             boxs(entorient, eo, es);
+            boxs(entorient, eo, es, clamp(0.015f*camera1->o.dist(eo)*tan(fovy*0.5f*RAD), 0.1f, 1.0f));
         }
         if(showenthelpers>=1 && (entgroup.length() || enthover >= 0))
         {
@@ -979,7 +981,6 @@ void renderentselection(const vec &o, const vec &ray, bool entmoving)
             if(enthover>=0) entfocus(enthover, renderentradius(e, true));
         }
     }
-    gle::disable();
 }
 
 bool enttoggle(int id)
@@ -1537,7 +1538,6 @@ void findplayerspawn(dynent *d, int forceent, int tag) // place at random spawn
         d->o.z += 1;
         entinmap(d);
     }
-    if(d == player) ovr::reset();
 }
 
 void splitocta(cube *c, int size)
@@ -1575,7 +1575,6 @@ void resetmap()
 void startmap(const char *name)
 {
     game::startmap(name);
-    ovr::reset();
 }
 
 bool emptymap(int scale, bool force, const char *mname, bool usecfg)    // main empty world creation routine

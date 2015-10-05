@@ -4,7 +4,7 @@ struct stainvert
 {
     vec pos;
     bvec4 color;
-    float u, v;
+    vec2 tc;
 };
 
 struct staininfo
@@ -34,8 +34,9 @@ struct stainbuffer
     stainvert *verts;
     int maxverts, startvert, endvert, lastvert, availverts;
     GLuint vbo;
+    bool dirty;
 
-    stainbuffer() : verts(NULL), maxverts(0), startvert(0), endvert(0), lastvert(0), availverts(0), vbo(0)
+    stainbuffer() : verts(NULL), maxverts(0), startvert(0), endvert(0), lastvert(0), availverts(0), vbo(0), dirty(false)
     {}
 
     ~stainbuffer()
@@ -67,6 +68,7 @@ struct stainbuffer
     {
         startvert = endvert = lastvert = 0;
         availverts = max(maxverts - 3, 0);
+        dirty = true;
     }
 
     int freestain(const staininfo &d)
@@ -82,6 +84,7 @@ struct stainbuffer
     {
         startvert = d.endvert;
         availverts = endvert < startvert ? startvert - endvert - 3 : maxverts - 3 - (endvert - startvert);
+        dirty = true;
     }
 
     bool faded(const staininfo &d) const { return verts[d.startvert].color.a < 255; }
@@ -105,28 +108,34 @@ struct stainbuffer
                 vert++;
             }
         }
+        dirty = true;
     }
 
     void render()
     {
         if(startvert == endvert) return;
 
-        if(!vbo) glGenBuffers_(1, &vbo);
-        glBindBuffer_(GL_ARRAY_BUFFER, vbo);
+        if(!vbo) { glGenBuffers_(1, &vbo); dirty = true; }
+        gle::bindvbo(vbo);
 
         int count = endvert < startvert ? maxverts - startvert : endvert - startvert;
-        glBufferData_(GL_ARRAY_BUFFER, maxverts*sizeof(stainvert), NULL, GL_STREAM_DRAW);
-        glBufferSubData_(GL_ARRAY_BUFFER, 0, count*sizeof(stainvert), &verts[startvert]);
-        if(endvert < startvert)
+        if(dirty)
         {
-            glBufferSubData_(GL_ARRAY_BUFFER, count*sizeof(stainvert), endvert*sizeof(stainvert), verts);
-            count += endvert;
+            glBufferData_(GL_ARRAY_BUFFER, maxverts*sizeof(stainvert), NULL, GL_STREAM_DRAW);
+            glBufferSubData_(GL_ARRAY_BUFFER, 0, count*sizeof(stainvert), &verts[startvert]);
+            if(endvert < startvert)
+            {
+                glBufferSubData_(GL_ARRAY_BUFFER, count*sizeof(stainvert), endvert*sizeof(stainvert), verts);
+                count += endvert;
+            }
+            dirty = false;
         }
+        else if(endvert < startvert) count += endvert;
 
         const stainvert *ptr = 0;
-        gle::vertexpointer(sizeof(stainvert), &ptr->pos);
-        gle::texcoord0pointer(sizeof(stainvert), &ptr->u);
-        gle::colorpointer(sizeof(stainvert), &ptr->color);
+        gle::vertexpointer(sizeof(stainvert), ptr->pos.v);
+        gle::texcoord0pointer(sizeof(stainvert), ptr->tc.v);
+        gle::colorpointer(sizeof(stainvert), ptr->color.v);
 
         glDrawArrays(GL_TRIANGLES, 0, count);
         xtravertsva += count;
@@ -139,6 +148,11 @@ struct stainbuffer
         endvert += 3;
         if(endvert >= maxverts) endvert = 0;
         return tri;
+    }
+
+    void addstain(staininfo &d)
+    {
+        dirty = true;
     }
 
     bool hasverts() const { return startvert != endvert; }
@@ -332,7 +346,7 @@ struct stainrenderer
 
     static void cleanuprenderstate(int sbuf, bool gbuf, int layer)
     {
-        glBindBuffer_(GL_ARRAY_BUFFER, 0);
+        gle::clearvbo();
 
         gle::disablevertex();
         gle::disabletexcoord0();
@@ -449,6 +463,7 @@ struct stainrenderer
             d.millis = lastmillis;
             d.startvert = buf.lastvert;
             d.endvert = buf.endvert;
+            buf.addstain(d);
         }
     }
 
@@ -546,8 +561,8 @@ struct stainrenderer
             float tsz = flags&SF_RND4 ? 0.5f : 1.0f, scale = tsz*0.5f/stainradius,
                   tu = stainu + tsz*0.5f - ptc*scale, tv = stainv + tsz*0.5f - pbc*scale;
             pt.mul(scale); pb.mul(scale);
-            stainvert dv1 = { v2[0], staincolor, pt.dot(v2[0]) + tu, pb.dot(v2[0]) + tv },
-                      dv2 = { v2[1], staincolor, pt.dot(v2[1]) + tu, pb.dot(v2[1]) + tv };
+            stainvert dv1 = { v2[0], staincolor, vec2(pt.dot(v2[0]) + tu, pb.dot(v2[0]) + tv) },
+                      dv2 = { v2[1], staincolor, vec2(pt.dot(v2[1]) + tu, pb.dot(v2[1]) + tv) };
             int totalverts = 3*(numv-2);
             if(totalverts > buf.maxverts-3) return;
             while(buf.availverts < totalverts)
@@ -560,8 +575,7 @@ struct stainrenderer
                 tri[0] = dv1;
                 tri[1] = dv2;
                 dv2.pos = v2[k+2];
-                dv2.u = pt.dot(v2[k+2]) + tu;
-                dv2.v = pb.dot(v2[k+2]) + tv;
+                dv2.tc = vec2(pt.dot(v2[k+2]) + tu, pb.dot(v2[k+2]) + tv);
                 tri[2] = dv2;
             }
         }
@@ -647,8 +661,8 @@ struct stainrenderer
         float tsz = flags&SF_RND4 ? 0.5f : 1.0f, scale = tsz*0.5f/stainradius,
               tu = stainu + tsz*0.5f - ptc*scale, tv = stainv + tsz*0.5f - pbc*scale;
         pt.mul(scale); pb.mul(scale);
-        stainvert dv1 = { v2[0], staincolor, pt.dot(v2[0]) + tu, pb.dot(v2[0]) + tv },
-                  dv2 = { v2[1], staincolor, pt.dot(v2[1]) + tu, pb.dot(v2[1]) + tv };
+        stainvert dv1 = { v2[0], staincolor, vec2(pt.dot(v2[0]) + tu, pb.dot(v2[0]) + tv) },
+                  dv2 = { v2[1], staincolor, vec2(pt.dot(v2[1]) + tu, pb.dot(v2[1]) + tv) };
         int totalverts = 3*(numv-2);
         stainbuffer &buf = verts[STAINBUF_MAPMODEL];
         if(totalverts > buf.maxverts-3) return;
@@ -662,8 +676,7 @@ struct stainrenderer
             tri[0] = dv1;
             tri[1] = dv2;
             dv2.pos = v2[k+2];
-            dv2.u = pt.dot(v2[k+2]) + tu;
-            dv2.v = pb.dot(v2[k+2]) + tv;
+            dv2.tc = vec2(pt.dot(v2[k+2]) + tu, pb.dot(v2[k+2]) + tv);
             tri[2] = dv2;
         }
     }

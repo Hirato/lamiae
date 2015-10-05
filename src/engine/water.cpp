@@ -76,7 +76,6 @@ void rendercaustics(float surface, float syl, float syr)
     gle::attribf(1, syr);
     gle::attribf(-1, syl);
     gle::end();
-    gle::disable();
 }
 
 void renderwaterfog(int mat, float surface)
@@ -135,7 +134,6 @@ void renderwaterfog(int mat, float surface)
     gle::attribf(1, syr, 1);
     gle::attribf(-1, syl, 1);
     gle::end();
-    gle::disable();
 
     glDisable(GL_BLEND);
 

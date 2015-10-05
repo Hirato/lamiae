@@ -1092,10 +1092,10 @@ void processhdr(GLuint outfbo, int aa)
 
     if(bloompbo)
     {
-        glBindBuffer_(GL_ARRAY_BUFFER, bloompbo);
+        gle::bindvbo(bloompbo);
         gle::enablecolor();
         gle::colorpointer(hasTF ? sizeof(GLfloat) : sizeof(GLushort), (const void *)0, hasTF ? GL_FLOAT : GL_UNSIGNED_SHORT, 1);
-        glBindBuffer_(GL_ARRAY_BUFFER, 0);
+        gle::clearvbo();
     }
 
     b0fbo = bloomfbo[3];
@@ -1480,7 +1480,6 @@ void viewrh()
         gle::attribf(x+w, y+h); gle::attribf(1, 1, z);
         gle::end();
     }
-    gle::disable();
 }
 
 #define SHADOWATLAS_SIZE 4096
@@ -1748,64 +1747,88 @@ VARFP(smfilter, 0, 2, 3, { cleardeferredlightshaders(); cleanupshadowatlas(); cl
 VARFP(smgather, 0, 0, 1, { cleardeferredlightshaders(); cleanupshadowatlas(); cleanupvolumetric(); });
 VAR(smnoshadow, 0, 0, 1);
 VAR(smdynshadow, 0, 1, 1);
-VAR(lighttilesused, 1, 0, 0);
 VAR(lightpassesused, 1, 0, 0);
 VAR(lightsvisible, 1, 0, 0);
 VAR(lightsoccluded, 1, 0, 0);
 VARN(lightbatches, lightbatchesused, 1, 0, 0);
+VARN(lightbatchrects, lightbatchrectsused, 1, 0, 0);
+VARN(lightbatchstacks, lightbatchstacksused, 1, 0, 0);
+
+enum
+{
+    MAXLIGHTTILEBATCH = 8
+};
+
+VARF(lighttilebatch, 0, MAXLIGHTTILEBATCH, MAXLIGHTTILEBATCH, cleardeferredlightshaders());
+VARF(batchsunlight, 0, 2, 2, cleardeferredlightshaders());
 
 int shadowmapping = 0;
 
-struct lightstrip
+struct lightrect
 {
-    short x, y, w;
+    uchar x1, y1, x2, y2;
 
-    bool inside(int tx1, int ty1, int tx2, int ty2, const uint *tilemask) const
+    lightrect() {}
+    lightrect(uchar x1, uchar y1, uchar x2, uchar y2) : x1(x1), y1(y1), x2(x2), y2(y2) {}
+    lightrect(const lightinfo &l)
     {
-        return x + w > tx1 && x < tx2 && y >= ty1 && y < ty2 && (!tilemask || (tilemask[y]>>x)&((1<<w)-1));
+        calctilebounds(l.sx1, l.sy1, l.sx2, l.sy2, x1, y1, x2, y2);
     }
 
-    bool extend(int ex, int ey)
+    bool outside(const lightrect &o) const
     {
-        if(y != ey || x+w != ex) return false;
-        ++w;
-        return true;
+        return x1 >= o.x2 || x2 <= o.x1 || y1 >= o.y2 || y2 <= o.y1;
+    }
+
+    bool inside(const lightrect &o) const
+    {
+        return x1 >= o.x1 && x2 <= o.x2 && y1 >= o.y1 && y2 <= o.y2;
+    }
+
+    void intersect(const lightrect &o)
+    {
+        x1 = max(x1, o.x1);
+        y1 = max(y1, o.y1);
+        x2 = min(x2, o.x2);
+        y2 = min(y2, o.y2);
+    }
+
+    bool overlaps(int tx1, int ty1, int tx2, int ty2, const uint *tilemask) const
+    {
+        if(int(x2) <= tx1 || int(x1) >= tx2 || int(y2) <= ty1 || int(y1) >= ty2) return false;
+        if(!tilemask) return true;
+        uint xmask = (1<<x2) - (1<<x1);
+        for(int y = max(int(y1), ty1), end = min(int(y2), ty2); y < end; y++) if(tilemask[y] & xmask) return true;
+        return false;
     }
 };
 
-struct lighttile
+enum
 {
-    int band;
-    vector<ushort> lights;
+    BF_SPOTLIGHT = 1<<0,
+    BF_NOSHADOW  = 1<<1,
+    BF_NOSUN     = 1<<2
+};
+
+struct lightbatchkey
+{
+    uchar flags, numlights;
+    ushort lights[MAXLIGHTTILEBATCH];
+};
+
+struct lightbatch : lightbatchkey
+{
+    vector<lightrect> rects;
 
     void reset()
     {
-        lights.setsize(0);
-    }
-};
-
-struct lighttileslice
-{
-    lighttile *tile;
-    ushort priority, offset, numlights;
-
-    lighttileslice() {}
-    lighttileslice(lighttile *tile, int priority, int offset, int numlights) : tile(tile), priority(priority), offset(offset), numlights(numlights) {}
-};
-
-struct lightbatch : lighttileslice
-{
-    vector<lightstrip> strips;
-
-    void reset()
-    {
-        strips.setsize(0);
+        rects.setsize(0);
     }
 
-    bool inside(int tx1, int ty1, int tx2, int ty2, const uint *tilemask) const
+    bool overlaps(int tx1, int ty1, int tx2, int ty2, const uint *tilemask) const
     {
         if(!tx1 && !ty1 && tx2 >= lighttilew && ty2 >= lighttileh && !tilemask) return true;
-        loopv(strips) if(strips[i].inside(tx1, ty1, tx2, ty2, tilemask)) return true;
+        loopv(rects) if(rects[i].overlaps(tx1, ty1, tx2, ty2, tilemask)) return true;
         return false;
     }
 };
@@ -1815,24 +1838,22 @@ static inline void htrecycle(lightbatch &l)
     l.reset();
 }
 
-static inline uint hthash(const lighttileslice &l)
+static inline uint hthash(const lightbatchkey &l)
 {
     uint h = 0;
-    loopi(l.numlights) h = ((h<<8)+h)^l.tile->lights[l.offset + i];
+    loopi(l.numlights) h = ((h<<8)+h)^l.lights[i];
     return h;
 }
 
-static inline bool htcmp(const lighttileslice &x, const lighttileslice &y)
+static inline bool htcmp(const lightbatchkey &x, const lightbatchkey &y)
 {
-    return x.tile->band == y.tile->band &&
-           x.priority == y.priority &&
+    return x.flags == y.flags &&
            x.numlights == y.numlights &&
-           (!x.numlights || !memcmp(&x.tile->lights[x.offset], &y.tile->lights[y.offset], x.numlights*sizeof(ushort)));
+           (!x.numlights || !memcmp(x.lights, y.lights, x.numlights*sizeof(x.lights[0])));
 }
 
 vector<lightinfo> lights;
 vector<int> lightorder;
-lighttile lighttiles[LIGHTTILE_MAXH][LIGHTTILE_MAXW];
 hashset<lightbatch> lightbatcher(128);
 vector<lightbatch *> lightbatches;
 vector<shadowmapinfo> shadowmaps;
@@ -2407,9 +2428,6 @@ void cleardeferredlightshaders()
     deferredmsaasampleshader = NULL;
 }
 
-VARF(lighttilebatch, 0, 8, 8, cleardeferredlightshaders());
-VARF(batchsunlight, 0, 2, 2, cleardeferredlightshaders());
-
 Shader *loaddeferredlightshader(const char *type = NULL)
 {
     string common, shadow, sun;
@@ -2540,7 +2558,6 @@ void resetlights()
 
     lights.setsize(0);
     lightorder.setsize(0);
-    loopi(LIGHTTILE_MAXH) loopj(LIGHTTILE_MAXW) lighttiles[i][j].reset();
 
     shadowmaps.setsize(0);
     shadowatlaspacker.reset();
@@ -2596,12 +2613,12 @@ namespace lightsphere
         }
 
         if(!vbuf) glGenBuffers_(1, &vbuf);
-        glBindBuffer_(GL_ARRAY_BUFFER, vbuf);
+        gle::bindvbo(vbuf);
         glBufferData_(GL_ARRAY_BUFFER, numverts*sizeof(vec), verts, GL_STATIC_DRAW);
         DELETEA(verts);
 
         if(!ebuf) glGenBuffers_(1, &ebuf);
-        glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, ebuf);
+        gle::bindebo(ebuf);
         glBufferData_(GL_ELEMENT_ARRAY_BUFFER, numindices*sizeof(GLushort), indices, GL_STATIC_DRAW);
         DELETEA(indices);
     }
@@ -2615,8 +2632,8 @@ namespace lightsphere
     void enable()
     {
         if(!vbuf) init(8, 4);
-        glBindBuffer_(GL_ARRAY_BUFFER, vbuf);
-        glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, ebuf);
+        gle::bindvbo(vbuf);
+        gle::bindebo(ebuf);
         gle::vertexpointer(sizeof(vec), verts);
         gle::enablevertex();
     }
@@ -2631,8 +2648,8 @@ namespace lightsphere
     void disable()
     {
         gle::disablevertex();
-        glBindBuffer_(GL_ARRAY_BUFFER, 0);
-        glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, 0);
+        gle::clearvbo();
+        gle::clearebo();
     }
 }
 
@@ -2640,9 +2657,6 @@ VAR(depthtestlights, 0, 2, 2);
 FVAR(depthtestlightsclamp, 0, 0.999995f, 1);
 VAR(depthfaillights, 0, 1, 1);
 FVAR(lightradiustweak, 1, 1.11f, 2);
-
-VAR(lighttilestrip, 0, 1, 1);
-VAR(lighttilebands, 0, 1, LIGHTTILE_MAXH);
 
 static inline void lightquad(float z = -1, float sx1 = -1, float sy1 = -1, float sx2 = 1, float sy2 = 1)
 {
@@ -2662,33 +2676,41 @@ static inline void lightquads(float z, float sx1, float sy1, float sx2, float sy
     gle::attribf(sx1, sy1, z);
 }
 
+static inline void lightquads(float z, float sx1, float sy1, float sx2, float sy2, int tx1, int ty1, int tx2, int ty2)
+{
+    int vx1 = max(int(floor((sx1*0.5f+0.5f)*vieww)), ((tx1*lighttilevieww)/lighttilew)*lighttilealignw),
+        vy1 = max(int(floor((sy1*0.5f+0.5f)*viewh)), ((ty1*lighttileviewh)/lighttileh)*lighttilealignh),
+        vx2 = min(int(ceil((sx2*0.5f+0.5f)*vieww)), min(((tx2*lighttilevieww)/lighttilew)*lighttilealignw, vieww)),
+        vy2 = min(int(ceil((sy2*0.5f+0.5f)*viewh)), min(((ty2*lighttileviewh)/lighttileh)*lighttilealignh, viewh));
+    lightquads(z, (vx1*2.0f)/vieww-1.0f, (vy1*2.0f)/viewh-1.0f, (vx2*2.0f)/vieww-1.0f, (vy2*2.0f)/viewh-1.0f);
+}
+
+static inline void lightquads(float z, float sx1, float sy1, float sx2, float sy2, int x1, int y1, int x2, int y2, const uint *tilemask)
+{
+    if(!tilemask) lightquads(z, sx1, sy1, sx2, sy2, x1, y1, x2, y2);
+    else for(int y = y1; y < y2;)
+    {
+        int starty = y;
+        uint xmask = (1<<x2) - (1<<x1), startmask = tilemask[y] & xmask;
+        do ++y; while(y < y2 && (tilemask[y]&xmask) == startmask);
+        for(int x = x1; x < x2;)
+        {
+            while(x < x2 && !(startmask&(1<<x))) ++x;
+            if(x >= x2) break;
+            int startx = x;
+            do ++x; while(x < x2 && startmask&(1<<x));
+            lightquads(z, sx1, sy1, sx2, sy2, startx, starty, x, y);
+        }
+    }
+}
+
 static void lightquad(float sz1, float bsx1, float bsy1, float bsx2, float bsy2, const uint *tilemask)
 {
     int btx1, bty1, btx2, bty2;
     calctilebounds(bsx1, bsy1, bsx2, bsy2, btx1, bty1, btx2, bty2);
 
     gle::begin(GL_QUADS);
-    for(int y = bty1; y < bty2; y++) for(int x = btx1, end = btx2; x < end;)
-    {
-        int start;
-        if(tilemask)
-        {
-            while(x < end && !(tilemask[y]&(1<<x))) x++;
-            if(x >= end) break;
-            start = x;
-            do ++x; while(x < end && tilemask[y]&(1<<x));
-        }
-        else
-        {
-            start = x;
-            x = end;
-        }
-        int tx1 = max(int(floor((bsx1*0.5f+0.5f)*vieww)), ((start*lighttilevieww)/lighttilew)*lighttilealignw),
-            ty1 = max(int(floor((bsy1*0.5f+0.5f)*viewh)), ((y*lighttileviewh)/lighttileh)*lighttilealignh),
-            tx2 = min(int(ceil((bsx2*0.5f+0.5f)*vieww)), min(((x*lighttilevieww)/lighttilew)*lighttilealignw, vieww)),
-            ty2 = min(int(ceil((bsy2*0.5f+0.5f)*viewh)), min((((y+1)*lighttileviewh)/lighttileh)*lighttilealignh, viewh));
-        lightquads(sz1, (tx1*2.0f)/vieww-1.0f, (ty1*2.0f)/viewh-1.0f, (tx2*2.0f)/vieww-1.0f, (ty2*2.0f)/viewh-1.0f);
-    }
+    lightquads(sz1, bsx1, bsy1, bsx2, bsy2, btx1, bty1, btx2, bty2, tilemask);
     gle::end();
 }
 
@@ -2923,19 +2945,19 @@ static void renderlightbatches(Shader *s, int stencilref, bool transparent, floa
     loopv(lightbatches)
     {
         lightbatch &batch = *lightbatches[i];
-        if(!batch.inside(btx1, bty1, btx2, bty2, tilemask)) continue;
+        if(!batch.overlaps(btx1, bty1, btx2, bty2, tilemask)) continue;
 
-        lighttile &tile = *batch.tile;
-        int offset = batch.offset, n = batch.numlights;
+        int n = batch.numlights;
         float sx1 = 1, sy1 = 1, sx2 = -1, sy2 = -1, sz1 = 1, sz2 = -1;
         loopj(n)
         {
-            const lightinfo &l = lights[tile.lights[offset+j]];
+            const lightinfo &l = lights[batch.lights[j]];
             setlightparams(j, l);
             l.addscissor(sx1, sy1, sx2, sy2, sz1, sz2);
         }
 
-        if(!offset && !sunpass) { sx1 = bsx1; sy1 = bsy1; sx2 = bsx2; sy2 = bsy2; sz1 = -1; sz2 = 1; }
+        bool baselight = !(batch.flags & BF_NOSUN) && !sunpass;
+        if(baselight) { sx1 = bsx1; sy1 = bsy1; sx2 = bsx2; sy2 = bsy2; sz1 = -1; sz2 = 1; }
         else
         {
             sx1 = max(sx1, bsx1); sy1 = max(sy1, bsy1); sx2 = min(sx2, bsx2); sy2 = min(sy2, bsy2);
@@ -2944,8 +2966,8 @@ static void renderlightbatches(Shader *s, int stencilref, bool transparent, floa
 
         if(n)
         {
-            const lightinfo &l = lights[tile.lights[offset]];
-            setlightshader(s, n, !offset && !sunpass, l.shadowmap >= 0, l.spot > 0, transparent);
+            bool shadowmap = !(batch.flags & BF_NOSHADOW), spotlight = (batch.flags & BF_SPOTLIGHT) != 0;
+            setlightshader(s, n, baselight, shadowmap, spotlight, transparent);
         }
         else s->setvariant(transparent ? 0 : -1, 16);
 
@@ -2953,30 +2975,12 @@ static void renderlightbatches(Shader *s, int stencilref, bool transparent, floa
 
         if(hasDBT && depthtestlights > 1) glDepthBounds_(sz1*0.5f + 0.5f, min(sz2*0.5f + 0.5f, depthtestlightsclamp));
         gle::begin(GL_QUADS);
-        loopvj(batch.strips)
+        loopvj(batch.rects)
         {
-            lightstrip &s = batch.strips[j];
-            if(s.y >= bty1 && s.y < bty2) for(int x = max(int(s.x), btx1), end = min(int(s.x + s.w), btx2); x < end;)
-            {
-                int start;
-                if(tilemask)
-                {
-                    while(x < end && !(tilemask[s.y]&(1<<x))) x++;
-                    if(x >= end) break;
-                    start = x;
-                    do ++x; while(x < end && tilemask[s.y]&(1<<x));
-                }
-                else
-                {
-                    start = x;
-                    x = end;
-                }
-                int tx1 = max(int(floor((sx1*0.5f+0.5f)*vieww)), ((start*lighttilevieww)/lighttilew)*lighttilealignw),
-                    ty1 = max(int(floor((sy1*0.5f+0.5f)*viewh)), ((s.y*lighttileviewh)/lighttileh)*lighttilealignh),
-                    tx2 = min(int(ceil((sx2*0.5f+0.5f)*vieww)), min(((x*lighttilevieww)/lighttilew)*lighttilealignw, vieww)),
-                    ty2 = min(int(ceil((sy2*0.5f+0.5f)*viewh)), min((((s.y+1)*lighttileviewh)/lighttileh)*lighttilealignh, viewh));
-                lightquads(sz1, (tx1*2.0f)/vieww-1.0f, (ty1*2.0f)/viewh-1.0f, (tx2*2.0f)/vieww-1.0f, (ty2*2.0f)/viewh-1.0f);
-            }
+            const lightrect &r = batch.rects[j];
+            int x1 = max(int(r.x1), btx1), y1 = max(int(r.y1), bty1),
+                x2 = min(int(r.x2), btx2), y2 = min(int(r.y2), bty2);
+            if(x1 < x2 && y1 < y2) lightquads(sz1, sx1, sy1, sx2, sy2, x1, y1, x2, y2, tilemask);
         }
         gle::end();
     }
@@ -3093,13 +3097,11 @@ void renderlights(float bsx1 = -1, float bsy1 = -1, float bsx2 = 1, float bsy2 =
 
     if(!lighttilebatch || drawtex == DRAWTEX_MINIMAP)
     {
-        gle::disable();
         renderlightsnobatch(s, stencilref, transparent, bsx1, bsy1, bsx2, bsy2);
     }
     else
     {
         renderlightbatches(s, stencilref, transparent, bsx1, bsy1, bsx2, bsy2, tilemask);
-        gle::disable();
     }
 
     if(msaapass == 1 && ghasstencil)
@@ -3367,7 +3369,6 @@ void viewlightscissor()
             }
         }
     }
-    gle::disable();
 }
 
 extern bool dolightgc;
@@ -3439,8 +3440,7 @@ void collectlights()
                     queried = true;
                 }
                 startquery(l.query);
-                ivec bo = bbmin, br = bbmax;
-                br.sub(bo).add(1);
+                ivec bo(bbmin), br = ivec(bbmax).sub(bo).add(1);
                 drawbb(bo, br);
                 endquery(l.query);
             }
@@ -3503,26 +3503,136 @@ static inline bool shouldworkinoq()
     return !drawtex && oqfrags && (!wireframe || !editmode);
 }
 
+struct batchrect : lightrect
+{
+    uchar group;
+    ushort idx;
+
+    batchrect() {}
+    batchrect(const lightinfo &l, ushort idx)
+      : lightrect(l),
+        group((l.shadowmap < 0 ? BF_NOSHADOW : 0) | (l.spot > 0 ? BF_SPOTLIGHT : 0)),
+        idx(idx)
+    {}
+};
+
+struct batchstack : lightrect
+{
+    ushort offset, numrects;
+    uchar flags;
+
+    batchstack() {}
+    batchstack(uchar x1, uchar y1, uchar x2, uchar y2, ushort offset, ushort numrects, uchar flags = 0) : lightrect(x1, y1, x2, y2), offset(offset), numrects(numrects), flags(flags) {}
+};
+
+static vector<batchrect> batchrects;
+
+static void batchlights(const batchstack &initstack)
+{
+    batchstack stack[32];
+    size_t numstack = 1;
+    stack[0] = initstack;
+
+    while(numstack > 0)
+    {
+        batchstack s = stack[--numstack];
+        if(numstack + 5 > sizeof(stack)/sizeof(stack[0])) { batchlights(s); continue; }
+
+        ++lightbatchstacksused;
+        int groups[BF_NOSUN] = { 0 };
+        lightrect split(s);
+        ushort splitidx = USHRT_MAX;
+        int outside = s.offset, inside = s.offset + s.numrects;
+        for(int i = outside; i < inside; ++i)
+        {
+            const batchrect &r = batchrects[i];
+            if(r.outside(s))
+            {
+                if(i != outside) swap(batchrects[i], batchrects[outside]);
+                ++outside;
+            }
+            else if(s.inside(r))
+            {
+                ++groups[r.group];
+                swap(batchrects[i--], batchrects[--inside]);
+            }
+            else if(r.idx < splitidx) { split = r; splitidx = r.idx; }
+        }
+
+        uchar flags = s.flags;
+        int batched = s.offset + s.numrects;
+        loop(g, BF_NOSUN) while(groups[g] >= lighttilebatch || (inside == outside && (groups[g] || !(flags & BF_NOSUN))))
+        {
+            lightbatchkey key;
+            key.flags = flags | g;
+            flags |= BF_NOSUN;
+
+            int n = min(groups[g], lighttilebatch);
+            groups[g] -= n;
+            key.numlights = n;
+            loopi(n)
+            {
+                int best = -1;
+                ushort bestidx = USHRT_MAX;
+                for(int j = inside; j < batched; ++j) { const batchrect &r = batchrects[j]; if(r.group == g && r.idx < bestidx) { best = j; bestidx = r.idx; } }
+                key.lights[i] = lightorder[bestidx];
+                swap(batchrects[best], batchrects[--batched]);
+            }
+
+            lightbatch &batch = lightbatcher[key];
+            if(batch.rects.empty())
+            {
+                (lightbatchkey &)batch = key;
+                lightbatches.add(&batch);
+            }
+            batch.rects.add(s);
+            ++lightbatchrectsused;
+        }
+
+        if(splitidx != USHRT_MAX)
+        {
+            int numoverlap = batched - outside;
+            split.intersect(s);
+
+            if(split.y1 > s.y1) stack[numstack++] = batchstack(s.x1, s.y1, s.x2, split.y1, outside, numoverlap, flags);
+
+            if(split.x1 > s.x1) stack[numstack++] = batchstack(s.x1, split.y1, split.x1, split.y2, outside, numoverlap, flags);
+            stack[numstack++] = batchstack(split.x1, split.y1, split.x2, split.y2, outside, numoverlap, flags);
+            if(split.x2 < s.x2) stack[numstack++] = batchstack(split.x2, split.y1, s.x2, split.y2, outside, numoverlap, flags);
+
+            if(split.y2 < s.y2) stack[numstack++] = batchstack(s.x1, split.y2, s.x2, s.y2, outside, numoverlap, flags);
+        }
+    }
+}
+
 static inline bool sortlightbatches(const lightbatch *x, const lightbatch *y)
 {
-    if(x->tile->band < y->tile->band) return true;
-    if(x->tile->band > y->tile->band) return false;
-    if(x->priority < y->priority) return true;
-    if(x->priority > y->priority) return false;
+    if(x->flags < y->flags) return true;
+    if(x->flags > y->flags) return false;
     return x->numlights > y->numlights;
 }
 
-static inline void addlighttiles(const lightinfo &l, int idx)
+static void batchlights()
 {
-    int tx1, ty1, tx2, ty2;
-    calctilebounds(l.sx1, l.sy1, l.sx2, l.sy2, tx1, ty1, tx2, ty2);
-    for(int y = ty1; y < ty2; y++) for(int x = tx1; x < tx2; x++) { lighttiles[y][x].lights.add(idx); lighttilesused++; }
+    lightbatches.setsize(0);
+    lightbatchstacksused = 0;
+    lightbatchrectsused = 0;
+
+    if(lighttilebatch && drawtex != DRAWTEX_MINIMAP)
+    {
+        lightbatcher.recycle();
+        batchlights(batchstack(0, 0, lighttilew, lighttileh, 0, batchrects.length()));
+        lightbatches.sort(sortlightbatches);
+    }
+
+    lightbatchesused = lightbatches.length();
 }
 
 void packlights()
 {
     lightsvisible = lightsoccluded = 0;
-    lighttilesused = lightpassesused = 0;
+    lightpassesused = 0;
+    batchrects.setsize(0);
 
     loopv(lightorder)
     {
@@ -3558,58 +3668,12 @@ void packlights()
             else if(smcache) shadowcachefull = true;
         }
 
-        addlighttiles(l, idx);
+        batchrects.add(batchrect(l, i));
     }
 
     lightsvisible = lightorder.length() - lightsoccluded;
 
-    lightbatcher.recycle();
-    lightbatches.setsize(0);
-    if(lighttilebatch && drawtex != DRAWTEX_MINIMAP) loop(y, lighttileh)
-    {
-        int band = lighttilebands && lighttilebands < lighttileh ? (y * lighttilebands) / lighttileh : y;
-        bool sunpass = !sunlight.iszero() && csmshadowmap && batchsunlight < (gi && giscale && gidist ? 1 : 0);
-        loop(x, lighttilew)
-        {
-            lighttile &tile = lighttiles[y][x];
-            tile.band = band;
-            for(int offset = 0;;)
-            {
-                int n = min(tile.lights.length() - offset, lighttilebatch);
-                bool shadowmap = false, spotlight = false;
-                if(n)
-                {
-                    lightinfo &l = lights[tile.lights[offset]];
-                    shadowmap = l.shadowmap >= 0;
-                    spotlight = l.spot > 0;
-                }
-                loopj(n)
-                {
-                    lightinfo &l = lights[tile.lights[offset+j]];
-                    if((l.shadowmap >= 0) != shadowmap || (l.spot > 0) != spotlight) { n = j; break; }
-                }
-                int priority = (offset || sunpass ? 4 : 0) + (shadowmap ? 0 : 2) + (spotlight ? 1 : 0);
-                lighttileslice slice(&tile, priority, offset, n);
-                lightbatch &batch = lightbatcher[slice];
-                if(batch.strips.empty() || !lighttilestrip || !batch.strips.last().extend(x, y))
-                {
-                    if(batch.strips.empty())
-                    {
-                        (lighttileslice &)batch = slice;
-                        lightbatches.add(&batch);
-                    }
-                    lightstrip &strip = batch.strips.add();
-                    strip.x = x;
-                    strip.y = y;
-                    strip.w = 1;
-                }
-                offset += n;
-                if(offset >= tile.lights.length()) break;
-            }
-        }
-    }
-    lightbatches.sort(sortlightbatches);
-    lightbatchesused = lightbatches.length();
+    batchlights();
 }
 
 static inline void nogiquad(int x, int y, int w, int h)
@@ -4019,8 +4083,6 @@ void radiancehints::renderslices()
         }
         memcpy(rhclearmasks[0][i], clearmasks, sizeof(clearmasks));
     }
-
-    gle::disable();
 
     if(rhrect) glDisable(GL_SCISSOR_TEST);
 }
@@ -4758,7 +4820,7 @@ void shademodelpreview(int x, int y, int w, int h, bool background, bool scissor
 {
     GLERROR;
 
-    glBindFramebuffer_(GL_FRAMEBUFFER, ovr::lensfbo[viewidx]);
+    glBindFramebuffer_(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, hudw, hudh);
 
     if(msaasamples) glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, mscolortex);

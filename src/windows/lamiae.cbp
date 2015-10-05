@@ -196,7 +196,6 @@
 		<Unit filename="../engine/octa.h" />
 		<Unit filename="../engine/octaedit.cpp" />
 		<Unit filename="../engine/octarender.cpp" />
-		<Unit filename="../engine/ovr.cpp" />
 		<Unit filename="../engine/physics.cpp" />
 		<Unit filename="../engine/pvs.cpp" />
 		<Unit filename="../engine/ragdoll.h" />

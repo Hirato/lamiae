@@ -4,6 +4,36 @@ extern int outline;
 
 bool boxoutline = false;
 
+void boxs(int orient, vec o, const vec &s, float size)
+{
+    int d = dimension(orient), dc = dimcoord(orient);
+    float f = boxoutline ? (dc>0 ? 0.2f : -0.2f) : 0;
+    o[D[d]] += dc * s[D[d]] + f;
+
+    vec r(0, 0, 0), c(0, 0, 0);
+    r[R[d]] = s[R[d]];
+    c[C[d]] = s[C[d]];
+
+    vec v1 = o, v2 = vec(o).add(r), v3 = vec(o).add(r).add(c), v4 = vec(o).add(c);
+
+    r[R[d]] = 0.5f*size;
+    c[C[d]] = 0.5f*size;
+
+    gle::defvertex();
+    gle::begin(GL_TRIANGLE_STRIP);
+    gle::attrib(vec(v1).sub(r).sub(c));
+        gle::attrib(vec(v1).add(r).add(c));
+    gle::attrib(vec(v2).add(r).sub(c));
+        gle::attrib(vec(v2).sub(r).add(c));
+    gle::attrib(vec(v3).add(r).add(c));
+        gle::attrib(vec(v3).sub(r).sub(c));
+    gle::attrib(vec(v4).sub(r).add(c));
+        gle::attrib(vec(v4).add(r).sub(c));
+    gle::attrib(vec(v1).sub(r).sub(c));
+        gle::attrib(vec(v1).add(r).add(c));
+    xtraverts += gle::end();
+}
+
 void boxs(int orient, vec o, const vec &s)
 {
     int d = dimension(orient), dc = dimcoord(orient);
@@ -374,13 +404,13 @@ void rendereditcursor()
                     loopi(3) w[i] = clamp(camera1->o[i], 0.0f, float(worldsize));
                 }
             }
-            cube *c = &lookupcube(w);
+            cube *c = &lookupcube(ivec(w));
             if(gridlookup && !dragging && !moving && !havesel && hmapedit!=1) gridsize = lusize;
             int mag = lusize / gridsize;
-            normalizelookupcube(w);
+            normalizelookupcube(ivec(w));
             if(sdist == 0 || sdist > wdist) rayboxintersect(vec(lu), vec(gridsize), camera1->o, dir, t=0, orient); // just getting orient
             cur = lu;
-            cor = vec(w).mul(2).div(gridsize);
+            cor = ivec(w).mul(2).div(gridsize);
             od = dimension(orient);
             d = dimension(sel.orient);
 
@@ -441,6 +471,7 @@ void rendereditcursor()
         }
     }
 
+    glDisable(GL_CULL_FACE);
     glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ONE);
 
@@ -503,9 +534,8 @@ void rendereditcursor()
 
     boxoutline = false;
 
-    gle::disable();
-
     glDisable(GL_BLEND);
+    glEnable(GL_CULL_FACE);
 }
 
 void tryedit()
@@ -555,7 +585,6 @@ void commitchanges(bool force)
     if(!force && !haschanged) return;
     haschanged = false;
 
-    extern vector<vtxarray *> valist;
     int oldlen = valist.length();
     resetclipplanes();
     entitiesinoctanodes();
@@ -662,7 +691,7 @@ static inline int undosize(undoblock *u)
     {
         block3 *b = u->block();
         cube *q = b->c();
-        int size = b->size(), total = size*sizeof(int);
+        int size = b->size(), total = size;
         loopj(size) total += familysize(*q++)*sizeof(cube);
         return total;
     }
@@ -1299,15 +1328,15 @@ struct prefabmesh
 
         loopv(verts) verts[i].norm.flip();
         if(!p.vbo) glGenBuffers_(1, &p.vbo);
-        glBindBuffer_(GL_ARRAY_BUFFER, p.vbo);
+        gle::bindvbo(p.vbo);
         glBufferData_(GL_ARRAY_BUFFER, verts.length()*sizeof(vertex), verts.getbuf(), GL_STATIC_DRAW);
-        glBindBuffer_(GL_ARRAY_BUFFER, 0);
+        gle::clearvbo();
         p.numverts = verts.length();
 
         if(!p.ebo) glGenBuffers_(1, &p.ebo);
-        glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, p.ebo);
+        gle::bindebo(p.ebo);
         glBufferData_(GL_ELEMENT_ARRAY_BUFFER, tris.length()*sizeof(ushort), tris.getbuf(), GL_STATIC_DRAW);
-        glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, 0);
+        gle::clearebo();
         p.numtris = tris.length()/3;
     }
 
@@ -1342,7 +1371,7 @@ static void genprefabmesh(prefabmesh &r, cube &c, const ivec &co, int size)
             if(vis&2) pos[numverts++] = vec(v[(order+3)&3]).mul(size/8.0f).add(vo);
             guessnormals(pos, numverts, norm);
             int index[4];
-            loopj(numverts) index[j] = r.addvert(pos[j], norm[j]);
+            loopj(numverts) index[j] = r.addvert(pos[j], bvec(norm[j]));
             loopj(numverts-2) if(index[0]!=index[j+1] && index[j+1]!=index[j+2] && index[j+2]!=index[0])
             {
                 r.tris.add(index[0]);
@@ -1410,8 +1439,8 @@ static void renderprefab(prefab &p, const vec &o, float yaw, float pitch, float 
     if(size > 0 && size != 1) m.scale(size);
     m.translate(vec(b.s).mul(-b.grid*0.5f));
 
-    glBindBuffer_(GL_ARRAY_BUFFER, p.vbo);
-    glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, p.ebo);
+    gle::bindvbo(p.vbo);
+    gle::bindebo(p.ebo);
     gle::enablevertex();
     gle::enablenormal();
     prefabmesh::vertex *v = (prefabmesh::vertex *)0;
@@ -1440,8 +1469,8 @@ static void renderprefab(prefab &p, const vec &o, float yaw, float pitch, float 
 
     gle::disablevertex();
     gle::disablenormal();
-    glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, 0);
-    glBindBuffer_(GL_ARRAY_BUFFER, 0);
+    gle::clearebo();
+    gle::clearvbo();
 }
 
 void renderprefab(const char *name, const vec &o, float yaw, float pitch, float roll, float size, const vec &color)
@@ -2972,7 +3001,6 @@ void rendertexturepanel(int w, int h)
             y += s+gap;
         }
 
-        gle::disable();
         pophudmatrix(true, false);
         resethudshader();
     }
