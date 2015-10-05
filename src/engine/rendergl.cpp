@@ -1237,11 +1237,11 @@ void setcammatrix()
     cammatrix.transposedtransformnormal(vec(viewmatrix.a).neg(), camright);
     cammatrix.transposedtransformnormal(vec(viewmatrix.c), camup);
 
-    camprojmatrix.mul(projmatrix, cammatrix);
-    invcamprojmatrix.invert(camprojmatrix);
-
     if(!drawtex)
     {
+        camprojmatrix.mul(projmatrix, cammatrix);
+        invcamprojmatrix.invert(camprojmatrix);
+
         float x, y;
         vec dir1, dir2;
         UI::getcursorpos(x, y);
