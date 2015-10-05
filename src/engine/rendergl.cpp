@@ -1238,8 +1238,6 @@ void setcammatrix()
     cammatrix.transposedtransformnormal(vec(viewmatrix.c), camup);
 
     camprojmatrix.mul(projmatrix, cammatrix);
-    invcammatrix.invert(cammatrix);
-    invprojmatrix.invert(projmatrix);
     invcamprojmatrix.invert(camprojmatrix);
 
     if(!drawtex)
@@ -1262,9 +1260,17 @@ void setcamprojmatrix(bool init = true, bool flush = false)
     {
         setcammatrix();
     }
-    else camprojmatrix.muld(projmatrix, cammatrix);
 
     jitteraa();
+
+    camprojmatrix.muld(projmatrix, cammatrix);
+
+    if (init)
+    {
+        invcammatrix.invert(cammatrix);
+        invprojmatrix.invert(projmatrix);
+        invcamprojmatrix.invert(camprojmatrix);
+    }
 
     GLOBALPARAM(camprojmatrix, camprojmatrix);
     GLOBALPARAM(lineardepthscale, projmatrix.lineardepthscale()); //(invprojmatrix.c.z, invprojmatrix.d.z));
