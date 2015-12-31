@@ -2487,10 +2487,6 @@ end:
     result(str);
 )
 
-ICOMMAND(getvshaderparam, "is", (int *slot),
-    if(noedit(true) || !vslots.inrange(*slot)) return;
-)
-
 void mpedittex(int tex, int allfaces, selinfo &sel, bool local)
 {
     if(local)
