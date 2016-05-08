@@ -336,6 +336,8 @@
 		</Unit>
 		<Unit filename="resources/mingw.rc">
 			<Option compilerVar="WINDRES" />
+			<Option compile="0" />
+			<Option link="0" />
 			<Option compiler="gcc" use="1" buildCommand="$rescomp -F $WINDRES_TARGET -i $file -J rc -o $resource_output -O coff $res_includes" />
 		</Unit>
 		<Extensions>
@@ -343,7 +345,7 @@
 			<envvars />
 			<debugger />
 			<DoxyBlocks>
-				<comment_style block="0" line="0" />
+				<comment_style block="0" line="2" />
 				<doxyfile_project />
 				<doxyfile_build />
 				<doxyfile_warnings />
