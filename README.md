@@ -1,5 +1,5 @@
-*LAMIAE IS CURRENTLY IN ALPHA*
-*WHILE IT IS STABLE, AND IN A HIGHLY USABLE STATE, THINGS ARE IN A STATE OF SEMI-FLUX*
+**LAMIAE IS CURRENTLY IN ALPHA**
+**WHILE IT IS STABLE, AND IN A HIGHLY USABLE STATE, THINGS ARE IN A STATE OF SEMI-FLUX**
 
 
 What is Lamiae
@@ -86,19 +86,19 @@ Run Instructions
 If you need to build a binary first, see the section below.
 
 
-Windows
+**Windows**
 There is a lamiae.bat in the main directory, this is your sole means of launching lamiae.
 If you're having issues running the game, make sure that your drivers are properly installed and that your GPU can at least match Intel's Sandy Bridge in all aspects.
 
 
-Linux/FreeBSD
+**Linux/FreeBSD**
 There is a script named lamiae.sh in the main directory, running this will launch the proper binary for your platform.
 A multitude of command line options are available, run with --help, -h or -? to get a list.
 If you have problems running it, make sure that SDL2, SDL2_mixer and SDL2_image is installed. If you have an Nvidia GPU, you should also make sure that the proprietary drivers are installed and working.
 
 
-Mac (OS X) *UNSUPPORTED*
-Hopw Roewur Ne.
+**Mac (OS X) UNSUPPORTED**
+*Hopw Roewur Ne.*
 
 
 
@@ -110,30 +110,27 @@ Good Luck!
 Build Instructions
 ==================
 
-Windows
-1. Install Codeblocks ( http://www.codeblocks.org/ ) pick the no-mingw version
-2. Install mingw64 with SILJ bindings ( http://tdm-gcc.tdragon.net/download )
+**Windows**
+1. Install Codeblocks ( http://www.codeblocks.org/ ) - we **strongly** recommend the no-mingw version
+2. Install mingw64 with SJLJ bindings ( http://tdm-gcc.tdragon.net/download ) - grab the tdm64-gcc bundle at the top
 3. Open up the codeblocks project file in src/windows/lamiae.cbp
 4. Click build
 
-* The current 32bit only tdm-gcc release (4.7.1-2) will not compile lamiae, and has other known issues.
-* You may need to manually specify the paths for mingw, just point it to C:\MingW64 (or where applicable) and replace the compiler executables with their generic selves (eg mingw32-i386-unknown-gcc.exe to gcc.exe)
+* You may need to manually specify the paths for mingw, just point it to C:\MingW64 (or where applicable) and replace the compiler executables with their generic selves (eg mingw32-i386-unknown-gcc.exe to gcc.exe, mingw32-i386-unknown-g++.exe to g++.exe)
 
-** Support is not provided for Visual Studio, in theory the code should compile with 2005 and later.
+**Official support is not provided for Visual Studio, but in theory the code should compile with 2005 and later.**
 
 
-Linux/FreeBSD
+**Linux/FreeBSD**
 1. Install GCC
 2. Install SDL2, sdl2_mixer and sdl2_image, as well as their *-dev counterparts
 3. make -C src install
 
-* SDL 2.0 is currently in development, and otherwise known as SDL-hg.
-    Most distros don't yet package SDL 2.0, Archlinux has sdl-hg packages in the AUR with which you may use to easily build it yourself, and Ubuntu derivatives can access pre-built apckages via PPAs. You'll need to do it manually otherwise.
 * if you want a debug binary instead, use "make -C src -f Makefile.debug install"
 * If you're using BSD, you may need to specify the GNU version of the make utility.
 
 
-Macintosh (OS X) *UNSUPPORTED*
+**Macintosh (OS X) UNSUPPORTED**
 1. Install Xcode
 2. Manually install SDL2, SDL2_image, and SDL2_mixer Frameworks.
 3. Create, setup, and otherwise configure an xcode project for Lamiae.
