@@ -1267,6 +1267,7 @@ struct item
 		delete[] o.description;
 		delete[] o.mdl;
 		o.uses.deletecontents();
+		rpgscript::freelocal(o.locals);
 
 		o = *this;
 		if(name) o.name = newstring(name);
