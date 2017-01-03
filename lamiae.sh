@@ -78,7 +78,7 @@ do
 			echo "  -x<string>		executes script <string> after initialisation"
 			echo ""
 			echo "Script by Kevin \"Hirato Kirata\" Meyer"
-			echo "(c) 2012-2015 - zlib/libpng licensed"
+			echo "(c) 2012-2017 - zlib/libpng licensed"
 			echo ""
 
 			exit 1

@@ -1,6 +1,6 @@
 Lamiae source code, any release.
 
-Copyright (C) 2012-2015 Kevin "Hirato Kirata" Meyer
+Copyright (C) 2012-2017 Kevin "Hirato Kirata" Meyer
 Copyright (C) 2013 Daniel "q66" Kolesa
 
 This software is provided 'as-is', without any express or implied
@@ -45,7 +45,7 @@ freely, subject to the following restrictions:
 
 Tesseract game engine source code, any release.
 
-Copyright (C) 2001-2015 Wouter van Oortmerssen, Lee Salzman, Mike Dysart, Robert Pointon, Quinton Reeves, and Benjamin Segovia
+Copyright (C) 2001-2017 Wouter van Oortmerssen, Lee Salzman, Mike Dysart, Robert Pointon, Quinton Reeves, and Benjamin Segovia
 
 This software is provided 'as-is', without any express or implied
 warranty.  In no event will the authors be held liable for any damages
