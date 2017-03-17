@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# LAMIAE_DIR should refer to the directory in which sandbox is placed, the default should be good enough.
+# LAMIAE_DIR should refer to the directory in which lamiae is placed, the default should be good enough.
 #LAMIAE_DIR=~/lamiae
 #LAMIAE_DIR=/usr/local/lamiae
 LAMIAE_DIR=$(dirname $(readlink -f $0))
