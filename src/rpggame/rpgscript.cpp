@@ -1993,11 +1993,14 @@ namespace rpgscript
 			scr->curnode->close();
 			scr->curnode->open();
 
+			rpgent *t = talker->getent(0); // in case a script resets talker to null
+			if(!t) return;
+
 			if(!scr->curnode->choices.length())
 			{
 				//if(DEBUGF print something
 				//there are no destinations so just print the text and close...
-				game::hudline("%s: %s", talker->getent(0)->getname(), scr->curnode->str);
+				game::hudline("%s: %s", t->getname(), scr->curnode->str);
 				scr->curnode->close();
 				scr->curnode = NULL;
 			}
