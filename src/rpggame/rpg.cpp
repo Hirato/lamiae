@@ -507,7 +507,6 @@ namespace game
 		else if(DEBUG_WORLD)
 			DEBUGF("Loaded game properties");
 
-		player1->resetmdl();
 		if(restore) { forceverbose--; return true; }
 
 		player1->health = player1->base.getmaxhp();
@@ -737,7 +736,7 @@ namespace game
 			rpgent *d = curmap->objs[i];
 			float eye = d->maxheight;
 
-			d->resetmdl();
+			d->temp.mdloverride = NULL;
 			d->temp.alpha = d->temp.scale = 1;
 			d->temp.light = vec4(0, 0, 0, 0);
 			d->update();
@@ -750,7 +749,7 @@ namespace game
 					j--;
 				}
 			}
-			setbbfrommodel(d, d->temp.mdl, d->getscale());
+			setbbfrommodel(d, d->getmdl(), d->getscale());
 
 			eye = d->maxheight - eye;
 			if(eye)

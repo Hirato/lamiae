@@ -169,10 +169,9 @@ namespace entities
 
 		dummy->init(e.id);
 		rpgscript::removereferences(dummy);
-		dummy->resetmdl();
 
-		if(DEBUG_WORLD) DEBUGF("Registering model \"%s\" in preview cache as %.8X", dummy->temp.mdl, hash);
-		m = newstring(dummy->temp.mdl);
+		if(DEBUG_WORLD) DEBUGF("Registering model \"%s\" in preview cache as %.8X", dummy->getmdl(), hash);
+		m = newstring(dummy->getmdl());
 
 #define x(enum, type) \
 	case enum: \
@@ -341,8 +340,7 @@ namespace entities
 		}
 
 		ent->init(id);
-		ent->resetmdl();
-		setbbfrommodel(ent, ent->temp.mdl);
+		setbbfrommodel(ent, ent->getmdl());
 		ent->o = e.o;
 
 		if(!ent->validate())

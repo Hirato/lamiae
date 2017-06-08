@@ -859,7 +859,7 @@ struct rpgent : dynent
 		vec4 light; //w == radius x y z == R G B
 		float alpha;
 		float scale;
-		const char *mdl;
+		const char *mdloverride;
 	} temp;
 
 	///everything can suffer some status effects, whether this is just invisibility or something more sinister is up for debate
@@ -868,7 +868,7 @@ struct rpgent : dynent
 
 	///global
 	virtual void update()=0;
-	virtual void resetmdl()=0;
+	virtual const char *getmdl() const =0;
 	virtual void render()=0;
 	virtual script *getscript() =0;
 	virtual vec blipcol() { return vec(1, 1, 1);}
@@ -899,7 +899,7 @@ struct rpgent : dynent
 	///{de,con}structors
 	rpgent() : lasttouch(0), locals(-1)
 	{
-		temp.mdl = NULL;
+		temp.mdloverride = NULL;
 		temp.light = vec4(0, 0, 0, 0);
 		temp.alpha = 1;
 		temp.scale = 1;
@@ -1317,8 +1317,8 @@ struct rpgitem : rpgent, item
 	int lastupdate;
 
 	void update();
-	void resetmdl();
 	void render();
+	const char *getmdl() const;
 	const char *getname() const;
 	vec blipcol() { return vec(0, .75, 1);}
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
@@ -1354,10 +1354,10 @@ struct rpgobstacle : rpgent
 	float scale;
 
 	void update();
-	void resetmdl() { temp.mdl = mdl;}
 	void render();
 	inline ::script *getscript() { return script; }
 	vec blipcol() { return vec(1, 1, 1);}
+	const char *getmdl() const;
 	const char *getname() const { return NULL; }
 	const int type() { return ENT_OBSTACLE; }
 	void init(const char *base);
@@ -1386,10 +1386,10 @@ struct rpgcontainer : rpgent
 	float scale;
 
 	void update();
-	void resetmdl();
 	void render();
 	inline ::script *getscript() { return script; }
 	vec blipcol() { return vec(1, 1, 1);}
+	const char *getmdl() const;
 	const char *getname() const { return name; }
 	const int type() { return ENT_CONTAINER; }
 	void init(const char *base);
@@ -1440,10 +1440,10 @@ struct rpgplatform : rpgent
 	int target;
 
 	void update();
-	void resetmdl() { temp.mdl = (mdl && mdl[0]) ? mdl : DEFAULTMODEL; }
 	void render();
 	inline ::script *getscript() { return script; }
 	vec blipcol() { return vec(1, 1, 1);}
+	const char *getmdl() const;
 	const char *getname() const { return NULL; }
 	const int type() { return ENT_PLATFORM; }
 	void init(const char *base);
@@ -1475,10 +1475,10 @@ struct rpgtrigger : rpgent
 	float scale;
 
 	void update();
-	void resetmdl() { temp.mdl = (mdl && mdl[0]) ? mdl : DEFAULTMODEL; }
 	void render();
 	inline ::script *getscript() { return script; }
 	vec blipcol() { return vec(1, 1, 1);}
+	const char *getmdl() const;
 	const char *getname() const { return name; }
 	const int type() { return ENT_TRIGGER; }
 	void init(const char *base);
@@ -1627,9 +1627,9 @@ struct rpgchar : rpgent
 	void doai(equipment *eleft, equipment *eright, equipment *quiver);
 
 	///global
-	void resetmdl();
 	void update();
 	void render();
+	const char *getmdl() const;
 	const char *getname() const;
 	const int type() {return ENT_CHAR;}
 	inline ::script *getscript() { return script; }

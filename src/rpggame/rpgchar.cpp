@@ -342,9 +342,11 @@ void rpgchar::doattack(equipment *eleft, equipment *eright, equipment *quiver)
 	}
 }
 
-void rpgchar::resetmdl()
+const char *rpgchar::getmdl() const
 {
-	temp.mdl = (mdl && mdl[0]) ? mdl : DEFAULTMODEL;
+	if(temp.mdloverride) return temp.mdloverride;
+	if(mdl && mdl[0]) return mdl;
+	return DEFAULTMODEL;
 }
 
 ///REMEMBER route IS REVERSED
@@ -650,7 +652,7 @@ void rpgchar::render()
 
 	if(aiflags & AI_ANIM) hold = (forceanim & ANIM_INDEX) | ANIM_LOOP;
 
-	renderclient(this, temp.mdl ? temp.mdl : mdl, attachments.buf, hold, action, delay, lastaction, state == CS_ALIVE ? lastpain : 0, getscale(), true, col);
+	renderclient(this, getmdl(), attachments.buf, hold, action, delay, lastaction, state == CS_ALIVE ? lastpain : 0, getscale(), true, col);
 
 	emitter = emitters;
 	loopv(equipped)

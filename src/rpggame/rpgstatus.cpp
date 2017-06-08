@@ -313,7 +313,7 @@ void status_polymorph::update(rpgent *victim, rpgent *owner, int resist, int thr
 {
 	if(duration == 0 || (duration > 0 && remain <= curtime)) return;
 
-	victim->temp.mdl = mdl;
+	victim->temp.mdloverride = mdl;
 }
 
 void status_light::update(rpgent *victim, rpgent *owner, int resist, int thresh, float mul, float extra)

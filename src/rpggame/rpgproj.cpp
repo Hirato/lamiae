@@ -265,8 +265,7 @@ bool projectile::update()
 					it->transfer(*rit);
 
 					vectoyawpitch(dir, rit->yaw, rit->pitch);
-					rit->resetmdl();
-					setbbfrommodel(rit, rit->temp.mdl);
+					setbbfrommodel(rit, rit->getmdl());
 					rit->o = o;
 					rit->o.z -= rit->eyeheight / 2;
 					dir.rescale(rit->radius);

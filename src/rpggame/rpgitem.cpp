@@ -1,9 +1,11 @@
 #include "rpggame.h"
 
 ///base functions
-void rpgitem::resetmdl()
+const char *rpgitem::getmdl() const
 {
-	temp.mdl = (mdl && mdl[0]) ? mdl : DEFAULTMODEL;
+	if(temp.mdloverride) return temp.mdloverride;
+	if(mdl && mdl[0]) return mdl;
+	return DEFAULTMODEL;
 }
 
 void rpgitem::update()
@@ -28,7 +30,7 @@ void rpgitem::update()
 void rpgitem::render()
 {
 	vec4 col(colour, temp.alpha);
-	rendermodel(temp.mdl, ANIM_MAPMODEL|ANIM_LOOP, vec(o).sub(vec(0, 0, eyeheight)), yaw, pitch, roll, MDL_CULL_DIST|MDL_CULL_OCCLUDED, NULL, NULL, 0, 0, getscale(), col);
+	rendermodel(getmdl(), ANIM_MAPMODEL|ANIM_LOOP, vec(o).sub(vec(0, 0, eyeheight)), yaw, pitch, roll, MDL_CULL_DIST|MDL_CULL_OCCLUDED, NULL, NULL, 0, 0, getscale(), col);
 }
 
 const char *rpgitem::getname() const

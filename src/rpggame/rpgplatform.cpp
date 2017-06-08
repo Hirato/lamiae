@@ -2,6 +2,13 @@
 
 VAR(route_tag, 1, 0, -1);
 
+const char *rpgplatform::getmdl() const
+{
+	if(temp.mdloverride) return temp.mdloverride;
+	if(mdl && mdl[0]) return mdl;
+	return DEFAULTMODEL;
+}
+
 void rpgplatform::update()
 {
 	if(!entities::ents.inrange(target) || entities::ents[target]->type != PLATFORMROUTE)
@@ -64,7 +71,7 @@ void rpgplatform::update()
 void rpgplatform::render()
 {
 	vec4 col(colour, temp.alpha);
-	rendermodel(temp.mdl, ANIM_MAPMODEL|ANIM_LOOP, vec(o).sub(vec(0, 0, eyeheight)), yaw, pitch, roll, MDL_CULL_DIST|MDL_CULL_OCCLUDED, NULL, NULL, 0, 0, getscale(), col);
+	rendermodel(getmdl(), ANIM_MAPMODEL|ANIM_LOOP, vec(o).sub(vec(0, 0, eyeheight)), yaw, pitch, roll, MDL_CULL_DIST|MDL_CULL_OCCLUDED, NULL, NULL, 0, 0, getscale(), col);
 }
 
 void rpgplatform::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir)

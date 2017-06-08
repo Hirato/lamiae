@@ -5,15 +5,17 @@ void rpgcontainer::update()
 	magelock = 0; // IT'S MAGIC!
 }
 
-void rpgcontainer::resetmdl()
+const char *rpgcontainer::getmdl() const
 {
-	temp.mdl = (mdl && mdl[0]) ? mdl : DEFAULTMODEL;
+	if(temp.mdloverride) return temp.mdloverride;
+	if(mdl && mdl[0]) return mdl;
+	return DEFAULTMODEL;
 }
 
 void rpgcontainer::render()
 {
 	vec4 col(colour, temp.alpha);
-	rendermodel(temp.mdl, ANIM_MAPMODEL|ANIM_LOOP, vec(o).sub(vec(0, 0, eyeheight)), yaw, pitch, roll, MDL_CULL_DIST|MDL_CULL_OCCLUDED, NULL, NULL, 0, 0, getscale(), col);
+	rendermodel(getmdl(), ANIM_MAPMODEL|ANIM_LOOP, vec(o).sub(vec(0, 0, eyeheight)), yaw, pitch, roll, MDL_CULL_DIST|MDL_CULL_OCCLUDED, NULL, NULL, 0, 0, getscale(), col);
 }
 
 item *rpgcontainer::additem(item *it)
