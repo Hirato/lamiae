@@ -1,9 +1,9 @@
 **LAMIAE IS CURRENTLY IN ALPHA**
+
 **WHILE IT IS STABLE, AND IN A HIGHLY USABLE STATE, THINGS ARE IN A STATE OF SEMI-FLUX**
 
 
-What is Lamiae
-==============
+# What is Lamiae
 
 Lamiae is a fork of Platinum Arts Sandbox meant to showcase my work on the RPG module since 2009.
 Sandbox is in turn a fork of cube 2, which is a fantastic octree-based first person engine, naturally this isn't ideal for RPG-style gameplay, so getting to where we are now has been a significant challenge.
@@ -13,8 +13,8 @@ Lamiae builds upon cube 2 technologies, providing a highly flexible framework fo
 Check the "Inspiration" and the "Features" sections for a general idea.
 
 
-Inspiration
-===========
+# Inspiration
+
 Note that these are taken at a cursory look at the games in question, with no knowledge of their actual inner workings.
 
 Arcanum
@@ -42,8 +42,8 @@ Oblivion
 * AI's Directives system; giving an NPC instructions and having them execute to the best of their ability, simultaneously if possible, and with prioritisation.
 
 
-List of Features
-================
+# List of Features
+
 If you want a list of Sauerbraten's or Tesseract's respective features, visit their webpages.
 Suffice to say cube 2 features a very easy to use WYSIWYG-style map-editor.
 
@@ -59,8 +59,8 @@ Suffice to say cube 2 features a very easy to use WYSIWYG-style map-editor.
 * Open Source and with Plain-Text, easy to modify formats - Makes modding a cinch.
 
 
-Origin of the name, "Lamiae"
-============================
+# Origin of the name, "Lamiae"
+
 The name "Lamiae" serves both as a joke and as a descriptor of what an RPG can do.
 "Lamiae" itself is the plural form of "Lamia" - a creature with its origins in Greek Mythology.
 
@@ -81,24 +81,28 @@ On one hand, you can look at it from the designer's perspective; He is entranced
 On the other, it also refers to the seductive quality of RPGs as a tool for escapism, and overindulging can have rather negative results on your future prospects, Succubi have level drain for a reason you know.
 
 
-Run Instructions
-================
+# Run Instructions
+
 If you need to build a binary first, see the section below.
 
 
-**Windows**
+## Windows
 There is a lamiae.bat in the main directory, this is your sole means of launching lamiae.
+
 If you're having issues running the game, make sure that your drivers are properly installed and that your GPU can at least match Intel's Sandy Bridge in all aspects.
 
 
-**Linux/FreeBSD**
+## Linux/FreeBSD
 There is a script named lamiae.sh in the main directory, running this will launch the proper binary for your platform.
+
 A multitude of command line options are available, run with --help, -h or -? to get a list.
+
 If you have problems running it, make sure that SDL2, SDL2_mixer and SDL2_image is installed. If you have an Nvidia GPU, you should also make sure that the proprietary drivers are installed and working.
 
 
-**Mac (OS X) UNSUPPORTED**
+## Mac (OS X) UNSUPPORTED
 *Hopw Roewur Ne.*
+
 
 
 
@@ -107,10 +111,9 @@ You'll find additional readmes and instructions inside.
 Good Luck!
 
 
-Build Instructions
-==================
+# Build Instructions
 
-**Windows**
+## Windows
 1. Install Codeblocks ( http://www.codeblocks.org/ ) - we **strongly** recommend the no-mingw version
 2. Install mingw64 with SJLJ bindings ( http://tdm-gcc.tdragon.net/download ) - grab the tdm64-gcc bundle at the top
 3. Open up the codeblocks project file in src/windows/lamiae.cbp
@@ -121,7 +124,7 @@ Build Instructions
 **Official support is not provided for Visual Studio, but in theory the code should compile with 2005 and later.**
 
 
-**Linux/FreeBSD**
+## Linux/FreeBSD
 1. Install GCC
 2. Install SDL2, sdl2_mixer and sdl2_image, as well as their *-dev counterparts
 3. make -C src install
@@ -130,7 +133,7 @@ Build Instructions
 * If you're using BSD, you may need to specify the GNU version of the make utility.
 
 
-**Macintosh (OS X) UNSUPPORTED**
+## Macintosh (OS X) UNSUPPORTED
 1. Install Xcode
 2. Manually install SDL2, SDL2_image, and SDL2_mixer Frameworks.
 3. Create, setup, and otherwise configure an xcode project for Lamiae.
