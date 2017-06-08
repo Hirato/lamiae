@@ -85,6 +85,11 @@ On the other, it also refers to the seductive quality of RPGs as a tool for esca
 
 If you need to build a binary first, see the section below.
 
+Once up and running, if you want to dive straight into making something, go to data/rpg/games and copy the "base" directory, this is the basis for your game.
+
+You'll find additional readmes and instructions inside, as well as a [Tutorial on the wiki](https://github.com/Hirato/lamiae/wiki/Tutorial)
+
+Good Luck!
 
 ## Windows
 There is a lamiae.bat in the main directory, this is your sole means of launching lamiae.
@@ -102,13 +107,6 @@ If you have problems running it, make sure that SDL2, SDL2_mixer and SDL2_image 
 
 ## Mac (OS X) UNSUPPORTED
 *Hopw Roewur Ne.*
-
-
-
-
-Once up and running, if you want to dive straight into making something, go to data/rpg/games and copy the "base" directory, this is the basis for your game.
-You'll find additional readmes and instructions inside.
-Good Luck!
 
 
 # Build Instructions
