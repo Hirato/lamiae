@@ -48,6 +48,8 @@ namespace gle
     {
         quadsenabled = true;
 
+        if(glversion < 300) return;
+
         if(quadindexes)
         {
             glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, quadindexes);
@@ -72,14 +74,21 @@ namespace gle
 
     void disablequads()
     {
-        glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, 0);
-
         quadsenabled = false;
+
+        if(glversion < 300) return;
+
+        glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
 
     void drawquads(int offset, int count)
     {
         if(count <= 0) return;
+        if(glversion < 300)
+        {
+            glDrawArrays(GL_QUADS, offset*4, count*4);
+            return;
+        }
         if(offset + count > MAXQUADS)
         {
             if(offset >= MAXQUADS) return;

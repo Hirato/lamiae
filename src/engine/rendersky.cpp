@@ -462,10 +462,10 @@ void drawskybox(bool clear)
     {
         if(ldrscale < 1 && (skyboxoverbrightmin != 1 || (skyboxoverbright > 1 && skyboxoverbrightthreshold < 1)))
         {
-            SETSWIZZLE(skyboxoverbright, sky[0]);
+            SETSHADER(skyboxoverbright);
             LOCALPARAMF(overbrightparams, skyboxoverbrightmin, max(skyboxoverbright, skyboxoverbrightmin), skyboxoverbrightthreshold);
         }
-        else SETSWIZZLE(skybox, sky[0]);
+        else SETSHADER(skybox);
 
         gle::color(skyboxcolour);
 
@@ -498,7 +498,7 @@ void drawskybox(bool clear)
 
     if(cloudbox[0])
     {
-        SETSWIZZLE(skybox, clouds[0]);
+        SETSHADER(skybox);
 
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -518,7 +518,7 @@ void drawskybox(bool clear)
 
     if(cloudlayer[0] && cloudheight)
     {
-        SETSWIZZLE(skybox, cloudoverlay);
+        SETSHADER(skybox);
 
         glDisable(GL_CULL_FACE);
 

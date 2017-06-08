@@ -25,6 +25,7 @@ struct vec2
     float squaredlen() const { return dot(*this); }
     float magnitude() const  { return sqrtf(squaredlen()); }
     vec2 &normalize() { mul(1/magnitude()); return *this; }
+    vec2 &safenormalize() { float m = magnitude(); if(m) mul(1/m); return *this; }
     float cross(const vec2 &o) const { return x*o.y - y*o.x; }
     float squaredist(const vec2 &e) const { return vec2(*this).sub(e).squaredlen(); }
     float dist(const vec2 &e) const { return sqrtf(squaredist(e)); }
@@ -141,6 +142,7 @@ struct vec
     float magnitude2() const { return sqrtf(dot2(*this)); }
     float magnitude() const  { return sqrtf(squaredlen()); }
     vec &normalize()         { div(magnitude()); return *this; }
+    vec &safenormalize()     { float m = magnitude(); if(m) div(m); return *this; }
     bool isnormalized() const { float m = squaredlen(); return (m>0.99f && m<1.01f); }
     float squaredist(const vec &e) const { return vec(*this).sub(e).squaredlen(); }
     float dist(const vec &e) const { return sqrtf(squaredist(e)); }
@@ -311,6 +313,7 @@ struct vec4
     float magnitude() const  { return sqrtf(squaredlen()); }
     float magnitude3() const { return sqrtf(dot3(*this)); }
     vec4 &normalize() { mul(1/magnitude()); return *this; }
+    vec4 &safenormalize() { float m = magnitude(); if(m) mul(1/m); return *this; }
 
     vec4 &lerp(const vec4 &b, float t)
     {

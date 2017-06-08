@@ -657,7 +657,6 @@ void calclight()
     renderbackground("computing lighting... (esc to abort)");
     remip();
     optimizeblendmap();
-    clearlightcache();
     clearsurfaces(worldroot);
     lightprogress = 0;
     calclight_canceled = false;
@@ -669,7 +668,6 @@ void calclight()
     clearnormals();
     Uint32 end = SDL_GetTicks();
     if(timer) SDL_RemoveTimer(timer);
-    initlights();
     renderbackground("lighting done...");
     allchanged();
     if(calclight_canceled)
@@ -688,8 +686,8 @@ void mpcalclight(bool local)
 
 ICOMMAND(calclight, "", (), mpcalclight(true));
 
-VARF(fullbright, 0, 0, 1, initlights());
-VARF(fullbrightlevel, 0, 160, 255, initlights());
+VAR(fullbright, 0, 0, 1);
+VAR(fullbrightlevel, 0, 160, 255);
 
 void clearlights()
 {

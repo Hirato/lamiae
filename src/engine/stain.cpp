@@ -374,7 +374,7 @@ struct stainrenderer
         if(flags&SF_OVERBRIGHT)
         {
             glBlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
-            SETVARIANTSWIZZLE(overbrightstain, tex, sbuf == STAINBUF_TRANSPARENT ? 1 : 0);
+            SETVARIANT(overbrightstain, sbuf == STAINBUF_TRANSPARENT ? 0 : -1, 0);
         }
         else if(flags&SF_GLOW)
         {
@@ -382,20 +382,20 @@ struct stainrenderer
             colorscale = ldrscale;
             if(flags&SF_SATURATE) colorscale *= 2;
             alphascale = 0;
-            SETSWIZZLE(foggedstain, tex);
+            SETSHADER(foggedstain);
         }
         else if(flags&SF_INVMOD)
         {
             glBlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
             alphascale = 0;
-            SETSWIZZLE(foggedstain, tex);
+            SETSHADER(foggedstain);
         }
         else
         {
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             colorscale = ldrscale;
             if(flags&SF_SATURATE) colorscale *= 2;
-            SETVARIANTSWIZZLE(stain, tex, sbuf == STAINBUF_TRANSPARENT ? 1 : 0);
+            SETVARIANT(stain, sbuf == STAINBUF_TRANSPARENT ? 0 : -1, 0);
         }
         LOCALPARAMF(colorscale, colorscale, colorscale, colorscale, alphascale);
 
@@ -421,6 +421,8 @@ struct stainrenderer
 
     void addstain(const vec &center, const vec &dir, float radius, const bvec &color, int info)
     {
+        if(dir.iszero()) return;
+
         bbmin = ivec(center).sub(radius);
         bbmax = ivec(center).add(radius).add(1);
 

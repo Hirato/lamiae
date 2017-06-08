@@ -334,7 +334,7 @@ void loadc(stream *f, cube &c, const ivec &co, int size, bool &failed)
     {
         int surfmask, totalverts;
         surfmask = f->getchar();
-        totalverts = f->getchar();
+        totalverts = max(f->getchar(), 0);
         newcubeext(c, totalverts, false);
         memset(c.ext->surfaces, 0, sizeof(c.ext->surfaces));
         memset(c.ext->verts(), 0, totalverts*sizeof(vertinfo));
@@ -502,7 +502,8 @@ void writemapcfg()
     loopv(ids)
     {
         ident &id = *ids[i];
-        if(!(id.flags&IDF_OVERRIDDEN) || id.flags&IDF_READONLY) continue; switch(id.type)
+        if(!(id.flags&IDF_OVERRIDDEN) || id.flags&IDF_READONLY) continue;
+        switch(id.type)
         {
             case ID_VAR: f->printf(id.flags & IDF_HEX ? "//%s 0x%.6X\n" : "//%s %d\n", escapeid(id.name), *id.storage.i); break;
             case ID_FVAR: f->printf("//%s %s\n", escapeid(id.name), floatstr(*id.storage.f)); break;
@@ -666,7 +667,8 @@ void loadvslot(stream *f, VSlot &vs, int changed)
 
 void loadvslots(stream *f, int numvslots)
 {
-    int *prev = new int[numvslots];
+    int *prev = new (false) int[numvslots];
+    if(!prev) return;
     memset(prev, -1, numvslots*sizeof(int));
     while(numvslots > 0)
     {
@@ -1382,7 +1384,6 @@ bool load_world(const char *mname, const char *cname)
 
         entitiesinoctanodes();
         attachentities();
-        initlights();
         allchanged(true);
         startmap(cname ? cname : mname);
 

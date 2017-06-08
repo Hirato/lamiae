@@ -192,10 +192,10 @@ static void compileglslshader(Shader &s, GLenum type, GLuint &obj, const char *d
         {
             parts[numparts++] = "#define varying in\n";
             parts[numparts++] = (glslversion >= 330 || (glslversion >= 150 && hasEAL)) && !amd_eal_bug ?
-                "#define fragdata(loc, name, type) layout(location = loc) out type name;\n"
-                "#define blenddata(loc, name, type) layout(location = loc, index = 1) out type name;\n" :
-                "#define fragdata(loc, name, type) out type name;\n"
-                "#define blenddata(loc, name, type) out type name;\n";
+                "#define fragdata(loc) layout(location = loc) out\n"
+                "#define fragblend(loc) layout(location = loc, index = 1) out\n" :
+                "#define fragdata(loc) out\n"
+                "#define fragblend(loc) out\n";
             if(glslversion < 150)
             {
                 const char *decls = finddecls(source);
@@ -252,12 +252,11 @@ static void compileglslshader(Shader &s, GLenum type, GLuint &obj, const char *d
         if(hasEGPU4)
         {
             parts[numparts++] =
-                "#define fragdata(loc, name, type) varying out type name;\n"
-                "#define blenddata(loc, name, type) varying out type name;\n";
+                "#define fragdata(loc) varying out\n"
+                "#define fragblend(loc) varying out\n";
         }
         else
         {
-            parts[numparts++] = "#define fragdata(loc, name, type)\n";
             loopv(s.fragdatalocs)
             {
                 FragDataLoc &d = s.fragdatalocs[i];
@@ -361,7 +360,7 @@ static void linkglslprogram(Shader &s, bool msg = true)
             attribs |= 1<<a.loc;
         }
         loopi(gle::MAXATTRIBS) if(!(attribs&(1<<i))) glBindAttribLocation_(s.program, i, gle::attribnames[i]);
-        if((glslversion >= 130 || hasEGPU4) && ((glslversion < 330 && (glslversion < 150 || !hasEAL)) || amd_eal_bug)) loopv(s.fragdatalocs)
+        if(hasGPU4 && ((glslversion < 330 && (glslversion < 150 || !hasEAL)) || amd_eal_bug)) loopv(s.fragdatalocs)
         {
             FragDataLoc &d = s.fragdatalocs[i];
             if(d.index)
@@ -399,50 +398,69 @@ static void linkglslprogram(Shader &s, bool msg = true)
     }
 }
 
-static void findfragdatalocs(Shader &s, const char *ps, const char *macroname, int index)
+static void findfragdatalocs(Shader &s, char *ps, const char *macroname, int index)
 {
+    int macrolen = strlen(macroname);
+    bool clear = glslversion < 130 && !hasEGPU4;
     while((ps = strstr(ps, macroname)))
     {
-        int loc = strtol(ps + 9, (char **)&ps, 0);
+        char *start = ps;
+        int loc = strtol(ps + macrolen, (char **)&ps, 0);
         if(loc < 0 || loc > 3) continue;
 
-        ps += strspn(ps, ", \t\r\n");
-        const char *namestart = ps;
-        ps += strcspn(ps, "), \t\r\n");
-        string name;
-        int namelen = min(int(sizeof(name)-1), int(ps-namestart));
-        memcpy(name, namestart, namelen);
-        name[namelen++] = '\0';
-
-        ps += strspn(ps, ", \t\r\n");
+        ps += strspn(ps, ") \t\r\n");
         const char *type = ps;
-        ps += strcspn(ps, ") \t\r\n");
+        ps += strcspn(ps, "; \t\r\n");
         GLenum format = GL_FLOAT_VEC4;
-        if(ps > type)
+        switch(type[0])
         {
-            if(matchstring(type, ps-type, "vec3")) format = GL_FLOAT_VEC3;
-            else if(matchstring(type, ps-type, "vec2")) format = GL_FLOAT_VEC2;
-            else if(matchstring(type, ps-type, "float")) format = GL_FLOAT;
-            else if(matchstring(type, ps-type, "ivec4")) format = GL_INT_VEC4;
-            else if(matchstring(type, ps-type, "ivec3")) format = GL_INT_VEC3;
-            else if(matchstring(type, ps-type, "ivec2")) format = GL_INT_VEC2;
-            else if(matchstring(type, ps-type, "int")) format = GL_INT;
-            else if(matchstring(type, ps-type, "uvec4")) format = GL_UNSIGNED_INT_VEC4;
-            else if(matchstring(type, ps-type, "uvec3")) format = GL_UNSIGNED_INT_VEC3;
-            else if(matchstring(type, ps-type, "uvec2")) format = GL_UNSIGNED_INT_VEC2;
-            else if(matchstring(type, ps-type, "uint")) format = GL_UNSIGNED_INT;
+            case 'v':
+                if(matchstring(type, ps-type, "vec3")) format = GL_FLOAT_VEC3;
+                else if(matchstring(type, ps-type, "vec2")) format = GL_FLOAT_VEC2;
+                break;
+            case 'f':
+                if(matchstring(type, ps-type, "float")) format = GL_FLOAT;
+                break;
+            case 'i':
+                if(matchstring(type, ps-type, "ivec4")) format = GL_INT_VEC4;
+                else if(matchstring(type, ps-type, "ivec3")) format = GL_INT_VEC3;
+                else if(matchstring(type, ps-type, "ivec2")) format = GL_INT_VEC2;
+                else if(matchstring(type, ps-type, "int")) format = GL_INT;
+                break;
+            case 'u':
+                if(matchstring(type, ps-type, "uvec4")) format = GL_UNSIGNED_INT_VEC4;
+                else if(matchstring(type, ps-type, "uvec3")) format = GL_UNSIGNED_INT_VEC3;
+                else if(matchstring(type, ps-type, "uvec2")) format = GL_UNSIGNED_INT_VEC2;
+                else if(matchstring(type, ps-type, "uint")) format = GL_UNSIGNED_INT;
+                break;
         }
 
-        s.fragdatalocs.add(FragDataLoc(getshaderparamname(name), loc, format, index));
+        ps += strspn(ps, " \t\r\n");
+        const char *name = ps;
+        ps += strcspn(ps, "; \t\r\n");
+
+        if(ps > 0)
+        {
+            char end = *ps;
+            *ps = '\0';
+            s.fragdatalocs.add(FragDataLoc(getshaderparamname(name), loc, format, index));
+            *ps = end;
+        }
+
+        if(clear)
+        {
+            ps += strspn(ps, "; \t\r\n");
+            memset(start, ' ', ps - start);
+        }
     }
 }
 
-void findfragdatalocs(Shader &s, const char *psstr)
+void findfragdatalocs(Shader &s, char *psstr)
 {
     if(!psstr || ((glslversion >= 330 || (glslversion >= 150 && hasEAL)) && !amd_eal_bug)) return;
 
     findfragdatalocs(s, psstr, "fragdata(", 0);
-    if(maxdualdrawbufs) findfragdatalocs(s, psstr, "blenddata(", 1);
+    if(maxdualdrawbufs) findfragdatalocs(s, psstr, "fragblend(", 1);
 }
 
 int getlocalparam(const char *name)
@@ -729,13 +747,13 @@ void Shader::cleanup(bool full)
 
 static void genattriblocs(Shader &s, const char *vs, const char *ps, Shader *reusevs, Shader *reuseps)
 {
-    static int len = strlen("#pragma CUBE2_attrib");
+    static int len = strlen("//:attrib");
     string name;
     int loc;
     if(reusevs) s.attriblocs = reusevs->attriblocs;
-    else while((vs = strstr(vs, "#pragma CUBE2_attrib")))
+    else while((vs = strstr(vs, "//:attrib")))
     {
-        if(sscanf(vs, "#pragma CUBE2_attrib %100s %d", name, &loc) == 2)
+        if(sscanf(vs, "//:attrib %100s %d", name, &loc) == 2)
             s.attriblocs.add(AttribLoc(getshaderparamname(name), loc));
         vs += len;
     }
@@ -743,13 +761,13 @@ static void genattriblocs(Shader &s, const char *vs, const char *ps, Shader *reu
 
 static void genuniformlocs(Shader &s, const char *vs, const char *ps, Shader *reusevs, Shader *reuseps)
 {
-    static int len = strlen("#pragma CUBE2_uniform");
+    static int len = strlen("//:uniform");
     string name, blockname;
     int binding, stride;
     if(reusevs) s.uniformlocs = reusevs->uniformlocs;
-    else while((vs = strstr(vs, "#pragma CUBE2_uniform")))
+    else while((vs = strstr(vs, "//:uniform")))
     {
-        int numargs = sscanf(vs, "#pragma CUBE2_uniform %100s %100s %d %d", name, blockname, &binding, &stride);
+        int numargs = sscanf(vs, "//:uniform %100s %100s %d %d", name, blockname, &binding, &stride);
         if(numargs >= 3) s.uniformlocs.add(UniformLoc(getshaderparamname(name), getshaderparamname(blockname), binding, numargs >= 4 ? stride : 0));
         else if(numargs >= 1) s.uniformlocs.add(UniformLoc(getshaderparamname(name)));
         vs += len;
@@ -799,7 +817,7 @@ Shader *newshader(int type, const char *name, const char *vs, const char *ps, Sh
     genuniformlocs(s, vs, ps, s.reusevs, s.reuseps);
     s.fragdatalocs.setsize(0);
     if(s.reuseps) s.fragdatalocs = s.reuseps->fragdatalocs;
-    else findfragdatalocs(s, ps);
+    else findfragdatalocs(s, s.psstr);
     if(!s.compile())
     {
         s.cleanup(true);
@@ -826,10 +844,10 @@ static void gengenericvariant(Shader &s, const char *sname, const char *vs, cons
     vsv.put(vs, strlen(vs)+1);
     psv.put(ps, strlen(ps)+1);
 
-    static const int len = strlen("#pragma CUBE2_variant"), olen = strlen("override");
+    static const int len = strlen("//:variant"), olen = strlen("override");
     for(char *vspragma = vsv.getbuf();; vschanged = true)
     {
-        vspragma = strstr(vspragma, "#pragma CUBE2_variant");
+        vspragma = strstr(vspragma, "//:variant");
         if(!vspragma) break;
         if(sscanf(vspragma + len, "row %d", &rowoffset) == 1) continue;
         memset(vspragma, ' ', len);
@@ -846,7 +864,7 @@ static void gengenericvariant(Shader &s, const char *sname, const char *vs, cons
     }
     for(char *pspragma = psv.getbuf();; pschanged = true)
     {
-        pspragma = strstr(pspragma, "#pragma CUBE2_variant");
+        pspragma = strstr(pspragma, "//:variant");
         if(!pspragma) break;
         if(sscanf(pspragma + len, "row %d", &rowoffset) == 1) continue;
         memset(pspragma, ' ', len);
@@ -871,41 +889,11 @@ static void gengenericvariant(Shader &s, const char *sname, const char *vs, cons
     newshader(s.type, varname, vschanged ? vsv.getbuf() : reuse, pschanged ? psv.getbuf() : reuse, &s, row);
 }
 
-static void genswizzle(Shader &s, const char *sname, const char *ps, int row = 0)
-{
-    if(!hasTRG || hasTSW) return;
-    static const int pragmalen = strlen("#pragma CUBE2_swizzle");
-    const char *pspragma = strstr(ps, "#pragma CUBE2_swizzle");
-    if(!pspragma) return;
-
-    int clen = 0;
-    const char *cname = pspragma + pragmalen;
-    while(iscubealpha(*cname)) cname++;
-    while(*cname && !iscubespace(*cname)) cname++;
-    cname += strspn(cname, " \t\v\f");
-    clen = strcspn(cname, "\r\n");
-
-    string reuse;
-    if(s.numvariants(row)) formatstring(reuse, "%d", row);
-    else copystring(reuse, "");
-
-    loopi(2)
-    {
-        vector<char> pswz;
-        pswz.put(ps, int(pspragma-ps));
-        pswz.put(cname, clen); pswz.put(" = ", 3); pswz.put(cname, clen); pswz.put(i ? ".rrrg;" : ".rrra;", 6);
-        pswz.put(cname+clen, strlen(cname+clen)+1);
-
-        defformatstring(varname, "<variant:%d,%d>%s", s.numvariants(row), row, sname);
-        newshader(s.type, varname, reuse, pswz.getbuf(), &s, row);
-    }
-}
-
 static void genfogshader(vector<char> &vsbuf, vector<char> &psbuf, const char *vs, const char *ps)
 {
-    const char *vspragma = strstr(vs, "#pragma CUBE2_fog"), *pspragma = strstr(ps, "#pragma CUBE2_fog");
+    const char *vspragma = strstr(vs, "//:fog"), *pspragma = strstr(ps, "//:fog");
     if(!vspragma && !pspragma) return;
-    static const int pragmalen = strlen("#pragma CUBE2_fog");
+    static const int pragmalen = strlen("//:fog");
     const char *vsmain = findglslmain(vs), *vsend = strrchr(vs, '}');
     if(vsmain && vsend)
     {
@@ -988,7 +976,7 @@ void setupshaders()
     maxvsuniforms = val/4;
     glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_COMPONENTS, &val);
     maxfsuniforms = val/4;
-    if(glslversion >= 130 || hasGPU4)
+    if(hasGPU4)
     {
         glGetIntegerv(GL_MIN_PROGRAM_TEXEL_OFFSET, &val);
         mintexoffset = val;
@@ -1009,7 +997,7 @@ void setupshaders()
         "void main(void) {\n"
         "   gl_Position = vvertex;\n"
         "}\n",
-        "fragdata(0, fragcolor, vec4)\n"
+        "fragdata(0) vec4 fragcolor;\n"
         "void main(void) {\n"
         "   fragcolor = vec4(1.0, 0.0, 1.0, 1.0);\n"
         "}\n");
@@ -1027,13 +1015,11 @@ void setupshaders()
         "uniform sampler2D tex0;\n"
         "varying vec2 texcoord0;\n"
         "varying vec4 colorscale;\n"
-        "fragdata(0, fragcolor, vec4)\n"
+        "fragdata(0) vec4 fragcolor;\n"
         "void main(void) {\n"
         "    vec4 color = texture2D(tex0, texcoord0);\n"
-        "    #pragma CUBE2_swizzle color\n"
         "    fragcolor = colorscale * color;\n"
         "}\n");
-    if(hudshader) genswizzle(*hudshader, hudshader->name, hudshader->psstr);
     hudtextshader = newshader(0, "<init>hudtext",
         "attribute vec4 vvertex, vcolor;\n"
         "attribute vec2 vtexcoord0;\n"
@@ -1049,7 +1035,7 @@ void setupshaders()
         "uniform vec4 textparams;\n"
         "varying vec2 texcoord0;\n"
         "varying vec4 colorscale;\n"
-        "fragdata(0, fragcolor, vec4)\n"
+        "fragdata(0) vec4 fragcolor;\n"
         "void main(void) {\n"
         "    float dist = texture2D(tex0, texcoord0).r;\n"
         "    float border = smoothstep(textparams.x, textparams.y, dist);\n"
@@ -1065,7 +1051,7 @@ void setupshaders()
         "    color = vcolor;\n"
         "}\n",
         "varying vec4 color;\n"
-        "fragdata(0, fragcolor, vec4)\n"
+        "fragdata(0) vec4 fragcolor;\n"
         "void main(void) {\n"
         "    fragcolor = color;\n"
         "}\n");
@@ -1154,12 +1140,11 @@ void shader(int *type, char *name, char *vs, char *ps)
         if(psbuf.length()) ps = psbuf.getbuf(); \
     }
     GENSHADER(slotparams.length(), genuniformdefs(vsbuf, psbuf, vs, ps));
-    GENSHADER(strstr(vs, "#pragma CUBE2_fog") || strstr(ps, "#pragma CUBE2_fog"), genfogshader(vsbuf, psbuf, vs, ps));
+    GENSHADER(strstr(vs, "//:fog") || strstr(ps, "//:fog"), genfogshader(vsbuf, psbuf, vs, ps));
     Shader *s = newshader(*type, name, vs, ps);
     if(s)
     {
-        if(strstr(ps, "#pragma CUBE2_variant") || strstr(vs, "#pragma CUBE2_variant")) gengenericvariant(*s, name, vs, ps);
-        if(strstr(ps, "#pragma CUBE2_swizzle")) genswizzle(*s, name, ps);
+        if(strstr(ps, "//:variant") || strstr(vs, "//:variant")) gengenericvariant(*s, name, vs, ps);
     }
     slotparams.shrink(0);
 }
@@ -1185,12 +1170,11 @@ void variantshader(int *type, char *name, int *row, char *vs, char *ps, int *max
     }
     vector<char> vsbuf, psbuf, vsbak, psbak;
     GENSHADER(s->defaultparams.length(), genuniformdefs(vsbuf, psbuf, vs, ps, s));
-    GENSHADER(strstr(vs, "#pragma CUBE2_fog") || strstr(ps, "#pragma CUBE2_fog"), genfogshader(vsbuf, psbuf, vs, ps));
+    GENSHADER(strstr(vs, "//:fog") || strstr(ps, "//:fog"), genfogshader(vsbuf, psbuf, vs, ps));
     Shader *v = newshader(*type, varname, vs, ps, s, *row);
     if(v)
     {
-        if(strstr(ps, "#pragma CUBE2_variant") || strstr(vs, "#pragma CUBE2_variant")) gengenericvariant(*s, varname, vs, ps, *row);
-        if(strstr(ps, "#pragma CUBE2_swizzle")) genswizzle(*s, varname, ps, *row);
+        if(strstr(ps, "//:variant") || strstr(vs, "//:variant")) gengenericvariant(*s, varname, vs, ps, *row);
     }
 }
 COMMAND(variantshader, "isissi");

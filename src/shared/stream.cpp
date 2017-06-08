@@ -674,13 +674,15 @@ struct filestream : stream
     {
 #ifdef WIN32
 #ifdef __GNUC__
-        return ftello64(file);
+        offset off = ftello64(file);
 #else
-        return _ftelli64(file);
+        offset off = _ftelli64(file);
 #endif
 #else
-        return ftello(file);
+        offset off = ftello(file);
 #endif
+        // ftello returns LONG_MAX for directories on some platforms
+        return off + 1 >= 0 ? off : -1;
     }
     bool seek(offset pos, int whence)
     {
@@ -1230,9 +1232,10 @@ char *loadfile(const char *fn, size_t *size, bool utf8)
 {
     stream *f = openfile(fn, "rb");
     if(!f) return NULL;
-    size_t len = f->size();
-    if(len <= 0) { delete f; return NULL; }
-    char *buf = new char[len+1];
+    stream::offset fsize = f->size();
+    if(fsize <= 0) { delete f; return NULL; }
+    size_t len = fsize;
+    char *buf = new (false) char[len+1];
     if(!buf) { delete f; return NULL; }
     size_t offset = 0;
     if(utf8 && len >= 3)

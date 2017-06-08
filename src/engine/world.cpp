@@ -1607,10 +1607,10 @@ bool emptymap(int scale, bool force, const char *mname, bool usecfg)    // main 
         identflags &= ~IDF_OVERRIDDEN;
     }
 
-    initlights();
-    allchanged(usecfg);
+    allchanged(true);
 
     startmap(mname);
+
     return true;
 }
 

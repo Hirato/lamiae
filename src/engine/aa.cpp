@@ -55,7 +55,7 @@ void cleanuptqaa()
 void setaavelocityparams(GLenum tmu)
 {
     glActiveTexture_(tmu);
-    if(msaasamples) glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, msdepthtex);
+    if(msaalight) glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, msdepthtex);
     else glBindTexture(GL_TEXTURE_RECTANGLE, gdepthtex);
     glActiveTexture_(++tmu);
     if(msaasamples) glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, msnormaltex);
@@ -203,7 +203,7 @@ void loadsmaashaders(bool split = false)
     string opts;
     int optslen = 0;
     if(!hasTRG) opts[optslen++] = 'a';
-    if((smaadepthmask && (!tqaa || msaasamples)) || (smaastencil && ghasstencil > (msaasamples ? 1 : 0))) opts[optslen++] = 'd';
+    if((smaadepthmask && (!tqaa || msaalight)) || (smaastencil && ghasstencil > (msaasamples ? 1 : 0))) opts[optslen++] = 'd';
     if(split) opts[optslen++] = 's';
     if(tqaa || smaagreenluma || intel_texalpha_bug) opts[optslen++] = 'g';
     if(tqaa) opts[optslen++] = 't';
@@ -534,7 +534,7 @@ void setupsmaa(int w, int h)
             static const GLenum drawbufs[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
             glDrawBuffers_(2, drawbufs);
         }
-        if(!i || (smaadepthmask && (!tqaa || msaasamples)) || (smaastencil && ghasstencil > (msaasamples ? 1 : 0))) bindgdepth();
+        if(!i || (smaadepthmask && (!tqaa || msaalight)) || (smaastencil && ghasstencil > (msaasamples ? 1 : 0))) bindgdepth();
         if(glCheckFramebufferStatus_(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
             fatal("failed allocating SMAA buffer!");
     }
@@ -584,8 +584,8 @@ void dosmaa(GLuint outfbo = 0, bool split = false)
 {
     timer *smaatimer = begintimer("smaa");
 
-    int cleardepth = msaasamples ? GL_DEPTH_BUFFER_BIT | (ghasstencil > 1 ? GL_STENCIL_BUFFER_BIT : 0) : 0;
-    bool depthmask = smaadepthmask && (!tqaa || msaasamples),
+    int cleardepth = msaalight ? GL_DEPTH_BUFFER_BIT | (ghasstencil > 1 ? GL_STENCIL_BUFFER_BIT : 0) : 0;
+    bool depthmask = smaadepthmask && (!tqaa || msaalight),
          stencil = smaastencil && ghasstencil > (msaasamples ? 1 : 0);
     loop(pass, split ? 2 : 1)
     {
@@ -735,7 +735,7 @@ void disableaamask()
 
 bool multisampledaa()
 {
-    return msaasamples == 2 && (smaa ? smaaspatial : tqaa);
+    return msaasamples == 2 && (smaa ? msaalight && smaaspatial : tqaa);
 }
 
 bool maskedaa()

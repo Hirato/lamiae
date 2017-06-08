@@ -251,6 +251,8 @@ VARNP(relativemouse, userelativemouse, 0, 1, 1);
 
 bool shouldgrab = false, grabinput = false, minimized = false, canrelativemouse = true, relativemouse = false;
 int keyrepeatmask = 0, textinputmask = 0;
+Uint32 textinputtime = 0;
+VAR(textinputfilter, 0, 5, 1000);
 
 void keyrepeat(bool on, int mask)
 {
@@ -262,7 +264,11 @@ void textinput(bool on, int mask)
 {
     if(on)
     {
-        if(!textinputmask) SDL_StartTextInput();
+        if(!textinputmask)
+        {
+            SDL_StartTextInput();
+            textinputtime = SDL_GetTicks();
+        }
         textinputmask |= mask;
     }
     else
@@ -373,11 +379,13 @@ void cleargamma()
     if(curgamma != 100 && screen) SDL_SetWindowBrightness(screen, 1.0f);
 }
 
+int curvsync = -1;
 void restorevsync()
 {
     if(initing || !glcontext) return;
     extern int vsync, vsynctear;
-    SDL_GL_SetSwapInterval(vsync ? (vsynctear ? -1 : 1) : 0);
+    if(!SDL_GL_SetSwapInterval(vsync ? (vsynctear ? -1 : 1) : 0))
+        curvsync = vsync;
 }
 
 VARFP(vsync, 0, 0, 1, restorevsync());
@@ -397,9 +405,10 @@ void setupscreen()
         SDL_DestroyWindow(screen);
         screen = NULL;
     }
+    curvsync = -1;
 
-    SDL_DisplayMode desktop;
-    if(SDL_GetDesktopDisplayMode(0, &desktop) < 0) fatal("failed querying desktop display mode: %s", SDL_GetError());
+    SDL_Rect desktop;
+    if(SDL_GetDisplayBounds(0, &desktop) < 0) fatal("failed querying desktop bounds: %s", SDL_GetError());
     desktopw = desktop.w;
     desktoph = desktop.h;
 
@@ -417,6 +426,7 @@ void setupscreen()
         initwindowpos = true;
     }
 
+    SDL_GL_ResetAttributes();
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);
@@ -426,23 +436,21 @@ void setupscreen()
     SDL_SetWindowMinimumSize(screen, SCR_MINW, SCR_MINH);
     SDL_SetWindowMaximumSize(screen, SCR_MAXW, SCR_MAXH);
 
-    static const struct { int major, minor; } coreversions[] = { { 4, 0 }, { 3, 3 }, { 3, 2 }, { 3, 1 }, { 3, 0 } };
-    loopi(sizeof(coreversions)/sizeof(coreversions[0]))
+#ifdef __APPLE__
+    static const int glversions[] = { 32, 20 };
+#else
+    static const int glversions[] = { 40, 33, 32, 31, 30, 20 };
+#endif
+    loopi(sizeof(glversions)/sizeof(glversions[0]))
     {
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, coreversions[i].major);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, coreversions[i].minor);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+        glcompat = glversions[i] <= 30 ? 1 : 0;
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, glversions[i] / 10);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, glversions[i] % 10);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, glversions[i] >= 32 ? SDL_GL_CONTEXT_PROFILE_CORE : 0);
         glcontext = SDL_GL_CreateContext(screen);
         if(glcontext) break;
     }
-    if(!glcontext)
-    {
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, 0);
-        glcontext = SDL_GL_CreateContext(screen);
-        if(!glcontext) fatal("failed to create OpenGL context: %s", SDL_GetError());
-    }
+    if(!glcontext) fatal("failed to create OpenGL context: %s", SDL_GetError());
 
     SDL_GetWindowSize(screen, &screenw, &screenh);
     renderw = min(scr_w, screenw);
@@ -499,7 +507,6 @@ void resetgl()
     initgbuffer();
     reloadshaders();
     reloadtextures();
-    initlights();
     allchanged(true);
 }
 
@@ -619,12 +626,13 @@ void checkinput()
                 return;
 
             case SDL_TEXTINPUT:
-            {
-                uchar buf[SDL_TEXTINPUTEVENT_TEXT_SIZE+1];
-                size_t len = decodeutf8(buf, sizeof(buf)-1, (const uchar *)event.text.text, strlen(event.text.text));
-                if(len > 0) { buf[len] = '\0'; processtextinput((const char *)buf, len); }
+                if(textinputmask && int(event.text.timestamp-textinputtime) >= textinputfilter)
+                {
+                    uchar buf[SDL_TEXTINPUTEVENT_TEXT_SIZE+1];
+                    size_t len = decodeutf8(buf, sizeof(buf)-1, (const uchar *)event.text.text, strlen(event.text.text));
+                    if(len > 0) { buf[len] = '\0'; processtextinput((const char *)buf, len); }
+                }
                 break;
-            }
 
             case SDL_KEYDOWN:
             case SDL_KEYUP:
@@ -744,6 +752,26 @@ void limitfps(int &millis, int curmillis)
         }
     }
 }
+
+#ifdef WIN32
+// Force Optimus setups to use the NVIDIA GPU
+extern "C"
+{
+#ifdef __GNUC__
+__attribute__((dllexport))
+#else
+__declspec(dllexport)
+#endif
+    DWORD NvOptimusEnablement = 1;
+
+#ifdef __GNUC__
+__attribute__((dllexport))
+#else
+__declspec(dllexport)
+#endif
+    DWORD AmdPowerXpressRequestHighPerformance = 1;
+}
+#endif
 
 #if defined(WIN32) && !defined(_DEBUG) && !defined(__GNUC__)
 void stackdumper(unsigned int type, EXCEPTION_POINTERS *ep)
@@ -896,34 +924,32 @@ int main(int argc, char **argv)
 
     initing = INIT_RESET;
     for(int i = 1; i<argc; i++)
+    // set home dir first
+    for(int i = 1; i<argc; i++) if(argv[i][0]=='-' && argv[i][1] == 'u') { sethomedir(&argv[i][2]); break; }
+    // set log after home dir, but before anything else
+    for(int i = 1; i<argc; i++) if(argv[i][0]=='-' && argv[i][1] == 'g')
     {
-        if(argv[i][0]=='-') switch(argv[i][1])
-        {
-            case 'u':
-            {
-                const char *dir = sethomedir(&argv[i][2]);
-                if(dir) logoutf("Using home directory: %s", dir);
-                break;
-            }
-        }
-    }
+        const char *file = argv[i][2] ? &argv[i][2] : "log.txt";
+        setlogfile(file);
+        logoutf("Setting log file: %s", file);
+        break;
+     }
     execfile("init.cfg", false);
     for(int i = 1; i<argc; i++)
     {
         if(argv[i][0]=='-') switch(argv[i][1])
         {
-            case 'u': /* parsed first */ break;
+            case 'u': if(homedir[0]) logoutf("Using home directory: %s", homedir); break;
             case 'k':
             {
                 const char *dir = addpackagedir(&argv[i][2]);
                 if(dir) logoutf("Adding package directory: %s", dir);
                 break;
             }
-            case 'g': logoutf("Setting log file: %s", &argv[i][2]); setlogfile(&argv[i][2]); break;
+            case 'g': break;
             case 'd': dedicated = atoi(&argv[i][2]); if(dedicated<=0) dedicated = 2; break;
             case 'w': scr_w = clamp(atoi(&argv[i][2]), SCR_MINW, SCR_MAXW); if(!findarg(argc, argv, "-h")) scr_h = -1; break;
             case 'h': scr_h = clamp(atoi(&argv[i][2]), SCR_MINH, SCR_MAXH); if(!findarg(argc, argv, "-w")) scr_w = -1; break;
-            case 'v': vsync = atoi(&argv[i][2]); if(vsync < 0) { vsynctear = 1; vsync = 1; } else vsynctear = 0; break;
             case 'f': fullscreen = atoi(&argv[i][2]); break;
             case 'l':
             {

@@ -1,4 +1,4 @@
-static void FUNCNAME(halvetexture)(uchar *src, uint sw, uint sh, uint stride, uchar *dst)
+static void FUNCNAME(halvetexture)(uchar * RESTRICT src, uint sw, uint sh, uint stride, uchar * RESTRICT dst)
 {
     for(uchar *yend = &src[sh*stride]; src < yend;)
     {
@@ -12,7 +12,7 @@ static void FUNCNAME(halvetexture)(uchar *src, uint sw, uint sh, uint stride, uc
     }
 }
 
-static void FUNCNAME(shifttexture)(uchar *src, uint sw, uint sh, uint stride, uchar *dst, uint dw, uint dh)
+static void FUNCNAME(shifttexture)(uchar * RESTRICT src, uint sw, uint sh, uint stride, uchar * RESTRICT dst, uint dw, uint dh)
 {
     uint wfrac = sw/dw, hfrac = sh/dh, wshift = 0, hshift = 0;
     while(dw<<wshift < sw) wshift++;
@@ -44,7 +44,7 @@ static void FUNCNAME(shifttexture)(uchar *src, uint sw, uint sh, uint stride, uc
     }
 }
 
-static void FUNCNAME(scaletexture)(uchar *src, uint sw, uint sh, uint stride, uchar *dst, uint dw, uint dh)
+static void FUNCNAME(scaletexture)(uchar * RESTRICT src, uint sw, uint sh, uint stride, uchar * RESTRICT dst, uint dw, uint dh)
 {
     uint wfrac = (sw<<12)/dw, hfrac = (sh<<12)/dh, darea = dw*dh, sarea = sw*sh;
     int over, under;

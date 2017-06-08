@@ -339,14 +339,28 @@ void clearqueries()
     loopi(MAXQUERYFRAMES) queryframes[i].cleanup();
 }
 
+VARF(oqany, 0, 0, 2, clearqueries());
 VAR(oqfrags, 0, 8, 64);
 VAR(oqwait, 0, 1, 1);
 
+static inline GLenum querytarget()
+{
+    return oqany && hasOQ2 ? (oqany > 1 && hasES3 ? GL_ANY_SAMPLES_PASSED_CONSERVATIVE : GL_ANY_SAMPLES_PASSED) : GL_SAMPLES_PASSED;
+}
+
+void startquery(occludequery *query)
+{
+    glBeginQuery_(querytarget(), query->id);
+}
+
+void endquery(occludequery *query)
+{
+    glEndQuery_(querytarget());
+}
+
 bool checkquery(occludequery *query, bool nowait)
 {
-    GLuint fragments;
-    if(query->fragments >= 0) fragments = query->fragments;
-    else
+    if(query->fragments < 0)
     {
         if(nowait || !oqwait)
         {
@@ -354,10 +368,12 @@ bool checkquery(occludequery *query, bool nowait)
             glGetQueryObjectiv_(query->id, GL_QUERY_RESULT_AVAILABLE, &avail);
             if(!avail) return false;
         }
+
+        GLuint fragments;
         glGetQueryObjectuiv_(query->id, GL_QUERY_RESULT, &fragments);
-        query->fragments = fragments;
+        query->fragments = querytarget() == GL_SAMPLES_PASSED || !fragments ? int(fragments) : oqfrags;
     }
-    return fragments < uint(oqfrags);
+    return query->fragments < oqfrags;
 }
 
 static GLuint bbvbo = 0, bbebo = 0;
@@ -441,7 +457,7 @@ extern int octaentsize;
 
 static octaentities *visiblemms, **lastvisiblemms;
 
-void findvisiblemms(const vector<extentity *> &ents)
+void findvisiblemms(const vector<extentity *> &ents, bool doquery)
 {
     visiblemms = NULL;
     lastvisiblemms = &visiblemms;
@@ -450,7 +466,7 @@ void findvisiblemms(const vector<extentity *> &ents)
         octaentities *oe = va->mapmodels[i];
         if(isfoggedcube(oe->o, oe->size) || pvsoccluded(oe->bbmin, oe->bbmax)) continue;
 
-        bool occluded = oe->query && oe->query->owner == oe && checkquery(oe->query);
+        bool occluded = doquery && oe->query && oe->query->owner == oe && checkquery(oe->query);
         if(occluded)
         {
             oe->distance = -1;
@@ -499,12 +515,10 @@ static inline void rendermapmodel(extentity &e)
 
 void rendermapmodels()
 {
-    const vector<extentity *> &ents = entities::getents();
-
-    findvisiblemms(ents);
-
     static int skipoq = 0;
-    bool doquery = oqfrags && oqmm;
+    bool doquery = !drawtex && oqfrags && oqmm;
+    const vector<extentity *> &ents = entities::getents();
+    findvisiblemms(ents, doquery);
 
     for(octaentities *oe = visiblemms; oe; oe = oe->next) if(oe->distance>=0)
     {

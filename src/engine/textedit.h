@@ -31,6 +31,7 @@ struct editline
             vformatstring(newtext, fmt, args, maxlen);
             va_end(args);
         }
+        else newtext[0] = '\0';
         DELETEA(text);
         text = newtext;
         return true;

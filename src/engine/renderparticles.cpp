@@ -116,9 +116,8 @@ enum
     PT_ICON      = 1<<18,
     PT_NOTEX     = 1<<19,
     PT_SHADER    = 1<<20,
-    PT_SWIZZLE   = 1<<21,
-    PT_NOLAYER   = 1<<22,
-    PT_COLLIDE   = 1<<24,
+    PT_NOLAYER   = 1<<21,
+    PT_COLLIDE   = 1<<22,
     PT_FLIP      = PT_HFLIP | PT_VFLIP | PT_ROT
 };
 
@@ -925,7 +924,6 @@ void renderparticles(int layer)
     uint lastflags = PT_LERP|PT_SHADER,
          flagmask = PT_LERP|PT_MOD|PT_BRIGHT|PT_NOTEX|PT_SOFT|PT_SHADER,
          excludemask = layer == PL_ALL ? ~0 : (layer != PL_NOLAYER ? PT_NOLAYER : 0);
-    int lastswizzle = -1;
 
     loopi(sizeof(parts)/sizeof(parts[0]))
     {
@@ -940,14 +938,12 @@ void renderparticles(int layer)
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
             glActiveTexture_(GL_TEXTURE2);
-            if(msaasamples) glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, msdepthtex);
+            if(msaalight) glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, msdepthtex);
             else glBindTexture(GL_TEXTURE_RECTANGLE, gdepthtex);
             glActiveTexture_(GL_TEXTURE0);
         }
 
         uint flags = p->type & flagmask, changedbits = flags ^ lastflags;
-        int swizzle = p->tex ? p->tex->swizzle() : -1;
-        if(swizzle != lastswizzle) changedbits |= PT_SWIZZLE;
         if(changedbits)
         {
             if(changedbits&PT_LERP) { if(flags&PT_LERP) resetfogcolor(); else zerofogcolor(); }
@@ -959,17 +955,17 @@ void renderparticles(int layer)
             }
             if(!(flags&PT_SHADER))
             {
-                if(changedbits&(PT_LERP|PT_SOFT|PT_NOTEX|PT_SHADER|PT_SWIZZLE))
+                if(changedbits&(PT_LERP|PT_SOFT|PT_NOTEX|PT_SHADER))
                 {
                     if(flags&PT_SOFT && softparticles)
                     {
-                        particlesoftshader->setvariant(swizzle, 0);
+                        particlesoftshader->set();
                         LOCALPARAMF(softparams, -1.0f/softparticleblend, 0, 0);
                     }
                     else if(flags&PT_NOTEX) particlenotextureshader->set();
-                    else particleshader->setvariant(swizzle, 0);
+                    else particleshader->set();
                 }
-                if(changedbits&(PT_MOD|PT_BRIGHT|PT_SOFT|PT_NOTEX|PT_SHADER|PT_SWIZZLE))
+                if(changedbits&(PT_MOD|PT_BRIGHT|PT_SOFT|PT_NOTEX|PT_SHADER))
                 {
                     float colorscale = flags&PT_MOD ? 1 : ldrscale;
                     if(flags&PT_BRIGHT) colorscale *= particlebright;
@@ -977,7 +973,6 @@ void renderparticles(int layer)
                 }
             }
             lastflags = flags;
-            lastswizzle = swizzle;
         }
         p->render();
     }

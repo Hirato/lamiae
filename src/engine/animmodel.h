@@ -1626,9 +1626,12 @@ struct animmodel : model
 
     static void disablevbo()
     {
-        gle::clearvbo();
-        gle::clearebo();
-        gle::disablevertex();
+        if(lastebuf) gle::clearebo();
+        if(lastvbuf)
+        {
+            gle::clearvbo();
+            gle::disablevertex();
+        }
         if(enabletc) disabletc();
         if(enabletangents) disabletangents();
         if(enablebones) disablebones();

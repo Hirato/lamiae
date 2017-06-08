@@ -2,13 +2,14 @@
 
 #include "engine.h"
 
-bool hasVAO = false, hasTR = false, hasTSW = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasS3TC = false, hasFXT1 = false, hasLATC = false, hasRGTC = false, hasAF = false, hasFBB = false, hasFBMS = false, hasTMS = false, hasMSS = false, hasFBMSBS = false, hasUBO = false, hasMBR = false, hasDB2 = false, hasDBB = false, hasTG = false, hasTQ = false, hasPF = false, hasTRG = false, hasTI = false, hasHFV = false, hasHFP = false, hasDBT = false, hasDC = false, hasDBGO = false, hasEGPU4 = false, hasGPU4 = false, hasGPU5 = false, hasBFE = false, hasEAL = false, hasCR = false, hasOQ2 = false, hasCB = false, hasCI = false;
+bool hasVAO = false, hasTR = false, hasTSW = false, hasPBO = false, hasFBO = false, hasAFBO = false, hasDS = false, hasTF = false, hasCBF = false, hasS3TC = false, hasFXT1 = false, hasLATC = false, hasRGTC = false, hasAF = false, hasFBB = false, hasFBMS = false, hasTMS = false, hasMSS = false, hasFBMSBS = false, hasUBO = false, hasMBR = false, hasDB2 = false, hasDBB = false, hasTG = false, hasTQ = false, hasPF = false, hasTRG = false, hasTI = false, hasHFV = false, hasHFP = false, hasDBT = false, hasDC = false, hasDBGO = false, hasEGPU4 = false, hasGPU4 = false, hasGPU5 = false, hasBFE = false, hasEAL = false, hasCR = false, hasOQ2 = false, hasES3 = false, hasCB = false, hasCI = false;
 bool mesa = false, intel = false, amd = false, nvidia = false;
 
 int hasstencil = 0;
 
 VAR(glversion, 1, 0, 0);
 VAR(glslversion, 1, 0, 0);
+VAR(glcompat, 1, 0, 0);
 
 // GL_EXT_timer_query
 PFNGLGETQUERYOBJECTI64VEXTPROC glGetQueryObjecti64v_  = NULL;
@@ -73,7 +74,7 @@ PFNGLGETCOMPRESSEDTEXIMAGEPROC   glGetCompressedTexImage_   = NULL;
 PFNGLDRAWRANGEELEMENTSPROC glDrawRangeElements_ = NULL;
 #endif
 
-// OpenGL 2.1
+// OpenGL 2.0
 #ifndef __APPLE__
 PFNGLMULTIDRAWARRAYSPROC   glMultiDrawArrays_   = NULL;
 PFNGLMULTIDRAWELEMENTSPROC glMultiDrawElements_ = NULL;
@@ -167,13 +168,6 @@ PFNGLVERTEXATTRIB4NUBVPROC        glVertexAttrib4Nubv_        = NULL;
 PFNGLVERTEXATTRIB4NUIVPROC        glVertexAttrib4Nuiv_        = NULL;
 PFNGLVERTEXATTRIB4NUSVPROC        glVertexAttrib4Nusv_        = NULL;
 PFNGLVERTEXATTRIBPOINTERPROC      glVertexAttribPointer_      = NULL;
-
-PFNGLUNIFORMMATRIX2X3FVPROC       glUniformMatrix2x3fv_       = NULL;
-PFNGLUNIFORMMATRIX3X2FVPROC       glUniformMatrix3x2fv_       = NULL;
-PFNGLUNIFORMMATRIX2X4FVPROC       glUniformMatrix2x4fv_       = NULL;
-PFNGLUNIFORMMATRIX4X2FVPROC       glUniformMatrix4x2fv_       = NULL;
-PFNGLUNIFORMMATRIX3X4FVPROC       glUniformMatrix3x4fv_       = NULL;
-PFNGLUNIFORMMATRIX4X3FVPROC       glUniformMatrix4x3fv_       = NULL;
 
 PFNGLDRAWBUFFERSPROC glDrawBuffers_ = NULL;
 #endif
@@ -279,6 +273,7 @@ VAR(amd_eal_bug, 0, 0, 1);
 VAR(mesa_texrectoffset_bug, 0, 0, 1);
 VAR(intel_texalpha_bug, 0, 0, 1);
 VAR(intel_mapbufferrange_bug, 0, 0, 1);
+VAR(mesa_swap_bug, 0, 0, 1);
 VAR(useubo, 1, 0, 0);
 VAR(usetexgather, 1, 0, 0);
 VAR(usetexcompress, 1, 0, 0);
@@ -351,7 +346,7 @@ bool checkdepthtexstencilrb()
 
     GLuint depthtex = 0;
     glGenTextures(1, &depthtex);
-    createtexture(depthtex, w, h, NULL, 3, 0, GL_DEPTH_COMPONENT, GL_TEXTURE_RECTANGLE);
+    createtexture(depthtex, w, h, NULL, 3, 0, GL_DEPTH_COMPONENT24, GL_TEXTURE_RECTANGLE);
     glBindTexture(GL_TEXTURE_RECTANGLE, 0);
     glFramebufferTexture2D_(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_RECTANGLE, depthtex, 0);
 
@@ -401,7 +396,7 @@ void gl_checkextensions()
     if(sscanf(version, " %u.%u", &glmajorversion, &glminorversion) != 2) glversion = 100;
     else glversion = glmajorversion*100 + glminorversion*10;
 
-    if(glversion < 210) fatal("OpenGL 2.1 or greater is required!");
+    if(glversion < 200) fatal("OpenGL 2.0 or greater is required!");
 
 #ifdef WIN32
     glActiveTexture_ =            (PFNGLACTIVETEXTUREPROC)            getprocaddress("glActiveTexture");
@@ -518,13 +513,6 @@ void gl_checkextensions()
     glVertexAttrib4Nusv_ =        (PFNGLVERTEXATTRIB4NUSVPROC)        getprocaddress("glVertexAttrib4Nusv");
     glVertexAttribPointer_ =      (PFNGLVERTEXATTRIBPOINTERPROC)      getprocaddress("glVertexAttribPointer");
 
-    glUniformMatrix2x3fv_ =       (PFNGLUNIFORMMATRIX2X3FVPROC)       getprocaddress("glUniformMatrix2x3fv");
-    glUniformMatrix3x2fv_ =       (PFNGLUNIFORMMATRIX3X2FVPROC)       getprocaddress("glUniformMatrix3x2fv");
-    glUniformMatrix2x4fv_ =       (PFNGLUNIFORMMATRIX2X4FVPROC)       getprocaddress("glUniformMatrix2x4fv");
-    glUniformMatrix4x2fv_ =       (PFNGLUNIFORMMATRIX4X2FVPROC)       getprocaddress("glUniformMatrix4x2fv");
-    glUniformMatrix3x4fv_ =       (PFNGLUNIFORMMATRIX3X4FVPROC)       getprocaddress("glUniformMatrix3x4fv");
-    glUniformMatrix4x3fv_ =       (PFNGLUNIFORMMATRIX4X3FVPROC)       getprocaddress("glUniformMatrix4x3fv");
-
     glDrawBuffers_ =              (PFNGLDRAWBUFFERSPROC)              getprocaddress("glDrawBuffers");
 #endif
 
@@ -561,6 +549,13 @@ void gl_checkextensions()
     glGetIntegerv(GL_MAX_DRAW_BUFFERS, &drawbufs);
     maxdrawbufs = drawbufs;
     if(maxdrawbufs < 4) fatal("Hardware does not support at least 4 draw buffers.");
+
+    if(glversion >= 210 || hasext("GL_ARB_pixel_buffer_object") || hasext("GL_EXT_pixel_buffer_object"))
+    {
+        hasPBO = true;
+        if(glversion < 210 && dbgexts) conoutf(CON_INIT, "Using GL_ARB_pixel_buffer_object extension.");
+    }
+    else fatal("Pixel buffer object support is required!");
 
     if(glversion >= 300 || hasext("GL_ARB_vertex_array_object"))
     {
@@ -977,6 +972,12 @@ void gl_checkextensions()
     }
     if(hasTG) usetexgather = hasGPU5 && !intel && !nvidia ? 2 : 1;
 
+    if(glversion >= 430 || hasext("GL_ARB_ES3_compatibility"))
+    {
+        hasES3 = true;
+        if(glversion < 430 && dbgexts) conoutf(CON_INIT, "Using GL_ARB_ES3_compatibility extension.");
+    }
+
     if(glversion >= 430)
     {
         glDebugMessageControl_ =  (PFNGLDEBUGMESSAGECONTROLPROC) getprocaddress("glDebugMessageControl");
@@ -1019,8 +1020,11 @@ void gl_checkextensions()
         msaalineardepth = glineardepth = 1; // reading back from depth-stencil still buggy on newer cards, and requires stencil for MSAA
         msaadepthstencil = gdepthstencil = 1; // some older AMD GPUs do not support reading from depth-stencil textures, so only use depth-stencil renderbuffer for now
         if(checkseries(renderer, "Radeon HD", 4000, 5199)) amd_pf_bug = 1;
-        if(glversion <= 330) amd_eal_bug = 1; // explicit_attrib_location broken when used with blend_func_extended on legacy Catalyst
-        rhrect = 1; // bad cpu stalls on Catalyst 13.x when trying to use 3D textures previously bound to FBOs
+        if(glversion < 400)
+        {
+            amd_eal_bug = 1; // explicit_attrib_location broken when used with blend_func_extended on legacy Catalyst
+            rhrect = 1; // bad cpu stalls on Catalyst 13.x when trying to use 3D textures previously bound to FBOs
+        }
     }
     else if(nvidia)
     {
@@ -1033,6 +1037,7 @@ void gl_checkextensions()
             batchsunlight = 0; // causes massive slowdown in linux driver
             if(!checkmesaversion(version, 10, 0, 3))
                 mesa_texrectoffset_bug = 1; // mesa i965 driver has buggy textureOffset with texture rectangles
+            msaalineardepth = 1; // MSAA depth texture access is buggy and resolves are slow
         }
         else
         {
@@ -1048,6 +1053,7 @@ void gl_checkextensions()
             if(glversion <= 310) intel_mapbufferrange_bug = 1;
         }
     }
+    if(mesa) mesa_swap_bug = 1;
     if(hasGPU5 && hasTG) tqaaresolvegather = 1;
 }
 
@@ -2220,7 +2226,7 @@ void drawcubemap(int size, const vec &o, float yaw, float pitch, const cubemapsi
     ldrscale = 1;
     ldrscaleb = ldrscale/255;
 
-    visiblecubes(onlysky);
+    visiblecubes();
 
     if(onlysky)
     {

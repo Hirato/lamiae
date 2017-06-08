@@ -412,7 +412,7 @@ float rayfloor(const vec &o, vec &floor, int mode, float radius)
 /////////////////////////  entity collision  ///////////////////////////////////////////////
 
 // info about collisions
-bool collideinside; // whether an internal collision happened
+int collideinside; // whether an internal collision happened
 physent *collideplayer; // whether the collection hit a player
 vec collidewall; // just the normal vectors.
 
@@ -474,7 +474,7 @@ bool ellipseboxcollide(physent *d, const vec &dir, const vec &o, const vec &cent
             collidewall = vec(0, 0, 1);
             return true;
         }
-        collideinside = true;
+        collideinside++;
     }
     return false;
 }
@@ -512,7 +512,7 @@ bool ellipsecollide(physent *d, const vec &dir, const vec &o, const vec &center,
             collidewall = vec(0, 0, 1);
             return true;
         }
-        collideinside = true;
+        collideinside++;
     }
     return false;
 }
@@ -599,14 +599,30 @@ static inline bool plcollide(physent *d, const vec &dir, physent *o)
         vec wn = vec(cp).sub(obvol.center());
         collidewall = obvol.contactface(wn, dir.iszero() ? vec(wn).neg() : dir);
         if(!collidewall.iszero()) return true;
-        collideinside = true;
+        collideinside++;
     }
     return false;
 }
 
-bool plcollide(physent *d, const vec &dir)    // collide with player
+static inline bool plcollide(physent *d, const vec &dir, physent *o)
+{
+    switch(d->collidetype)
+    {
+        case COLLIDE_ELLIPSE:
+            if(o->collidetype == COLLIDE_ELLIPSE) return ellipsecollide(d, dir, o->o, vec(0, 0, 0), o->yaw, o->xradius, o->yradius, o->aboveeye, o->eyeheight);
+            else return ellipseboxcollide(d, dir, o->o, vec(0, 0, 0), o->yaw, o->xradius, o->yradius, o->aboveeye, o->eyeheight);
+        case COLLIDE_OBB:
+            if(o->collidetype == COLLIDE_ELLIPSE) return plcollide<mpr::EntOBB, mpr::EntCylinder>(d, dir, o);
+            else return plcollide<mpr::EntOBB, mpr::EntOBB>(d, dir, o);
+        default: return false;
+    }
+}
+
+bool plcollide(physent *d, const vec &dir, bool insideplayercol)    // collide with player
 {
     if(d->type==ENT_CAMERA || d->state!=CS_ALIVE) return false;
+    int lastinside = collideinside;
+    physent *insideplayer = NULL;
     loopdynentcache(x, y, d->o, d->radius)
     {
         const vector<physent *> &dynents = checkdynentcache(x, y);
@@ -614,28 +630,24 @@ bool plcollide(physent *d, const vec &dir)    // collide with player
         {
             physent *o = dynents[i];
             if(o==d || d->o.reject(o->o, d->radius+o->radius)) continue;
-            switch(d->collidetype)
+            if(plcollide(d, dir, o))
             {
-                case COLLIDE_ELLIPSE:
-                    if(o->collidetype == COLLIDE_ELLIPSE)
-                    {
-                        if(!ellipsecollide(d, dir, o->o, vec(0, 0, 0), o->yaw, o->xradius, o->yradius, o->aboveeye, o->eyeheight)) continue;
-                    }
-                    else if(!ellipseboxcollide(d, dir, o->o, vec(0, 0, 0), o->yaw, o->xradius, o->yradius, o->aboveeye, o->eyeheight)) continue;
-                    break;
-                case COLLIDE_OBB:
-                    if(o->collidetype == COLLIDE_ELLIPSE)
-                    {
-                        if(!plcollide<mpr::EntOBB, mpr::EntCylinder>(d, dir, o)) continue;
-                    }
-                    else if(!plcollide<mpr::EntOBB, mpr::EntOBB>(d, dir, o)) continue;
-                    break;
-                default: continue;
+                collideplayer = o;
+                game::dynentcollide(d, o, collidewall);
+                return true;
             }
-            collideplayer = o;
-            game::dynentcollide(d, o, collidewall);
-            return true;
+            if(collideinside > lastinside)
+            {
+                lastinside = collideinside;
+                insideplayer = o;
+            }
         }
+    }
+    if(insideplayer && insideplayercol)
+    {
+        collideplayer = insideplayer;
+        game::dynentcollide(d, insideplayer, vec(0, 0, 0));
+        return true;
     }
     return false;
 }
@@ -662,7 +674,7 @@ static inline bool mmcollide(physent *d, const vec &dir, const extentity &e, con
         vec wn = vec(cp).sub(mdlvol.center());
         collidewall = mdlvol.contactface(wn, dir.iszero() ? vec(wn).neg() : dir);
         if(!collidewall.iszero()) return true;
-        collideinside = true;
+        collideinside++;
     }
     return false;
 }
@@ -713,7 +725,7 @@ static bool fuzzycollidebox(physent *d, const vec &dir, float cutoff, const vec 
     }
     if(collidewall.iszero())
     {
-        collideinside = true;
+        collideinside++;
         return false;
     }
     return true;
@@ -772,7 +784,7 @@ static bool fuzzycollideellipse(physent *d, const vec &dir, float cutoff, const 
     }
     if(collidewall.iszero())
     {
-        collideinside = true;
+        collideinside++;
         return false;
     }
     return true;
@@ -886,7 +898,7 @@ static bool fuzzycollidesolid(physent *d, const vec &dir, float cutoff, const cu
 
     if(collidewall.iszero())
     {
-        collideinside = false;
+        collideinside++;
         return false;
     }
     return true;
@@ -965,7 +977,7 @@ static bool fuzzycollideplanes(physent *d, const vec &dir, float cutoff, const c
     if(bestplane >= 0) collidewall = p.p[bestplane];
     else if(collidewall.iszero())
     {
-        collideinside = true;
+        collideinside++;
         return false;
     }
     return true;
@@ -995,7 +1007,7 @@ static bool cubecollidesolid(physent *d, const vec &dir, float cutoff, const cub
 
     if(collidewall.iszero())
     {
-        collideinside = true;
+        collideinside++;
         return false;
     }
     return true;
@@ -1049,7 +1061,7 @@ static bool cubecollideplanes(physent *d, const vec &dir, float cutoff, const cu
     if(bestplane >= 0) collidewall = p.p[bestplane];
     else if(collidewall.iszero())
     {
-        collideinside = true;
+        collideinside++;
         return false;
     }
     return true;
@@ -1122,15 +1134,15 @@ static inline bool octacollide(physent *d, const vec &dir, float cutoff, const i
 }
 
 // all collision happens here
-bool collide(physent *d, const vec &dir, float cutoff, bool playercol)
+bool collide(physent *d, const vec &dir, float cutoff, bool playercol, bool insideplayercol)
 {
-    collideinside = false;
+    collideinside = 0;
     collideplayer = NULL;
     collidewall = vec(0, 0, 0);
     ivec bo(int(d->o.x-d->radius), int(d->o.y-d->radius), int(d->o.z-d->eyeheight)),
          bs(int(d->o.x+d->radius), int(d->o.y+d->radius), int(d->o.z+d->aboveeye));
     bs.add(1);  // guard space for rounding errors
-    return octacollide(d, dir, cutoff, bo, bs) || (playercol && plcollide(d, dir)); // collide with world
+    return octacollide(d, dir, cutoff, bo, bs) || (playercol && plcollide(d, dir, insideplayercol)); // collide with world
 }
 
 void recalcdir(physent *d, const vec &oldvel, vec &dir)
@@ -1551,7 +1563,7 @@ bool bounce(physent *d, float secs, float elasticity, float waterfric, float gra
         vec dir(d->vel);
         dir.mul(secs);
         d->o.add(dir);
-        if(!collide(d, dir))
+        if(!collide(d, dir, 0, true, true))
         {
             if(collideinside)
             {
