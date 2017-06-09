@@ -2,7 +2,7 @@
 # LAMIAE_DIR should refer to the directory in which lamiae is placed, the default should be good enough.
 #LAMIAE_DIR=~/lamiae
 #LAMIAE_DIR=/usr/local/lamiae
-LAMIAE_DIR=$(dirname $(readlink -f $0))
+LAMIAE_DIR="$(dirname "$(readlink -f "$0")")"
 
 LAMIAE_OPTIONS=""
 LAMIAE_HOME="${HOME}/.lamiae"
@@ -161,7 +161,8 @@ function failed {
 }
 
 function run {
-	cd ${LAMIAE_DIR}
+	cd "${LAMIAE_DIR}"
+
 	if [ -a "bin/${LAMIAE_PLATFORM}/lamiae${MACHINE_BIT}${LAMIAE_SUFFIX}" ]
 	then
 		eval ${LAMIAE_EXEC} "./bin/${LAMIAE_PLATFORM}/lamiae${MACHINE_BIT}${LAMIAE_SUFFIX}" "-u${LAMIAE_HOME}" ${LAMIAE_OPTIONS}
