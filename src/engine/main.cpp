@@ -1008,6 +1008,7 @@ int main(int argc, char **argv)
 
     logoutf("init: cfg");
     initing = INIT_LOAD;
+    execfile("config/variables.cfg", false);
     execfile("config/keymap.cfg");
     execfile("config/stdedit.cfg");
     defformatstring(confname, "config/%s/std.cfg", game::gameident());
