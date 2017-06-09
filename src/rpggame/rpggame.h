@@ -1248,6 +1248,7 @@ struct item
 
 	vector<use *> uses;
 	int locals;
+	short nocompact;
 
 	inline ::script *getscript(int use = -1)
 	{
@@ -1300,7 +1301,7 @@ struct item
 		return true;
 	}
 
-	item() : name(NULL), icon(NULL), description(NULL), mdl(newstring(DEFAULTMODEL)), script(DEFAULTITEMSCR), base(NULL), colour(1, 1, 1), quantity(1), category(0), flags(0), value(0), maxdurability(0), charges(-2), scale(1), weight(0), durability(0), recovery(1), locals(-1) {}
+	item() : name(NULL), icon(NULL), description(NULL), mdl(newstring(DEFAULTMODEL)), script(DEFAULTITEMSCR), base(NULL), colour(1, 1, 1), quantity(1), category(0), flags(0), value(0), maxdurability(0), charges(-2), scale(1), weight(0), durability(0), recovery(1), locals(-1), nocompact(0) {}
 	virtual ~item()
 	{
 		delete[] name;

@@ -700,6 +700,7 @@ void rpgchar::equip(item *it, int u)
 		game::hudline("Unable to equip: required slot unavailable");
 }
 
+VAR(dequip_use, 1, 0, -1);
 bool rpgchar::dequip(const char *base, int slots)
 {
 	if(primary || secondary || lastprimary || lastsecondary)
@@ -711,6 +712,8 @@ bool rpgchar::dequip(const char *base, int slots)
 	if(base) base = game::hashpool.find(base, NULL);
 
 	int rem = 0;
+	vector<equipment *> dequipped;
+	//Find items to unequip and queue them for removal
 	loopv(equipped)
 	{
 		use_armour *arm = (use_armour *) equipped[i]->it->uses[equipped[i]->use];
@@ -721,11 +724,23 @@ bool rpgchar::dequip(const char *base, int slots)
 				rem++;
 			else
 			{
-				equipped[i]->it->quantity++;
-				rpgscript::removeminorrefs(equipped[i]);
-				delete equipped.remove(i--);
+				equipment *eq = dequipped.add(equipped.remove(i--));
+				eq->it->quantity++;
+				eq->it->nocompact++;
 			}
 		}
+	}
+	// slowly remove the items
+	loopv(dequipped)
+	{
+		item *it = dequipped[i]->it;
+		dequip_use = dequipped[i]->use;
+
+		rpgscript::removeminorrefs(dequipped[i]);
+		delete dequipped[i];
+
+		it->getsignal("dequip", false, this, dequip_use);
+		it->nocompact--;
 	}
 	return !rem;
 }
@@ -1056,6 +1071,8 @@ void rpgchar::compactinventory(const char *base)
 	vector<item *> &stack = *inventory.access(base);
 	loopvrev(stack)
 	{
+		if(stack[i]->nocompact) continue;
+
 		if(!getcount(stack[i]))
 		{
 			rpgscript::removeminorrefs(stack[i]);
@@ -1063,6 +1080,8 @@ void rpgchar::compactinventory(const char *base)
 			continue;
 		}
 
+		// merges an item higher in the stack into one that is lower
+		// this means that even if the nocompact flag is set, we can still safely merge it downwards
 		loopj(i)
 		{
 			if(stack[i]->compare(stack[j]))
