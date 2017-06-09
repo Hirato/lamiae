@@ -301,6 +301,7 @@ namespace rpgio
 					wp->elasticity = f->getlil<float>();
 					wp->speed = f->getlil<float>();
 				}
+				[[fallthrough]];
 				case USE_ARMOUR:
 				{
 					if(!u) u = it->uses.add(new use_armour(NULL));
@@ -322,6 +323,7 @@ namespace rpgio
 					loopj(STAT_MAX) ar->reqs.attrs[j] = f->getlil<short>();
 					loopj(SKILL_MAX) ar->reqs.skills[j] = f->getlil<short>();
 				}
+				[[fallthrough]];
 				case USE_CONSUME:
 				{
 					if(!u) u = it->uses.add(new use(NULL));
@@ -417,8 +419,8 @@ namespace rpgio
 					f->putlil(wp->maxcharge);
 					f->putlil(wp->elasticity);
 					f->putlil(wp->speed);
-					//fallthrough
 				}
+				[[fallthrough]];
 				case USE_ARMOUR:
 				{
 					use_armour *ar = (use_armour *) it->uses[i];
@@ -432,8 +434,8 @@ namespace rpgio
 
 					loopj(STAT_MAX) f->putlil<short>(ar->reqs.attrs[j]);
 					loopj(SKILL_MAX)  f->putlil<short>(ar->reqs.skills[j]);
-					//fallthrough
 				}
+				[[fallthrough]];
 				case USE_CONSUME:
 				{
 					use *u = it->uses[i];
@@ -1478,10 +1480,12 @@ namespace rpgio
 					default:
 						ERRORF("unsupported reference type %i for reference %s:%i, saving as T_INVALID", sav.type, saving.name, j);
 					// Temporary reference types below this line...
+					[[fallthrough]];
 					case ::reference::T_EQUIP:
 					case ::reference::T_VEFFECT:
 					case ::reference::T_AEFFECT:
 						type = ::reference::T_INVALID;
+						[[fallthrough]];
 					case ::reference::T_INVALID:
 						if(DEBUG_IO) DEBUGF("writing null reference %s:%i", saving.name, j);
 						f->putchar(type);
@@ -1590,7 +1594,7 @@ namespace rpgio
 					case ::reference::T_VEFFECT:
 					case ::reference::T_AEFFECT:
 						WARNINGF("volatile reference type found for reference %s:%i, assuming invalid", loading->name, j);
-						//fallthrough
+						[[fallthrough]];
 					case ::reference::T_INVALID:
 						if(DEBUG_IO) DEBUGF("reading now null reference %s:%i", loading->name, j);
 						loading->pushref(NULL, true);

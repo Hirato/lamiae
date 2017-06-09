@@ -1299,14 +1299,14 @@ static void getpartprops(const entity &e, int &attr1, int &attr2, int &attr3, in
 
                 switch(vals.length())
                 {
-                    case 8: dpp.attr8 = parseint(vals[7]);
-                    case 7: dpp.attr7 = parseint(vals[6]);
-                    case 6: dpp.attr6 = parseint(vals[5]);
-                    case 5: dpp.attr5 = parseint(vals[4]);
-                    case 4: dpp.attr4 = parseint(vals[3]);
-                    case 3: dpp.attr3 = parseint(vals[2]);
-                    case 2: dpp.attr2 = parseint(vals[1]);
-                    case 1: dpp.attr1 = parseint(vals[0]);
+                    case 8: dpp.attr8 = parseint(vals[7]); [[fallthrough]];
+                    case 7: dpp.attr7 = parseint(vals[6]); [[fallthrough]];
+                    case 6: dpp.attr6 = parseint(vals[5]); [[fallthrough]];
+                    case 5: dpp.attr5 = parseint(vals[4]); [[fallthrough]];
+                    case 4: dpp.attr4 = parseint(vals[3]); [[fallthrough]];
+                    case 3: dpp.attr3 = parseint(vals[2]); [[fallthrough]];
+                    case 2: dpp.attr2 = parseint(vals[1]); [[fallthrough]];
+                    case 1: dpp.attr1 = parseint(vals[0]); [[fallthrough]];
                     case 0: break;
                 }
 
@@ -1318,14 +1318,14 @@ static void getpartprops(const entity &e, int &attr1, int &attr2, int &attr3, in
 
         switch(dpp.num)
         {
-            case 8: attr8 = dpp.attr8;
-            case 7: attr7 = dpp.attr7;
-            case 6: attr6 = dpp.attr6;
-            case 5: attr5 = dpp.attr5;
-            case 4: attr4 = dpp.attr4;
-            case 3: attr3 = dpp.attr3;
-            case 2: attr2 = dpp.attr2;
-            case 1: attr1 = dpp.attr1;
+            case 8: attr8 = dpp.attr8; [[fallthrough]];
+            case 7: attr7 = dpp.attr7; [[fallthrough]];
+            case 6: attr6 = dpp.attr6; [[fallthrough]];
+            case 5: attr5 = dpp.attr5; [[fallthrough]];
+            case 4: attr4 = dpp.attr4; [[fallthrough]];
+            case 3: attr3 = dpp.attr3; [[fallthrough]];
+            case 2: attr2 = dpp.attr2; [[fallthrough]];
+            case 1: attr1 = dpp.attr1; [[fallthrough]];
             case 0: break;
         }
     }

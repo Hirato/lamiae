@@ -300,10 +300,10 @@ void getlightprops(const extentity &e, int &radius, int &red, int &green, int &b
 
                 switch(vals.length())
                 {
-                    case 4: dlp.blue =   max(0, parseint(vals[3]));
-                    case 3: dlp.green =  max(0, parseint(vals[2]));
-                    case 2: dlp.red =    max(0, parseint(vals[1]));
-                    case 1: dlp.radius = max(0, parseint(vals[0]));
+                    case 4: dlp.blue =   max(0, parseint(vals[3])); [[fallthrough]];
+                    case 3: dlp.green =  max(0, parseint(vals[2])); [[fallthrough]];
+                    case 2: dlp.red =    max(0, parseint(vals[1])); [[fallthrough]];
+                    case 1: dlp.radius = max(0, parseint(vals[0])); [[fallthrough]];
                     case 0: break;
                 }
 
@@ -314,10 +314,10 @@ void getlightprops(const extentity &e, int &radius, int &red, int &green, int &b
 
         switch(dlp.num)
         {
-            case 4: blue = dlp.blue;
-            case 3: green = dlp.green;
-            case 2: red = dlp.red;
-            case 1: radius = dlp.radius;
+            case 4: blue = dlp.blue; [[fallthrough]];
+            case 3: green = dlp.green; [[fallthrough]];
+            case 2: red = dlp.red; [[fallthrough]];
+            case 1: radius = dlp.radius; [[fallthrough]];
             case 0: break;
         }
     }

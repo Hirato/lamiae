@@ -269,6 +269,7 @@ void status_generic::update(rpgent *victim, rpgent *owner, int resist, int thres
 					///WRITE ME, prevent attacks with a vocal component, special speech path for talking to NPCs too?
 					return;
 			}
+			break;
 		}
 		case ENT_CONTAINER:
 		{
@@ -287,6 +288,7 @@ void status_generic::update(rpgent *victim, rpgent *owner, int resist, int thres
 						ent->magelock += strength * mult;
 					return;
 			}
+			break;
 		}
 	}
 

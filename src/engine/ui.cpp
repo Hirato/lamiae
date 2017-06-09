@@ -2581,6 +2581,7 @@ namespace UI
                 case SDLK_KP_ENTER:
                 case SDLK_TAB:
                     if(edit->maxy != 1) break;
+                    [[fallthrough]];
 
                 case SDLK_ESCAPE:
                     setfocus(NULL);

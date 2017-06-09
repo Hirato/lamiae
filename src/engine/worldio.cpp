@@ -706,11 +706,14 @@ void octa_to_lamiae_entity(const mapheader &hdr, extentity &e)
             {
                 case 0:
                     if(!e.attr[3]) break;
+                    [[fallthrough]];
                 case 4: case 5: case 6: case 7: case 8: case 9: case 10: case 12: case 13: case 14:
                     e.attr[3] = ((e.attr[3] & 0xF00) << 12) | ((e.attr[3] & 0x0F0) << 8) | ((e.attr[3] & 0x00F) << 4) | 0x0F0F0F;
                     if(e.attr[0] != 5 && e.attr[0] != 6) break;
+                    [[fallthrough]];
                 case 3: case 11:
                     e.attr[2] = ((e.attr[2] & 0xF00) << 12) | ((e.attr[2] & 0x0F0) << 8) | ((e.attr[2] & 0x00F) << 4) | 0x0F0F0F;
+                    break;
                 default:
                     break;
             }
@@ -766,12 +769,14 @@ void lamiae_to_octa_entity(const extentity &e, octaent &oe)
             {
                 case 0:
                     if(!e.attr[3]) break;
+                    [[fallthrough]];
                 case 1: case 2: case 6: case 7: case 9: case 10: case 11: case 12: case 13: case 14: case 15:
                     oe.attr4 = ((e.attr[3] & 0xF00000) >> 12) | ((e.attr[3] & 0xF000) >> 8) | ((e.attr[3] & 0xF0) >> 4);
                     if(e.attr[0] != 6 && e.attr[0] != 7) break;
-
+                    [[fallthrough]];
                 case 5: case 8:
                     oe.attr3 = ((e.attr[2] & 0xF00000) >> 12) | ((e.attr[2] & 0xF000) >> 8) | ((e.attr[2] & 0xF0) >> 4);
+                    break;
                 default:
                     break;
             }

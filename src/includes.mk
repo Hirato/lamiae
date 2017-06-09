@@ -1,4 +1,4 @@
-override CXXFLAGS+= -Wall -fsigned-char -fno-exceptions -fno-rtti
+override CXXFLAGS+= -Wall -fsigned-char -fno-exceptions -fno-rtti -Wimplicit-fallthrough
 override ENET_CFLAGS+= -g -O2
 
 BIN_SUFFIX=dbg
