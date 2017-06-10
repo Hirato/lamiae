@@ -95,11 +95,11 @@
 				<Option host_application="../../bin/w64/lamiae-dbg.exe" />
 				<Option run_host_application_in_terminal="0" />
 				<Compiler>
+					<Add option="-m64" />
 					<Add option="-g" />
 					<Add option="-fsigned-char" />
 					<Add option="-fno-rtti" />
 					<Add option="-fno-exceptions" />
-					<Add option="-m64" />
 					<Add directory="../rpggame" />
 				</Compiler>
 				<Linker>
@@ -118,6 +118,7 @@
 		</VirtualTargets>
 		<Compiler>
 			<Add option="-Wall" />
+			<Add option="-std=c++11" />
 			<Add directory="../enet/include" />
 			<Add directory="../include" />
 			<Add directory="../engine" />
@@ -223,7 +224,6 @@
 		<Unit filename="../engine/world.cpp" />
 		<Unit filename="../engine/world.h" />
 		<Unit filename="../engine/worldio.cpp" />
-		<Unit filename="../include/GL/glext.h" />
 		<Unit filename="../include/SDL.h" />
 		<Unit filename="../include/SDL_assert.h" />
 		<Unit filename="../include/SDL_atomic.h" />
@@ -256,7 +256,6 @@
 		<Unit filename="../include/SDL_mutex.h" />
 		<Unit filename="../include/SDL_name.h" />
 		<Unit filename="../include/SDL_opengl.h" />
-		<Unit filename="../include/SDL_opengles.h" />
 		<Unit filename="../include/SDL_opengles2.h" />
 		<Unit filename="../include/SDL_pixels.h" />
 		<Unit filename="../include/SDL_platform.h" />
@@ -313,10 +312,6 @@
 		<Unit filename="../shared/cube.h">
 			<Option compile="1" />
 			<Option weight="0" />
-		</Unit>
-		<Unit filename="../shared/cube2font.c">
-			<Option compilerVar="CC" />
-			<Option target="&lt;{~None~}&gt;" />
 		</Unit>
 		<Unit filename="../shared/ents.h" />
 		<Unit filename="../shared/geom.cpp" />
