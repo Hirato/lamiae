@@ -39,7 +39,7 @@ namespace test
 			NULL, NULL,
 			(flags&FLAG_FUZZY) ? 20 : 0,
 			1,
-			0.01 + rnd(flags & FLAG_FAST ? 10000 : 1000) / 100.0f
+			0.01f + rnd(flags & FLAG_FAST ? 10000 : 1000) / 100.0f
 		);
 
 		vector<effect *> efx;

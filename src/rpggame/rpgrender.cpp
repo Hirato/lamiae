@@ -23,7 +23,7 @@ namespace game
 			{
 				rpgent *d = curmap->objs[i];
 
-				vec pos = vec(d->yaw * RAD, d->pitch * RAD).mul(d->radius * 1.75);
+				vec pos = vec(d->yaw * RAD, d->pitch * RAD).mul(d->radius * 1.75f);
 				pos.z = 0;
 				pos.add(d->o);
 
@@ -130,7 +130,7 @@ namespace game
 		}
 	}
 
-	const int numanims() {return NUMANIMS;}
+	int numanims() {return NUMANIMS;}
 
 	void findanims(const char *pattern, vector<int> &anims)
 	{

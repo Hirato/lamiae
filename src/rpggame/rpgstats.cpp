@@ -8,7 +8,7 @@ int stats::getmaxhp() const
 
 float stats::gethpregen() const
 {
-	return max<float>(0, bonushregen + deltahregen + getattr(STAT_ENDURANCE) * 0.0025 + getattr(STAT_STRENGTH) * 0.00125);
+	return max<float>(0, bonushregen + deltahregen + getattr(STAT_ENDURANCE) * 0.0025f + getattr(STAT_STRENGTH) * 0.00125f);
 }
 
 int stats::getmaxmp() const
@@ -19,7 +19,7 @@ int stats::getmaxmp() const
 
 float stats::getmpregen() const
 {
-	return max<float>(0, bonusmregen + deltamregen + getattr(STAT_WISDOM)  * 0.05 + getattr(STAT_INTELLIGENCE) * 0.025);
+	return max<float>(0, bonusmregen + deltamregen + getattr(STAT_WISDOM)  * 0.05f + getattr(STAT_INTELLIGENCE) * 0.025f);
 }
 
 int stats::getmaxcarry() const
@@ -71,29 +71,29 @@ void stats::skillpotency(int n, float &amnt, float &extra)
 	{
 		case -1: amnt = 1; extra = rnd(50) / 100.0f; return; //special NO MODIFIERs case
 		case SKILL_ARMOUR:
-			amnt += (getattr(STAT_STRENGTH)      + getattr(STAT_ENDURANCE) * 2       + getskill(SKILL_ARMOUR) * 5) / 100.0f;
+			amnt += (getattr(STAT_STRENGTH)       + getattr(STAT_ENDURANCE) * 2        + getskill(SKILL_ARMOUR) * 5) / 100.0f;
 			break;
 		case SKILL_DIPLOMACY:
-			amnt += (getattr(STAT_CHARISMA) * 3                                      + getskill(SKILL_DIPLOMACY) * 5) / 100.0f;
+			amnt += (getattr(STAT_CHARISMA) * 3                                        + getskill(SKILL_DIPLOMACY) * 5) / 100.0f;
 			break;
 		case SKILL_MAGIC:
-			amnt += (getattr(STAT_WISDOM) * 1.75 + getattr(STAT_INTELLIGENCE) * 1.25 + getskill(SKILL_MAGIC) * 5) / 100.0f;
+			amnt += (getattr(STAT_WISDOM) * 1.75f + getattr(STAT_INTELLIGENCE) * 1.25f + getskill(SKILL_MAGIC) * 5) / 100.0f;
 			break;
 		case SKILL_MARKSMAN:
-			amnt += (getattr(STAT_STRENGTH) * .5 + getattr(STAT_AGILITY) * 2.5       + getskill(SKILL_MARKSMAN) * 5) / 100.0f;
+			amnt += (getattr(STAT_STRENGTH) * .5f + getattr(STAT_AGILITY) * 2.5f       + getskill(SKILL_MARKSMAN) * 5) / 100.0f;
 			break;
 		case SKILL_MELEE:
-			amnt += (getattr(STAT_AGILITY) * .5  + getattr(STAT_STRENGTH) * 2.5      + getskill(SKILL_MELEE) * 5) / 100.0f;
+			amnt += (getattr(STAT_AGILITY) * .5f  + getattr(STAT_STRENGTH) * 2.5f      + getskill(SKILL_MELEE) * 5) / 100.0f;
 			break;
 		case SKILL_STEALTH:
-			amnt += (getattr(STAT_LUCK) * 1      + getattr(STAT_AGILITY) * 2         + getskill(SKILL_STEALTH) * 5) / 100.0f;
+			amnt += (getattr(STAT_LUCK) * 1       + getattr(STAT_AGILITY) * 2          + getskill(SKILL_STEALTH) * 5) / 100.0f;
 			break;
 	}
 	amnt = log(1 + amnt);
 
 	extra = amnt * (50 + rnd(101)) / 100.0f;
 	if(rnd(1000) < critchance())
-		extra = extra * (1.10 + (rnd(191) / 100.0f)) + (rnd(150) / 100.0f) * (rnd(150) / 100.0f);
+		extra = extra * (1.10f + (rnd(191) / 100.0f)) + (rnd(150) / 100.0f) * (rnd(150) / 100.0f);
 	extra -= amnt;
 }
 

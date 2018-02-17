@@ -1217,7 +1217,7 @@ extentity *newentity(bool local, const vec &o, int type, int *attrs, int &idx, b
     return &e;
 }
 
-const int getattrnum(int type)
+int getattrnum(int type)
 {
     if(type >= ET_GAMESPECIFIC)
         return entities::numattrs(type);

@@ -5,7 +5,7 @@ namespace entities
     extern void editent(int i, bool local);
     extern const char *entnameinfo(entity &e);
     extern const char *entname(int i);
-    extern const int numattrs(int type);
+    extern int numattrs(int type);
     extern int extraentinfosize();
     extern void saveextrainfo(entity &e, char *buf);
     extern void loadextrainfo(entity &e, char *buf);
@@ -79,7 +79,7 @@ namespace game
     extern int numdynents();
     extern void rendergame();
     extern void renderavatar();
-    extern const int numanims();
+    extern int numanims();
     extern void findanims(const char *pattern, vector<int> &anims);
     extern void writegamedata(vector<uchar> &extras);
     extern void readgamedata(vector<uchar> &extras);

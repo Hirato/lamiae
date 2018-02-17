@@ -445,9 +445,9 @@ void rpgchar::doai(equipment *eleft, equipment *eright, equipment *quiver)
 		dir.z = 0; dir.normalize();
 		dir.rotate_around_z(-yaw * RAD);
 
-		if(fabs(dir.y) >= .7)
+		if(fabs(dir.y) >= .7f)
 			move = dir.y < 0 ? -1 : 1;
-		if(fabs(dir.x) >= .7)
+		if(fabs(dir.x) >= .7f)
 			strafe = dir.x < 0 ? -1 : 1;
 	}
 }
@@ -1115,7 +1115,7 @@ bool rpgchar::cansee(rpgent *d)
 	vec dir = vec(d->o).sub(o).normalize();
 	vec view = vec(yaw * RAD, pitch * RAD);
 
-	if(dir.dot(view) >= .25) // fov == ~150
+	if(dir.dot(view) >= .25f) // fov == ~150
 	{
 		vec pos;
 		float dist = raycubepos(o, dir, pos, 0, RAY_ALPHAPOLY|RAY_CLIPMAT);

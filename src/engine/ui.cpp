@@ -509,7 +509,7 @@ namespace UI
         }
 
         virtual const char *getname() const { return ""; }
-        virtual const int gettype() const { return TYPE_OBJECT; }
+        virtual int gettype() const { return TYPE_OBJECT; }
         virtual bool takesinput() const { return true; }
 
         bool isnamed(const char *name) const { return !strcmp(name, getname()); }
@@ -617,7 +617,7 @@ namespace UI
             return false;
         }
 
-        const int gettype() const { return TYPE_WORLD;}
+        int gettype() const { return TYPE_WORLD;}
     };
 
     World *main;
@@ -674,7 +674,7 @@ namespace UI
                 offset += cspace;
             });
         }
-        const int gettype() const { return TYPE_LIST;}
+        int gettype() const { return TYPE_LIST;}
     };
 
     struct VerticalList : Object
@@ -710,7 +710,7 @@ namespace UI
                 offset += cspace;
             });
         }
-        const int gettype() const { return TYPE_LIST;}
+        int gettype() const { return TYPE_LIST;}
     };
 
     struct Table : Object
@@ -769,7 +769,7 @@ namespace UI
                 }
             });
         }
-        const int gettype() const { return TYPE_LIST;}
+        int gettype() const { return TYPE_LIST;}
     };
 
     struct Spacer : Object
@@ -798,7 +798,7 @@ namespace UI
         {
             adjustchildrento(spacew, spaceh, w - 2*spacew, h - 2*spaceh);
         }
-        const int gettype() const { return TYPE_MISC;}
+        int gettype() const { return TYPE_MISC;}
     };
 
     struct Filler : Object
@@ -820,7 +820,7 @@ namespace UI
             w = max(w, minw);
             h = max(h, minh);
         }
-        const int gettype() const { return TYPE_MISC;}
+        int gettype() const { return TYPE_MISC;}
     };
 
     struct Offsetter : Object
@@ -847,7 +847,7 @@ namespace UI
         {
             adjustchildrento(offsetx, offsety, w - offsetx, h - offsety);
         }
-        const int gettype() const { return TYPE_MISC;}
+        int gettype() const { return TYPE_MISC;}
     };
 
     struct Clipper : Object
@@ -883,7 +883,7 @@ namespace UI
             }
             else Object::draw(sx, sy);
         }
-        const int gettype() const { return TYPE_MISC;}
+        int gettype() const { return TYPE_MISC;}
     };
 
     struct Conditional : Object
@@ -895,7 +895,7 @@ namespace UI
 
         int forks() const { return 2; }
         int choosefork() const { return executebool(cond) ? 0 : 1; }
-        const int gettype() const { return TYPE_MISC;}
+        int gettype() const { return TYPE_MISC;}
     };
 
     struct Button : Object
@@ -929,7 +929,7 @@ namespace UI
             updatelater.add().schedule(onselect);
         }
 
-        const int gettype() const { return TYPE_BUTTON; }
+        int gettype() const { return TYPE_BUTTON; }
     };
 
     struct ConditionalButton : Button
@@ -972,7 +972,7 @@ namespace UI
             }
             return NULL;
         }
-        const int gettype() const { return TYPE_BUTTON;}
+        int gettype() const { return TYPE_BUTTON;}
     };
 
     struct Scroller : Clipper
@@ -1041,7 +1041,7 @@ namespace UI
         void sethscroll(float hscroll) { offsetx = clamp(hscroll, 0.0f, hlimit()); }
         void setvscroll(float vscroll) { offsety = clamp(vscroll, 0.0f, vlimit()); }
 
-        const int gettype() const { return TYPE_SCROLLER; }
+        int gettype() const { return TYPE_SCROLLER; }
     };
 
     struct ScrollBar : Object
@@ -1079,7 +1079,7 @@ namespace UI
             return target(cx, cy) ? this : NULL;
         }
 
-        const int gettype() const { return TYPE_SCROLLBAR; }
+        int gettype() const { return TYPE_SCROLLBAR; }
 
         virtual void scrollto(float cx, float cy) {}
 
@@ -1190,7 +1190,7 @@ namespace UI
             offsety = cy;
         }
 
-        const int gettype() const { return TYPE_SCROLLBUTTON; }
+        int gettype() const { return TYPE_SCROLLBUTTON; }
     };
 
     struct HorizontalScrollBar : ScrollBar
@@ -1411,7 +1411,7 @@ namespace UI
             return target(cx, cy) ? this : NULL;
         }
 
-        const int gettype() const { return TYPE_SLIDER; }
+        int gettype() const { return TYPE_SLIDER; }
 
         virtual void scrollto(float cx, float cy)
         {
@@ -1505,7 +1505,7 @@ namespace UI
             }
         }
 
-        const int gettype() const { return TYPE_SLIDERBUTTON; }
+        int gettype() const { return TYPE_SLIDERBUTTON; }
     };
 
     struct HorizontalSlider : Slider
@@ -1664,7 +1664,7 @@ namespace UI
 
             Object::draw(sx, sy);
         }
-        const int gettype() const { return TYPE_RECTANGLE;}
+        int gettype() const { return TYPE_RECTANGLE;}
     };
 
     struct Gradient : Rectangle
@@ -1700,7 +1700,7 @@ namespace UI
 
             Object::draw(sx, sy);
         }
-        const int gettype() const { return TYPE_GRADIENT;}
+        int gettype() const { return TYPE_GRADIENT;}
     };
 
     struct Line : Filler
@@ -1728,7 +1728,7 @@ namespace UI
 
             Object::draw(sx, sy);
         }
-        const int gettype() const { return TYPE_LINE; }
+        int gettype() const { return TYPE_LINE; }
     };
 
     struct Outline : Filler
@@ -1759,7 +1759,7 @@ namespace UI
             Object::draw(sx, sy);
         }
 
-        const int gettype() const { return TYPE_LINE; }
+        int gettype() const { return TYPE_LINE; }
     };
 
     VARP(uialphatest, 0, 1, 1);
@@ -1807,7 +1807,7 @@ namespace UI
             Object::draw(sx, sy);
         }
 
-        const int gettype() const { return TYPE_IMAGE; }
+        int gettype() const { return TYPE_IMAGE; }
     };
 
     Texture *Image::lasttex = NULL;
@@ -1990,7 +1990,7 @@ namespace UI
 
             Object::draw(sx, sy);
         }
-        const int gettype() const { return TYPE_SLOTVIEWER; }
+        int gettype() const { return TYPE_SLOTVIEWER; }
     };
 
     struct CroppedImage : Image
@@ -2235,7 +2235,7 @@ namespace UI
             if(clipstack.length()) glEnable(GL_SCISSOR_TEST);
         }
 
-        const int gettype() const { return TYPE_PREVIEW; }
+        int gettype() const { return TYPE_PREVIEW; }
     };
 
     struct ModelPreview : Preview
@@ -2365,7 +2365,7 @@ namespace UI
             Object::draw(sx, sy);
             popfont();
         }
-        const int gettype() const { return TYPE_MISC; }
+        int gettype() const { return TYPE_MISC; }
     };
 
     // default size of text in terms of rows per screenful
@@ -2423,7 +2423,7 @@ namespace UI
             h = max(h, th*k);
         }
 
-        const int gettype() const { return TYPE_TEXT; }
+        int gettype() const { return TYPE_TEXT; }
     };
 
     struct EvalText : Object
@@ -2472,7 +2472,7 @@ namespace UI
             h = max(h, th*k);
         }
 
-        const int gettype() const { return TYPE_TEXT; }
+        int gettype() const { return TYPE_TEXT; }
     };
 
     struct Console : Filler
@@ -2491,7 +2491,7 @@ namespace UI
             pophudmatrix();
         }
 
-        const int gettype() const { return TYPE_CONSOLE; }
+        int gettype() const { return TYPE_CONSOLE; }
     };
 
     struct TextEditor;
@@ -2637,7 +2637,7 @@ namespace UI
             Object::draw(sx, sy);
         }
 
-        const int gettype() const { return TYPE_TEXTEDITOR; }
+        int gettype() const { return TYPE_TEXTEDITOR; }
     };
 
     static const char *getsval(ident *id, const char *val = "")
@@ -2724,13 +2724,13 @@ namespace UI
         ~NamedObject() { delete[] name; }
 
         const char *getname() const { return name; }
-        const int gettype() const { return TYPE_MISC; }
+        int gettype() const { return TYPE_MISC; }
     };
 
     struct Tag : NamedObject
     {
         Tag(const char *name) : NamedObject(name) {}
-        const int gettype() const { return TYPE_TAG; }
+        int gettype() const { return TYPE_TAG; }
     };
 
     struct Window : NamedObject
@@ -2746,7 +2746,7 @@ namespace UI
             if(onhide) execute(onhide);
         }
 
-        const int gettype() const { return TYPE_WINDOW; }
+        int gettype() const { return TYPE_WINDOW; }
     };
 
     struct Overlay : Window

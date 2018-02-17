@@ -873,7 +873,7 @@ struct rpgent : dynent
 	virtual script *getscript() =0;
 	virtual vec blipcol() { return vec(1, 1, 1);}
 	virtual const char *getname() const =0;
-	virtual const int type()=0;
+	virtual int type() const =0;
 	virtual void init(const char *base)=0;
 	virtual bool validate()=0;
 	virtual void getsignal(const char *sig, bool prop = true, rpgent *sender = NULL);
@@ -1323,7 +1323,7 @@ struct rpgitem : rpgent, item
 	const char *getname() const;
 	vec blipcol() { return vec(0, .75, 1);}
 	void hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir);
-	const int type() {return ENT_ITEM;}
+	int type() const {return ENT_ITEM;}
 	void init(const char *base);
 	bool validate();
 	float getscale() const { return temp.scale * scale; }
@@ -1360,7 +1360,7 @@ struct rpgobstacle : rpgent
 	vec blipcol() { return vec(1, 1, 1);}
 	const char *getmdl() const;
 	const char *getname() const { return NULL; }
-	const int type() { return ENT_OBSTACLE; }
+	int type() const { return ENT_OBSTACLE; }
 	void init(const char *base);
 	bool validate();
 	float getscale() const { return temp.scale * scale; }
@@ -1392,7 +1392,7 @@ struct rpgcontainer : rpgent
 	vec blipcol() { return vec(1, 1, 1);}
 	const char *getmdl() const;
 	const char *getname() const { return name; }
-	const int type() { return ENT_CONTAINER; }
+	int type() const { return ENT_CONTAINER; }
 	void init(const char *base);
 	bool validate();
 	float getscale() const { return temp.scale * scale; }
@@ -1446,7 +1446,7 @@ struct rpgplatform : rpgent
 	vec blipcol() { return vec(1, 1, 1);}
 	const char *getmdl() const;
 	const char *getname() const { return NULL; }
-	const int type() { return ENT_PLATFORM; }
+	int type() const { return ENT_PLATFORM; }
 	void init(const char *base);
 	bool validate();
 	float getscale() const { return temp.scale * scale; }
@@ -1481,7 +1481,7 @@ struct rpgtrigger : rpgent
 	vec blipcol() { return vec(1, 1, 1);}
 	const char *getmdl() const;
 	const char *getname() const { return name; }
-	const int type() { return ENT_TRIGGER; }
+	int type() const { return ENT_TRIGGER; }
 	void init(const char *base);
 	bool validate();
 	float getscale() const { return temp.scale * scale; }
@@ -1632,7 +1632,7 @@ struct rpgchar : rpgent
 	void render();
 	const char *getmdl() const;
 	const char *getname() const;
-	const int type() {return ENT_CHAR;}
+	int type() const {return ENT_CHAR;}
 	inline ::script *getscript() { return script; }
 	void init(const char *base);
 	bool validate();
@@ -1791,7 +1791,7 @@ enum
 struct action
 {
 	virtual void exec()=0;
-	virtual const int type()=0;
+	virtual int type() const =0;
 
 	action() {}
 	virtual ~action() {}
@@ -1804,7 +1804,7 @@ struct action_teleport : action
 	int dest, etype;
 
 	void exec();
-	const int type() {return ACTION_TELEPORT;}
+	int type() const {return ACTION_TELEPORT;}
 
 	action_teleport(rpgent *pl, int d, int e = TELEDEST) : ent(pl), dest(d), etype(e) {}
 	~action_teleport() {}
@@ -1817,7 +1817,7 @@ struct action_spawn : action
 	int tag, ent, amount, qty;
 
 	void exec();
-	const int type() {return ACTION_SPAWN;}
+	int type() const {return ACTION_SPAWN;}
 
 	action_spawn(int ta, int en, const char *i, int amt, int q) : id(game::queryhashpool(i)), tag(ta), ent(en), amount(amt), qty(q) {}
 	~action_spawn()	{}
@@ -1828,7 +1828,7 @@ struct action_script : action
 	const char *script;
 
 	void exec() { if(script) execute(script); }
-	const int type() {return ACTION_SCRIPT;}
+	int type() const {return ACTION_SCRIPT;}
 
 	action_script(const char *s) : script(newstring(s)) {}
 	~action_script()

@@ -583,7 +583,7 @@ namespace entities
 		return i>=0 && size_t(i)<sizeof(entnames)/sizeof(entnames[0]) ? entnames[i] : "";
 	}
 
-	const int numattrs(int type)
+	int numattrs(int type)
 	{
 		static const int num[] =
 		{

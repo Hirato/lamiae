@@ -588,7 +588,7 @@ namespace rpgscript
 		loopv(expiredtimers) timers.remove(expiredtimers[i]->name);
 
 		vec dir = vec(worldpos).sub(player1->o);
-		float maxdist = max(player1->maxheight, player1->radius) * 1.1;
+		float maxdist = max(player1->maxheight, player1->radius) * 1.1f;
 		if(dir.squaredlen() > maxdist * maxdist)
 			dir.rescale(maxdist);
 		dir.add(player1->o);
