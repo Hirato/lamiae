@@ -1867,7 +1867,7 @@ struct hvec2
     half x, y;
 
     hvec2() {}
-    template<class T> hvec2(T x, T y) : x(x), y(y) {}
+    hvec2(float x, float y) : x(x), y(y) {}
     hvec2(const vec2 &v) : x(v.x), y(v.y) {}
 
     bool operator==(const hvec2 &h) const { return x == h.x && y == h.y; }
@@ -1879,7 +1879,7 @@ struct hvec
     half x, y, z;
 
     hvec() {}
-    template<class T> hvec(T x, T y, T z) : x(x), y(y), z(z) {}
+    hvec(float x, float y, float z) : x(x), y(y), z(z) {}
     hvec(const vec &v) : x(v.x), y(v.y), z(v.z) {}
 
     bool operator==(const hvec &h) const { return x == h.x && y == h.y && z == h.z; }
@@ -1891,8 +1891,8 @@ struct hvec4
     half x, y, z, w;
 
     hvec4() {}
-    template<class T> hvec4(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {}
-    template<class T> hvec4(const vec &v, T w = 0) : x(v.x), y(v.y), z(v.z), w(w) {}
+    hvec4(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {}
+    hvec4(const vec &v, float w = 0) : x(v.x), y(v.y), z(v.z), w(w) {}
     hvec4(const vec4 &v) : x(v.x), y(v.y), z(v.z), w(v.w) {}
 
     bool operator==(const hvec4 &h) const { return x == h.x && y == h.y && z == h.z && w == h.w; }
