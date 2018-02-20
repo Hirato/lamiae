@@ -478,6 +478,12 @@ namespace rpgscript
 		player = map = talker = looter = trader = hover = NULL;
 	}
 
+	void debughud(int yoffset)
+	{
+		draw_textf("running timers: %i", 0, yoffset, timers.length());
+		draw_textf("active sleeps: %i", 0, yoffset + 50, delaystack.length());
+	}
+
 	void init()
 	{
 		pushstack();

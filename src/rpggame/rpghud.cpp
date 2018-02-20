@@ -376,7 +376,7 @@ namespace game
 		if(DEBUG_WORLD)
 		{
 			pushhudmatrix();
-			hudmatrix.translate(hud_right - 300, 350, 0);
+			hudmatrix.translate(hud_right - 300, 300, 0);
 			hudmatrix.scale(.5, .5, .5);
 			flushhudmatrix();
 
@@ -386,6 +386,8 @@ namespace game
 			draw_textf("persistent effects: %i", 0, 150, curmap->aeffects.length());
 			draw_textf("projectiles: %i", 0, 200, curmap->projs.length());
 			draw_textf("areatriggers: %i", 0, 250, curmap->areatriggers.length());
+
+			rpgscript::debughud(300);
 
 			pophudmatrix();
 			resethudshader();

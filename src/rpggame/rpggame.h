@@ -291,6 +291,7 @@ namespace rpgscript
 	}
 
 	extern void update();
+	extern void debughud(int yoffset);
 	extern void clean();
 	extern void init();
 	extern void replacerefs(void *orig, void *next);
