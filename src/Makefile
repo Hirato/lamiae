@@ -1,4 +1,4 @@
 ENET_CFLAGS=
-CXXFLAGS?= -O3 -flto -ffast-math
+CXXFLAGS?= -O3 -flto
 
 include includes.mk
