@@ -1,0 +1,48 @@
+************************************************************************
+BLINDABUSER'S MEDIEVAL TEXTURE PACK LICENSE (2019)
+-------------------------------------------------
+(Originally made for my Stormworth map at: http://tesseract.gg/forum/)
+************************************************************************
+
+The following textures and configuration files ("the files") have been
+created by Gabriele "Blindabuser" Magurno, using original photographs
+which may have been legally downloaded from some of the following sites:
+
+http://texturelib.com
+http://mayang.com/textures
+http://www.texturise.club
+http://texturify.com
+https://pixabay.com/
+http://imageafter.com/
+https://pxhere.com/
+https://pixnio.com/
+https://www.pexels.com/
+
+To the extent possible under law, Gabriele "Blindabuser" Magurno has
+waived all copyright and related or neighboring rights to these works.
+These works are published from: Argentina.
+
+https://creativecommons.org/publicdomain/zero/1.0/
+https://creativecommons.org/publicdomain/zero/1.0/legalcode
+
+************************************************************************
+* CC0 1.0 Universal (CC0 1.0)                                          *
+* Public Domain Dedication                                             *
+* This is a human-readable summary of the Legal Code.                  *
+*                                                                      *
+*    The person who associated a work with this deed has dedicated the *
+*    work to the public domain by waiving all of his or her rights to  *
+*    the work worldwide under copyright law, including all related and *
+*    neighboring rights, to the extent allowed by law.                 *
+*                                                                      *
+*    You can copy, modify, distribute and perform the work, even for   *
+*    commercial purposes, all without asking permission.               *
+*                                                                      *
+************************************************************************
+
+In no event (including, without limitation, in the event of negligence)
+will Gabriele "Blindabuser" Magurno be liable for any consequential,
+incidental, indirect, special or punitive damages whatsoever.
+This software and the accompanying files are distributed "as is" and
+without warranties as to performance or merchantability or any other
+warranties whether expressed or implied.
