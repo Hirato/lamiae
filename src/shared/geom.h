@@ -1867,7 +1867,7 @@ struct hvec2
     half x, y;
 
     hvec2() {}
-    hvec2(float x, float y) : x(x), y(y) {}
+    template<class T> hvec2(T x, T y) : x(x), y(y) {}
     hvec2(const vec2 &v) : x(v.x), y(v.y) {}
 
     bool operator==(const hvec2 &h) const { return x == h.x && y == h.y; }
@@ -1879,7 +1879,7 @@ struct hvec
     half x, y, z;
 
     hvec() {}
-    hvec(float x, float y, float z) : x(x), y(y), z(z) {}
+    template<class T> hvec(T x, T y, T z) : x(x), y(y), z(z) {}
     hvec(const vec &v) : x(v.x), y(v.y), z(v.z) {}
 
     bool operator==(const hvec &h) const { return x == h.x && y == h.y && z == h.z; }

@@ -1498,10 +1498,11 @@ static void changetexgen(renderstate &cur, int orient, Slot &slot, VSlot &vslot)
              cur.texgenvslot->rotation != vslot.rotation || cur.texgenvslot->scale != vslot.scale ||
              cur.texgenvslot->offset != vslot.offset || cur.texgenvslot->scroll != vslot.scroll))
         {
-            float xs = vslot.rotation>=2 && vslot.rotation<=4 ? -tex->xs : tex->xs,
-                  ys = (vslot.rotation>=1 && vslot.rotation<=2) || vslot.rotation==5 ? -tex->ys : tex->ys;
+            const texrotation &r = texrotations[vslot.rotation];
+            float xs = r.flipx ? -tex->xs : tex->xs,
+                  ys = r.flipy ? -tex->ys : tex->ys;
             vec2 scroll(vslot.scroll);
-            if((vslot.rotation&5)==1) swap(scroll.x, scroll.y);
+            if(r.swapxy) swap(scroll.x, scroll.y);
             scroll.x *= cur.texgenmillis*tex->xs/xs;
             scroll.y *= cur.texgenmillis*tex->ys/ys;
             if(cur.texgenscroll != scroll)
@@ -2411,7 +2412,7 @@ void renderdecals()
 
     if(maxdualdrawbufs)
     {
-        glBlendFunc(GL_SRC1_ALPHA, GL_ONE_MINUS_SRC1_ALPHA);
+        glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC1_ALPHA);
         maskgbuffer("c");
         for(vtxarray *va = decalva; va; va = va->next) if(va->decaltris && va->occluded < OCCLUDE_BB)
         {
@@ -2425,6 +2426,7 @@ void renderdecals()
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
         }
+        else glBlendFunc(GL_SRC1_ALPHA, GL_ONE_MINUS_SRC1_ALPHA);
         maskgbuffer("n");
         cur.vbuf = 0;
         for(vtxarray *va = decalva; va; va = va->next) if(va->decaltris && va->occluded < OCCLUDE_BB)
@@ -2436,7 +2438,7 @@ void renderdecals()
     }
     else
     {
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
         glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
         maskgbuffer("cn");
         for(vtxarray *va = decalva; va; va = va->next) if(va->decaltris && va->occluded < OCCLUDE_BB)

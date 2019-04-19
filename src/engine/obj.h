@@ -1,11 +1,12 @@
 struct obj;
 
-struct obj : vertmodel, vertloader<obj>
+struct obj : vertloader<obj>
 {
-    obj(const char *name) : vertmodel(name) {}
+    obj(const char *name) : vertloader(name) {}
 
     static const char *formatname() { return "obj"; }
     static bool cananimate() { return false; }
+    bool flipy() const { return true; }
     int type() const { return MDL_OBJ; }
 
     struct objmeshgroup : vertmeshgroup
@@ -178,30 +179,6 @@ struct obj : vertmodel, vertloader<obj>
         loadskin(name, pname, tex, masks);
         mdl.initskins(tex, masks);
         if(tex==notexture) conoutf("could not load model skin for %s", name1);
-        return true;
-    }
-
-    bool load()
-    {
-        formatstring(dir, "media/models/%s", name);
-        defformatstring(cfgname, "media/models/%s/obj.cfg", name);
-
-        loading = this;
-        identflags &= ~IDF_PERSIST;
-        if(execfile(cfgname, false) && parts.length()) // configured obj, will call the obj* commands below
-        {
-            identflags |= IDF_PERSIST;
-            loading = NULL;
-            loopv(parts) if(!parts[i]->meshes) return false;
-        }
-        else // obj without configuration, try default tris and skin
-        {
-            identflags |= IDF_PERSIST;
-            loading = NULL;
-            if(!loaddefaultparts()) return false;
-        }
-        translate.y = -translate.y;
-        loaded();
         return true;
     }
 };

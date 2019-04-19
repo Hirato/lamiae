@@ -131,6 +131,7 @@ struct animmodel : model
 
         void setshaderparams(mesh &m, const animstate *as, bool skinned = true)
         {
+            if(!Shader::lastshader) return;
             if(key->checkversion() && Shader::lastshader->owner == key) return;
             Shader::lastshader->owner = key;
 
@@ -218,7 +219,7 @@ struct animmodel : model
 
         void setshader(mesh &m, const animstate *as)
         {
-            m.setshader(loadshader(), !shadowmapping && colorscale.a < 1 ? 1 : 0);
+            m.setshader(loadshader(), transparentlayer ? 1 : 0);
         }
 
         void bind(mesh &b, const animstate *as)
@@ -322,6 +323,13 @@ struct animmodel : model
             if(noclip) m.flags |= BIH::MESH_NOCLIP;
             if(s.cullface > 0) m.flags |= BIH::MESH_CULLFACE;
             genBIH(m);
+            while(bih.last().numtris > BIH::mesh::MAXTRIS)
+            {
+                BIH::mesh &overflow = bih.dup();
+                overflow.tris += BIH::mesh::MAXTRIS;
+                overflow.numtris -= BIH::mesh::MAXTRIS;
+                bih[bih.length()-2].numtris = BIH::mesh::MAXTRIS;
+            }
         }
 
         virtual void genshadowmesh(vector<triangle> &tris, const matrix4x3 &m) {}
@@ -895,7 +903,7 @@ struct animmodel : model
                 matrixstack[matrixpos] = matrixstack[matrixpos-1];
                 matrixstack[matrixpos].rotate(pitchamount*RAD, oaxis);
             }
-            if(!index && !model->translate.iszero())
+            if(this == model->parts[0] && !model->translate.iszero())
             {
                 if(oldpos == matrixpos)
                 {
@@ -918,7 +926,7 @@ struct animmodel : model
                 {
                     linkedpart &link = links[i];
                     if(!link.p) continue;
-                    link.matrix.translate(links[i].translate, resize);
+                    link.matrix.translate(link.translate, resize);
 
                     matrixpos++;
                     matrixstack[matrixpos].mul(matrixstack[matrixpos-1], link.matrix);
@@ -981,7 +989,7 @@ struct animmodel : model
                 matrixstack[matrixpos] = matrixstack[matrixpos-1];
                 matrixstack[matrixpos].rotate(pitchamount*RAD, oaxis);
             }
-            if(!index && !model->translate.iszero())
+            if(this == model->parts[0] && !model->translate.iszero())
             {
                 if(oldpos == matrixpos)
                 {
@@ -1017,7 +1025,7 @@ struct animmodel : model
                 loopv(links)
                 {
                     linkedpart &link = links[i];
-                    link.matrix.translate(links[i].translate, resize);
+                    link.matrix.translate(link.translate, resize);
 
                     matrixpos++;
                     matrixstack[matrixpos].mul(matrixstack[matrixpos-1], link.matrix);
@@ -1362,8 +1370,11 @@ struct animmodel : model
         loopv(parts) parts[i]->cleanup();
     }
 
+    virtual void flushpart() {}
+
     part &addpart()
     {
+        flushpart();
         part *p = new part(this, parts.length());
         parts.add(p);
         return *p;
@@ -1468,8 +1479,26 @@ struct animmodel : model
         return false;
     }
 
-    virtual bool loaddefaultparts()
+    virtual bool flipy() const { return false; }
+    virtual bool loadconfig() { return false; }
+    virtual bool loaddefaultparts() { return false; }
+    virtual void startload() {}
+    virtual void endload() {}
+
+    bool load()
     {
+        startload();
+        bool success = loadconfig() && parts.length(); // configured model, will call the model commands below
+        if(!success)
+            success = loaddefaultparts(); // model without configuration, try default tris and skin
+        flushpart();
+        endload();
+        if(flipy()) translate.y = -translate.y;
+
+        if(!success) return false;
+        loopv(parts) if(!parts[i]->meshes) return false;
+
+        loaded();
         return true;
     }
 
@@ -1672,18 +1701,41 @@ static inline bool htcmp(const animmodel::shaderparams &x, const animmodel::shad
 hashtable<animmodel::shaderparams, animmodel::shaderparamskey> animmodel::shaderparamskey::keys;
 int animmodel::shaderparamskey::firstversion = 0, animmodel::shaderparamskey::lastversion = 1;
 
-template<class MDL> struct modelloader
+template<class MDL, class BASE> struct modelloader : BASE
 {
     static MDL *loading;
     static string dir;
 
+    modelloader(const char *name) : BASE(name) {}
+
     static bool cananimate() { return true; }
     static bool multiparted() { return true; }
     static bool multimeshed() { return true; }
+
+    void startload()
+    {
+        loading = (MDL *)this;
+    }
+
+    void endload()
+    {
+        loading = NULL;
+    }
+
+    bool loadconfig()
+    {
+        formatstring(dir, "media/models/%s", BASE::name);
+        defformatstring(cfgname, "media/models/%s/%s.cfg", BASE::name, MDL::formatname());
+
+        identflags &= ~IDF_PERSIST;
+        bool success = execfile(cfgname, false);
+        identflags |= IDF_PERSIST;
+        return success;
+    }
 };
 
-template<class MDL> MDL *modelloader<MDL>::loading = NULL;
-template<class MDL> string modelloader<MDL>::dir = {'\0'}; // crashes clang if "" is used here
+template<class MDL, class BASE> MDL *modelloader<MDL, BASE>::loading = NULL;
+template<class MDL, class BASE> string modelloader<MDL, BASE>::dir = {'\0'}; // crashes clang if "" is used here
 
 template<class MDL, class MESH> struct modelcommands
 {

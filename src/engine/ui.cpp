@@ -1907,9 +1907,10 @@ namespace UI
             int xoff = vslot.offset.x, yoff = vslot.offset.y;
             if(vslot.rotation)
             {
-                if((vslot.rotation&5) == 1) { swap(xoff, yoff); loopk(4) swap(tc[k][0], tc[k][1]); }
-                if(vslot.rotation >= 2 && vslot.rotation <= 4) { xoff *= -1; loopk(4) tc[k][0] *= -1; }
-                if(vslot.rotation <= 2 || vslot.rotation == 5) { yoff *= -1; loopk(4) tc[k][1] *= -1; }
+                const texrotation &r = texrotations[vslot.rotation];
+                if(r.swapxy) { swap(xoff, yoff); loopk(4) swap(tc[k].x, tc[k].y); }
+                if(r.flipx) { xoff *= -1; loopk(4) tc[k].x *= -1; }
+                if(r.flipy) { yoff *= -1; loopk(4) tc[k].y *= -1; }
             }
             loopk(4) { tc[k][0] = tc[k][0]/xt - float(xoff)/tex->xs; tc[k][1] = tc[k][1]/yt - float(yoff)/tex->ys; }
 

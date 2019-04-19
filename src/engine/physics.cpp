@@ -6,50 +6,58 @@
 #include "engine.h"
 #include "mpr.h"
 
+const int MAXCLIPOFFSET = 4;
 const int MAXCLIPPLANES = 1024;
 static clipplanes clipcache[MAXCLIPPLANES];
-static int clipcacheversion = -2;
+static int clipcacheversion = -MAXCLIPOFFSET;
 
-static inline clipplanes &getclipplanes(const cube &c, const ivec &o, int size, bool collide = true, int offset = 0)
+static inline clipplanes &getclipbounds(const cube &c, const ivec &o, int size, int offset)
 {
     clipplanes &p = clipcache[int(&c - worldroot)&(MAXCLIPPLANES-1)];
     if(p.owner != &c || p.version != clipcacheversion+offset)
     {
         p.owner = &c;
         p.version = clipcacheversion+offset;
-        genclipplanes(c, o, size, p, collide);
+        genclipbounds(c, o, size, p);
     }
+    return p;
+}
+
+static inline clipplanes &getclipbounds(const cube &c, const ivec &o, int size, physent *d)
+{
+    int offset = !(c.visible&0x80) || d->type==ENT_PLAYER ? 0 : 1;
+    return getclipbounds(c, o, size, offset);
+}
+
+static inline int forceclipplanes(const cube &c, const ivec &o, int size, clipplanes &p)
+{
+    if(p.visible&0x80)
+    {
+        bool collide = true, noclip = false;
+        if(p.version&1) { collide = false; noclip = true; }
+        genclipplanes(c, o, size, p, collide, noclip);
+    }
+    return p.visible;
+}
+
+static inline clipplanes &getclipplanes(const cube &c, const ivec &o, int size)
+{
+    clipplanes &p = getclipbounds(c, o, size, c.visible&0x80 ? 2 : 0);
+    if(p.visible&0x80) genclipplanes(c, o, size, p, false, false);
     return p;
 }
 
 void resetclipplanes()
 {
-    clipcacheversion += 2;
+    clipcacheversion += MAXCLIPOFFSET;
     if(!clipcacheversion)
     {
         memset(clipcache, 0, sizeof(clipcache));
-        clipcacheversion = 2;
+        clipcacheversion = MAXCLIPOFFSET;
     }
 }
 
 /////////////////////////  ray - cube collision ///////////////////////////////////////////////
-
-static inline bool pointinbox(const vec &v, const vec &bo, const vec &br)
-{
-    return v.x <= bo.x+br.x &&
-           v.x >= bo.x-br.x &&
-           v.y <= bo.y+br.y &&
-           v.y >= bo.y-br.y &&
-           v.z <= bo.z+br.z &&
-           v.z >= bo.z-br.z;
-}
-
-bool pointincube(const clipplanes &p, const vec &v)
-{
-    if(!pointinbox(v, p.o, p.r)) return false;
-    loopi(p.size) if(p.p[i].dist(v)>1e-3f) return false;
-    return true;
-}
 
 #define INTERSECTPLANES(setentry, exit) \
     float enterdist = -1e16f, exitdist = 1e16f; \
@@ -302,9 +310,9 @@ float raycube(const vec &o, const vec &ray, float radius, int mode, int size, ex
             {
                 if(closest < 0)
                 {
-                    float dx = ((x&(~0<<lshift))+(invray.x>0 ? 0 : 1<<lshift)-v.x)*invray.x,
-                          dy = ((y&(~0<<lshift))+(invray.y>0 ? 0 : 1<<lshift)-v.y)*invray.y,
-                          dz = ((z&(~0<<lshift))+(invray.z>0 ? 0 : 1<<lshift)-v.z)*invray.z;
+                    float dx = ((x&(~0U<<lshift))+(invray.x>0 ? 0 : 1<<lshift)-v.x)*invray.x,
+                          dy = ((y&(~0U<<lshift))+(invray.y>0 ? 0 : 1<<lshift)-v.y)*invray.y,
+                          dz = ((z&(~0U<<lshift))+(invray.z>0 ? 0 : 1<<lshift)-v.z)*invray.z;
                     closest = dx > dy ? (dx > dz ? 0 : 2) : (dy > dz ? 1 : 2);
                 }
                 hitsurface = vec(0, 0, 0);
@@ -314,11 +322,11 @@ float raycube(const vec &o, const vec &ray, float radius, int mode, int size, ex
             return dent;
         }
 
-        ivec lo(x&(~0<<lshift), y&(~0<<lshift), z&(~0<<lshift));
+        ivec lo(x&(~0U<<lshift), y&(~0U<<lshift), z&(~0U<<lshift));
 
         if(!isempty(c))
         {
-            const clipplanes &p = getclipplanes(c, lo, lsize, false, 1);
+            const clipplanes &p = getclipplanes(c, lo, lsize);
             float f = 0;
             if(raycubeintersect(p, c, v, ray, invray, dent-dist, f) && (dist+f>0 || !(mode&RAY_SKIPFIRST)) && (!(mode&RAY_CLIPMAT) || (c.material&MATF_CLIP)!=MAT_NOCLIP))
                 return min(dent, dist+f);
@@ -344,12 +352,12 @@ float shadowray(const vec &o, const vec &ray, float radius, int mode, extentity 
         DOWNOCTREE(shadowent, );
 
         cube &c = *lc;
-        ivec lo(x&(~0<<lshift), y&(~0<<lshift), z&(~0<<lshift));
+        ivec lo(x&(~0U<<lshift), y&(~0U<<lshift), z&(~0U<<lshift));
 
         if(!isempty(c) && !(c.material&MAT_ALPHA))
         {
             if(isentirelysolid(c)) return c.texture[side]==DEFAULT_SKY && mode&RAY_SKIPSKY ? radius : dist;
-            const clipplanes &p = getclipplanes(c, lo, 1<<lshift, false, 1);
+            const clipplanes &p = getclipplanes(c, lo, 1<<lshift);
             INTERSECTPLANES(side = p.side[i], goto nextcube);
             INTERSECTBOX(side = (i<<1) + 1 - lsizemask[i], goto nextcube);
             if(exitdist >= 0) return c.texture[side]==DEFAULT_SKY && mode&RAY_SKIPSKY ? radius : dist+max(enterdist+0.1f, 0.0f);
@@ -875,7 +883,7 @@ static bool fuzzycollidesolid(physent *d, const vec &dir, float cutoff, const cu
 
     collidewall = vec(0, 0, 0);
     float bestdist = -1e10f;
-    int visible = isentirelysolid(c) ? c.visible : 0xFF;
+    int visible = !(c.visible&0x80) || d->type==ENT_PLAYER ? c.visible : 0xFF;
     #define CHECKSIDE(side, distval, dotval, margin, normal) if(visible&(1<<side)) do \
     { \
         float dist = distval; \
@@ -934,7 +942,7 @@ static inline bool clampcollide(const clipplanes &p, const E &entvol, const plan
 template<class E>
 static bool fuzzycollideplanes(physent *d, const vec &dir, float cutoff, const cube &c, const ivec &co, int size) // collide with deformed cube geometry
 {
-    const clipplanes &p = getclipplanes(c, co, size);
+    clipplanes &p = getclipbounds(c, co, size, d);
 
     if(fabs(d->o.x - p.o.x) > p.r.x + d->radius || fabs(d->o.y - p.o.y) > p.r.y + d->radius ||
        d->o.z + d->aboveeye < p.o.z - p.r.z || d->o.z - d->eyeheight > p.o.z + p.r.z)
@@ -942,7 +950,7 @@ static bool fuzzycollideplanes(physent *d, const vec &dir, float cutoff, const c
 
     collidewall = vec(0, 0, 0);
     float bestdist = -1e10f;
-    int visible = p.visible;
+    int visible = forceclipplanes(c, co, size, p);
     CHECKSIDE(O_LEFT, p.o.x - p.r.x - (d->o.x + d->radius), -dir.x, -d->radius, vec(-1, 0, 0));
     CHECKSIDE(O_RIGHT, d->o.x - d->radius - (p.o.x + p.r.x), dir.x, -d->radius, vec(1, 0, 0));
     CHECKSIDE(O_BACK, p.o.y - p.r.y - (d->o.y + d->radius), -dir.y, -d->radius, vec(0, -1, 0));
@@ -997,7 +1005,7 @@ static bool cubecollidesolid(physent *d, const vec &dir, float cutoff, const cub
 
     collidewall = vec(0, 0, 0);
     float bestdist = -1e10f;
-    int visible = isentirelysolid(c) ? c.visible : 0xFF;
+    int visible = !(c.visible&0x80) || d->type==ENT_PLAYER ? c.visible : 0xFF;
     CHECKSIDE(O_LEFT, co.x - entvol.right(), -dir.x, -d->radius, vec(-1, 0, 0));
     CHECKSIDE(O_RIGHT, entvol.left() - (co.x + size), dir.x, -d->radius, vec(1, 0, 0));
     CHECKSIDE(O_BACK, co.y - entvol.front(), -dir.y, -d->radius, vec(0, -1, 0));
@@ -1016,8 +1024,7 @@ static bool cubecollidesolid(physent *d, const vec &dir, float cutoff, const cub
 template<class E>
 static bool cubecollideplanes(physent *d, const vec &dir, float cutoff, const cube &c, const ivec &co, int size) // collide with deformed cube geometry
 {
-    const clipplanes &p = getclipplanes(c, co, size);
-
+    clipplanes &p = getclipbounds(c, co, size, d);
     if(fabs(d->o.x - p.o.x) > p.r.x + d->radius || fabs(d->o.y - p.o.y) > p.r.y + d->radius ||
        d->o.z + d->aboveeye < p.o.z - p.r.z || d->o.z - d->eyeheight > p.o.z + p.r.z)
         return false;
@@ -1028,7 +1035,7 @@ static bool cubecollideplanes(physent *d, const vec &dir, float cutoff, const cu
 
     collidewall = vec(0, 0, 0);
     float bestdist = -1e10f;
-    int visible = p.visible;
+    int visible = forceclipplanes(c, co, size, p);
     CHECKSIDE(O_LEFT, p.o.x - p.r.x - entvol.right(), -dir.x, -d->radius, vec(-1, 0, 0));
     CHECKSIDE(O_RIGHT, entvol.left() - (p.o.x + p.r.x), dir.x, -d->radius, vec(1, 0, 0));
     CHECKSIDE(O_BACK, p.o.y - p.r.y - entvol.front(), -dir.y, -d->radius, vec(0, -1, 0));
@@ -1141,7 +1148,7 @@ bool collide(physent *d, const vec &dir, float cutoff, bool playercol, bool insi
     collidewall = vec(0, 0, 0);
     ivec bo(int(d->o.x-d->radius), int(d->o.y-d->radius), int(d->o.z-d->eyeheight)),
          bs(int(d->o.x+d->radius), int(d->o.y+d->radius), int(d->o.z+d->aboveeye));
-    bs.add(1);  // guard space for rounding errors
+    bo.sub(1); bs.add(1);  // guard space for rounding errors
     return octacollide(d, dir, cutoff, bo, bs) || (playercol && plcollide(d, dir, insideplayercol)); // collide with world
 }
 

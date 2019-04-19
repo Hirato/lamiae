@@ -159,6 +159,15 @@ VARF(soundbufferlen, 128, 1024, 4096, initwarning("sound configuration", INIT_RE
 
 void initsound()
 {
+    SDL_version version;
+    SDL_GetVersion(&version);
+    if(version.major == 2 && version.minor == 0 && version.patch == 6)
+    {
+        nosound = true;
+        if(sound) conoutf(CON_ERROR, "audio is broken in SDL 2.0.6");
+        return;
+    }
+
     if(!sound || Mix_OpenAudio(soundfreq, MIX_DEFAULT_FORMAT, 2, soundbufferlen)<0)
     {
         nosound = true;
@@ -485,7 +494,7 @@ void checkmapsounds()
 
 VAR(stereo, 0, 1, 1);
 
-VARP(maxsoundradius, 0, 340, 10000);
+VAR(maxsoundradius, 1, 340, 0);
 
 bool updatechannel(soundchannel &chan)
 {

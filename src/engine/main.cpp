@@ -225,6 +225,16 @@ void renderprogress(float bar, const char *text,bool background)
 {
     if(!inbetweenframes || drawtex) return;
 
+    extern int menufps, maxfps;
+    int fps = menufps ? (maxfps ? min(maxfps, menufps) : menufps) : maxfps;
+    if(fps)
+    {
+        static int lastprogress = 0;
+        int ticks = SDL_GetTicks(), diff = ticks - lastprogress;
+        if(bar > 0 && diff >= 0 && diff < (1000 + fps-1)/fps) return;
+        lastprogress = ticks;
+    }
+
     clientkeepalive();      // make sure our connection doesn't time out while loading maps etc.
 
     #ifdef __APPLE__

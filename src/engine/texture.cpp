@@ -8,29 +8,86 @@
   #include "SDL_image.h"
 #endif
 
-#define FUNCNAME(name) name##1
-#define DEFPIXEL uint OP(r, 0);
-#define PIXELOP OP(r, 0);
-#define BPP 1
-#include "scale.h"
+template<int BPP> static void halvetexture(uchar * RESTRICT src, uint sw, uint sh, uint stride, uchar * RESTRICT dst)
+{
+    for(uchar *yend = &src[sh*stride]; src < yend;)
+    {
+        for(uchar *xend = &src[sw*BPP], *xsrc = src; xsrc < xend; xsrc += 2*BPP, dst += BPP)
+        {
+            loopi(BPP) dst[i] = (uint(xsrc[i]) + uint(xsrc[i+BPP]) + uint(xsrc[stride+i]) + uint(xsrc[stride+i+BPP]))>>2;
+        }
+        src += 2*stride;
+    }
+}
 
-#define FUNCNAME(name) name##2
-#define DEFPIXEL uint OP(r, 0), OP(g, 1);
-#define PIXELOP OP(r, 0); OP(g, 1);
-#define BPP 2
-#include "scale.h"
+template<int BPP> static void shifttexture(uchar * RESTRICT src, uint sw, uint sh, uint stride, uchar * RESTRICT dst, uint dw, uint dh)
+{
+    uint wfrac = sw/dw, hfrac = sh/dh, wshift = 0, hshift = 0;
+    while(dw<<wshift < sw) wshift++;
+    while(dh<<hshift < sh) hshift++;
+    uint tshift = wshift + hshift;
+    for(uchar *yend = &src[sh*stride]; src < yend;)
+    {
+        for(uchar *xend = &src[sw*BPP], *xsrc = src; xsrc < xend; xsrc += wfrac*BPP, dst += BPP)
+        {
+            uint t[BPP] = {0};
+            for(uchar *ycur = xsrc, *xend = &ycur[wfrac*BPP], *yend = &src[hfrac*stride];
+                ycur < yend;
+                ycur += stride, xend += stride)
+            {
+                for(uchar *xcur = ycur; xcur < xend; xcur += BPP)
+                    loopi(BPP) t[i] += xcur[i];
+            }
+            loopi(BPP) dst[i] = t[i] >> tshift;
+        }
+        src += hfrac*stride;
+    }
+}
 
-#define FUNCNAME(name) name##3
-#define DEFPIXEL uint OP(r, 0), OP(g, 1), OP(b, 2);
-#define PIXELOP OP(r, 0); OP(g, 1); OP(b, 2);
-#define BPP 3
-#include "scale.h"
-
-#define FUNCNAME(name) name##4
-#define DEFPIXEL uint OP(r, 0), OP(g, 1), OP(b, 2), OP(a, 3);
-#define PIXELOP OP(r, 0); OP(g, 1); OP(b, 2); OP(a, 3);
-#define BPP 4
-#include "scale.h"
+template<int BPP> static void scaletexture(uchar * RESTRICT src, uint sw, uint sh, uint stride, uchar * RESTRICT dst, uint dw, uint dh)
+{
+    uint wfrac = (sw<<12)/dw, hfrac = (sh<<12)/dh, darea = dw*dh, sarea = sw*sh;
+    int over, under;
+    for(over = 0; (darea>>over) > sarea; over++);
+    for(under = 0; (darea<<under) < sarea; under++);
+    uint cscale = clamp(under, over - 12, 12),
+         ascale = clamp(12 + under - over, 0, 24),
+         dscale = ascale + 12 - cscale,
+         area = ((ullong)darea<<ascale)/sarea;
+    dw *= wfrac;
+    dh *= hfrac;
+    for(uint y = 0; y < dh; y += hfrac)
+    {
+        const uint yn = y + hfrac - 1, yi = y>>12, h = (yn>>12) - yi, ylow = ((yn|(-int(h)>>24))&0xFFFU) + 1 - (y&0xFFFU), yhigh = (yn&0xFFFU) + 1;
+        const uchar *ysrc = &src[yi*stride];
+        for(uint x = 0; x < dw; x += wfrac, dst += BPP)
+        {
+            const uint xn = x + wfrac - 1, xi = x>>12, w = (xn>>12) - xi, xlow = ((w+0xFFFU)&0x1000U) - (x&0xFFFU), xhigh = (xn&0xFFFU) + 1;
+            const uchar *xsrc = &ysrc[xi*BPP], *xend = &xsrc[w*BPP];
+            uint t[BPP] = {0};
+            for(const uchar *xcur = &xsrc[BPP]; xcur < xend; xcur += BPP)
+                loopi(BPP) t[i] += xcur[i];
+            loopi(BPP) t[i] = (ylow*(t[i] + ((xsrc[i]*xlow + xend[i]*xhigh)>>12)))>>cscale;
+            if(h)
+            {
+                xsrc += stride;
+                xend += stride;
+                for(uint hcur = h; --hcur; xsrc += stride, xend += stride)
+                {
+                    uint c[BPP] = {0};
+                    for(const uchar *xcur = &xsrc[BPP]; xcur < xend; xcur += BPP)
+                        loopi(BPP) c[i] += xcur[i];
+                    loopi(BPP) t[i] += ((c[i]<<12) + xsrc[i]*xlow + xend[i]*xhigh)>>cscale;
+                }
+                uint c[BPP] = {0};
+                for(const uchar *xcur = &xsrc[BPP]; xcur < xend; xcur += BPP)
+                    loopi(BPP) c[i] += xcur[i];
+                loopi(BPP) t[i] += (yhigh*(c[i] + ((xsrc[i]*xlow + xend[i]*xhigh)>>12)))>>cscale;
+            }
+            loopi(BPP) dst[i] = (t[i] * area)>>dscale;
+        }
+    }
+}
 
 static void scaletexture(uchar * RESTRICT src, uint sw, uint sh, uint bpp, uint pitch, uchar * RESTRICT dst, uint dw, uint dh)
 {
@@ -38,30 +95,30 @@ static void scaletexture(uchar * RESTRICT src, uint sw, uint sh, uint bpp, uint 
     {
         switch(bpp)
         {
-            case 1: return halvetexture1(src, sw, sh, pitch, dst);
-            case 2: return halvetexture2(src, sw, sh, pitch, dst);
-            case 3: return halvetexture3(src, sw, sh, pitch, dst);
-            case 4: return halvetexture4(src, sw, sh, pitch, dst);
+            case 1: return halvetexture<1>(src, sw, sh, pitch, dst);
+            case 2: return halvetexture<2>(src, sw, sh, pitch, dst);
+            case 3: return halvetexture<3>(src, sw, sh, pitch, dst);
+            case 4: return halvetexture<4>(src, sw, sh, pitch, dst);
         }
     }
     else if(sw < dw || sh < dh || sw&(sw-1) || sh&(sh-1) || dw&(dw-1) || dh&(dh-1))
     {
         switch(bpp)
         {
-            case 1: return scaletexture1(src, sw, sh, pitch, dst, dw, dh);
-            case 2: return scaletexture2(src, sw, sh, pitch, dst, dw, dh);
-            case 3: return scaletexture3(src, sw, sh, pitch, dst, dw, dh);
-            case 4: return scaletexture4(src, sw, sh, pitch, dst, dw, dh);
+            case 1: return scaletexture<1>(src, sw, sh, pitch, dst, dw, dh);
+            case 2: return scaletexture<2>(src, sw, sh, pitch, dst, dw, dh);
+            case 3: return scaletexture<3>(src, sw, sh, pitch, dst, dw, dh);
+            case 4: return scaletexture<4>(src, sw, sh, pitch, dst, dw, dh);
         }
     }
     else
     {
         switch(bpp)
         {
-            case 1: return shifttexture1(src, sw, sh, pitch, dst, dw, dh);
-            case 2: return shifttexture2(src, sw, sh, pitch, dst, dw, dh);
-            case 3: return shifttexture3(src, sw, sh, pitch, dst, dw, dh);
-            case 4: return shifttexture4(src, sw, sh, pitch, dst, dw, dh);
+            case 1: return shifttexture<1>(src, sw, sh, pitch, dst, dw, dh);
+            case 2: return shifttexture<2>(src, sw, sh, pitch, dst, dw, dh);
+            case 3: return shifttexture<3>(src, sw, sh, pitch, dst, dw, dh);
+            case 4: return shifttexture<4>(src, sw, sh, pitch, dst, dw, dh);
         }
     }
 }
@@ -388,15 +445,25 @@ void texreorient(ImageData &s, bool flipx, bool flipy, bool swapxy, int type = T
     s.replace(d);
 }
 
+extern const texrotation texrotations[8] =
+{
+    { false, false, false }, // 0: default
+    { false,  true,  true }, // 1: 90 degrees
+    {  true,  true, false }, // 2: 180 degrees
+    {  true, false,  true }, // 3: 270 degrees
+    {  true, false, false }, // 4: flip X
+    { false,  true, false }, // 5: flip Y
+    { false, false,  true }, // 6: transpose
+    {  true,  true,  true }, // 7: flipped transpose
+};
+
 void texrotate(ImageData &s, int numrots, int type = TEX_DIFFUSE)
 {
-    // 1..3 rotate through 90..270 degrees, 4 flips X, 5 flips Y
-    if(numrots>=1 && numrots<=5)
-        texreorient(s,
-            numrots>=2 && numrots<=4, // flip X on 180/270 degrees
-            numrots<=2 || numrots==5, // flip Y on 90/180 degrees
-            (numrots&5)==1,           // swap X/Y on 90/270 degrees
-            type);
+    if(numrots>=1 && numrots<=7)
+    {
+        const texrotation &r = texrotations[numrots];
+        texreorient(s, r.flipx, r.flipy, r.swapxy, type);
+    }
 }
 
 void texoffset(ImageData &s, int xoffset, int yoffset)
@@ -1856,7 +1923,7 @@ static void clampvslotoffset(VSlot &dst, Slot *slot = NULL)
         Texture *t = slot->sts[0].t;
         int xs = t->xs, ys = t->ys;
         if(t->type & Texture::MIRROR) { xs *= 2; ys *= 2; }
-        if((dst.rotation&5)==1) swap(xs, ys);
+        if(texrotations[dst.rotation].swapxy) swap(xs, ys);
         dst.offset.x %= xs; if(dst.offset.x < 0) dst.offset.x += xs;
         dst.offset.y %= ys; if(dst.offset.y < 0) dst.offset.y += ys;
     }
@@ -1925,7 +1992,7 @@ static void mergevslot(VSlot &dst, const VSlot &src, int diff, Slot *slot = NULL
     }
     if(diff & (1<<VSLOT_ROTATION))
     {
-        dst.rotation = clamp(dst.rotation + src.rotation, 0, 5);
+        dst.rotation = clamp(dst.rotation + src.rotation, 0, 7);
         if(!dst.offset.iszero()) clampvslotoffset(dst, slot);
     }
     if(diff & (1<<VSLOT_OFFSET))
@@ -2109,7 +2176,7 @@ bool unpackvslot(ucharbuf &buf, VSlot &dst, bool delta)
                 break;
             case VSLOT_ROTATION:
                 dst.rotation = getint(buf);
-                if(!delta) dst.rotation = clamp(dst.rotation, 0, 5);
+                if(!delta) dst.rotation = clamp(dst.rotation, 0, 7);
                 break;
             case VSLOT_OFFSET:
                 dst.offset.x = getint(buf);
@@ -2277,7 +2344,7 @@ void texture(char *type, char *name, int *rot, int *xoffset, int *yoffset, float
     {
         setslotshader(s);
         VSlot &vs = s.emptyvslot();
-        vs.rotation = clamp(*rot, 0, 5);
+        vs.rotation = clamp(*rot, 0, 7);
         vs.offset = ivec2(*xoffset, *yoffset).max(0);
         vs.scale = *scale <= 0 ? 1 : *scale;
         propagatevslot(&vs, (1<<VSLOT_NUM)-1);
@@ -2319,7 +2386,7 @@ void texrotate_(int *rot)
 {
     if(!defslot) return;
     Slot &s = *defslot;
-    s.variants->rotation = clamp(*rot, 0, 5);
+    s.variants->rotation = clamp(*rot, 0, 7);
     propagatevslot(s.variants, 1<<VSLOT_ROTATION);
 }
 COMMANDN(texrotate, texrotate_, "i");
@@ -2473,6 +2540,15 @@ int DecalSlot::cancombine(int type) const
     }
 }
 
+bool DecalSlot::shouldpremul(int type) const
+{
+    switch(type)
+    {
+        case TEX_DIFFUSE: return true;
+        default: return false;
+    }
+}
+
 static void addname(vector<char> &key, Slot &slot, Slot::Tex &t, bool combined = false, const char *prefix = NULL)
 {
     if(combined) key.add('&');
@@ -2484,7 +2560,7 @@ static void addname(vector<char> &key, Slot &slot, Slot::Tex &t, bool combined =
 void Slot::load(int index, Slot::Tex &t)
 {
     vector<char> key;
-    addname(key, *this, t);
+    addname(key, *this, t, false, shouldpremul(t.type) ? "<premul>" : NULL);
     Slot::Tex *combine = NULL;
     loopv(sts)
     {
@@ -2526,6 +2602,7 @@ void Slot::load(int index, Slot::Tex &t)
             if(ts.bpp < 3) swizzleimage(ts);
             break;
     }
+    if(!ts.compressed && shouldpremul(t.type)) texpremul(ts);
     t.t = newtexture(NULL, key.getbuf(), ts, wrap, true, true, true, compress);
 }
 

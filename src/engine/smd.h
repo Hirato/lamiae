@@ -7,9 +7,9 @@ struct smdbone
     smdbone() : parent(-1) { name[0] = '\0'; }
 };
 
-struct smd : skelmodel, skelloader<smd>
+struct smd : skelloader<smd>
 {
-    smd(const char *name) : skelmodel(name) {}
+    smd(const char *name) : skelloader(name) {}
 
     static const char *formatname() { return "smd"; }
     int type() const { return MDL_SMD; }
@@ -412,7 +412,6 @@ struct smd : skelmodel, skelloader<smd>
     bool loaddefaultparts()
     {
         skelpart &mdl = addpart();
-        adjustments.setsize(0);
         const char *fname = name + strlen(name);
         do --fname; while(fname >= name && *fname!='/' && *fname!='\\');
         fname++;
@@ -421,33 +420,6 @@ struct smd : skelmodel, skelloader<smd>
         if(!mdl.meshes) return false;
         mdl.initanimparts();
         mdl.initskins();
-        return true;
-    }
-
-    bool load()
-    {
-        formatstring(dir, "media/models/%s", name);
-        defformatstring(cfgname, "media/models/%s/smd.cfg", name);
-
-        loading = this;
-        identflags &= ~IDF_PERSIST;
-        if(execfile(cfgname, false) && parts.length()) // configured smd, will call the smd* commands below
-        {
-            identflags |= IDF_PERSIST;
-            loading = NULL;
-            loopv(parts) if(!parts[i]->meshes) return false;
-        }
-        else // smd without configuration, try default tris and skin
-        {
-            identflags |= IDF_PERSIST;
-            if(!loaddefaultparts())
-            {
-                loading = NULL;
-                return false;
-            }
-            loading = NULL;
-        }
-        loaded();
         return true;
     }
 };

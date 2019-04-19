@@ -167,6 +167,7 @@ struct vertmodel : animmodel
 
         void render(const animstate *as, skin &s, vbocacheentry &vc)
         {
+            if(!Shader::lastshader) return;
             glDrawRangeElements_(GL_TRIANGLES, minvert, maxvert, elen, GL_UNSIGNED_SHORT, &((vertmeshgroup *)group)->edata[eoffset]);
             glde++;
             xtravertsva += numverts;
@@ -443,8 +444,9 @@ struct vertmodel : animmodel
     }
 };
 
-template<class MDL> struct vertloader : modelloader<MDL>
+template<class MDL> struct vertloader : modelloader<MDL, vertmodel>
 {
+    vertloader(const char *name) : modelloader<MDL, vertmodel>(name) {}
 };
 
 template<class MDL> struct vertcommands : modelcommands<MDL, struct MDL::vertmesh>

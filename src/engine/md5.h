@@ -25,9 +25,9 @@ struct md5hierarchy
     int parent, flags, start;
 };
 
-struct md5 : skelmodel, skelloader<md5>
+struct md5 : skelloader<md5>
 {
-    md5(const char *name) : skelmodel(name) {}
+    md5(const char *name) : skelloader(name) {}
 
     static const char *formatname() { return "md5"; }
     int type() const { return MDL_MD5; }
@@ -397,7 +397,6 @@ struct md5 : skelmodel, skelloader<md5>
     bool loaddefaultparts()
     {
         skelpart &mdl = addpart();
-        adjustments.setsize(0);
         const char *fname = name + strlen(name);
         do --fname; while(fname >= name && *fname!='/' && *fname!='\\');
         fname++;

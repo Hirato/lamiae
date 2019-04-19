@@ -221,6 +221,7 @@ void mdlname()
 COMMAND(mdlname, "");
 
 #define checkragdoll \
+    checkmdl; \
     if(!loadingmodel->skeletal()) { conoutf(CON_ERROR, "not loading a skeletal model"); return; } \
     skelmodel *m = (skelmodel *)loadingmodel; \
     if(m->parts.empty()) return; \
@@ -610,8 +611,8 @@ void shadowmaskbatchedmodels(bool dynshadow)
     loopv(batchedmodels)
     {
         batchedmodel &b = batchedmodels[i];
-        if(b.flags&MDL_MAPMODEL) break;
-        b.visible = dynshadow && b.colorscale.a >= 1 ? shadowmaskmodel(b.center, b.radius) : 0;
+        if(b.flags&(MDL_MAPMODEL | MDL_NOSHADOW)) break;
+        b.visible = dynshadow && (b.colorscale.a >= 1 || b.flags&(MDL_ONLYSHADOW | MDL_FORCESHADOW)) ? shadowmaskmodel(b.center, b.radius) : 0;
     }
 }
 
@@ -731,7 +732,7 @@ void rendermodelbatches()
             j = bm.next;
             bm.culled = cullmodel(b.m, bm.center, bm.radius, bm.flags, bm.d);
             if(bm.culled || bm.flags&MDL_ONLYSHADOW) continue;
-            if(bm.colorscale.a < 1)
+            if(bm.colorscale.a < 1 || bm.flags&MDL_FORCETRANSPARENT)
             {
                 float sx1, sy1, sx2, sy2;
                 ivec bbmin(vec(bm.center).sub(bm.radius)), bbmax(vec(bm.center).add(bm.radius+1));
@@ -802,7 +803,7 @@ void rendertransparentmodelbatches(int stencil)
             batchedmodel &bm = batchedmodels[j];
             j = bm.next;
             bm.culled = cullmodel(b.m, bm.center, bm.radius, bm.flags, bm.d);
-            if(bm.culled || bm.colorscale.a >= 1 || bm.flags&MDL_ONLYSHADOW) continue;
+            if(bm.culled || !(bm.colorscale.a < 1 || bm.flags&MDL_FORCETRANSPARENT) || bm.flags&MDL_ONLYSHADOW) continue;
             if(!rendered)
             {
                 b.m->startrender();

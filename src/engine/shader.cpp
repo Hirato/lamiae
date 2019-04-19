@@ -36,6 +36,7 @@ void loadshaders()
     if(!nullshader || !hudshader || !hudtextshader || !hudnotextureshader || !stdworldshader) fatal("cannot find shader definitions");
 
     dummyslot.shader = stdworldshader;
+    dummydecalslot.shader = nullshader;
 
     nocolorshader = lookupshaderbyname("nocolor");
     foggedshader = lookupshaderbyname("fogged");
@@ -61,9 +62,10 @@ Shader *generateshader(const char *name, const char *fmt, ...)
     if(!s)
     {
         defvformatstring(cmd, fmt, fmt);
+        bool wasstandard = standardshaders;
         standardshaders = true;
         execute(cmd);
-        standardshaders = false;
+        standardshaders = wasstandard;
         s = name ? lookupshaderbyname(name) : NULL;
         if(!s) s = nullshader;
     }
@@ -439,7 +441,7 @@ static void findfragdatalocs(Shader &s, char *ps, const char *macroname, int ind
         const char *name = ps;
         ps += strcspn(ps, "; \t\r\n");
 
-        if(ps > 0)
+        if(ps > name)
         {
             char end = *ps;
             *ps = '\0';
@@ -1081,7 +1083,7 @@ COMMAND(defershader, "iss");
 
 void Shader::force()
 {
-    if(!deferred()) return;
+    if(!deferred() || !defer) return;
 
     char *cmd = defer;
     defer = NULL;
@@ -1517,6 +1519,7 @@ void cleanupshaders()
 {
     cleanuppostfx(true);
 
+    loadedshaders = false;
     nullshader = hudshader = hudnotextureshader = NULL;
     enumerate(shaders, Shader, s, s.cleanup());
     Shader::lastshader = NULL;

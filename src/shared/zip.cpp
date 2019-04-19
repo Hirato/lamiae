@@ -447,6 +447,7 @@ struct zipstream : stream
             zfile.next_in += zfile.avail_in;
             zfile.avail_in = 0;
             zfile.total_in = info->compressedsize;
+            zfile.total_out = info->size;
             arch->owner = NULL;
             ended = false;
             return true;

@@ -23,6 +23,20 @@ ICOMMAND(setmapdir, "sN", (const char *pth, int *numargs),
 
 string mname, mpath; //holds the mapname and mappath
 
+void validmapname(char *dst, const char *src, const char *prefix = NULL, const char *alt = "untitled", size_t maxlen = 100)
+{
+    if(prefix) while(*prefix) *dst++ = *prefix++;
+    const char *start = dst;
+    if(src) loopi(maxlen)
+    {
+        char c = *src++;
+        if(iscubealnum(c) || c == '_' || c == '-' || c == '/' || c == '\\') *dst++ = c;
+        else break;
+    }
+    if(dst > start) *dst = '\0';
+    else if(dst != alt) copystring(dst, alt, maxlen);
+}
+
 void getmapfilenames(const char *map)
 {
     copystring(mpath, mapdir);
@@ -44,8 +58,13 @@ void getmapfilenames(const char *map)
         map = slash;
     }
 
-    copystring(mname, map);
+    validmapname(mname, map);
     createdir(mpath);
+}
+
+void fixmapname(char *name)
+{
+    validmapname(name, name, NULL, "");
 }
 
 static void fixent(entity &e, int version)
@@ -638,7 +657,7 @@ void loadvslot(stream *f, VSlot &vs, int changed)
         }
     }
     if(vs.changed & (1<<VSLOT_SCALE)) vs.scale = f->getlil<float>();
-    if(vs.changed & (1<<VSLOT_ROTATION)) vs.rotation = f->getlil<int>();
+    if(vs.changed & (1<<VSLOT_ROTATION)) vs.rotation = clamp(f->getlil<int>(), 0, 7);
     if(vs.changed & (1<<VSLOT_OFFSET))
     {
         loopk(2) vs.offset[k] = f->getlil<int>();

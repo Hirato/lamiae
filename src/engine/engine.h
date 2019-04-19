@@ -228,11 +228,12 @@ extern bool collapsedface(const cube &c, int orient);
 extern bool touchingface(const cube &c, int orient);
 extern bool flataxisface(const cube &c, int orient);
 extern bool collideface(const cube &c, int orient);
+extern void genclipbounds(const cube &c, const ivec &co, int size, clipplanes &p);
 extern int genclipplane(const cube &c, int i, vec *v, plane *clip);
-extern void genclipplanes(const cube &c, const ivec &co, int size, clipplanes &p, bool collide = true);
+extern void genclipplanes(const cube &c, const ivec &co, int size, clipplanes &p, bool collide = true, bool noclip = false);
 extern bool visibleface(const cube &c, int orient, const ivec &co, int size, ushort mat = MAT_AIR, ushort nmat = MAT_AIR, ushort matmask = MATF_VOLUME);
 extern int classifyface(const cube &c, int orient, const ivec &co, int size);
-extern int visibletris(const cube &c, int orient, const ivec &co, int size, ushort nmat = MAT_ALPHA, ushort matmask = MAT_ALPHA);
+extern int visibletris(const cube &c, int orient, const ivec &co, int size, ushort vmat = MAT_AIR, ushort nmat = MAT_ALPHA, ushort matmask = MAT_ALPHA);
 extern int visibleorient(const cube &c, int orient);
 extern void genfaceverts(const cube &c, int orient, ivec v[4]);
 extern int calcmergedsize(int orient, const ivec &co, int size, const vertinfo *verts, int numverts);
@@ -327,6 +328,8 @@ static inline bool bbinsidespot(const vec &origin, const vec &dir, int spot, con
 }
 
 extern matrix4 worldmatrix, screenmatrix;
+
+extern int transparentlayer;
 
 extern int gw, gh, gdepthformat, ghasstencil;
 extern GLuint gdepthtex, gcolortex, gnormaltex, gglowtex, gdepthrb, gstencilrb;
@@ -642,7 +645,6 @@ extern void clearchanges(int type);
 // physics
 extern void modifyorient(float yaw, float pitch);
 extern void mousemove(int dx, int dy);
-extern bool pointincube(const clipplanes &p, const vec &v);
 extern bool overlapsdynent(const vec &o, float radius);
 extern void rotatebb(vec &center, vec &radius, int yaw, int pitch, int roll = 0);
 extern float shadowray(const vec &o, const vec &ray, float radius, int mode, extentity *t = NULL);
