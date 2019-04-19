@@ -579,15 +579,15 @@ namespace game
 	{
 		colcache.setsize(0);
 		mergecache.setsize(0);
-		loopvrev(map->objs)
+		while(map->objs.ulen)
 		{
-			rpgent *ent = map->objs[i];
+			rpgent *ent = map->objs.pop();
 // 			conoutf("freeing %p", ent);
 			rpgscript::removereferences(ent);
 			delete ent;
 		}
 
-		map->objs.deletecontents();
+		//map->objs.deletecontents();
 		map->projs.deletecontents();
 		map->aeffects.deletecontents();
 		map->blips.setsize(0);
