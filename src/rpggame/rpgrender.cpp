@@ -42,7 +42,7 @@ namespace game
 		if(editmode)
 		{
 			entities::renderentities();
-			player1->render(isthirdperson() ? MDL_ONLYSHADOW : 0);
+			player1->render(!isthirdperson() ? MDL_ONLYSHADOW : 0);
 		}
 
 		if(!editmode || editdrawgame)
