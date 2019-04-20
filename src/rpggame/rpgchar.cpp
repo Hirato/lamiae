@@ -549,7 +549,7 @@ VAR(animoverride, -1, 0, NUMANIMS-1);
 VAR(testanims, 0, 0, 1);
 VAR(testpitch, -90, 0, 90);
 
-void renderclient(dynent *d, const char *mdlname, modelattach *attachments, int hold, int attack, int attackdelay, int lastaction, int lastpain, float scale, bool ragdoll, vec4 &color)
+void renderclient(dynent *d, const char *mdlname, modelattach *attachments, int flags, int hold, int attack, int attackdelay, int lastaction, int lastpain, float scale, bool ragdoll, vec4 &color)
 {
 	int anim = hold ? hold : ANIM_IDLE|ANIM_LOOP;
 	float yaw = testanims ? 0 : d->yaw,
@@ -605,7 +605,6 @@ void renderclient(dynent *d, const char *mdlname, modelattach *attachments, int 
 		if((anim&ANIM_INDEX)==ANIM_IDLE && (anim>>ANIM_SECONDARY)&ANIM_INDEX) anim >>= ANIM_SECONDARY;
 	}
 	if(!((anim>>ANIM_SECONDARY)&ANIM_INDEX)) anim |= (ANIM_IDLE|ANIM_LOOP)<<ANIM_SECONDARY;
-	int flags = 0;
     if(d!=game::player1) flags |= MDL_CULL_VFC | MDL_CULL_OCCLUDED | MDL_CULL_QUERY;
     if(d->type==ENT_PLAYER) flags |= MDL_FULLBRIGHT;
     else flags |= MDL_CULL_DIST;
@@ -613,7 +612,7 @@ void renderclient(dynent *d, const char *mdlname, modelattach *attachments, int 
 	rendermodel(mdlname, anim, o, yaw, pitch, roll, flags, d, attachments, basetime, 0, scale, color);
 }
 
-void rpgchar::render()
+void rpgchar::render(int flags)
 {
 	int lastaction = this->lastaction,
 		action = ANIM_MSTRIKE,
@@ -641,7 +640,7 @@ void rpgchar::render()
 		else if(use->slots & SLOT_QUIVER) tag = "tag_quiver";
 		attachments.add(modelattach(tag, use->vwepmdl));
 
-		if(use->idlefx)
+		if(use->idlefx && !flags)
 		{
 			attachments.add(modelattach("tag_partstart", emitter));
 			attachments.add(modelattach("tag_partend", emitter + 1));
@@ -652,18 +651,21 @@ void rpgchar::render()
 
 	if(aiflags & AI_ANIM) hold = (forceanim & ANIM_INDEX) | ANIM_LOOP;
 
-	renderclient(this, getmdl(), attachments.buf, hold, action, delay, lastaction, state == CS_ALIVE ? lastpain : 0, getscale(), true, col);
+	renderclient(this, getmdl(), attachments.buf, flags, hold, action, delay, lastaction, state == CS_ALIVE ? lastpain : 0, getscale(), true, col);
 
-	emitter = emitters;
-	loopv(equipped)
+	if(!flags)
 	{
-		use_armour *use = (use_armour *) equipped[i]->it->uses[equipped[i]->use];
-		if(use->type < USE_ARMOUR || !use->vwepmdl || !use->idlefx || !use->slots)
-			continue;
+		emitter = emitters;
+		loopv(equipped)
+		{
+			use_armour *use = (use_armour *) equipped[i]->it->uses[equipped[i]->use];
+			if(use->type < USE_ARMOUR || !use->vwepmdl || !use->idlefx || !use->slots)
+				continue;
 
-		use->idlefx->drawwield(emitter[0], emitter[1], 1, effect::TRAIL);
-		emitter[0] = emitter[1] = vec(-1, -1, -1);
-		emitter += 2;
+			use->idlefx->drawwield(emitter[0], emitter[1], 1, effect::TRAIL);
+			emitter[0] = emitter[1] = vec(-1, -1, -1);
+			emitter += 2;
+		}
 	}
 }
 

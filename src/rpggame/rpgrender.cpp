@@ -2,11 +2,6 @@
 
 namespace game
 {
-	void g3d_gamemenus()
-	{
-
-	}
-
 	VARP(projallowlight, 0, 1, 1);
 	VARP(editdrawgame, 0, 0, 1);
 	void adddynlights()
@@ -47,8 +42,7 @@ namespace game
 		if(editmode)
 		{
 			entities::renderentities();
-			if(isthirdperson())
-				player1->render();
+			player1->render(isthirdperson() ? MDL_ONLYSHADOW : 0);
 		}
 
 		if(!editmode || editdrawgame)
@@ -68,6 +62,10 @@ namespace game
 						defformatstring(ds, "%p", curmap->objs[i]);
 						particle_textcopy(curmap->objs[i]->abovehead(), ds, PART_TEXT, 1, 0xFFFFFF, 4);
 					}
+				}
+				else
+				{
+					curmap->objs[i]->render(MDL_ONLYSHADOW);
 				}
 			}
 

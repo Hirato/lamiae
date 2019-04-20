@@ -12,10 +12,10 @@ const char *rpgcontainer::getmdl() const
 	return DEFAULTMODEL;
 }
 
-void rpgcontainer::render()
+void rpgcontainer::render(int flags)
 {
 	vec4 col(colour, temp.alpha);
-	rendermodel(getmdl(), ANIM_MAPMODEL|ANIM_LOOP, vec(o).sub(vec(0, 0, eyeheight)), yaw, pitch, roll, MDL_CULL_DIST|MDL_CULL_OCCLUDED, NULL, NULL, 0, 0, getscale(), col);
+	rendermodel(getmdl(), ANIM_MAPMODEL|ANIM_LOOP, vec(o).sub(vec(0, 0, eyeheight)), yaw, pitch, roll, flags | MDL_CULL_DIST | MDL_CULL_OCCLUDED, NULL, NULL, 0, 0, getscale(), col);
 }
 
 item *rpgcontainer::additem(item *it)

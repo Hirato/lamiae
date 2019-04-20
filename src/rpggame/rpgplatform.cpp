@@ -68,10 +68,10 @@ void rpgplatform::update()
 	stack.setsize(0);
 }
 
-void rpgplatform::render()
+void rpgplatform::render(int flags)
 {
 	vec4 col(colour, temp.alpha);
-	rendermodel(getmdl(), ANIM_MAPMODEL|ANIM_LOOP, vec(o).sub(vec(0, 0, eyeheight)), yaw, pitch, roll, MDL_CULL_DIST|MDL_CULL_OCCLUDED, NULL, NULL, 0, 0, getscale(), col);
+	rendermodel(getmdl(), ANIM_MAPMODEL|ANIM_LOOP, vec(o).sub(vec(0, 0, eyeheight)), yaw, pitch, roll, flags | MDL_CULL_DIST | MDL_CULL_OCCLUDED, NULL, NULL, 0, 0, getscale(), col);
 }
 
 void rpgplatform::hit(rpgent *attacker, use_weapon *weapon, use_weapon *ammo, float mul, int flags, vec dir)

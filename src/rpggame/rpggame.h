@@ -870,7 +870,7 @@ struct rpgent : dynent
 	///global
 	virtual void update()=0;
 	virtual const char *getmdl() const =0;
-	virtual void render()=0;
+	virtual void render(int flags = 0)=0;
 	virtual script *getscript() =0;
 	virtual vec blipcol() { return vec(1, 1, 1);}
 	virtual const char *getname() const =0;
@@ -1319,7 +1319,7 @@ struct rpgitem : rpgent, item
 	int lastupdate;
 
 	void update();
-	void render();
+	void render(int flags);
 	const char *getmdl() const;
 	const char *getname() const;
 	vec blipcol() { return vec(0, .75, 1);}
@@ -1356,7 +1356,7 @@ struct rpgobstacle : rpgent
 	float scale;
 
 	void update();
-	void render();
+	void render(int flags);
 	inline ::script *getscript() { return script; }
 	vec blipcol() { return vec(1, 1, 1);}
 	const char *getmdl() const;
@@ -1388,7 +1388,7 @@ struct rpgcontainer : rpgent
 	float scale;
 
 	void update();
-	void render();
+	void render(int flags);
 	inline ::script *getscript() { return script; }
 	vec blipcol() { return vec(1, 1, 1);}
 	const char *getmdl() const;
@@ -1442,7 +1442,7 @@ struct rpgplatform : rpgent
 	int target;
 
 	void update();
-	void render();
+	void render(int flags);
 	inline ::script *getscript() { return script; }
 	vec blipcol() { return vec(1, 1, 1);}
 	const char *getmdl() const;
@@ -1477,7 +1477,7 @@ struct rpgtrigger : rpgent
 	float scale;
 
 	void update();
-	void render();
+	void render(int flags);
 	inline ::script *getscript() { return script; }
 	vec blipcol() { return vec(1, 1, 1);}
 	const char *getmdl() const;
@@ -1630,7 +1630,7 @@ struct rpgchar : rpgent
 
 	///global
 	void update();
-	void render();
+	void render(int flags);
 	const char *getmdl() const;
 	const char *getname() const;
 	int type() const {return ENT_CHAR;}

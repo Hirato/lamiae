@@ -27,10 +27,10 @@ void rpgitem::update()
 	entities::touchents(this);
 }
 
-void rpgitem::render()
+void rpgitem::render(int flags)
 {
 	vec4 col(colour, temp.alpha);
-	rendermodel(getmdl(), ANIM_MAPMODEL|ANIM_LOOP, vec(o).sub(vec(0, 0, eyeheight)), yaw, pitch, roll, MDL_CULL_DIST|MDL_CULL_OCCLUDED, NULL, NULL, 0, 0, getscale(), col);
+	rendermodel(getmdl(), ANIM_MAPMODEL|ANIM_LOOP, vec(o).sub(vec(0, 0, eyeheight)), yaw, pitch, roll, flags | MDL_CULL_DIST | MDL_CULL_OCCLUDED, NULL, NULL, 0, 0, getscale(), col);
 }
 
 const char *rpgitem::getname() const
