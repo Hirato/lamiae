@@ -2050,44 +2050,6 @@ void mpeditface(int dir, int mode, selinfo &sel, bool local)
         sel.o[d] += sel.grid * seldir;
 }
 
-ivec getcubevector2(cube &c, int dir, int x,int y)
-{
-    int d = dimension(dir);
-    int dc = dimcoord(dir);
-
-    ivec u(d,x,y,dc);
-    ivec nv;
-    for(int i=0;i<3;i++)
-    {
-        if(u[D[i]])
-            nv[i]=8-edgeget(cubeedge(c,i,u[R[i]],u[C[i]]),u[D[i]]);
-        else
-            nv[i]=edgeget(cubeedge(c,i,u[R[i]],u[C[i]]),u[D[i]]);
-    }
-    return nv;
-}
-
-// like setcubevector, but make the offset (dx,dy,dz) always zero-based relative to the vertex of the cube
-void setcubevector2(cube &c, int dir, int x,int y, int dx, int dy, int dz)
-{
-    int d = dimension(dir);
-    int dc = dimcoord(dir);
-
-    ivec u(d,x,y,dc);
-    ivec nv(d,dx,dy,dz);
-    for(int i=0;i<3;i++)
-    {
-        if(u[D[i]])
-        {
-            edgeset(cubeedge(c,i,u[R[i]],u[C[i]]),u[D[i]],8-nv[i]);
-        }
-        else
-        {
-            edgeset(cubeedge(c,i,u[R[i]],u[C[i]]),u[D[i]],nv[i]);
-        }
-    }
-}
-
 void editface(int *dir, int *mode)
 {
     if(noedit(moving!=0)) return;

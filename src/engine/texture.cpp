@@ -685,7 +685,7 @@ VAR(hwvtexunits, 1, 0, 0);
 VARFP(maxtexsize, 0, 0, 1<<12, initwarning("texture quality", INIT_LOAD));
 VARFP(reducefilter, 0, 1, 1, initwarning("texture quality", INIT_LOAD));
 VARFP(texreduce, 0, 0, 12, initwarning("texture quality", INIT_LOAD));
-VARFP(texcompress, 0, 1<<10, 1<<12, initwarning("texture quality", INIT_LOAD));
+VARFP(texcompress, 0, 1536, 1<<12, initwarning("texture quality", INIT_LOAD));
 VARFP(texcompressquality, -1, -1, 1, setuptexcompress());
 VARFP(trilinear, 0, 1, 1, initwarning("texture filtering", INIT_LOAD));
 VARFP(bilinear, 0, 1, 1, initwarning("texture filtering", INIT_LOAD));

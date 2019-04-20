@@ -273,10 +273,11 @@ bool dolightgc = false;
 
 void getlightprops(const extentity &e, int &radius, int &red, int &green, int &blue)
 {
-    radius = max(0, e.attr[0]);
-    red =    max(0, e.attr[1]);
-    green =  max(0, e.attr[2]);
-    blue =   max(0, e.attr[3]);
+    //values will be clamped once it goes into the lightinfo collection
+    radius = e.attr[0];
+    red =    e.attr[1];
+    green =  e.attr[2];
+    blue =   e.attr[3];
 
     if(e.attr[5] > 0)
     {
@@ -349,11 +350,11 @@ void clearlightcache(int id)
     if(id >= 0)
     {
         const extentity &light = *entities::getents()[id];
+        // don't lookup because this is a cache
         int radius = light.attr[0];
         if(radius <= 0) return;
         for(int x = int(max(light.o.x-radius, 0.0f))>>lightcachesize, ex = int(min(light.o.x+radius, worldsize-1.0f))>>lightcachesize; x <= ex; x++)
         for(int y = int(max(light.o.y-radius, 0.0f))>>lightcachesize, ey = int(min(light.o.y+radius, worldsize-1.0f))>>lightcachesize; y <= ey; y++)
-        if(radius)
         {
             lightcacheentry &lce = lightcache[LIGHTCACHEHASH(x, y)];
             if(lce.x != x || lce.y != y) continue;
@@ -387,8 +388,10 @@ const vector<int> &checklightcache(int x, int y)
         {
             case ET_LIGHT:
             {
-                int radius, r, g, b;
-                getlightprops(light, radius, r, g, b);
+                //ignore because this is a cache
+                //int radius, r, g, b;
+                //getlightprops(light, radius, r, g, b);
+                int radius = light.attr[0];
                 if(radius <= 0 ||
                    light.o.x + radius < cx || light.o.x - radius > cx + csize ||
                    light.o.y + radius < cy || light.o.y - radius > cy + csize)

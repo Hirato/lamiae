@@ -4299,7 +4299,7 @@ int calcshadowinfo(const extentity &e, vec &origin, float &radius, vec &spotloc,
     int rad, red, green, blue;
     getlightprops(e, rad, red, green, blue);
 
-    if(e.attr[4] & L_NOSHADOW || radius <= smminradius) return SM_NONE;
+    if(e.attr[4] & L_NOSHADOW || rad <= smminradius) return SM_NONE;
 
     origin = e.o;
     radius = rad;
