@@ -3844,20 +3844,22 @@ COMMAND(listsplice, "ssii");
 
 ICOMMAND(listfiles, "ss", (char *dir, char *ext),
 {
-	vector<char *> files;
-	listfiles(dir, *ext ? ext : NULL, files);
+    vector<char *> files;
+    listfiles(dir, *ext ? ext : NULL, files);
+    files.sort();
+    files.uniquedeletearrays();
 
-	vector<char> ret;
-	loopv(files)
-	{
-		if(i) ret.add(' ');
+    vector<char> ret;
+    loopv(files)
+    {
+        if(i) ret.add(' ');
 
-		const char *str = escapestring(files[i]);
-		while(*str) ret.add(*(str++));
-	}
-	ret.add('\0');
+        const char *str = escapestring(files[i]);
+        while(*str) ret.add(*(str++));
+    }
+    ret.add('\0');
 
-	commandret->setstr(ret.disown());
+    commandret->setstr(ret.disown());
 });
 
 ICOMMAND(loopfiles, "rsse", (ident *id, char *dir, char *ext, uint *body),
