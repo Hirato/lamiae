@@ -3842,6 +3842,24 @@ void listsplice(const char *s, const char *vals, int *skip, int *count)
 }
 COMMAND(listsplice, "ssii");
 
+ICOMMAND(listfiles, "ss", (char *dir, char *ext),
+{
+	vector<char *> files;
+	listfiles(dir, *ext ? ext : NULL, files);
+
+	vector<char> ret;
+	loopv(files)
+	{
+		if(i) ret.add(' ');
+
+		const char *str = escapestring(files[i]);
+		while(*str) ret.add(*(str++));
+	}
+	ret.add('\0');
+
+	commandret->setstr(ret.disown());
+});
+
 ICOMMAND(loopfiles, "rsse", (ident *id, char *dir, char *ext, uint *body),
 {
     if(id->type!=ID_ALIAS) return;
