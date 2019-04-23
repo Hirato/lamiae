@@ -1492,8 +1492,8 @@ VARF(rhcache, 0, 1, 1, cleanupradiancehints());
 VARF(rhforce, 0, 0, 1, cleanupradiancehints());
 VAR(rsmcull, 0, 1, 1);
 VARFP(rhtaps, 0, 20, 32, cleanupradiancehints());
-VAR(rhdyntex, 0, 0, 1);
-VAR(rhdynmm, 0, 0, 1);
+VARP(rhdyntex, 0, 0, 1);
+VARP(rhdynmm, 0, 0, 1);
 VARFR(gidist, 0, 384, 1024, { clearradiancehintscache(); cleardeferredlightshaders(); if(!gidist) cleanupradiancehints(); });
 FVARFR(giscale, 0, 1.5f, 1e3f, { cleardeferredlightshaders(); if(!giscale) cleanupradiancehints(); });
 FVARR(giaoscale, 0, 3, 1e3f);
@@ -4376,7 +4376,7 @@ void rendershadowmaps(int offset = 0)
         {
             shadowmapping = SM_CUBEMAP;
             border = smfilter > 2 ? smborder2 : smborder;
-            sidemask = smsidecull ? cullfrustumsides(l.o, l.radius, sm.size, border) : 0x3F;
+            sidemask = drawtex == DRAWTEX_MINIMAP ? 0x2F : (smsidecull ? cullfrustumsides(l.o, l.radius, sm.size, border) : 0x3F);
         }
 
         sm.sidemask = sidemask;
