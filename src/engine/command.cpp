@@ -3885,6 +3885,9 @@ ICOMMAND(loopdir, "rse", (ident *id, char *dir, uint *body),
     identstack stack;
     vector<char *> files;
     listfiles(dir, NULL, files);
+    files.sort();
+    files.uniquedeletearrays();
+
     loopvrev(files)
     {
         bool redundant = false;
