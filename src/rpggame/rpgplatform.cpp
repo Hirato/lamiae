@@ -27,7 +27,7 @@ void rpgplatform::update()
 	}
 
 	float delta = speed * curtime / 1000.f;
-	while(flags && F_ACTIVE && target >= 0 && delta > 0)
+	while(flags & F_ACTIVE && target >= 0 && delta > 0)
 	{
 		float dist = min(delta, entities::ents[target]->o.dist(o));
 		if(dist > 0) //avoid divide by 0 for normalisation
