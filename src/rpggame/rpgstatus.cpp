@@ -284,7 +284,7 @@ void status_generic::update(rpgent *victim, rpgent *owner, int resist, int thres
 
 					return;
 				case STATUS_MAGELOCK: //magelock
-					if(!duration != 0)
+					if(duration > 0)
 						ent->magelock += strength * mult;
 					return;
 			}
