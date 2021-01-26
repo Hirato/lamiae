@@ -1891,10 +1891,11 @@ struct waypoint
 	waypoint *parent;
 	vec o;
 	vector<ushort> links;
-	int score;
+	vector<ushort> revlinks; //this is used for pathfinding
+	ushort score;
 
-	waypoint() : parent(NULL), o(vec(0, 0, 0)), score(-1) {}
-	waypoint(const vec &o) : parent(NULL), o(o), score(-1) {}
+	waypoint() : parent(NULL), o(vec(0, 0, 0)), score(UINT16_MAX) {}
+	waypoint(const vec &o) : parent(NULL), o(o), score(UINT16_MAX) {}
 };
 
 struct reference

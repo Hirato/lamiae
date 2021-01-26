@@ -39,7 +39,34 @@ namespace ai
 		return result;
 	}
 
+	//note, single direction link.
+	void linkwaypoint(waypoint &from, waypoint &to)
+	{
+		if(&from == &to) return; //don't allow node to be linked to itself
+		ushort id = &to - waypoints.getbuf();
+		if(from.links.find(id) == -1)
+		{
+			ushort fromid = &from - waypoints.getbuf();
+			from.links.add(id);
+			to.revlinks.add(fromid);
+		}
+	}
+
+	void unlinkwaypoint(waypoint &from, waypoint &to)
+	{
+		ushort fromid = &from - waypoints.getbuf();
+		ushort toid = &to - waypoints.getbuf();
+
+		from.links.removeobj(toid);
+		to.revlinks.removeobj(fromid);
+	}
+
 	VAR(waypointstairheight, 0, 8, 32);
+	FVAR(waypointmergedist, 1, 8, 128);
+	FVAR(waypointlinkmaxdist, 1, 32, 128);
+	VAR(waypointmergepasses, 1, 4, 128);
+	VAR(waypointmaxlinks, 3, 10, 255);
+
 
 	void dropwaypoint(const vec &o)
 	{
@@ -53,14 +80,14 @@ namespace ai
 		for(int i = 0; i < waypoints.length() - 1; i++)
 		{
 			waypoint &ow = waypoints[i];
-			if(ow.o.dist(wp.o) > 30) continue;
+			if(ow.o.dist(wp.o) > (waypointlinkmaxdist - 2)) continue;
 			int omat = lookupmaterial(ow.o);
 			bool owair = !isliquid(omat) && raycube(ow.o, vec(0, 0, -waypointstairheight), 0, RAY_POLY|RAY_CLIPMAT) >= 1;
 
 			if(wpair && owair)
 			{
 				if(i == p)
-					ow.links.add(waypoints.length() - 1);
+					linkwaypoint(ow, wp);
 			}
 			else
 			{
@@ -87,20 +114,13 @@ namespace ai
 
 				if(raycube(from, ray, 0, RAY_POLY|RAY_CLIPMAT) >= 1)
 				{
-					wp.links.add(i);
-					ow.links.add(waypoints.length() - 1);
+					linkwaypoint(wp, ow);
+					linkwaypoint(ow, wp);
 				}
 			}
 		}
 	}
 
-	//note, single direction link.
-	void linkwaypoint(waypoint &from, waypoint &to)
-	{
-		int id = &to - waypoints.getbuf();
-		if(from.links.find(id) == -1)
-			from.links.add(id);
-	}
 
 	void trydrop()
 	{
@@ -116,7 +136,7 @@ namespace ai
 			if(dst < dist) dist = dst;
 		}
 
-		if(dist >= 16)
+		if(dist >= (waypointlinkmaxdist / 2))
 		{
 			dropwaypoint(game::player1->feetpos());
 		}
@@ -127,11 +147,6 @@ namespace ai
 			prev = closest;
 		}
 	}
-
-	FVAR(waypointmergedist, 1, 8, 128);
-	FVAR(waypointlinkmaxdist, 1, 32, 128);
-	VAR(waypointmergepasses, 1, 4, 128);
-	VAR(waypointmaxlinks, 3, 10, 255);
 
 	void removewaypoint(int ind)
 	{
@@ -155,6 +170,13 @@ namespace ai
 				else if(w.links[j] > ind)
 					w.links[j]--;
 			}
+			loopvj(w.revlinks)
+			{
+				if(w.revlinks[j] == ind)
+					w.revlinks.remove(j--);
+				else if(w.revlinks[j] > ind)
+					w.revlinks[j]--;
+			}
 		}
 
 		waypoints.remove(ind);
@@ -171,11 +193,7 @@ namespace ai
 		}
 
 		waypoint &first = waypoints[a], &second = waypoints[b];
-		int ind;
-		if((ind = first.links.find(b)) >= 0)
-			first.links.remove(ind);
-		if((ind = second.links.find(a)) >= 0)
-			second.links.remove(ind);
+		unlinkwaypoint(first, second);
 	}
 
 	ICOMMAND(removewaypointlink, "ii", (int *a, int *b), removelink(*a, *b))
@@ -185,23 +203,19 @@ namespace ai
 		waypoint &f = waypoints[first];
 		waypoint &s = waypoints[second];
 
-		int tmp;
-		while((tmp = s.links.find(first)) != -1)
-			s.links.remove(tmp);
-
+		//assume the secondary's links'
 		loopv(s.links)
 		{
 			if(f.links.find(s.links[i]) == -1)
-				f.links.add(s.links[i]);
+				linkwaypoint(f, waypoints[s.links[i]]);
 		}
-
-		loopv(waypoints)
+		//assume the secondary's reverse links'
+		loopv(s.revlinks)
 		{
-			int tmp;
-			if(i !=first && (tmp = waypoints[i].links.find(second)) >= 0)
-				waypoints[i].links[tmp] = first;
+			if(f.revlinks.find(s.revlinks[i]) == -1)
+				linkwaypoint(waypoints[s.revlinks[i]], f);
 		}
-
+		//average their distances
 		f.o.add(s.o).div(2.0f);
 
 		removewaypoint(second);
@@ -232,6 +246,7 @@ namespace ai
 					{
 						conoutf("merging points %i and %i", j, k);
 						mergewaypoints(j, k);
+						if (j > k--) j--;
 					}
 				}
 				if(waypoints[j].links.length() > waypointmaxlinks)
@@ -251,8 +266,7 @@ namespace ai
 					{
 						waypoint &tmp = waypoints[point.links.last()];
 						conoutf("removing link from %i to %i with distance %i", i, point.links.last(), tmp.score);
-
-						point.links.pop();
+						unlinkwaypoint(point, tmp);
 					}
 				}
 			}
@@ -274,7 +288,7 @@ namespace ai
 				if(w.links[j] == i || w.o.dist(l.o) > waypointlinkmaxdist)
 				{
 					conoutf("removing link from %i to %i (too far, or to self)", i, waypoints[i].links[j]);
-					w.links.remove(j);
+					unlinkwaypoint(w, l);
 					j--;
 					continue;
 				}
@@ -310,10 +324,12 @@ namespace ai
 		clearwaypoints();
 
 		ushort numwp = f->getlil<ushort>();
+		waypoints.reserve(numwp); //allocate them ahead of time
+		loopi(numwp) waypoints.add(); //need to call their constructors too
 
 		loopi(numwp)
 		{
-			waypoint &w = waypoints.add();
+			waypoint &w = waypoints[i];
 
 			w.o.x = f->getlil<float>();
 			w.o.y = f->getlil<float>();
@@ -321,8 +337,13 @@ namespace ai
 			int numlinks = f->getchar();
 			if(numlinks > 10)
 				WARNINGF("waypoint #%i has a large number of links! (%i)", i, numlinks);
+
 			loopj(numlinks)
-				w.links.add(f->getlil<ushort>() - 1); //FPS game uses 0 to denote dummy waypoint, and use 1+ to denote real waypoints - we don't
+			{
+				ushort wp = f->getlil<ushort>() - 1; //FPS game uses 0 to denote dummy waypoint, and use 1+ to denote real waypoints - we don't
+				w.links.add(wp);
+				waypoints[wp].revlinks.add(i);
+			}
 		}
 
 		conoutf("successfully loaded %i waypoints", waypoints.length());
@@ -373,109 +394,74 @@ namespace ai
 	//this is an attempt at an A-STAR search algorithm
 	//note that waypoints are considered equidistant; this is sort of true
 
+	int topscore = UINT16_MAX;
+
 	void findroute(int from, int to, vector<ushort> &route)
 	{
-		if(!waypoints.length() || !waypoints.inrange(from) || !waypoints.inrange(to) || from == to)
+		if(!waypoints.length() || !waypoints.inrange(from) || !waypoints.inrange(to))
 			return;
 
-		//determine scores
+		if(from == to)
+		{
+			route.add(to);
+			return;
+		}
+
+		//first, we reset the statuses of the nodes
 		loopv(waypoints)
 		{
-			waypoints[i].score = waypoints[i].o.dist(waypoints[to].o);
+			waypoints[i].score = UINT16_MAX;
 			waypoints[i].parent = NULL;
 		}
 
-		//recurse
-		waypoint *cur = &waypoints[from],
-		         *first = cur;
 
-		while(true)
+		//excessive, but should be plenty
+		static queue<ushort, 2048> wpqueue;
+
+		waypoints[to].score = 0;
+		wpqueue.add(to);
+
+		//We're doing a breadth first search
+		//Our target starts with a score of 0, and everything linked to that gets a score of 1; everything linked to those gets a score of 2, etc
+		//waypoints are roughly equidistant, so the score ends up being a number of steps that need to be taken to reach the target
+		//This gets us a very clear and direct route
+		//It also allows us to easily influence the pathfinding to favour less efficient routes.
+		// i.e. we're linked to a teleporter (TODO),
+		//also allows considering obstacles like projectiles (TODO),
+		//and area effects (TODO),
+		//and even traffic (TODO)
+		while(wpqueue.length())
 		{
-			int lowest = -1;
-			//try the "series of low scores" method
-			loopv(cur->links)
+			waypoint *wpto = &waypoints[wpqueue.remove()];
+			ushort score = wpto->score + 1;
+			loopv(wpto->revlinks)
 			{
-				waypoint &l = waypoints[cur->links[i]];
-				if(cur->links[i] == to ||
-					( !l.parent && &l != first &&
-						(lowest < 0 || l.score < waypoints[lowest].score) &&
-						(l.links.length() > 1 || (l.links.length() && !waypoints[l.links[0]].parent))
-					)
-				)
+				waypoint *wpfrom = &waypoints[wpto->revlinks[i]];
+				if(wpfrom->score > score)
 				{
-					lowest = cur->links[i];
-				}
-			}
-
-			if(lowest == -1 && cur == first)
-				return;
-			else if (lowest == -1)
-			{
-				cur = cur->parent;
-			}
-			else
-			{
-				waypoints[lowest].parent = cur;
-				cur = &waypoints[lowest];
-			}
-
-			if(lowest == to)
-				break;
-		}
-
-		//cur should still be the destination
-		int i = route.length();
-		while(true)
-		{
-			route.add(cur - waypoints.getbuf());
-
-			if(cur == first)
-				break;
-
-			cur = cur->parent;
-		}
-
-		//now we optimise the route, we start at the back and check the latter nodes for common nodes
-		//common nodes include unused nodes between two nodes in the route (a shortcut)
-		//             as well as nodes which have a link to one of the nodes later in the vector
-		///just remember the vector is in reverse
-		///we also start at the end of the prior movement vector; we don't want to miss out critical destinations.
-
-		for( ; i < route.length(); i++)
-		{
-			//don't bother checking i + 1
-			for(int j = route.length() - 1; j > i + 1; j--)
-			{
-				waypoint &chk = waypoints[route[j]];
-
-				//see if there are shortcuts available; take them!
-				if(chk.links.find(route[i]) >= 0)
-				{
-					route.remove(i + 1, j - i - 1);
-					break;
-				}
-				//see if a shortcut can be taken by using 1 intermediary node
-				//we don't check for more
-				if(i + 2 <= j)
-				{
-					int found = -1;
-					loopvk(chk.links)
-					{
-						if(waypoints[chk.links[k]].links.find(route[i]) >= 0)
-						{
-							found = k;
-							break;
-						}
-					}
-					if(found >= 0)
-					{
-						route[i + 1] = chk.links[found];
-						route.remove(i + 2, j - i - 2);
-						break;
-					}
+					wpfrom->score = score;
+					wpfrom->parent = wpto;
+					wpqueue.add(wpfrom - waypoints.getbuf());
 				}
 			}
 		}
+
+		//build the route; we go from start to end, travelling to each "parent", this is in order
+		vector<ushort> subroute;
+		waypoint *rt = &waypoints[from];
+		topscore = rt->score;
+		while(rt)
+		{
+			subroute.add(rt - waypoints.getbuf());
+			rt = rt->parent;
+		}
+
+		//we actually want it in reverse order for our route; the top most node should be the next node we wish to visit
+		//the route may already contain other pathfinding, which we don't want to touch.'
+		loopvrev(subroute)
+			route.add(subroute[i]);
+
+		return;
 	}
 
 	#ifndef NO_DEBUG
@@ -491,22 +477,33 @@ namespace ai
 	)
 	#endif
 
-	VARP(waypointdrawdist, 64, 256, 4096);
+	VARP(waypointdrawdist, 64, 512, 4096);
+	VARP(waypointlabeldist, 64, 128, 1024);
 
 	void renderwaypoints()
 	{
 		loopv(waypoints)
 		{
 			waypoint &w = waypoints[i];
-			if(w.o.dist(game::player1->o) > min(waypointdrawdist, maxparticledistance)) continue;
+			float dist = w.o.dist(game::player1->o);
+			if(dist > min(waypointdrawdist, maxparticledistance)) continue;
 
-			defformatstring(ds, "%i\n%i", i, w.links.length());
-			particle_textcopy(vec(0, 0, 6).add(w.o), ds, PART_TEXT, 1, 0xFF00FF, 3);
+			if(dist < waypointlabeldist)
+			{
+				defformatstring(ds, "%i\n%i", i, w.links.length());
+				particle_textcopy(vec(0, 0, 6).add(w.o), ds, PART_TEXT, 1, 0xFF00FF, 3);
+			}
 
 			loopvj(w.links)
 			{
 				waypoint &l = waypoints[w.links[j]];
-				particle_flare(w.o, l.o, 0, PART_STREAK, 0x0000FF, .5);
+				int colour = 0x00007F;
+				if(DEBUG_VAI) //will probably induce epilepsy
+				{
+					ushort score = min(127, 127 * max(w.score, l.score) / topscore);
+					colour = (score) << 16 | (127 - score) << 8;
+				}
+				particle_flare(w.o, l.o, 0, PART_STREAK, colour, .5);
 			}
 		}
 
@@ -523,7 +520,7 @@ namespace ai
 			if(cur.o.dist(game::player1->o) > min(waypointdrawdist, maxparticledistance) || prev.o.dist(game::player1->o) > min(waypointdrawdist, maxparticledistance))
 				continue;
 
-			particle_flare(vec(0, 0, 1).add(prev.o), vec(0, 0, 1).add(cur.o), 0, PART_STREAK, 0xFF0000, .5);
+			particle_flare(vec(0, 0, 1).add(prev.o), vec(0, 0, 1).add(cur.o), 0, PART_STREAK, DEBUG_VAI ? 0x0000FF : 0xFF0000, .75);
 		}
 		loopv(game::curmap->objs)
 		{
@@ -538,13 +535,13 @@ namespace ai
 				if(cur.o.dist(game::player1->o) > min(waypointdrawdist, maxparticledistance) || prev.o.dist(game::player1->o) > min(waypointdrawdist, maxparticledistance))
 					continue;
 
-				particle_flare(vec(0, 0, i + 1).add(prev.o), vec(0, 0, i + 1).add(cur.o), 0, PART_STREAK, 0x00FF00, .5);
+				particle_flare(vec(0, 0, i + 1).add(prev.o), vec(0, 0, i + 1).add(cur.o), 0, PART_STREAK, DEBUG_VAI ? 0x0000FF : 0x00FF00, .75);
 			}
 			for(int j = max(0, ent->route.length() - 2); j < ent->route.length(); j++)
 			{
 				vec from = ent->abovehead();
 				vec dest = vec(0, 0, i+1).add(waypoints[ent->route[j]].o);
-				particle_flare(from, dest, 0, PART_STREAK, 0x00AFFF, .5);
+				particle_flare(from, dest, 0, PART_STREAK, DEBUG_VAI ? 0x007F00 : 0x00007F, .5);
 			}
 		}
 		#endif
