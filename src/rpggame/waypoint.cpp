@@ -430,9 +430,12 @@ namespace ai
 		//also allows considering obstacles like projectiles (TODO),
 		//and area effects (TODO),
 		//and even traffic (TODO)
+		bool reached = false;
 		while(wpqueue.length())
 		{
-			waypoint *wpto = &waypoints[wpqueue.remove()];
+			ushort wpid = wpqueue.remove();
+			reached |= wpid == from;
+			waypoint *wpto = &waypoints[wpid];
 			ushort score = wpto->score + 1;
 			loopv(wpto->revlinks)
 			{
@@ -441,7 +444,8 @@ namespace ai
 				{
 					wpfrom->score = score;
 					wpfrom->parent = wpto;
-					wpqueue.add(wpfrom - waypoints.getbuf());
+					if(!reached) //If we've reached our target (the start), just flush the remainder, then get to work
+						wpqueue.add(wpfrom - waypoints.getbuf());
 				}
 			}
 		}
@@ -500,8 +504,16 @@ namespace ai
 				int colour = 0x00007F;
 				if(DEBUG_VAI) //will probably induce epilepsy
 				{
-					ushort score = min(127, 127 * max(w.score, l.score) / topscore);
-					colour = (score) << 16 | (127 - score) << 8;
+					ushort score = max(w.score, l.score);
+					if(score > topscore)
+						colour = 0x7F0000; //red, if we're outside the range
+					else
+					{
+						//green fading to yellow
+						score = min(64, 64 * score / topscore);
+						colour = (score) << 16 | (127 - score) << 8;
+
+					}
 				}
 				particle_flare(w.o, l.o, 0, PART_STREAK, colour, .5);
 			}
