@@ -179,7 +179,7 @@ float text_widthf(const char *str)
     text_boundsf(str, width, height);
     return width;
 }
-ICOMMAND(text_width, "s", (char *s), floatret(text_width(s)))
+ICOMMAND(text_width, "sfN", (char *s, float *scale, int *numargs), intret(ceil(text_widthf(s) * (*numargs >= 2 ? *scale : 1))))
 
 #define FONTTAB (4*FONTW)
 #define TEXTTAB(x) ((int((x)/FONTTAB)+1.0f)*FONTTAB)
