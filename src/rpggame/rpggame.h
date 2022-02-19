@@ -70,6 +70,7 @@ struct ammotype;
 struct areatrigger;
 struct delayscript;
 struct timerscript;
+struct conddelayscript;
 struct effect;
 struct faction;
 struct item;
@@ -316,6 +317,7 @@ namespace rpgscript
 	extern vector<localinst *> locals;
 	extern vector<delayscript *> delaystack;
 	extern hashnameset<timerscript> timers;
+	extern vector<conddelayscript *> conddelaystack;
 }
 
 namespace entities
@@ -1999,21 +2001,37 @@ struct delayscript
 	int remaining;
 
 	bool update();
-	delayscript() : refs(128), script(NULL), remaining(0) {}
+	delayscript() : refs(64), script(NULL), remaining(0) {}
 	~delayscript() { delete[] script; }
 };
 
 struct timerscript
 {
 	const char *name;
-	const char *cond;
-	const char *script;
+	const char *cond, *script;
+	uint *condcode, *scriptcode;
 	int delay;
 	int remaining;
 
+	inline void setcond(const char *c) { delete[] cond; cond = c; freecode(condcode); condcode = NULL; }
+	inline void setscript(const char *s) { delete[] script; script = s; freecode(scriptcode); scriptcode = NULL; }
+
 	bool update();
-	timerscript() : name(NULL), cond(NULL), script(NULL), delay(0), remaining(0) {}
-	~timerscript() { delete[] cond; }
+	timerscript() : name(NULL), cond(NULL), script(NULL), condcode(NULL), scriptcode(NULL), delay(0), remaining(0) {}
+	~timerscript() { delete[] cond; delete[] script; freecode(condcode); freecode(scriptcode);}
+};
+
+struct conddelayscript
+{
+	hashnameset<reference> refs;
+	const char *cond, *script;
+	uint *condcode;
+
+	inline void setcond(const char *c) { delete[] cond; cond = c; freecode(condcode); condcode = NULL; }
+
+	bool update();
+	conddelayscript() : refs(64), cond(NULL), script(NULL), condcode(NULL) {}
+	~conddelayscript() { delete[] cond; delete[] script; freecode(condcode); }
 };
 
 enum

@@ -284,19 +284,37 @@ bool timerscript::update()
 	remaining -= curtime;
 	if(remaining > 0 || camera::cutscene) return true;
 
-	uint *cond = compilecode(this->cond);
-	uint *script = compilecode(this->script);
+	uint *cond = this->condcode ? this->condcode : compilecode(this->cond);
+
 	while(remaining <= 0)
 	{
 		remaining += delay;
-		if(!executebool(cond)) { freecode(cond); freecode(script); return false; }
+		if(!executebool(cond)) { return false; }
 
+		uint *script = this->scriptcode ? this->scriptcode : compilecode(this->script);
 		rpgexecute(script);
 	}
 
-	freecode(cond);
-	freecode(script);
 	return true;
+}
+
+bool conddelayscript::update()
+{
+	if(camera::cutscene)
+		return true;
+
+	uint *cond = this->condcode ? this->condcode : compilecode(this->cond);
+
+	rpgscript::stack.add(&refs);
+	bool ret = executebool(cond);
+	if(ret)
+	{
+		uint *script = compilecode(this->script);
+		rpgexecute(script);
+	}
+
+	rpgscript::stack.pop();
+	return !ret;
 }
 
 /*
@@ -317,6 +335,7 @@ namespace rpgscript
 	vector<hashnameset<reference> *> stack;
 	vector<localinst *> locals;
 	vector<delayscript *> delaystack;
+	vector<conddelayscript *> conddelaystack;
 	hashnameset<timerscript> timers;
 	reference *player = NULL;
 	reference *hover = NULL;
@@ -454,7 +473,7 @@ namespace rpgscript
 	ICOMMAND(r_timer, "siss", (const char *name, int *interval, const char *cond, const char *scr),
 		if(!stack.length()) return;
 
-		*interval = max(50, *interval);
+		*interval = max(1, *interval);
 
 		if(DEBUG_SCRIPT) DEBUGF("Registering timer[%s] with interval %i", name, *interval);
 		name = game::queryhashpool(name);
@@ -462,14 +481,22 @@ namespace rpgscript
 
 		t->name = name;
 		t->delay = t->remaining = *interval;
-		delete[] t->cond; t->cond = newstring(cond);
-		delete[] t->script; t->script = newstring(scr);
+		t->setcond(newstring(cond));
+		t->setscript(newstring(scr));
+	)
+
+	ICOMMAND(r_defer, "ss", (const char *cond, const char *scr),
+		conddelayscript *cds = conddelaystack.add(new conddelayscript());
+		cds->setcond(newstring(cond));
+		cds->script = newstring(scr);
+		copystack(cds->refs);
 	)
 
 	void clean()
 	{
 		delaystack.deletecontents();
 		timers.clear();
+		conddelaystack.deletecontents();
 		stack.deletecontents();
 
 		locals.deletecontents();
@@ -482,6 +509,7 @@ namespace rpgscript
 	{
 		draw_textf("running timers: %i", 0, yoffset, timers.length());
 		draw_textf("active sleeps: %i", 0, yoffset + 50, delaystack.length());
+		draw_textf("active deferals: %i", 0, yoffset + 50, conddelaystack.length());
 	}
 
 	void init()
@@ -513,6 +541,7 @@ namespace rpgscript
 	{
 		loopv(stack) replacerefs(*stack[i], orig, next);
 		loopv(delaystack) replacerefs(delaystack[i]->refs, orig, next);
+		loopv(conddelaystack) replacerefs(conddelaystack[i]->refs, orig, next);
 	}
 
 	void removereferences(rpgent *ptr, bool references)
@@ -562,6 +591,8 @@ namespace rpgscript
 		hover->setnull(true);
 	}
 
+	VARP(r_condstackresponsiveness, 1, 16, 16384);
+
 	void update()
 	{
 		obits.removeobj(game::player1);
@@ -585,6 +616,19 @@ namespace rpgscript
 		{
 			if(!delaystack[i]->update())
 				delete delaystack.remove(i--);
+		}
+
+		//We test a set amount per frame, so it doesn't get too expensive
+		static int condstackprogress = 0;
+		int condstotest = min(conddelaystack.length(), r_condstackresponsiveness);
+		while(condstotest--)
+		{
+			if(condstackprogress >= conddelaystack.length())
+				condstackprogress = 0;
+
+			conddelayscript *cds = conddelaystack[condstackprogress];
+			if(!cds->update()) delete conddelaystack.remove(condstackprogress);
+			else condstackprogress++;
 		}
 
 		vector<timerscript *> expiredtimers;

@@ -4,8 +4,8 @@ extern bool reloadtexture(const char *name); //texture.cpp
 
 namespace rpgio
 {
-	#define SAVE_VERSION 49
-	#define COMPAT_VERSION 49
+	#define SAVE_VERSION 50
+	#define COMPAT_VERSION 50
 	#define SAVE_MAGIC "RPGS"
 
 	/**
@@ -1622,6 +1622,21 @@ namespace rpgio
 		loading->remaining = f->getlil<int>();
 	}
 
+	void writeconddelayscript(stream *f, const vector<mapinfo *> &maps, conddelayscript *saving)
+	{
+		writereferences(f, maps, saving->refs);
+		writestring(f, saving->cond);
+		writestring(f, saving->script);
+	}
+
+	void readconddelayscript(stream *f, const vector<mapinfo *> &maps, conddelayscript *loading)
+	{
+		readreferences(f, maps, loading->refs);
+		loading->cond = readstring(f);
+		loading->script = readstring(f);
+	}
+
+
 	void writejournal(stream *f, journal *saving)
 	{
 		writestring(f, saving->name);
@@ -1718,8 +1733,8 @@ namespace rpgio
 
 		loading->name = name;
 
-		loading->cond = readstring(f);
-		loading->script = readstring(f);
+		loading->setcond(readstring(f));
+		loading->setscript(readstring(f));
 
 		loading->delay = f->getlil<int>();
 		loading->remaining = f->getlil<int>();
@@ -1843,9 +1858,14 @@ namespace rpgio
 			readreferences(f, maps, *rpgscript::stack[i]);
 		)
 
-		READ(delayscript stack,
+		READ(delayed script stack,
 			rpgscript::delaystack.add(new delayscript());
 			readdelayscript(f, maps, rpgscript::delaystack[i]);
+		)
+
+		READ(deferred script stack,
+			rpgscript::conddelaystack.add(new conddelayscript());
+			readconddelayscript(f, maps, rpgscript::conddelaystack[i]);
 		)
 
 		READ(global timers, readtimer(f, maps); )
@@ -1983,8 +2003,12 @@ namespace rpgio
 			writereferences(f, maps, *rpgscript::stack[i]);
 		)
 
-		WRITE(delayscript stack, rpgscript::delaystack,
+		WRITE(delayed script stack, rpgscript::delaystack,
 			writedelayscript(f, maps, rpgscript::delaystack[i]);
+		)
+
+		WRITE(deferred script stack, rpgscript::conddelaystack,
+			writeconddelayscript(f, maps, rpgscript::conddelaystack[i]);
 		)
 
 		vector<timerscript *> timers;
