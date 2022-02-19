@@ -1689,7 +1689,7 @@ namespace rpgio
 		}
 	}
 
-	void writetimer(stream *f, vector<mapinfo *> &maps, timer *saving)
+	void writetimer(stream *f, vector<mapinfo *> &maps, timerscript *saving)
 	{
 		writestring(f, saving->name);
 		writestring(f, saving->cond);
@@ -1706,13 +1706,13 @@ namespace rpgio
 		NOTNULL(name, );
 
 		bool del = false;
-		timer *loading;
+		timerscript *loading;
 
 		if(rpgscript::timers.access(name))
 		{
 			if(DEBUG_IO) DEBUGF("Timer %s already exists, restoring countdown only", name);
 			del = true;
-			loading = new timer();
+			loading = new timerscript();
 		}
 		else loading = &rpgscript::timers[name];
 
@@ -1987,8 +1987,8 @@ namespace rpgio
 			writedelayscript(f, maps, rpgscript::delaystack[i]);
 		)
 
-		vector<timer *> timers;
-		enumerate(rpgscript::timers, timer, t, timers.add(&t));
+		vector<timerscript *> timers;
+		enumerate(rpgscript::timers, timerscript, t, timers.add(&t));
 
 		WRITE(global timer, timers,
 			writetimer(f, maps, timers[i]);

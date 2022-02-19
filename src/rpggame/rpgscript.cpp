@@ -279,7 +279,7 @@ bool delayscript::update()
 	return false;
 }
 
-bool timer::update()
+bool timerscript::update()
 {
 	remaining -= curtime;
 	if(remaining > 0 || camera::cutscene) return true;
@@ -317,7 +317,7 @@ namespace rpgscript
 	vector<hashnameset<reference> *> stack;
 	vector<localinst *> locals;
 	vector<delayscript *> delaystack;
-	hashnameset<timer> timers;
+	hashnameset<timerscript> timers;
 	reference *player = NULL;
 	reference *hover = NULL;
 	reference *map = NULL;
@@ -458,7 +458,7 @@ namespace rpgscript
 
 		if(DEBUG_SCRIPT) DEBUGF("Registering timer[%s] with interval %i", name, *interval);
 		name = game::queryhashpool(name);
-		timer *t = &timers[name];
+		timerscript *t = &timers[name];
 
 		t->name = name;
 		t->delay = t->remaining = *interval;
@@ -587,8 +587,8 @@ namespace rpgscript
 				delete delaystack.remove(i--);
 		}
 
-		vector<timer *> expiredtimers;
-		enumerate(timers, timer, t,
+		vector<timerscript *> expiredtimers;
+		enumerate(timers, timerscript, t,
 			if(!t.update()) expiredtimers.add(&t);
 		)
 		loopv(expiredtimers) timers.remove(expiredtimers[i]->name);

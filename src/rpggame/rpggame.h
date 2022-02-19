@@ -69,7 +69,7 @@
 struct ammotype;
 struct areatrigger;
 struct delayscript;
-struct timer;
+struct timerscript;
 struct effect;
 struct faction;
 struct item;
@@ -315,7 +315,7 @@ namespace rpgscript
 	extern vector<hashnameset<reference> *> stack;
 	extern vector<localinst *> locals;
 	extern vector<delayscript *> delaystack;
-	extern hashnameset<timer> timers;
+	extern hashnameset<timerscript> timers;
 }
 
 namespace entities
@@ -2003,7 +2003,7 @@ struct delayscript
 	~delayscript() { delete[] script; }
 };
 
-struct timer
+struct timerscript
 {
 	const char *name;
 	const char *cond;
@@ -2012,8 +2012,8 @@ struct timer
 	int remaining;
 
 	bool update();
-	timer() : name(NULL), cond(NULL), script(NULL), delay(0), remaining(0) {}
-	~timer() { delete[] cond; }
+	timerscript() : name(NULL), cond(NULL), script(NULL), delay(0), remaining(0) {}
+	~timerscript() { delete[] cond; }
 };
 
 enum
