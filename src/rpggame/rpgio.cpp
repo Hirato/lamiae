@@ -4,8 +4,8 @@ extern bool reloadtexture(const char *name); //texture.cpp
 
 namespace rpgio
 {
-	#define SAVE_VERSION 50
-	#define COMPAT_VERSION 50
+	#define SAVE_VERSION 51
+	#define COMPAT_VERSION 51
 	#define SAVE_MAGIC "RPGS"
 
 	/**
@@ -765,7 +765,7 @@ namespace rpgio
 		ent->pitch = f->getlil<float>();
 		ent->roll = f->getlil<float>();
 
-		ent->timeinair = f->getlil<int>();
+		ent->timeinair = f->getlil<ushort>();
 
 		ent->state = f->getchar();
 		ent->editstate = f->getchar();
