@@ -5,7 +5,7 @@
 #include "SDL_syswm.h"
 #endif
 
-SVARO(version, "0.1.0");
+SVARO(version, "0.2.0");
 SVAR(logo, "<premul>media/interface/lamiae");
 
 extern void cleargamma();
