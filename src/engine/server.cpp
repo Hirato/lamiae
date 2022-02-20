@@ -85,22 +85,6 @@ void conoutfv(int type, const char *fmt, va_list args)
 {
     logoutfv(fmt, args);
 }
-
-void conoutf(const char *fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    conoutfv(CON_INFO, fmt, args);
-    va_end(args);
-}
-
-void conoutf(int type, const char *fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    conoutfv(type, fmt, args);
-    va_end(args);
-}
 #endif
 
 #define DEFAULTCLIENTS 8
@@ -198,7 +182,7 @@ void sendpacket(int n, int chan, ENetPacket *packet, int exclude)
         loopv(clients) if(i!=exclude && server::allowbroadcast(i)) sendpacket(i, chan, packet);
         return;
     }
-    switch(clients[n]->type)
+    if(clients.inrange(n)) switch(clients[n]->type)
     {
         case ST_TCPIP:
         {
@@ -732,6 +716,7 @@ void localdisconnect(bool cleanup)
 
 void localconnect()
 {
+    if(initing) return;
     client &c = addclient(ST_LOCAL);
     copystring(c.hostname, "local");
     game::gameconnect(false);

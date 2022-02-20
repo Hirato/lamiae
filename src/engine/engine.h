@@ -122,7 +122,7 @@ static inline bool pvsoccluded(const ivec &bborigin, int size)
 }
 
 // rendergl
-extern bool hasVAO, hasTR, hasTSW, hasPBO, hasFBO, hasAFBO, hasDS, hasTF, hasCBF, hasS3TC, hasFXT1, hasLATC, hasRGTC, hasAF, hasFBB, hasFBMS, hasTMS, hasMSS, hasFBMSBS, hasUBO, hasMBR, hasDB2, hasDBB, hasTG, hasTQ, hasPF, hasTRG, hasTI, hasHFV, hasHFP, hasDBT, hasDC, hasDBGO, hasEGPU4, hasGPU4, hasGPU5, hasBFE, hasEAL, hasCR, hasOQ2, hasES3, hasCB, hasCI;
+extern bool hasVAO, hasTR, hasTSW, hasPBO, hasFBO, hasAFBO, hasDS, hasTF, hasCBF, hasS3TC, hasFXT1, hasLATC, hasRGTC, hasAF, hasFBB, hasFBMS, hasTMS, hasMSS, hasFBMSBS, hasUBO, hasMBR, hasDB2, hasDBB, hasTG, hasTQ, hasPF, hasTRG, hasTI, hasHFV, hasHFP, hasDBT, hasDC, hasDBGO, hasEGPU4, hasGPU4, hasGPU5, hasBFE, hasEAL, hasCR, hasOQ2, hasES2, hasES3, hasCB, hasCI, hasTS;
 extern int glversion, glslversion, glcompat;
 extern int maxdrawbufs, maxdualdrawbufs;
 
@@ -281,7 +281,7 @@ extern int shadowmapping;
 
 extern vec shadoworigin, shadowdir;
 extern float shadowradius, shadowbias;
-extern int shadowside, shadowspot;
+extern int shadowside, shadowspot, shadowtransparent;
 extern matrix4 shadowmatrix;
 
 extern void loaddeferredlightshaders();
@@ -291,10 +291,11 @@ extern void clearshadowcache();
 extern void rendervolumetric();
 extern void cleanupvolumetric();
 
-extern void findshadowvas();
+extern void findshadowvas(bool transparent = false);
 extern void findshadowmms();
 
 extern int calcshadowinfo(const extentity &e, vec &origin, float &radius, vec &spotloc, int &spotangle, float &bias);
+extern int dynamicshadowvas();
 extern int dynamicshadowvabounds(int mask, vec &bbmin, vec &bbmax);
 extern void rendershadowmapworld();
 extern void batchshadowmapmodels(bool skipmesh = false);
@@ -434,6 +435,7 @@ extern void rendergeom();
 extern int findalphavas();
 extern void renderrefractmask();
 extern void renderalphageom(int side);
+extern void renderalphashadow(bool cullside = false);
 extern void rendermapmodels();
 extern void renderoutline();
 extern void cleanupva();
@@ -476,7 +478,7 @@ extern float matsolidsx1, matsolidsy1, matsolidsx2, matsolidsy2;
 extern float matrefractsx1, matrefractsy1, matrefractsx2, matrefractsy2;
 extern uint matliquidtiles[LIGHTTILE_MAXH], matsolidtiles[LIGHTTILE_MAXH];
 extern vector<materialsurface> editsurfs, glasssurfs[4], watersurfs[4], waterfallsurfs[4], lavasurfs[4], lavafallsurfs[4];
-extern const vec matnormals[6];
+extern const bvec4 matnormals[6];
 
 extern int showmat;
 
@@ -579,7 +581,7 @@ extern void clearsleep(bool clearoverrides = true);
 // console
 extern float conscale;
 
-extern void processkey(int code, bool isdown);
+extern void processkey(int code, bool isdown, int modstate = 0);
 extern void processtextinput(const char *str, int len);
 extern float rendercommand(float x, float y, float w);
 extern float renderfullconsole(float w, float h);
@@ -617,7 +619,6 @@ extern bool initwarning(const char *desc, int level = INIT_RESET, int type = CHA
 
 extern bool grabinput, minimized;
 
-extern void pushevent(const SDL_Event &e);
 extern bool interceptkey(int sym);
 
 extern float loadprogress;
@@ -647,7 +648,6 @@ extern void modifyorient(float yaw, float pitch);
 extern void mousemove(int dx, int dy);
 extern bool overlapsdynent(const vec &o, float radius);
 extern void rotatebb(vec &center, vec &radius, int yaw, int pitch, int roll = 0);
-extern float shadowray(const vec &o, const vec &ray, float radius, int mode, extentity *t = NULL);
 
 // world
 

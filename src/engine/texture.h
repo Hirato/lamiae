@@ -194,7 +194,7 @@ struct Shader
 
     bool isdynamic() const { return (type&SHADER_DYNAMIC)!=0; }
 
-    static inline bool isnull(const Shader *s) { return !s; }
+    static bool isnull(const Shader *s);
 
     bool isnull() const { return isnull(this); }
 
@@ -593,6 +593,7 @@ enum
 
     TEX_SPEC,
     TEX_DEPTH,
+    TEX_ALPHA,
     TEX_UNKNOWN,
 
     TEX_DETAIL = TEX_SPEC

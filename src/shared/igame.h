@@ -87,11 +87,13 @@ namespace game
     extern const char *defaultcrosshair(int index);
     extern int selectcrosshair(vec &col);
     extern void setupcamera();
+    extern bool allowthirdperson(bool msg = false);
     extern bool detachcamera();
     extern bool collidecamera();
     extern void adddynlights();
     extern void particletrack(physent *owner, vec &o, vec &d);
     extern void dynlighttrack(physent *owner, vec &o, vec &hud);
+    extern int maxsoundradius(int n);
     extern bool needminimap();
     extern bool showenthelpers();
 

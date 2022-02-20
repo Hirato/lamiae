@@ -34,6 +34,7 @@ struct model
     virtual void setgloss(int gloss) {}
     virtual void setglow(float glow, float glowdelta, float glowpulse) {}
     virtual void setalphatest(float alpha) {}
+    virtual void setdither(bool dither) {}
     virtual void setfullbright(float fullbright) {}
     virtual void setcullface(int cullface) {}
     virtual void setcolor(const vec &color) {}
@@ -72,7 +73,7 @@ struct model
             {
                 collidecenter.z = collideradius.z = collideheight/2;
             }
-            rejectradius = collideradius.magnitude();
+            rejectradius = vec(collidecenter).abs().add(collideradius).magnitude();
         }
         center = collidecenter;
         radius = collideradius;

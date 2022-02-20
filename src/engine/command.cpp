@@ -682,6 +682,11 @@ int getvarmax(const char *name)
     GETVAR(id, name, 0);
     return id->maxval;
 }
+float getfvar(const char *name)
+{
+    _GETVAR(id, ID_FVAR, name, 0);
+    return *id->storage.f;
+}
 float getfvarmin(const char *name)
 {
     _GETVAR(id, ID_FVAR, name, 0);
@@ -812,21 +817,53 @@ void setsvarchecked(ident *id, const char *val)
     }
 }
 
+ICOMMAND(set, "rT", (ident *id, tagval *v),
+{
+    switch(id->type)
+    {
+        case ID_ALIAS:
+            if(id->index < MAXARGS) setarg(*id, *v); else setalias(*id, *v);
+            v->type = VAL_NULL;
+            break;
+        case ID_VAR:
+            setvarchecked(id, forceint(*v));
+            break;
+        case ID_FVAR:
+            setfvarchecked(id, forcefloat(*v));
+            break;
+        case ID_SVAR:
+            setsvarchecked(id, forcestr(*v));
+            break;
+        case ID_COMMAND:
+            if(id->flags&IDF_EMUVAR)
+            {
+                execute(id, v, 1);
+                v->type = VAL_NULL;
+                break;
+            }
+            // fall through
+        default:
+            debugcode("cannot redefine builtin %s with an alias", id->name);
+            break;
+    }
+});
+
 bool addcommand(const char *name, identfun fun, const char *args, int type)
 {
     uint argmask = 0;
-    int numargs = 0;
+    int numargs = 0, flags = 0;
     bool limit = true;
     if(args) for(const char *fmt = args; *fmt; fmt++) switch(*fmt)
     {
         case 'i': case 'b': case 'f': case 'F': case 't': case 'T': case 'E': case 'N': case 'D': if(numargs < MAXARGS) numargs++; break;
-        case 'S': case 's': case 'e': case 'r': case '$': if(numargs < MAXARGS) { argmask |= 1<<numargs; numargs++; } break;
+        case '$': flags |= IDF_EMUVAR; // fall through
+        case 'S': case 's': case 'e': case 'r': if(numargs < MAXARGS) { argmask |= 1<<numargs; numargs++; } break;
         case '1': case '2': case '3': case '4': if(numargs < MAXARGS) fmt -= *fmt-'0'+1; break;
         case 'C': case 'V': limit = false; break;
         default: fatal("builtin %s declared with illegal type: %s", name, args); break;
     }
     if(limit && numargs > MAXCOMARGS) fatal("builtin %s declared with too many args: %d", name, numargs);
-    addident(ident(type, name, args, argmask, numargs, (void *)fun));
+    addident(ident(type, name, args, argmask, numargs, (void *)fun, flags));
     return false;
 }
 
@@ -1706,6 +1743,9 @@ static void compilestatements(vector<uint> &code, const char *&p, int rettype, i
                             if(!(more = compilearg(code, p, VAL_CSTR, prevargs))) compilestr(code);
                             code.add(CODE_SVAR1|(id->index<<8));
                             goto endstatement;
+                        case ID_COMMAND:
+                            if(id->flags&IDF_EMUVAR) goto compilecommand;
+                            break;
                     }
                     compilestr(code, idname, true);
                 }
@@ -1713,6 +1753,7 @@ static void compilestatements(vector<uint> &code, const char *&p, int rettype, i
                 code.add(CODE_ALIASU);
                 goto endstatement;
         }
+    compilecommand:
         numargs = 0;
         if(!idname.str)
         {
@@ -2050,21 +2091,32 @@ void freecode(uint *code)
 
 void printvar(ident *id, int i)
 {
-    if(i < 0) conoutf("%s = %d", id->name, i);
+    if(i < 0) conoutf(CON_INFO, id->index, "%s = %d", id->name, i);
     else if(id->flags&IDF_HEX && id->maxval==0xFFFFFF)
-        conoutf("%s = 0x%.6X (%d, %d, %d)", id->name, i, (i>>16)&0xFF, (i>>8)&0xFF, i&0xFF);
+        conoutf(CON_INFO, id->index, "%s = 0x%.6X (%d, %d, %d)", id->name, i, (i>>16)&0xFF, (i>>8)&0xFF, i&0xFF);
     else
-        conoutf(id->flags&IDF_HEX ? "%s = 0x%X" : "%s = %d", id->name, i);
+        conoutf(CON_INFO, id->index, id->flags&IDF_HEX ? "%s = 0x%X" : "%s = %d", id->name, i);
 }
 
 void printfvar(ident *id, float f)
 {
-    conoutf("%s = %s", id->name, floatstr(f));
+    conoutf(CON_INFO, id->index, "%s = %s", id->name, floatstr(f));
 }
 
 void printsvar(ident *id, const char *s)
 {
-    conoutf(strchr(s, '"') ? "%s = [%s]" : "%s = \"%s\"", id->name, s);
+    conoutf(CON_INFO, id->index, strchr(s, '"') ? "%s = [%s]" : "%s = \"%s\"", id->name, s);
+}
+
+template <class V>
+static void printvar(ident *id, int type, V &val)
+{
+    switch(type)
+    {
+        case VAL_INT: printvar(id, val.getint()); break;
+        case VAL_FLOAT: printfvar(id, val.getfloat()); break;
+        default: printsvar(id, val.getstr()); break;
+    }
 }
 
 void printvar(ident *id)
@@ -2074,8 +2126,19 @@ void printvar(ident *id)
         case ID_VAR: printvar(id, *id->storage.i); break;
         case ID_FVAR: printfvar(id, *id->storage.f); break;
         case ID_SVAR: printsvar(id, *id->storage.s); break;
+        case ID_ALIAS: printvar(id, id->valtype, *id); break;
+        case ID_COMMAND:
+            if(id->flags&IDF_EMUVAR)
+            {
+                tagval result;
+                executeret(id, NULL, 0, true, result);
+                printvar(id, result.type, result);
+                freearg(result);
+            }
+            break;
     }
 }
+ICOMMAND(printvar, "r", (ident *id), printvar(id));
 
 typedef void (__cdecl *comfun)();
 typedef void (__cdecl *comfun1)(void *);
@@ -3542,6 +3605,31 @@ void substr(char *s, int *start, int *count, int *numargs)
 }
 COMMAND(substr, "siiN");
 
+void chopstr(char *s, int *lim, char *ellipsis)
+{
+    int len = strlen(s), maxlen = abs(*lim);
+    if(len > maxlen)
+    {
+        int elen = strlen(ellipsis);
+        maxlen = max(maxlen, elen);
+        char *chopped = newstring(maxlen);
+        if(*lim < 0)
+        {
+            memcpy(chopped, ellipsis, elen);
+            memcpy(&chopped[elen], &s[len - (maxlen - elen)], maxlen - elen);
+        }
+        else
+        {
+            memcpy(chopped, s, maxlen - elen);
+            memcpy(&chopped[maxlen - elen], ellipsis, elen);
+        }
+        chopped[maxlen] = '\0';
+        commandret->setstr(chopped);
+    }
+    else result(s);
+}
+COMMAND(chopstr, "sis");
+
 void sublist(const char *s, int *skip, int *count, int *numargs)
 {
     int offset = max(*skip, 0), len = *numargs >= 3 ? max(*count, 0) : -1;
@@ -3658,6 +3746,20 @@ void looplist(ident *id, const char *list, const uint *body)
 }
 
 COMMAND(looplist, "rse");
+
+void loopsublist(ident *id, const char *list, int *skip, int *count, const uint *body)
+{
+    if(id->type!=ID_ALIAS) return;
+    identstack stack;
+    int n = 0, offset = max(*skip, 0), len = *count < 0 ? INT_MAX : offset + *count;
+    for(const char *s = list, *start, *end, *qstart; parselist(s, start, end, qstart) && n < len; n++) if(n >= offset)
+    {
+        setiter(*id, listelem(start, end, qstart), stack);
+        execute(body);
+    }
+    if(n) poparg(*id);
+}
+COMMAND(loopsublist, "rsiie");
 
 void looplist2(ident *id, ident *id2, const char *list, const uint *body)
 {
@@ -4274,7 +4376,7 @@ CMPSCMD(>s, >);
 CMPSCMD(<=s, <=);
 CMPSCMD(>=s, >=);
 
-ICOMMAND(echo, "C", (char *s), conoutf("\f1%s", s));
+ICOMMAND(echo, "C", (char *s), conoutf(CON_ECHO, "\f1%s", s));
 ICOMMAND(error, "C", (char *s), conoutf(CON_ERROR, "%s", s));
 ICOMMAND(strstr, "ss", (char *a, char *b), { char *s = strstr(a, b); intret(s ? s-a : -1); });
 ICOMMAND(strlen, "s", (char *s), intret(strlen(s)));
@@ -4282,6 +4384,32 @@ ICOMMAND(strcode, "si", (char *s, int *i), intret(*i > 0 ? (memchr(s, 0, *i) ? 0
 ICOMMAND(codestr, "i", (int *i), { char *s = newstring(1); s[0] = char(*i); s[1] = '\0'; stringret(s); });
 ICOMMAND(struni, "si", (char *s, int *i), intret(*i > 0 ? (memchr(s, 0, *i) ? 0 : cube2uni(s[*i])) : cube2uni(s[0])));
 ICOMMAND(unistr, "i", (int *i), { char *s = newstring(1); s[0] = uni2cube(*i); s[1] = '\0'; stringret(s); });
+
+int naturalsort(const char *a, const char *b)
+{
+    for(;;)
+    {
+        int ac = *a, bc = *b;
+        if(!ac) return bc ? -1 : 0;
+        else if(!bc) return 1;
+        else if(isdigit(ac) && isdigit(bc))
+        {
+            while(*a == '0') a++;
+            while(*b == '0') b++;
+            const char *a0 = a, *b0 = b;
+            while(isdigit(*a)) a++;
+            while(isdigit(*b)) b++;
+            int alen = a - a0, blen = b - b0;
+            if(alen != blen) return alen - blen;
+            int n = memcmp(a0, b0, alen);
+            if(n < 0) return -1;
+            else if(n > 0) return 1;
+        }
+        else if(ac != bc) return ac - bc;
+        else { ++a; ++b; }
+    }
+}
+ICOMMAND(naturalsort, "ss", (char *a, char *b), intret(naturalsort(a,b)<=0));
 
 #define STRMAPCOMMAND(name, map) \
     ICOMMAND(name, "s", (char *s), \

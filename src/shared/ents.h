@@ -22,8 +22,8 @@ enum
     EF_OCTA       = 1<<5,
     EF_RENDER     = 1<<6,
     EF_SOUND      = 1<<7,
-    EF_SPAWNED    = 1<<8
-
+    EF_SPAWNED    = 1<<8,
+    EF_NOPICKUP   = 1<<9
 };
 
 struct extentity : entity                       // part of the entity that doesn't get saved to disk
@@ -37,6 +37,11 @@ struct extentity : entity                       // part of the entity that doesn
     void setspawned(bool val) { if(val) flags |= EF_SPAWNED; else flags &= ~EF_SPAWNED; }
     void setspawned() { flags |= EF_SPAWNED; }
     void clearspawned() { flags &= ~EF_SPAWNED; }
+
+    bool nopickup() const { return (flags&EF_NOPICKUP) != 0; }
+    void setnopickup(bool val) { if(val) flags |= EF_NOPICKUP; else flags &= ~EF_NOPICKUP; }
+    void setnopickup() { flags |= EF_NOPICKUP; }
+    void clearnopickup() { flags &= ~EF_NOPICKUP; }
 };
 
 #define MAXENTS 10000
@@ -60,15 +65,15 @@ struct physent                                  // base entity type, can be affe
     vec deltapos, newpos;                       // movement interpolation
     float yaw, pitch, roll;
     float maxspeed, jumpvel;                    // cubes per second, 100 for player
-    int timeinair;
     float radius, eyeheight, maxheight, aboveeye; // bounding box size
     float xradius, yradius, zmargin;
     vec floor;                                  // the normal of floor the dynent is on
 
-    int inwater;
+    ushort timeinair;
+    uchar inwater;
     bool jumping, flying;
 
-    char move, strafe, altitude, crouching;
+    schar move, strafe, altitude, crouching;
 
     uchar physstate;                            // one of PHYS_* above
     uchar state, editstate;                     // one of CS_* above

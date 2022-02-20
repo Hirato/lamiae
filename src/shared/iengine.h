@@ -42,9 +42,8 @@ enum // cube empty-space materials
 #define isdeadly(mat) ((mat)==MAT_LAVA)
 
 extern void lightent(extentity &e, float height = 8.0f);
-extern void lightreaching(const vec &target, vec &color, vec &dir, bool fast = false, extentity *e = 0, float minambient = 0.1f);
 
-enum { RAY_BB = 1, RAY_POLY = 3, RAY_ALPHAPOLY = 7, RAY_ENTS = 9, RAY_CLIPMAT = 16, RAY_SKIPFIRST = 32, RAY_EDITMAT = 64, RAY_SHADOW = 128, RAY_PASS = 256, RAY_SKIPSKY = 512 };
+enum { RAY_BB = 1, RAY_POLY = 3, RAY_ALPHAPOLY = 7, RAY_ENTS = 9, RAY_CLIPMAT = 16, RAY_SKIPFIRST = 32, RAY_EDITMAT = 64, RAY_PASS = 128 };
 
 extern float raycube   (const vec &o, const vec &ray, float radius = 0, int mode = RAY_CLIPMAT, int size = 0, extentity *t = 0);
 extern float raycubepos(const vec &o, const vec &ray, vec &hit, float radius = 0, int mode = RAY_CLIPMAT, int size = 0);
@@ -195,11 +194,16 @@ enum
     CON_ERROR = 1<<2,
     CON_DEBUG = 1<<3,
     CON_INIT  = 1<<4,
-    CON_ECHO  = 1<<5
+    CON_ECHO  = 1<<5,
+
+    CON_FLAGS = 0xFFFF,
+    CON_TAG_SHIFT = 16,
+    CON_TAG_MASK = (0x7FFF << CON_TAG_SHIFT)
 };
 
 extern void conoutf(const char *s, ...) PRINTFARGS(1, 2);
 extern void conoutf(int type, const char *s, ...) PRINTFARGS(2, 3);
+extern void conoutf(int type, int tag, const char *s, ...) PRINTFARGS(3, 4);
 extern void conoutfv(int type, const char *fmt, va_list args);
 
 extern FILE *getlogfile();
@@ -285,7 +289,7 @@ extern void packvslot(vector<uchar> &buf, const VSlot *vs);
 
 // renderlights
 
-enum { L_NOSHADOW = 1<<0, L_NODYNSHADOW = 1<<1, L_VOLUMETRIC = 1<<2, L_NOSPEC = 1<<3 };
+enum { L_NOSHADOW = 1<<0, L_NODYNSHADOW = 1<<1, L_VOLUMETRIC = 1<<2, L_NOSPEC = 1<<3, L_SMALPHA = 1<<4 };
 
 // dynlight
 enum
@@ -296,7 +300,6 @@ enum
 };
 
 extern void adddynlight(const vec &o, float radius, const vec &color, int fade = 0, int peak = 0, int flags = 0, float initradius = 0, const vec &initcolor = vec(0, 0, 0), physent *owner = NULL, const vec &dir = vec(0, 0, 0), int spot = 0);
-extern void dynlightreaching(const vec &target, vec &color, vec &dir, bool hud = false);
 extern void removetrackeddynlights(physent *owner = NULL);
 
 // rendergl
@@ -311,6 +314,7 @@ extern vec calcmodelpreviewpos(const vec &radius, float &yaw);
 
 extern void damageblend(int n);
 extern void damagecompass(int n, const vec &loc);
+extern void cleardamagescreen();
 
 extern vec minimapcenter, minimapradius, minimapscale;
 extern void bindminimap();
@@ -422,7 +426,9 @@ extern void findplayerspawn(dynent *d, int forceent = -1, int tag = 0);
 // sound
 enum
 {
-    SND_MAP = 1<<0
+    SND_MAP     = 1<<0,
+    SND_NO_ALT  = 1<<1,
+    SND_USE_ALT = 1<<2
 };
 
 extern int playsound(int n, const vec *loc = NULL, extentity *ent = NULL, int flags = 0, int loops = 0, int fade = 0, int chanid = -1, int radius = 0, int expire = -1);
@@ -537,7 +543,7 @@ extern void notifywelcome();
 extern void genprivkey(const char *seed, vector<char> &privstr, vector<char> &pubstr);
 extern bool calcpubkey(const char *privstr, vector<char> &pubstr);
 extern bool hashstring(const char *str, char *result, int maxlen);
-extern void answerchallenge(const char *privstr, const char *challenge, vector<char> &answerstr);
+extern bool answerchallenge(const char *privstr, const char *challenge, vector<char> &answerstr);
 extern void *parsepubkey(const char *pubstr);
 extern void freepubkey(void *pubkey);
 extern void *genchallenge(void *pubkey, const void *seed, int seedlen, vector<char> &challengestr);

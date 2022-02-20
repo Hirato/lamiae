@@ -176,7 +176,7 @@ bool resolverwait(const char *name, ENetAddress *address)
         }
     }
     SDL_UnlockMutex(resolvermutex);
-    return resolved;
+    return resolved && address->host != ENET_HOST_ANY;
 }
 
 #define CONNLIMIT 20000
@@ -540,7 +540,7 @@ void checkpings()
         getstring(text, p);
         filtertext(si->map, text, false);
         getstring(text, p);
-        filtertext(si->desc, text);
+        filtertext(si->desc, text, true, true);
     }
 }
 
@@ -679,11 +679,30 @@ void updatefrommaster()
 {
     vector<char> data;
     retrieveservers(data);
-    if(data.empty()) conoutf("master server not replying");
+    if(data.empty()) conoutf(CON_ERROR, "master server not replying");
     else
     {
         clearservers();
-        execute(data.getbuf());
+        char *line = data.getbuf();
+        while(char *end = (char *)memchr(line, '\n', data.length() - (line - data.getbuf())))
+        {
+            *end = '\0';
+
+            const char *args = line;
+            while(args < end && !iscubespace(*args)) args++;
+            int cmdlen = args - line;
+            while(args < end && iscubespace(*args)) args++;
+
+            if(matchstring(line, cmdlen, "addserver"))
+            {
+                string ip;
+                int port;
+                if(sscanf(args, "%100s %d", ip, &port) == 2) addserver(ip, port);
+            }
+            else if(matchstring(line, cmdlen, "echo")) conoutf("\f1%s", args);
+
+            line = end + 1;
+        }
     }
     refreshservers();
     updatedservers = true;

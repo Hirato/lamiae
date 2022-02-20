@@ -16,9 +16,22 @@ VARFP(maxcon, 10, 200, MAXCONLINES, { while(conlines.length() > maxcon) delete[]
 
 #define CONSTRLEN 512
 
+VARP(contags, 0, 3, 3);
+
 void conline(int type, const char *sf)        // add a line to the console buffer
 {
-    char *buf = conlines.length() >= maxcon ? conlines.remove().line : newstring("", CONSTRLEN-1);
+    char *buf = NULL;
+    if(type&CON_TAG_MASK) for(int i = conlines.length()-1; i >= max(conlines.length()-contags, 0); i--)
+    {
+        int prev = conlines.removing(i).type;
+        if(!(prev&CON_TAG_MASK)) break;
+        if(type == prev)
+        {
+            buf = conlines.remove(i).line;
+            break;
+        }
+    }
+    if(!buf) buf = conlines.length() >= maxcon ? conlines.remove().line : newstring("", CONSTRLEN-1);
     cline &cl = conlines.add();
     cl.line = buf;
     cl.type = type;
@@ -32,22 +45,6 @@ void conoutfv(int type, const char *fmt, va_list args)
     vformatstring(buf, fmt, args, sizeof(buf));
     conline(type, buf);
     logoutf("%s", buf);
-}
-
-void conoutf(const char *fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    conoutfv(CON_INFO, fmt, args);
-    va_end(args);
-}
-
-void conoutf(int type, const char *fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    conoutfv(type, fmt, args);
-    va_end(args);
 }
 
 ICOMMAND(fullconsole, "iN$", (int *val, int *numargs, ident *id),
@@ -91,6 +88,7 @@ int conskip = 0, miniconskip = 0;
 
 void setconskip(int &skip, int filter, int n)
 {
+    filter &= CON_FLAGS;
     int offset = abs(n), dir = n < 0 ? -1 : 1;
     skip = clamp(skip, 0, conlines.length()-1);
     while(offset)
@@ -112,6 +110,7 @@ ICOMMAND(clearconsole, "", (), { while(conlines.length()) delete[] conlines.pop(
 
 float drawconlines(int conskip, int confade, float conwidth, float conheight, float conoff, int filter, float y = 0, int dir = 1)
 {
+    filter &= CON_FLAGS;
     int numl = conlines.length(), offset = min(conskip, numl);
 
     if(confade)
@@ -603,14 +602,21 @@ void processtextinput(const char *str, int len)
         consoleinput(str, len);
 }
 
-void processkey(int code, bool isdown)
+void processkey(int code, bool isdown, int modstate)
 {
+    switch(code)
+    {
+        case SDLK_LGUI: case SDLK_RGUI:
+            return;
+    }
     keym *haskey = keyms.access(code);
     if(haskey && haskey->pressed) execbind(*haskey, isdown); // allow pressed keys to release
+    else if(modstate&KMOD_GUI) return;
     else if(!UI::keypress(code, isdown)) // 3D GUI mouse button intercept
     {
         if(!consolekey(code, isdown))
         {
+            if(modstate&KMOD_GUI) return;
             if(haskey) execbind(*haskey, isdown);
         }
     }
@@ -643,7 +649,7 @@ void writebinds(stream *f)
 
 // tab-completion of all idents and base maps
 
-enum { FILES_DIR = 0, FILES_LIST };
+enum { FILES_DIR = 0, FILES_VAR, FILES_LIST };
 
 struct fileskey
 {
@@ -653,6 +659,13 @@ struct fileskey
     fileskey() {}
     fileskey(int type, const char *dir, const char *ext) : type(type), dir(dir), ext(ext) {}
 };
+
+static void cleanfilesdir(char *dir)
+{
+    int dirlen = (int)strlen(dir);
+    while(dirlen > 0 && (dir[dirlen-1] == '/' || dir[dirlen-1] == '\\'))
+        dir[--dirlen] = '\0';
+}
 
 struct filesval
 {
@@ -666,9 +679,22 @@ struct filesval
 
     void update()
     {
-        if(type!=FILES_DIR || millis >= commandmillis) return;
+        if((type!=FILES_DIR && type!=FILES_VAR) || millis >= commandmillis) return;
         files.deletearrays();
-        listfiles(dir, ext, files);
+        if(type==FILES_VAR)
+        {
+            string buf;
+            buf[0] = '\0';
+            if(ident *id = readident(dir)) switch(id->type)
+            {
+                case ID_SVAR: copystring(buf, *id->storage.s); break;
+                case ID_ALIAS: copystring(buf, id->getstr()); break;
+            }
+            if(!buf[0]) copystring(buf, ".");
+            cleanfilesdir(buf);
+            listfiles(buf, ext, files);
+        }
+        else listfiles(dir, ext, files);
         files.sort();
         loopv(files) if(i && !strcmp(files[i], files[i-1])) delete[] files.remove(i--);
         millis = totalmillis;
@@ -706,16 +732,11 @@ void addcomplete(char *command, int type, char *dir, char *ext)
         if(hasfiles) *hasfiles = NULL;
         return;
     }
-    if(type==FILES_DIR)
+    if(type==FILES_DIR) cleanfilesdir(dir);
+    if(ext)
     {
-        int dirlen = (int)strlen(dir);
-        while(dirlen > 0 && (dir[dirlen-1] == '/' || dir[dirlen-1] == '\\'))
-            dir[--dirlen] = '\0';
-        if(ext)
-        {
-            if(strchr(ext, '*')) ext[0] = '\0';
-            if(!ext[0]) ext = NULL;
-        }
+        if(strchr(ext, '*')) ext[0] = '\0';
+        if(!ext[0]) ext = NULL;
     }
     fileskey key(type, dir, ext);
     filesval **val = completefiles.access(key);
@@ -736,12 +757,18 @@ void addfilecomplete(char *command, char *dir, char *ext)
     addcomplete(command, FILES_DIR, dir, ext);
 }
 
+void addvarcomplete(char *command, char *var, char *ext)
+{
+    addcomplete(command, FILES_VAR, var, ext);
+}
+
 void addlistcomplete(char *command, char *list)
 {
     addcomplete(command, FILES_LIST, list, NULL);
 }
 
 COMMANDN(complete, addfilecomplete, "sss");
+COMMANDN(varcomplete, addvarcomplete, "sss");
 COMMANDN(listcomplete, addlistcomplete, "ss");
 
 void complete(char *s, int maxlen, const char *cmdprefix)
@@ -808,7 +835,7 @@ void writecompletions(stream *f)
             if(validateblock(v->dir)) f->printf("listcomplete %s [%s]\n", escapeid(k), v->dir);
             else f->printf("listcomplete %s %s\n", escapeid(k), escapestring(v->dir));
         }
-        else f->printf("complete %s %s %s\n", escapeid(k), escapestring(v->dir), escapestring(v->ext ? v->ext : "*"));
+        else f->printf("%s %s %s %s\n", v->type==FILES_VAR ? "varcomplete" : "complete", escapeid(k), escapestring(v->dir), escapestring(v->ext ? v->ext : "*"));
     }
 }
 

@@ -745,7 +745,10 @@ void Shader::cleanup(bool full)
         reusevs = reuseps = NULL;
     }
     else loopv(defaultparams) defaultparams[i].loc = -1;
+    owner = NULL;
 }
+
+bool Shader::isnull(const Shader *s) { return !s; }
 
 static void genattriblocs(Shader &s, const char *vs, const char *ps, Shader *reusevs, Shader *reuseps)
 {

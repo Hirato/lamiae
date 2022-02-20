@@ -1032,6 +1032,18 @@ namespace game
 		return NULL;
 	}
 
+	int maxsoundradius(int n)
+	{
+		switch(n)
+		{
+			case S_JUMP:
+			case S_LAND:
+				return 340;
+			default:
+				return 500;
+		}
+	}
+
 	int numdynents()
 	{
 		return curmap ? curmap->objs.length() : 0;

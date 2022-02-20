@@ -333,81 +333,6 @@ void culldynlightprops()
     while(pending.length()) dynlightpropcache.remove(pending.pop());
 }
 
-#define LIGHTCACHESIZE 1024
-
-static struct lightcacheentry
-{
-    int x, y;
-    vector<int> lights;
-} lightcache[LIGHTCACHESIZE];
-
-#define LIGHTCACHEHASH(x, y) (((((x)^(y))<<5) + (((x)^(y))>>5)) & (LIGHTCACHESIZE - 1))
-
-VARF(lightcachesize, 4, 6, 12, clearlightcache());
-
-void clearlightcache(int id)
-{
-    if(id >= 0)
-    {
-        const extentity &light = *entities::getents()[id];
-        // don't lookup because this is a cache
-        int radius = light.attr[0];
-        if(radius <= 0) return;
-        for(int x = int(max(light.o.x-radius, 0.0f))>>lightcachesize, ex = int(min(light.o.x+radius, worldsize-1.0f))>>lightcachesize; x <= ex; x++)
-        for(int y = int(max(light.o.y-radius, 0.0f))>>lightcachesize, ey = int(min(light.o.y+radius, worldsize-1.0f))>>lightcachesize; y <= ey; y++)
-        {
-            lightcacheentry &lce = lightcache[LIGHTCACHEHASH(x, y)];
-            if(lce.x != x || lce.y != y) continue;
-            lce.x = -1;
-            lce.lights.setsize(0);
-        }
-        return;
-    }
-
-    for(lightcacheentry *lce = lightcache; lce < &lightcache[LIGHTCACHESIZE]; lce++)
-    {
-        lce->x = -1;
-        lce->lights.setsize(0);
-    }
-}
-
-const vector<int> &checklightcache(int x, int y)
-{
-    x >>= lightcachesize;
-    y >>= lightcachesize;
-    lightcacheentry &lce = lightcache[LIGHTCACHEHASH(x, y)];
-    if(lce.x == x && lce.y == y) return lce.lights;
-
-    lce.lights.setsize(0);
-    int csize = 1<<lightcachesize, cx = x<<lightcachesize, cy = y<<lightcachesize;
-    const vector<extentity *> &ents = entities::getents();
-    loopv(ents)
-    {
-        const extentity &light = *ents[i];
-        switch(light.type)
-        {
-            case ET_LIGHT:
-            {
-                //ignore because this is a cache
-                //int radius, r, g, b;
-                //getlightprops(light, radius, r, g, b);
-                int radius = light.attr[0];
-                if(radius <= 0 ||
-                   light.o.x + radius < cx || light.o.x - radius > cx + csize ||
-                   light.o.y + radius < cy || light.o.y - radius > cy + csize)
-                    continue;
-                break;
-            }
-            default: continue;
-        }
-        lce.lights.add(i);
-    }
-
-    lce.x = x;
-    lce.y = y;
-    return lce.lights;
-}
-
 static uint lightprogress = 0;
 
 bool calclight_canceled = false;
@@ -695,7 +620,6 @@ VAR(fullbrightlevel, 0, 160, 255);
 void clearlights()
 {
     dynlightpropcache.clear();
-    clearlightcache();
     clearshadowcache();
     cleardeferredlightshaders();
     resetsmoothgroups();
@@ -704,71 +628,6 @@ void clearlights()
 void initlights()
 {
     dynlightpropcache.clear();
-    clearlightcache();
     clearshadowcache();
     loaddeferredlightshaders();
-}
-
-void lightreaching(const vec &target, vec &color, vec &dir, bool fast, extentity *t, float minambient)
-{
-    if(fullbright && editmode)
-    {
-        color = vec(1, 1, 1);
-        dir = vec(0, 0, 1);
-        return;
-    }
-
-    color = dir = vec(0, 0, 0);
-    const vector<extentity *> &ents = entities::getents();
-    const vector<int> &lights = checklightcache(int(target.x), int(target.y));
-    loopv(lights)
-    {
-        extentity &e = *ents[lights[i]];
-        if(e.type != ET_LIGHT)
-            continue;
-
-        int radius, red, green, blue;
-        getlightprops(e, radius, red, green, blue);
-
-        vec ray(target);
-        ray.sub(e.o);
-        float mag = ray.magnitude();
-        if(radius <= 0 || mag >= float(radius))
-            continue;
-
-        if(mag < 1e-4f) ray = vec(0, 0, -1);
-        else
-        {
-            ray.div(mag);
-            if(shadowray(e.o, ray, mag, RAY_SHADOW | RAY_POLY, t) < mag)
-                continue;
-        }
-
-        float intensity = 1 - mag / float(radius);
-        if(e.attached && e.attached->type==ET_SPOTLIGHT)
-        {
-            vec spot = vec(e.attached->o).sub(e.o).normalize();
-            float spotatten = 1 - (1 - ray.dot(spot)) / (1 - cos360(clamp(int(e.attached->attr[0]), 1, 89)));
-            if(spotatten <= 0) continue;
-            intensity *= spotatten;
-        }
-
-        //if(target==player->o)
-        //{
-        //    conoutf(CON_DEBUG, "%d - %f %f", i, intensity, mag);
-        //}
-
-        vec lightcol = vec(red, green, blue).mul(1.0f/255).max(0);
-        color.add(vec(lightcol).mul(intensity));
-        dir.add(vec(ray).mul(-intensity*lightcol.x*lightcol.y*lightcol.z));
-    }
-    if(!sunlight.iszero() && shadowray(target, sunlightdir, 1e16f, RAY_SHADOW | RAY_POLY, t) > 1e15f)
-    {
-        vec lightcol = sunlight.tocolor().mul(sunlightscale);
-        color.add(lightcol);
-        dir.add(vec(sunlightdir).mul(lightcol.x*lightcol.y*lightcol.z));
-    }
-    color.max(ambient.tocolor().max(minambient)).min(1.5f);
-    if(dir.iszero()) dir = vec(0, 0, 1);
-    else dir.normalize();
 }

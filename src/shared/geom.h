@@ -115,6 +115,10 @@ struct vec
     float squaredot(const vec &o) const { float k = dot(o); return k*k; }
     float absdot(const vec &o) const { return fabs(x*o.x) + fabs(y*o.y) + fabs(z*o.z); }
     float zdot(const vec &o) const { return z*o.z; }
+    vec &pow(float f)        { x = ::pow(x, f); y = ::pow(y, f); z = ::pow(z, f); return *this; }
+    vec &exp()               { x = ::exp(x); y = ::exp(y); z = ::exp(z); return *this; }
+    vec &exp2()              { x = ::exp2(x); y = ::exp2(y); z = ::exp2(z); return *this; }
+    vec &sqrt()              { x = sqrtf(x); y = sqrtf(y); z = sqrtf(z); return *this; }
     vec &mul(const vec &o)   { x *= o.x; y *= o.y; z *= o.z; return *this; }
     vec &mul(float f)        { x *= f; y *= f; z *= f; return *this; }
     vec &mul2(float f)       { x *= f; y *= f; return *this; }
@@ -671,7 +675,7 @@ struct matrix3
     void multranspose(const matrix3 &m, const matrix3 &n)
     {
         a = vec(m.a).mul(n.a.x).madd(m.b, n.b.x).madd(m.c, n.c.x);
-        b = vec(m.a).mul(n.a.y).madd(m.b, m.b.y).madd(m.c, n.c.y);
+        b = vec(m.a).mul(n.a.y).madd(m.b, n.b.y).madd(m.c, n.c.y);
         c = vec(m.a).mul(n.a.z).madd(m.b, n.b.z).madd(m.c, n.c.z);
     }
     void multranspose(const matrix3 &n) { multranspose(matrix3(*this), n); }
@@ -909,6 +913,10 @@ struct matrix4x3
     void translate(float x, float y, float z) { translate(vec(x, y, z)); }
     void translate(const vec &p, float scale) { translate(vec(p).mul(scale)); }
 
+    void posttranslate(const vec &p) { d.add(p); }
+    void posttranslate(float x, float y, float z) { posttranslate(vec(x, y, z)); }
+    void posttranslate(const vec &p, float scale) { d.madd(p, scale); }
+
     void accumulate(const matrix4x3 &m, float k)
     {
         a.madd(m.a, k);
@@ -998,7 +1006,7 @@ struct matrix4x3
     {
         vec t(n.a.dot(n.d), n.b.dot(n.d), n.c.dot(n.d));
         a = vec(m.a).mul(n.a.x).madd(m.b, n.b.x).madd(m.c, n.c.x);
-        b = vec(m.a).mul(n.a.y).madd(m.b, m.b.y).madd(m.c, n.c.y);
+        b = vec(m.a).mul(n.a.y).madd(m.b, n.b.y).madd(m.c, n.c.y);
         c = vec(m.a).mul(n.a.z).madd(m.b, n.b.z).madd(m.c, n.c.z);
         d = vec(m.d).msub(m.a, t.x).msub(m.b, t.y).msub(m.c, t.z);
     }
@@ -1794,7 +1802,7 @@ struct matrix4
 
     float getscale() const
     {
-        return sqrtf(a.x*a.y + b.x*b.x + c.x*c.x);
+        return sqrtf(a.x*a.x + b.x*b.x + c.x*c.x);
     }
 
     vec gettranslation() const

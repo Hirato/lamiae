@@ -1,6 +1,10 @@
 // main.cpp: initialisation & main loop
 #include "engine.h"
 
+#ifdef SDL_VIDEO_DRIVER_X11
+#include "SDL_syswm.h"
+#endif
+
 SVARO(version, "0.1.0");
 SVAR(logo, "<premul>media/interface/lamiae");
 
@@ -114,10 +118,12 @@ void writeinitcfg()
     f->printf("screenw %d\n", scr_w);
     f->printf("screenh %d\n", scr_h);
     extern int sound, soundchans, soundfreq, soundbufferlen;
+    extern char *audiodriver;
     f->printf("sound %d\n", sound);
     f->printf("soundchans %d\n", soundchans);
     f->printf("soundfreq %d\n", soundfreq);
     f->printf("soundbufferlen %d\n", soundbufferlen);
+    if(audiodriver[0]) f->printf("audiodriver %s\n", escapestring(audiodriver));
     delete f;
 }
 
@@ -237,9 +243,7 @@ void renderprogress(float bar, const char *text,bool background)
 
     clientkeepalive();      // make sure our connection doesn't time out while loading maps etc.
 
-    #ifdef __APPLE__
-    interceptkey(SDLK_UNKNOWN); // keep the event queue awake to avoid 'beachball' cursor
-    #endif
+    SDL_PumpEvents(); // keep the event queue awake to avoid 'beachball' cursor
 
     int w = hudw, h = hudh;
     if(forceaspect) w = int(ceil(h*forceaspect));
@@ -257,7 +261,12 @@ void renderprogress(float bar, const char *text,bool background)
     swapbuffers(false);
 }
 
+#ifdef WIN32
+// SDL_WarpMouseInWindow behaves erratically on Windows, so force relative mouse instead.
+VARN(relativemouse, userelativemouse, 1, 1, 0);
+#else
 VARNP(relativemouse, userelativemouse, 0, 1, 1);
+#endif
 
 bool shouldgrab = false, grabinput = false, minimized = false, canrelativemouse = true, relativemouse = false;
 int keyrepeatmask = 0, textinputmask = 0;
@@ -281,15 +290,22 @@ void textinput(bool on, int mask)
         }
         textinputmask |= mask;
     }
-    else
+    else if(textinputmask)
     {
         textinputmask &= ~mask;
         if(!textinputmask) SDL_StopTextInput();
     }
 }
 
-void inputgrab(bool on)
+#ifdef SDL_VIDEO_DRIVER_X11
+VAR(sdl_xgrab_bug, 0, 0, 1);
+#endif
+
+void inputgrab(bool on, bool delay = false)
 {
+#ifdef SDL_VIDEO_DRIVER_X11
+    bool wasrelativemouse = relativemouse;
+#endif
     if(on)
     {
         SDL_ShowCursor(SDL_FALSE);
@@ -313,12 +329,30 @@ void inputgrab(bool on)
         SDL_ShowCursor(SDL_TRUE);
         if(relativemouse)
         {
-            SDL_SetRelativeMouseMode(SDL_FALSE);
             SDL_SetWindowGrab(screen, SDL_FALSE);
+            SDL_SetRelativeMouseMode(SDL_FALSE);
             relativemouse = false;
         }
     }
-    shouldgrab = false;
+    shouldgrab = delay;
+
+#ifdef SDL_VIDEO_DRIVER_X11
+    if((relativemouse || wasrelativemouse) && sdl_xgrab_bug)
+    {
+        // Workaround for buggy SDL X11 pointer grabbing
+        union { SDL_SysWMinfo info; uchar buf[sizeof(SDL_SysWMinfo) + 128]; };
+        SDL_GetVersion(&info.version);
+        if(SDL_GetWindowWMInfo(screen, &info) && info.subsystem == SDL_SYSWM_X11)
+        {
+            if(relativemouse)
+            {
+                uint mask = ButtonPressMask | ButtonReleaseMask | PointerMotionMask | FocusChangeMask;
+                XGrabPointer(info.info.x11.display, info.info.x11.window, True, mask, GrabModeAsync, GrabModeAsync, info.info.x11.window, None, CurrentTime);
+            }
+            else XUngrabPointer(info.info.x11.display, CurrentTime);
+        }
+    }
+#endif
 }
 
 bool initwindowpos = false;
@@ -354,8 +388,17 @@ void screenres(int w, int h)
     {
         scr_w = min(scr_w, desktopw);
         scr_h = min(scr_h, desktoph);
-        if(SDL_GetWindowFlags(screen) & SDL_WINDOW_FULLSCREEN) gl_resize();
-        else SDL_SetWindowSize(screen, scr_w, scr_h);
+        if(SDL_GetWindowFlags(screen) & SDL_WINDOW_FULLSCREEN)
+        {
+            gl_resize();
+            initwindowpos = true;
+        }
+        else
+        {
+            SDL_SetWindowSize(screen, scr_w, scr_h);
+            SDL_SetWindowPosition(screen, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+            initwindowpos = false;
+        }
     }
     else
     {
@@ -380,7 +423,8 @@ VARFNP(gamma, reqgamma, 30, 100, 300,
 
 void restoregamma()
 {
-    if(initing || curgamma == 100) return;
+    if(initing || reqgamma == 100) return;
+    curgamma = reqgamma;
     setgamma(curgamma);
 }
 
@@ -438,6 +482,11 @@ void setupscreen()
 
     SDL_GL_ResetAttributes();
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+#if !defined(WIN32) && !defined(__APPLE__)
+    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+#endif
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);
     screen = SDL_CreateWindow("Lamiae", winx, winy, winw, winh, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS | flags);
@@ -522,14 +571,9 @@ void resetgl()
 
 COMMAND(resetgl, "");
 
-vector<SDL_Event> events;
+static queue<SDL_Event, 32> events;
 
-void pushevent(const SDL_Event &e)
-{
-    events.add(e);
-}
-
-static bool filterevent(const SDL_Event &event)
+static inline bool filterevent(const SDL_Event &event)
 {
     switch(event.type)
     {
@@ -548,41 +592,74 @@ static bool filterevent(const SDL_Event &event)
     return true;
 }
 
-static inline bool pollevent(SDL_Event &event)
+template <int SIZE> static inline bool pumpevents(queue<SDL_Event, SIZE> &events)
 {
-    while(SDL_PollEvent(&event))
+    while(events.empty())
     {
-        if(filterevent(event)) return true;
+        SDL_PumpEvents();
+        databuf<SDL_Event> buf = events.reserve(events.capacity());
+        int n = SDL_PeepEvents(buf.getbuf(), buf.remaining(), SDL_GETEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT);
+        if(n <= 0) return false;
+        loopi(n) if(filterevent(buf.buf[i])) buf.put(buf.buf[i]);
+        events.addbuf(buf);
     }
-    return false;
+    return true;
+}
+
+static int interceptkeysym = 0;
+
+static int interceptevents(void *data, SDL_Event *event)
+{
+    switch(event->type)
+    {
+        case SDL_MOUSEMOTION: return 0;
+        case SDL_KEYDOWN:
+            if(event->key.keysym.sym == interceptkeysym)
+            {
+                interceptkeysym = -interceptkeysym;
+                return 0;
+            }
+            break;
+    }
+    return 1;
+}
+
+static void clearinterceptkey()
+{
+    SDL_DelEventWatch(interceptevents, NULL);
+    interceptkeysym = 0;
 }
 
 bool interceptkey(int sym)
 {
-    static int lastintercept = SDLK_UNKNOWN;
-    int len = lastintercept == sym ? events.length() : 0;
-    SDL_Event event;
-    while(pollevent(event))
+    if(!interceptkeysym)
     {
-        switch(event.type)
+        interceptkeysym = sym;
+        SDL_FilterEvents(interceptevents, NULL);
+        if(interceptkeysym < 0)
         {
-            case SDL_MOUSEMOTION: break;
-            default: pushevent(event); break;
+            interceptkeysym = 0;
+            return true;
         }
+        SDL_AddEventWatch(interceptevents, NULL);
     }
-    lastintercept = sym;
-    if(sym != SDLK_UNKNOWN) for(int i = len; i < events.length(); i++)
+    else if(abs(interceptkeysym) != sym) interceptkeysym = sym;
+    SDL_PumpEvents();
+    if(interceptkeysym < 0)
     {
-        if(events[i].type == SDL_KEYDOWN && events[i].key.keysym.sym == sym) { events.remove(i); return true; }
+        clearinterceptkey();
+        interceptkeysym = sym;
+        SDL_FilterEvents(interceptevents, NULL);
+        interceptkeysym = 0;
+        return true;
     }
     return false;
 }
 
 static void ignoremousemotion()
 {
-    SDL_Event e;
     SDL_PumpEvents();
-    while(SDL_PeepEvents(&e, 1, SDL_GETEVENT, SDL_MOUSEMOTION, SDL_MOUSEMOTION));
+    SDL_FlushEvent(SDL_MOUSEMOTION);
 }
 
 static void resetmousemotion()
@@ -595,39 +672,27 @@ static void resetmousemotion()
 
 static void checkmousemotion(int &dx, int &dy)
 {
-    loopv(events)
+    while(pumpevents(events))
     {
-        SDL_Event &event = events[i];
-        if(event.type != SDL_MOUSEMOTION)
-        {
-            if(i > 0) events.remove(0, i);
-            return;
-        }
+        SDL_Event &event = events.removing();
+        if(event.type != SDL_MOUSEMOTION) return;
         dx += event.motion.xrel;
         dy += event.motion.yrel;
-    }
-    events.setsize(0);
-    SDL_Event event;
-    while(pollevent(event))
-    {
-        if(event.type != SDL_MOUSEMOTION)
-        {
-            events.add(event);
-            return;
-        }
-        dx += event.motion.xrel;
-        dy += event.motion.yrel;
+        events.remove();
     }
 }
 
 void checkinput()
 {
-    SDL_Event event;
+    if(interceptkeysym) clearinterceptkey();
     //int lasttype = 0, lastbut = 0;
     bool mousemoved = false;
-    while(events.length() || pollevent(event))
+    int focused = 0;
+    while(pumpevents(events))
     {
-        if(events.length()) event = events.remove(0);
+        SDL_Event &event = events.remove();
+
+        if(focused && event.type!=SDL_WINDOWEVENT) { if(grabinput != (focused>0)) inputgrab(grabinput = focused>0, shouldgrab); focused = 0; }
 
         switch(event.type)
         {
@@ -647,7 +712,7 @@ void checkinput()
             case SDL_KEYDOWN:
             case SDL_KEYUP:
                 if(keyrepeatmask || !event.key.repeat)
-                    processkey(event.key.keysym.sym, event.key.state==SDL_PRESSED);
+                    processkey(event.key.keysym.sym, event.key.state==SDL_PRESSED, event.key.keysym.mod | SDL_GetModState());
                 break;
 
             case SDL_WINDOWEVENT:
@@ -661,12 +726,14 @@ void checkinput()
                         shouldgrab = true;
                         break;
                     case SDL_WINDOWEVENT_ENTER:
-                        inputgrab(grabinput = true);
+                        shouldgrab = false;
+                        focused = 1;
                         break;
 
                     case SDL_WINDOWEVENT_LEAVE:
                     case SDL_WINDOWEVENT_FOCUS_LOST:
-                        inputgrab(grabinput = false);
+                        shouldgrab = false;
+                        focused = -1;
                         break;
 
                     case SDL_WINDOWEVENT_MINIMIZED:
@@ -715,6 +782,9 @@ void checkinput()
                     case SDL_BUTTON_RIGHT: processkey(-3, event.button.state==SDL_PRESSED); break;
                     case SDL_BUTTON_X1: processkey(-6, event.button.state==SDL_PRESSED); break;
                     case SDL_BUTTON_X2: processkey(-7, event.button.state==SDL_PRESSED); break;
+                    case SDL_BUTTON_X2 + 1: processkey(-10, event.button.state==SDL_PRESSED); break;
+                    case SDL_BUTTON_X2 + 2: processkey(-11, event.button.state==SDL_PRESSED); break;
+                    case SDL_BUTTON_X2 + 3: processkey(-12, event.button.state==SDL_PRESSED); break;
                 }
                 //lasttype = event.type;
                 //lastbut = event.button.button;
@@ -723,9 +793,12 @@ void checkinput()
             case SDL_MOUSEWHEEL:
                 if(event.wheel.y > 0) { processkey(-4, true); processkey(-4, false); }
                 else if(event.wheel.y < 0) { processkey(-5, true); processkey(-5, false); }
+                else if(event.wheel.x > 0) { processkey(-8, true); processkey(-8, false); }
+                else if(event.wheel.x < 0) { processkey(-9, true); processkey(-9, false); }
                 break;
         }
     }
+    if(focused) { if(grabinput != (focused>0)) inputgrab(grabinput = focused>0, shouldgrab); focused = 0; }
     if(mousemoved) resetmousemotion();
 }
 
@@ -737,7 +810,7 @@ void swapbuffers(bool overlay)
     SDL_GL_SwapWindow(screen);
 }
 
-VAR(menufps, 0, 60, 1000);
+VARP(menufps, 0, 60, 1000);
 VARP(maxfps, 0, 125, 1000);
 
 void limitfps(int &millis, int curmillis)
@@ -982,6 +1055,13 @@ int main(int argc, char **argv)
         logoutf("init: sdl");
 
         if(SDL_Init(SDL_INIT_TIMER|SDL_INIT_VIDEO|SDL_INIT_AUDIO)<0) fatal("Unable to initialize SDL: %s", SDL_GetError());
+
+#ifdef SDL_VIDEO_DRIVER_X11
+        SDL_version version;
+        SDL_GetVersion(&version);
+        if (SDL_VERSIONNUM(version.major, version.minor, version.patch) <= SDL_VERSIONNUM(2, 0, 12))
+            sdl_xgrab_bug = 1;
+#endif
     }
 
     logoutf("init: net");

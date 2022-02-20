@@ -1,5 +1,31 @@
 #include "cube.h"
 
+///////////////////////////// console ////////////////////////
+
+void conoutf(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    conoutfv(CON_INFO, fmt, args);
+    va_end(args);
+}
+
+void conoutf(int type, const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    conoutfv(type, fmt, args);
+    va_end(args);
+}
+
+void conoutf(int type, int tag, const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    conoutfv(type | ((tag << CON_TAG_SHIFT) & CON_TAG_MASK), fmt, args);
+    va_end(args);
+}
+
 ///////////////////////// character conversion ///////////////
 
 #define CUBECTYPE(s, p, d, a, A, u, U) \
@@ -673,7 +699,7 @@ struct filestream : stream
     offset tell()
     {
 #ifdef WIN32
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(__MINGW32__)
         offset off = ftello64(file);
 #else
         offset off = _ftelli64(file);
@@ -687,7 +713,7 @@ struct filestream : stream
     bool seek(offset pos, int whence)
     {
 #ifdef WIN32
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(__MINGW32__)
         return fseeko64(file, pos, whence) >= 0;
 #else
         return _fseeki64(file, pos, whence) >= 0;
@@ -912,7 +938,7 @@ struct gzstream : stream
     offset size()
     {
         if(!file) return -1;
-        offset pos = tell();
+        offset pos = file->tell();
         if(!file->seek(-4, SEEK_END)) return -1;
         uint isize = file->getlil<uint>();
         return file->seek(pos, SEEK_SET) ? isize : offset(-1);

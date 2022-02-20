@@ -178,7 +178,7 @@ struct obj : vertloader<obj>
         Texture *tex, *masks;
         loadskin(name, pname, tex, masks);
         mdl.initskins(tex, masks);
-        if(tex==notexture) conoutf("could not load model skin for %s", name1);
+        if(tex==notexture) conoutf(CON_ERROR, "could not load model skin for %s", name1);
         return true;
     }
 };

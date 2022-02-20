@@ -1,12 +1,7 @@
 // sound.cpp: basic positional sound using sdl_mixer
 
 #include "engine.h"
-
-#ifdef __APPLE__
-  #include "SDL2_mixer/SDL_mixer.h"
-#else
-  #include "SDL_mixer.h"
-#endif
+#include "SDL_mixer.h"
 
 bool nosound = true;
 
@@ -38,9 +33,11 @@ struct soundconfig
         return p >= v.getbuf() + slots && p < v.getbuf() + slots+numslots && slots+numslots < v.length();
     }
 
-    int chooseslot() const
+    int chooseslot(int flags) const
     {
-        return numslots > 1 ? slots + rnd(numslots) : slots;
+        if(flags&SND_NO_ALT || numslots <= 1) return slots;
+        if(flags&SND_USE_ALT) return slots + 1 + rnd(numslots - 1);
+        return slots + rnd(numslots);
     }
 };
 
@@ -122,7 +119,14 @@ void stopchannels()
 }
 
 void setmusicvol(int musicvol);
-VARFP(soundvol, 0, 255, 255, if(!soundvol) { stopchannels(); setmusicvol(0); });
+extern int musicvol;
+static int curvol = 0;
+VARFP(soundvol, 0, 255, 255,
+{
+    if(!soundvol) { stopchannels(); setmusicvol(0); }
+    else if(!curvol) setmusicvol(musicvol);
+    curvol = soundvol;
+});
 VARFP(musicvol, 0, 60, 255, setmusicvol(soundvol ? musicvol : 0));
 
 char *musicfile = NULL, *musicdonecmd = NULL;
@@ -152,10 +156,57 @@ void stopmusic()
     DELETEP(musicstream);
 }
 
-VARF(sound, 0, 1, 1, initwarning("sound configuration", INIT_RESET, CHANGE_SOUND));
+#ifdef WIN32
+#define AUDIODRIVER "directsound winmm"
+#else
+#define AUDIODRIVER ""
+#endif
+bool shouldinitaudio = true;
+SVARF(audiodriver, AUDIODRIVER, { shouldinitaudio = true; initwarning("sound configuration", INIT_RESET, CHANGE_SOUND); });
+VARF(sound, 0, 1, 1, { shouldinitaudio = true; initwarning("sound configuration", INIT_RESET, CHANGE_SOUND); });
 VARF(soundchans, 1, 32, 128, initwarning("sound configuration", INIT_RESET, CHANGE_SOUND));
-VARF(soundfreq, 0, 44100, 44100, initwarning("sound configuration", INIT_RESET, CHANGE_SOUND));
+VARF(soundfreq, 0, 44100, 48000, initwarning("sound configuration", INIT_RESET, CHANGE_SOUND));
 VARF(soundbufferlen, 128, 1024, 4096, initwarning("sound configuration", INIT_RESET, CHANGE_SOUND));
+
+bool initaudio()
+{
+    static string fallback = "";
+    static bool initfallback = true;
+    static bool restorefallback = false;
+    if(initfallback)
+    {
+        initfallback = false;
+        if(char *env = SDL_getenv("SDL_AUDIODRIVER")) copystring(fallback, env);
+    }
+    if(!fallback[0] && audiodriver[0])
+    {
+        vector<char*> drivers;
+        explodelist(audiodriver, drivers);
+        loopv(drivers)
+        {
+            restorefallback = true;
+            SDL_setenv("SDL_AUDIODRIVER", drivers[i], 1);
+            if(SDL_InitSubSystem(SDL_INIT_AUDIO) >= 0)
+            {
+                drivers.deletearrays();
+                return true;
+            }
+        }
+        drivers.deletearrays();
+    }
+    if(restorefallback)
+    {
+        restorefallback = false;
+    #ifdef WIN32
+        SDL_setenv("SDL_AUDIODRIVER", fallback, 1);
+    #else
+        unsetenv("SDL_AUDIODRIVER");
+    #endif
+    }
+    if(SDL_InitSubSystem(SDL_INIT_AUDIO) >= 0) return true;
+    conoutf(CON_ERROR, "sound init failed: %s", SDL_GetError());
+    return false;
+}
 
 void initsound()
 {
@@ -168,10 +219,21 @@ void initsound()
         return;
     }
 
-    if(!sound || Mix_OpenAudio(soundfreq, MIX_DEFAULT_FORMAT, 2, soundbufferlen)<0)
+    if(shouldinitaudio)
+    {
+        shouldinitaudio = false;
+        if(SDL_WasInit(SDL_INIT_AUDIO)) SDL_QuitSubSystem(SDL_INIT_AUDIO);
+        if(!sound || !initaudio())
+        {
+            nosound = true;
+            return;
+        }
+    }
+
+    if(Mix_OpenAudio(soundfreq, MIX_DEFAULT_FORMAT, 2, soundbufferlen)<0)
     {
         nosound = true;
-        if(sound) conoutf(CON_ERROR, "sound init failed (SDL_mixer): %s", Mix_GetError());
+        conoutf(CON_ERROR, "sound init failed (SDL_mixer): %s", Mix_GetError());
         return;
     }
     Mix_AllocateChannels(soundchans);
@@ -504,7 +566,7 @@ bool updatechannel(soundchannel &chan)
     {
         vec v;
         float dist = chan.loc.dist(camera1->o, v);
-        int rad = maxsoundradius;
+        int rad = 0;
         if(chan.ent)
         {
             rad = chan.ent->attr[1];
@@ -514,7 +576,7 @@ bool updatechannel(soundchannel &chan)
                 dist -= chan.ent->attr[2];
             }
         }
-        else if(chan.radius > 0) rad = maxsoundradius ? min(maxsoundradius, chan.radius) : chan.radius;
+        else if(chan.radius > 0) rad = chan.radius;
         if(rad > 0) vol -= int(clamp(dist/rad, 0.0f, 1.0f)*soundvol); // simple mono distance attenuation
         if(stereo && (v.x != 0 || v.y != 0) && dist>0)
         {
@@ -549,11 +611,13 @@ void syncchannels()
     }
 }
 
+VARP(minimizedsounds, 0, 0, 1);
+
 void updatesounds()
 {
     updatemumble();
     if(nosound) return;
-    if(minimized) stopsounds();
+    if(minimized && !minimizedsounds) stopsounds();
     else
     {
         reclaimchannels();
@@ -594,17 +658,18 @@ void preloadmapsounds()
 
 int playsound(int n, const vec *loc, extentity *ent, int flags, int loops, int fade, int chanid, int radius, int expire)
 {
-    if(nosound || !soundvol || minimized) return -1;
+    if(nosound || !soundvol || (minimized && !minimizedsounds)) return -1;
 
     soundtype &sounds = ent || flags&SND_MAP ? mapsounds : gamesounds;
     if(!sounds.configs.inrange(n)) { conoutf(CON_WARN, "unregistered sound: %d", n); return -1; }
     soundconfig &config = sounds.configs[n];
 
-    if(loc && (maxsoundradius || radius > 0))
+    if(loc)
     {
         // cull sounds that are unlikely to be heard
-        int rad = radius > 0 ? (maxsoundradius ? min(maxsoundradius, radius) : radius) : maxsoundradius;
-        if(camera1->o.dist(*loc) > 1.5f*rad)
+        int maxrad = game::maxsoundradius(n);
+        if(radius <= 0 || maxrad < radius) radius = maxrad;
+        if(camera1->o.dist(*loc) > 1.5f*radius)
         {
             if(channels.inrange(chanid) && sounds.playing(channels[chanid], config))
             {
@@ -642,10 +707,10 @@ int playsound(int n, const vec *loc, extentity *ent, int flags, int loops, int f
     }
     if(fade < 0) return -1;
 
-    soundslot &slot = sounds.slots[config.chooseslot()];
+    soundslot &slot = sounds.slots[config.chooseslot(flags)];
     if(!slot.sample->chunk && !slot.sample->load(sounds.dir)) return -1;
 
-    if(dbgsound) conoutf("sound: %s%s", sounds.dir, slot.sample->name);
+    if(dbgsound) conoutf(CON_DEBUG, "sound: %s%s", sounds.dir, slot.sample->name);
 
     chanid = -1;
     loopv(channels) if(!channels[i].inuse) { chanid = i; break; }
@@ -679,7 +744,7 @@ void stopsounds()
 bool stopsound(int n, int chanid, int fade)
 {
     if(!gamesounds.configs.inrange(n) || !channels.inrange(chanid) || !gamesounds.playing(channels[chanid], gamesounds.configs[n])) return false;
-    if(dbgsound) conoutf("stopsound: %s%s", gamesounds.dir, channels[chanid].slot->sample->name);
+    if(dbgsound) conoutf(CON_DEBUG, "stopsound: %s%s", gamesounds.dir, channels[chanid].slot->sample->name);
     if(!fade || !Mix_FadeOutChannel(chanid, fade))
     {
         Mix_HaltChannel(chanid);
