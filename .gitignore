@@ -26,6 +26,7 @@ src/windows/lamiae.depend
 *.exe
 /src/tessfont
 /src/build
+/build
 
 # extra
 /wiki/
