@@ -1,7 +1,0 @@
-ENET_CFLAGS= -m32
-CXXFLAGS?= -O3 -flto
-override CXXFLAGS+= -m32 -msse2 -mfpmath=sse
-
-MACHINE=32
-
-include includes.mk
