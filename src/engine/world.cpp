@@ -1244,7 +1244,7 @@ int getattrnum(int type)
     {
         0, //empty
         6, //light
-        5, //mapmodel
+        6, //mapmodel
         2, //playerstart
         3, //envmap
         9, //particles
@@ -1399,6 +1399,12 @@ void printent(extentity &e, char *buf, int len)
         case ET_PARTICLES:
             if(printparticles(e, buf, len)) return;
             break;
+        case ET_MAPMODEL:
+        {
+            defformatstring(ds, "%d %d %d %d %d 0x%.6X", e.attr[0], e.attr[1], e.attr[2], e.attr[3], e.attr[4], e.attr[5]);
+            concatstring(buf, ds, len);
+            return;
+        }
         default:
             if(e.type >= ET_GAMESPECIFIC && entities::printent(e, buf, len)) return;
             break;

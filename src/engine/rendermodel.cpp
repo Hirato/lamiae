@@ -898,7 +898,7 @@ void clearbatchedmapmodels()
     }
 }
 
-void rendermapmodel(int idx, int anim, const vec &o, float yaw, float pitch, float roll, int flags, int basetime, float size)
+void rendermapmodel(int idx, int anim, const vec &o, float yaw, float pitch, float roll, int flags, int basetime, float size, const vec4 &colorscale)
 {
     if(!mapmodels.inrange(idx)) return;
     mapmodelinfo &mmi = mapmodels[idx];
@@ -936,7 +936,7 @@ void rendermapmodel(int idx, int anim, const vec &o, float yaw, float pitch, flo
     b.basetime = basetime;
     b.basetime2 = 0;
     b.sizescale = size;
-    b.colorscale = vec4(1, 1, 1, 1);
+    b.colorscale = colorscale;
     b.flags = flags | MDL_MAPMODEL;
     b.visible = visible;
     b.d = NULL;

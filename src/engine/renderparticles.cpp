@@ -1500,12 +1500,13 @@ void renderentinfo(int i)
 
         case ET_MAPMODEL:
             pos.z += 7.5;
-            nformatstring(ds.getbuf(), ds.length(), "Model: %s (%i)\nYaw: %i\nPitch: %i\nRoll: %i\nSize: %i",
+            nformatstring(ds.getbuf(), ds.length(), "Model: %s (%i)\nYaw: %i\nPitch: %i\nRoll: %i\nSize: %i\nColour: \fs\fR%i \fJ%i \fD%i\fr\n",
                 mapmodelname(e.attr[0]), e.attr[0],
                 e.attr[1],
                 e.attr[2],
                 e.attr[3],
-                e.attr[4]
+                e.attr[4],
+                (e.attr[5] & 0xFF0000) >> 16, (e.attr[5] & 0xFF00) >> 8, e.attr[5] & 0xFF
             );
             break;
         case ET_PLAYERSTART:

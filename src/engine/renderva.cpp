@@ -510,7 +510,12 @@ static inline void rendermapmodel(extentity &e)
     int anim = ANIM_MAPMODEL|ANIM_LOOP, basetime = 0;
     if(e.flags&EF_ANIM) entities::animatemapmodel(e, anim, basetime);
 
-    rendermapmodel(e.attr[0], anim, e.o, e.attr[1], e.attr[2], e.attr[3], MDL_CULL_VFC | MDL_CULL_DIST, basetime, e.attr[4] > 0 ? e.attr[4] / 100.f : 1);
+    vec4 col = vec4(1, 1, 1, 1);
+    const float recip = 1.f / 255;
+    if(e.attr[5])
+        col = vec4(recip * ((e.attr[5] & 0xFF0000) >> 16), recip * ((e.attr[5] & 0x00FF00) >> 8), recip * (e.attr[5] & 0x0000FF), 1);
+
+    rendermapmodel(e.attr[0], anim, e.o, e.attr[1], e.attr[2], e.attr[3], MDL_CULL_VFC | MDL_CULL_DIST, basetime, e.attr[4] > 0 ? e.attr[4] / 100.f : 1, col);
 }
 
 void rendermapmodels()
